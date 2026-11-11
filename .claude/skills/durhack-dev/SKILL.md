@@ -1,6 +1,6 @@
 ---
 name: durhack-dev
-description: Use before any work in the DurHack 2026 hackathon repo — coding, planning, research, Figma/UI, docs, git, issues or PRs. Router and rulebook for the 2–4 lane team. Routes to durhack-init (team and GitHub setup, joining on a new laptop), durhack-prizes (prize research), durhack-plan (idea, plan, lanes roadmap), durhack-execute (building with agents), durhack-inbox (cross-lane GitHub issues, needs-owner, human-test), durhack-pr (PRs, merging, conflicts), durhack-explain (how the program works, algorithms, judge prep) and durhack-browser (research and screenshots in the user's Chrome).
+description: Use before any work in the DurHack 2026 hackathon repo — coding, planning, research, Figma/UI, docs, git, issues or PRs. Router and rulebook for the 2–4 lane team. Routes to durhack-init (team and GitHub setup, joining on a new laptop), durhack-prizes (prize research), durhack-plan (idea, plan, lanes roadmap), durhack-execute (building with agents), durhack-inbox (cross-lane GitHub issues, needs-owner, human-test), durhack-pr (PRs, merging, conflicts), durhack-explain (how the program works, algorithms, judge prep), durhack-handoff (fresh session when context gets big) and durhack-browser (research and screenshots in the user's Chrome).
 ---
 
 # DurHack 2026
@@ -37,6 +37,7 @@ for slow, careful projects; this one has 24 hours.
 | Something a human should test by hand | `durhack-inbox` (`human-test`) |
 | Opening, merging or rebasing a PR, a merge conflict, a roadmap clash | `durhack-pr` |
 | "How does X work?", algorithms, problems we hit, docs, judge prep, the pitch | `durhack-explain` |
+| Context warning (~650k tokens), "handoff", "new session", resuming from a handoff | `durhack-handoff` |
 | Research that needs a real browser (JS/logged-in pages, live numbers, screenshots of sites or our app) | `durhack-browser` |
 | Figma screens, UI design, design → code | `durhack-execute` with the `durhack-frontend` agent (uses the Figma MCP if this laptop has it) |
 
@@ -69,6 +70,14 @@ for them in `docs/contracts.md`; others ask.
 JSON shape, file format) is written in `docs/contracts.md` before either side builds it. Code
 against it with a mock until the checkpoint. A contract change is a `needs-owner` issue that
 names every lane it affects.
+
+**Never wait on the user for routine git.** Pushing your lane branch, opening its PR and
+merging it once `./check.sh` is green are automatic: do them and move to the next row. Ask
+only for owner decisions and destructive actions. (A `needs-owner` PR waits for the owner, but
+its author moves on.)
+
+**Small context.** When a `DURHACK CONTEXT WARNING` arrives (about 650k tokens), finish the
+step in flight and run `durhack-handoff`. A fresh session from a handoff beats a confused one.
 
 **Speed.** One smoke gate (`./check.sh`), one fix round, then hand it to a human as a
 `human-test` issue. No TDD, no per-task review. A feature that works in the demo beats a
@@ -107,7 +116,7 @@ Dispatch is `durhack-execute`'s and `durhack-prizes`'s job; ad-hoc questions sta
 | `.github/durhack/team.json` | Owner, lane count, each lane's person, focus and paths |
 | `.github/ISSUE_TEMPLATE/` | `agent-request`, `needs-owner`, `human-test` forms |
 | `.github/pull_request_template.md` | The PR body every PR uses |
-| `scripts/durhack/` | `whoami.sh`, `inbox.sh` (the watcher), `ask.sh`, `reply.sh`, `test-issue.sh`, `pr.sh`, `setup-github.sh`, `install-hooks.sh` |
+| `scripts/durhack/` | `whoami.sh`, `inbox.sh` (the watcher), `ask.sh`, `reply.sh`, `pr.sh`, `setup-github.sh`, `install-hooks.sh`; hooks `session-start.sh` and `context-check.sh` (wired in `.claude/settings.json`) |
 | `docs/` | Plan, roadmap, lanes, contracts, documentation, prizes, decisions |
 | `.claude/ledger/` | Per-session build ledgers (git-ignored) |
 | `.claude/durhack-inbox/` | The watcher's seen-state (git-ignored) |

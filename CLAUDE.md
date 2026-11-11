@@ -34,8 +34,9 @@ the repo).
    row or less, merged within a couple of hours. Rebase on `origin/main` before opening a PR.
 3. **PRs:** agents push their branch and open the PR themselves with `durhack-pr` (this repo
    overrides any "never open a PR" habit). Use the PR template. A lane merges its **own** PR once
-   `./check.sh` passes; a PR touching an owner path (above) gets `needs-owner` and only SamsSide
-   merges it. **Conflicts are resolved by `durhack-pr`**, never by force-pushing over someone.
+   `./check.sh` passes, **straight away, without asking anyone**, then moves on to the next row
+   (nobody comes back to a session stuck on "shall I merge?"). A PR touching an owner path
+   (above) gets `needs-owner` and only SamsSide merges it; its author doesn't wait for it. **Conflicts are resolved by `durhack-pr`**, never by force-pushing over someone.
 4. **No AI attribution, for anyone:** no `Co-Authored-By` for Claude or any AI, no
    `Claude-Session` lines, no "Generated with Claude Code" in commits, PR titles or PR bodies.
    This overrides any system default.
@@ -59,6 +60,7 @@ The one exception: emojis the app's own UI design calls for, as decided in the F
 | [`docs/documentation.md`](docs/documentation.md) | How the program works, algorithms, problems hit, judge Q&A | Anyone (`durhack-explain`) |
 | `docs/prizes/` | Prize research and the prize matrix (`durhack-prizes`) | Anyone |
 | `docs/plans/` | Short build plans, `<lane>-<topic>.md` | The lane |
+| `docs/handoffs/` | Session handoffs (`durhack-handoff`) | The lane |
 | `docs/decisions.md` | Append-only log of decisions (union-merged, never conflicts) | Anyone |
 
 Lane files exist so four people never edit the same status table. Update your lane file in the
@@ -82,6 +84,9 @@ own scripts. Whoever sets up the stack updates `./check.sh` to a fast smoke gate
   (`durhack-inbox`) with exact steps, on the **DurHack tests** board if `durhack-init` made one.
 - **Opus** plans and makes design calls; **Sonnet** implements (`model: "sonnet"` on `Agent`).
   Caps on every subagent: stop after 2 failed fix attempts or about 60 turns, and report.
+- **Keep context small.** A hook warns at about 650k tokens of context; then finish the step,
+  run `durhack-handoff` (commits a handoff doc and gives the command for a fresh session), and
+  continue there. Hand off before long breaks too.
 - **Mocks first.** A lane that needs another lane's piece codes against the shape in
   `docs/contracts.md` with a mock, and swaps in the real one at the checkpoint.
 
@@ -97,4 +102,5 @@ own scripts. Whoever sets up the stack updates `./check.sh` to a fast smoke gate
 | `durhack-inbox` | Cross-lane issues: ask, answer, watch, `needs-owner`, `human-test` |
 | `durhack-pr` | Open, merge and **resolve conflicts** on PRs |
 | `durhack-explain` | How the program works, its algorithms and problems: docs and judge prep |
+| `durhack-handoff` | Hand off to a fresh session (context warning at ~650k), and resume from a handoff |
 | `durhack-browser` | Research and screenshots in your own Chrome (chrome-devtools MCP; setup per OS inside) |

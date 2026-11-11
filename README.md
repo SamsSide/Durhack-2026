@@ -109,7 +109,7 @@ flowchart LR
   R --> C{"conflict?"}
   C -- yes --> X["durhack-pr resolves<br/>(rules per file)"] --> R
   C -- no --> O{"touches owner paths?<br/>plan, roadmap, contracts,<br/>CLAUDE.md, .claude, .github, scripts"}
-  O -- no --> MG["lane merges its own PR<br/>(squash)"]
+  O -- no --> MG["lane merges its own PR<br/>straight away, no prompt"]
   O -- yes --> NO["label needs-owner<br/>SamsSide reviews and merges"]
   MG & NO --> MAIN[("main")]
   MAIN --> T["human-test issues<br/>for people to try"]
@@ -142,6 +142,7 @@ A teammate saying "just do it" doesn't override this; only the owner's answer do
 | `durhack-inbox` | Cross-lane issues: ask, answer, watch, owner decisions, human tests |
 | `durhack-pr` | Opening, merging and resolving conflicts on PRs |
 | `durhack-explain` | How the program works, its algorithms and the problems we hit; judge prep |
+| `durhack-handoff` | Writes and commits a handoff, gives the command for a fresh session (warned at ~650k tokens) |
 | `durhack-browser` | Research and screenshots in your own Chrome |
 
 Agents (`.claude/agents/`): `durhack-builder` (any code), `durhack-frontend` (UI, Figma),
@@ -169,3 +170,5 @@ Agents (`.claude/agents/`): `durhack-builder` (any code), `durhack-frontend` (UI
 - Contracts (`docs/contracts.md`) before code; mock what isn't built yet.
 - No AI attribution and no emojis in commits, PRs, issues or comments.
 - API keys only in `.env` (never committed).
+- Lane PRs are pushed, opened and merged automatically once green; nobody waits on a prompt.
+- Keep sessions small: at ~650k tokens of context, hand off to a fresh session (`durhack-handoff`).

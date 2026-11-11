@@ -11,7 +11,7 @@ step "scripts parse (bash -n)" bash -c 'for f in scripts/durhack/*.sh scripts/ho
 if command -v shellcheck >/dev/null; then
   step "shellcheck (errors only)" shellcheck -S error scripts/durhack/*.sh scripts/hooks/*
 fi
-step "team.json is valid JSON" bash -c 'if command -v jq >/dev/null; then jq empty .github/durhack/team.json; else python3 -m json.tool .github/durhack/team.json >/dev/null; fi'
+step "JSON files are valid" bash -c 'for f in .github/durhack/team.json .claude/settings.json scripts/durhack/claude-settings.json; do [ -f "$f" ] || continue; if command -v jq >/dev/null; then jq empty "$f" || exit 1; else python3 -m json.tool "$f" >/dev/null || exit 1; fi; done'
 step "no API keys in tracked files" bash -c '! git grep -nIE "(sk-ant-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|AIza[0-9A-Za-z_-]{35})" -- . ":!check.sh" ":!scripts/hooks/*"'
 step "no conflict markers" bash -c '! git grep -nE "^(<<<<<<< |>>>>>>> )" -- . ":!check.sh"'
 

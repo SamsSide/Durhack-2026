@@ -76,11 +76,17 @@ to avoid. Spot-check only what the gate can't (does the screen show up?) by runn
 1. Update `docs/lanes/<lane>.md`: rows `done` (or `testing` if waiting on a human test), the
    *Log* line, *Waiting on*.
 2. `durhack-pr` → *Open a PR* (`pr.sh open`), then `pr.sh merge <N>` if it has no owner paths.
+   **No confirmation from the user**: push, open, merge, start the next row.
    `needs-owner` → leave it for the owner and carry on on a new branch from your branch's tip
    only if the next task depends on it; else from `origin/main`.
 3. Reply to any `agent-request` this delivered: `reply.sh N --pr <PR> --close`.
 4. Tell the user in 3–5 lines: what's on `main` now, what's waiting on whom (issue numbers), the
    next row.
+
+## Context
+
+A `DURHACK CONTEXT WARNING` (about 650k tokens) means: finish the batch in flight, ship it,
+then `durhack-handoff`. Never start a new row past the warning.
 
 ## Don't stop for small things
 

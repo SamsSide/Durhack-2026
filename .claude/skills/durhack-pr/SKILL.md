@@ -28,8 +28,9 @@ Long branches are what make four-way conflicts.
 
 ## Merge
 
-- **Your lane's PR, no owner paths:** `scripts/durhack/pr.sh merge <N>` once the gate was green
-  and it's mergeable. Squash, branch deleted. Then `git switch main && git pull` locally and
+- **Your lane's PR, no owner paths:** `scripts/durhack/pr.sh merge <N>` as soon as the gate is
+  green and it's mergeable. **Don't ask the user** whether to push, open or merge: it's
+  automatic, so a session never sits waiting while its person is away. Squash, branch deleted. Then `git switch main && git pull` locally and
   branch again for the next row.
 - **`needs-owner` PR:** only the owner merges it. Don't merge, don't nag; the owner's watcher
   shows it as `[owner-review]`.
