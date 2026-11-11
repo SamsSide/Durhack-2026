@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# DurHack: no AI attribution in commit messages, for anyone.
+if grep -qiE '^co-authored-by:.*(claude|anthropic|copilot|chatgpt|openai|gemini|cursor)|^claude-session:|generated with \[?claude' "$1"; then
+  echo "DurHack rule: no AI attribution in commits (Co-Authored-By: Claude, Claude-Session, 'Generated with'). Remove those lines." >&2
+  exit 1
+fi
+exit 0

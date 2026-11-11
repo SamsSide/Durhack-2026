@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# DurHack: nothing is ever pushed to main. Every change is a pull request.
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main|refs/heads/master)
+      echo "DurHack rule: never push to ${remote_ref#refs/heads/}. Push a <lane>/<topic> branch and open a PR:" >&2
+      echo "   scripts/durhack/pr.sh open --title \"...\" --body-file pr.md" >&2
+      exit 1 ;;
+  esac
+  if [ "$remote_sha" != "0000000000000000000000000000000000000000" ] && [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+    case "$remote_ref" in refs/heads/main|refs/heads/master) echo "never delete main" >&2; exit 1;; esac
+  fi
+done
+exit 0

@@ -1,0 +1,21 @@
+name: Needs owner (decision for SamsSide)
+description: A change to the plan, roadmap, contracts, stack, dependencies or another lane — the owner decides.
+title: "[x→owner] "
+labels: ["needs-owner"]
+assignees: ["SamsSide"]
+body:
+  - type: input
+    id: decision
+    attributes: { label: "Decision needed (one line)" }
+    validations: { required: true }
+  - type: textarea
+    id: context
+    attributes: { label: "Context", description: "What happened, what it affects (lanes, rows, contracts, prizes)." }
+    validations: { required: true }
+  - type: textarea
+    id: options
+    attributes: { label: "Options", description: "A/B/C, recommended first, one line of trade-off each.", value: "A. (Recommended) \nB. \nC. " }
+    validations: { required: true }
+  - type: textarea
+    id: meanwhile
+    attributes: { label: "What I'm doing until you answer" }
