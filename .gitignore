@@ -1,0 +1,36 @@
+# DurHack
+.env
+.env.*
+!.env.example
+.claude/ledger/
+.claude/durhack-inbox/
+.claude/worktrees/
+.claude/settings.local.json
+scratch/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# Node / Electron
+node_modules/
+dist/
+build/
+out/
+.next/
+.vite/
+*.log
+npm-debug.log*
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
