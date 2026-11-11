@@ -1,0 +1,6 @@
+# Append-only logs: both sides' new lines are kept on merge, so they never conflict.
+docs/decisions.md merge=union
+docs/research/log.md merge=union
+* text=auto eol=lf
+*.sh text eol=lf
+scripts/hooks/* text eol=lf

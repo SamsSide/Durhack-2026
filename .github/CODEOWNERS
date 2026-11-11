@@ -1,0 +1,9 @@
+# The owner decides the plan, roadmap, contracts, rules, skills and tooling.
+/docs/hackathon-plan.md  @SamsSide
+/docs/roadmap.md         @SamsSide
+/docs/contracts.md       @SamsSide
+/CLAUDE.md               @SamsSide
+/.claude/                @SamsSide
+/.github/                @SamsSide
+/scripts/                @SamsSide
+/check.sh                @SamsSide

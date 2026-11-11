@@ -1,0 +1,29 @@
+name: Agent request (lane → lane)
+description: One lane needs something from another lane — an endpoint, a function, data, a fix, an answer.
+title: "[x→y] "
+labels: ["agent-request"]
+body:
+  - type: markdown
+    attributes:
+      value: "Assign this to the person who owns the lane you need. Agents normally open these with `scripts/durhack/ask.sh request`."
+  - type: input
+    id: need
+    attributes: { label: "What I need (one line)", placeholder: "POST /api/scan returning {tags: string[], score: number}" }
+    validations: { required: true }
+  - type: textarea
+    id: why
+    attributes: { label: "Why / what it unblocks", description: "Which roadmap row, which checkpoint." }
+    validations: { required: true }
+  - type: textarea
+    id: shape
+    attributes: { label: "Exact shape", description: "Signature, route, JSON, file format. Quote docs/contracts.md if it's there.", render: markdown }
+  - type: textarea
+    id: meanwhile
+    attributes: { label: "What I'm doing meanwhile", placeholder: "Coding against a mock of the shape above." }
+  - type: dropdown
+    id: urgency
+    attributes: { label: "Urgency", options: ["Blocking me now", "Needed by the next checkpoint", "Nice to have"] }
+    validations: { required: true }
+  - type: textarea
+    id: done
+    attributes: { label: "Done when", description: "How the asker will know it's delivered (a commit on main, a merged PR, an answer)." }
