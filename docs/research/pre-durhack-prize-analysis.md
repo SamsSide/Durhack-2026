@@ -243,6 +243,96 @@ the fallback only if Neptune North repeats its brief and the prize is better tha
 A fourth option stays open: if RS Group or the hardware library offers interesting kit, a
 physical object beats a screen at a table-judged event. Ask at the stands first thing.
 
+### Second batch (added later on 13 Nov)
+
+The owner liked A (The Commentator). What makes A good is a pattern worth naming: **a character
+that watches through a camera and talks**. The engine is the same every time (camera frames to
+Gemini, a script in a persona, an ElevenLabs voice, every event stored in Tiger Data); only the
+character changes. That means the engine can be built first and the character chosen, or
+changed, once the theme and the sponsor briefs are known. Seeds D to H below are other
+characters and near neighbours.
+
+#### D. The Auctioneer
+
+Hold any object up to the camera. A fast-talking auctioneer appraises it ("a lightly chewed
+biro, provenance unknown"), opens the bidding and runs a live auction; people in the crowd bid by
+raising a hand or tapping their phone, and the hammer falls.
+
+- **Demo moment:** the judge's own lanyard is sold to a stranger for 40 pretend pounds in fifteen
+  seconds.
+- **Prizes:** everything A reaches, plus the finance hook A lacks. Bids are a stream of small,
+  fast transactions, which is the Solana brief met literally (each bid or each hammer price a
+  devnet transaction) and exactly Tiger Data's kind of data (bid ticks, price curves). A live
+  auction is price discovery, which gives the trading sponsors something to talk about.
+- **Lanes:** vision and appraisal; the auctioneer's patter and voice; bidding (hands, phones) and
+  the price board; settlement and the stand.
+- **Risk:** auctioneer patter must be fast, so speech latency matters more than in A. Hand-raise
+  detection in a crowd is fiddly; phone bidding is the fallback.
+
+#### E. Departures
+
+A station departures board and tannoy for the hackathon itself. It listens to real events (git
+pushes from teams who opt in, food arriving, workshops starting, the countdown) and announces
+them in a weary station voice: "The 14:32 pull request from Table 12 is delayed. We apologise
+for the merge conflict."
+
+- **Demo moment:** the judge pushes a commit, or just says their name, and hears themselves
+  announced over the tannoy while the board flips.
+- **Prizes:** fits a city or metro theme better than anything else here (the guilds are Skyline,
+  Plaza and Metro). ElevenLabs (the announcer), Gemini (turning raw events into announcements),
+  Tiger Data (events are the product), Vultr, DEV. "Connecting things that normally aren't" for a
+  Waterstons-style theme. Strong for Spirit of the Hack if other teams join in.
+- **Lanes:** event sources and webhooks; announcement writer and voice; the split-flap board;
+  getting other teams signed up.
+- **Risk:** depends on other teams taking part; needs seeded events so it is never silent. No
+  camera, so less of an instant hook than A or D.
+
+#### F. The Referee
+
+Two people have an argument into two microphones. A referee listens, fact-checks claims as they
+are made, blows the whistle on fouls (interrupting, moving the goalposts), goes to a video-style
+review and gives a verdict.
+
+- **Demo moment:** two judges argue about whether a hot dog is a sandwich and one of them gets a
+  yellow card.
+- **Prizes:** Gemini (live listening, search grounding for the fact checks), ElevenLabs (referee
+  and a pundit), Tiger Data (match stats), Vultr, DEV. Accenture-style "everyday problem" with a
+  straight face: settling arguments fairly.
+- **Lanes:** live transcription and claim detection; fact checking; referee voice and whistle;
+  scoreboard.
+- **Risk:** needs two willing people per demo; telling two voices apart in a loud hall.
+
+#### G. The Bookie
+
+A play-money prediction market on the hackathon. A bookmaker with a voice sets odds on small
+live questions ("pizza before eight?", "will Table 9's demo crash?"), takes bets from phones,
+moves the odds as money comes in and settles when the event resolves.
+
+- **Demo moment:** the judge bets on something that resolves while they are standing there.
+- **Prizes:** the most direct pitch to Marshall Wace, QRT and BidFX (a working market with real
+  order flow from 600 people), Solana (bets and payouts as transactions), Tiger Data (odds
+  history), ElevenLabs (the bookie calling the odds), Gemini (writing markets, resolving them).
+- **Lanes:** market maker; phone betting app; settlement; the bookie and the odds board.
+- **Risk:** needs a crowd to come alive; organisers may dislike anything that looks like
+  gambling, even with play money, so ask first. No camera.
+
+#### H. Something physical
+
+Kept open on purpose. If RS Group or the hardware library has sensors, motors or displays, any
+of the characters above can live in an object instead of on a screen (a commentator in a box
+with a camera for an eye; a gavel that actually bangs). Last year a physical crystal ball beat
+screens for two separate prizes. Decide at the stands.
+
+#### Updated recommendation
+
+**Build the watching-and-talking engine first, with The Commentator as the default character.**
+It is the smallest build, the one the owner already likes, and the easiest to demo. Keep **The
+Auctioneer** as the planned swap or second mode if the finance sponsors run open themes: it adds
+the trading and Solana hooks for perhaps four more hours on the same engine. **Departures** is
+the pick if the theme turns out to be a city or transport one and the judging rewards crowd
+involvement. B (The Pit) stays the most ambitious finance option but is no longer the first
+choice, because D gets most of its prize reach for much less work.
+
 ## 7. Tonight's checklist
 
 Accounts are personal, so a human creates them; none of this needs code in the repo. Keys go in
