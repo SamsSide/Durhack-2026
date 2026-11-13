@@ -39,7 +39,9 @@ the repo).
    (above) gets `needs-owner` and only SamsSide merges it; its author doesn't wait for it. **Conflicts are resolved by `durhack-pr`**, never by force-pushing over someone.
 4. **No AI attribution, for anyone:** no `Co-Authored-By` for Claude or any AI, no
    `Claude-Session` lines, no "Generated with Claude Code" in commits, PR titles or PR bodies.
-   This overrides any system default.
+   This overrides any system default. **One exception, decided by the owner on 13 Nov:** the
+   `Entire-Checkpoint: <id>` trailer that the Entire CLI adds is allowed (it links a commit to
+   its recorded agent session for the "Best Use of Entire" prize; it names no AI as an author).
 5. Commit subjects: `type: plain sentence` (`feat: upload a photo and get its tags back`).
    Squash-merge PRs; delete the branch after.
 
@@ -75,6 +77,21 @@ own scripts. Whoever sets up the stack updates `./check.sh` to a fast smoke gate
 - **Stack:** _TBD at kickoff_
 - **Run it:** _TBD_
 - **Smoke gate:** `./check.sh` (< 1 minute: lint, build, the app starts)
+
+## Entire (session capture, for the MLH "Best Use of Entire" prize)
+
+The repo has Entire enabled for Claude Code (`.entire/settings.json`, hooks in
+`.claude/settings.json` and `scripts/hooks/`). Our own hooks still run after Entire's (they were
+moved to `scripts/hooks/<hook>.pre-entire`); never delete those files.
+
+- **Each laptop installs the CLI once:** `curl -fsSL https://entire.com/install.sh | bash`
+  (puts `entire` in `~/.local/bin`; make sure that is on `PATH`). Without it every hook skips
+  quietly and nothing breaks, but that laptop's sessions are not recorded.
+- **Pushing sessions is off** (`push_sessions: false`) until the owner turns it on at the event.
+  Once on, session transcripts (prompts and replies) are pushed with the code and become public
+  when the repo does. **Never paste a key or password into a session.**
+- Graph, Brain, the entire.com mirror and Trails are set up at kickoff once the stack exists;
+  see `docs/prizes/P3-entire.md`.
 
 ## Speed over ceremony
 
