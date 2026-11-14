@@ -4,7 +4,7 @@
 // inside the tick loop; between calls, and whenever the ruler is silenced or fails, the rules run on
 // its last focus or on autopilotPolicy from its temperament.
 import {
-  applyEvent, applyTickBatch, autopilotPolicy, cloneWorld, hashString, mulberry32, nationTurn, newUnrestMemory, noteUnrestEvents, noteWarEvents, relationOf,
+  applyEvent, applyTickBatch, autopilotPolicy, cloneWorld, hashString, mulberry32, nationTurn, newAgeMemory, newUnrestMemory, noteUnrestEvents, noteWarEvents, relationOf,
   type ChronicleKind, type NationPolicy, type WarLedger, type World, type WorldEvent,
 } from '@terra/shared';
 import type { MessageBus, BusEndpoint } from '../engine/bus';
@@ -48,6 +48,8 @@ export class NationAgent implements BusEndpoint {
   readonly wars: WarLedger = new Map();
   /** Provinces it took and battles it fought, per region, for the unrest of its regions (row A18). */
   readonly unrestMemo = newUnrestMemory();
+  /** Its progress towards the next age and the foreign merchant ships it has counted at its ports (row A23). */
+  readonly ageMemo = newAgeMemory();
 
   constructor(id: number, world: World, private bus: MessageBus, private opts: NationAgentOptions) {
     this.id = id;
@@ -80,7 +82,7 @@ export class NationAgent implements BusEndpoint {
     const events: WorldEvent[] = [
       ...this.rulerEvents(tick, year),
       ...this.noticeSilence(tick, year),
-      ...nationTurn(w, this.id, policy, tick, rng, { regionNames: this.opts.regionNames, wars: this.wars, unrest: this.unrestMemo }),
+      ...nationTurn(w, this.id, policy, tick, rng, { regionNames: this.opts.regionNames, wars: this.wars, unrest: this.unrestMemo, ages: this.ageMemo }),
     ];
     for (const e of events) e.lamport = ++this.lamport;
     const onWire = this.bus.publish(this.id, events);

@@ -16,6 +16,7 @@ import type {
 } from '../types';
 import { hashString, mulberry32, type Rng } from '../rng';
 import { countryTiles, relationOf } from '../world';
+import { AGE_EDGE, STRENGTH_CAP, ageIndex, ageStrength } from './ages';
 
 /** No nation declares a war of its own before this tick. */
 export const WAR_EARLIEST = 70;
@@ -30,10 +31,13 @@ const TERRAIN_DEF: Record<Terrain, number> = { ocean: 1, coast: 1, plains: 1, de
 const GARRISON: Partial<Record<StructureKind, number>> = { camp: 1, village: 3, town: 6, city: 10, capital: 14, fort: 12, port: 2 };
 const RAZEABLE: StructureKind[] = ['farm', 'port', 'fort', 'temple', 'factory'];
 
+/** Units that fight: armies and fleets (settlers and merchant ships do not). */
+export const isCombatant = (u: Unit): boolean => u.kind === 'army' || u.kind === 'fleet';
+
 /** Sum of a nation's army and fleet strength (the "strength" map mode adds the same numbers). */
 export function militaryStrength(world: World, countryId: number): number {
   let s = 0;
-  for (const u of world.units) if (u.owner === countryId && u.kind !== 'settler') s += u.strength;
+  for (const u of world.units) if (u.owner === countryId && isCombatant(u)) s += u.strength;
   return s;
 }
 
@@ -42,7 +46,12 @@ export function armyStrengthFor(c: Country, forts: number): number {
   return Math.round(Math.max(5, Math.min(60, 4 + c.population / 4000 + forts * 1.5 + Math.min(c.treasury, 300) / 30)));
 }
 
-/** The local defence of a province with no army in it: militia from its settlement or fort. */
+/** Strength of a unit raised now in a nation's age (row A23), kept under STRENGTH_CAP. */
+export function ageScaled(c: Country, base: number): number {
+  return Math.min(STRENGTH_CAP, Math.round(base * ageStrength(c)));
+}
+
+/** The local defence of a province with no army in it: militia from its settlement or fort, armed for its age. */
 export function garrisonAt(world: World, tile: number, owner: number): { strength: number; fort: boolean } {
   if (owner < 0) return { strength: 0, fort: false };
   let strength = 3 + Math.min(15, Math.floor((world.countries[owner]?.population ?? 0) / 20000));
@@ -52,40 +61,48 @@ export function garrisonAt(world: World, tile: number, owner: number): { strengt
     strength += GARRISON[s.kind] ?? 0;
     if (s.kind === 'fort' || s.kind === 'capital') fort = true;
   }
-  return { strength, fort };
+  return { strength: Math.round(strength * ageStrength(world.countries[owner])), fort };
 }
 
 /** What an attacker expects to face on a tile (its units plus garrison, with terrain and fort). */
 export function defenceEstimate(world: World, tile: number, defender: number): number {
   let d = 0;
-  for (const u of world.units) if (u.tile === tile && u.owner === defender && u.kind !== 'settler') d += u.strength;
+  for (const u of world.units) if (u.tile === tile && u.owner === defender && isCombatant(u)) d += u.strength;
   const g = world.owner[tile] === defender ? garrisonAt(world, tile, defender) : { strength: 0, fort: false };
   return (d + g.strength) * TERRAIN_DEF[world.tiles[tile]!.terrain] * (g.fort ? 1.5 : 1);
 }
 
 // ---- the battle -----------------------------------------------------------------------------
 
-export interface BattleInput { attack: number; defend: number; terrain: Terrain; fort: boolean; seed: number }
+export interface BattleInput {
+  attack: number; defend: number; terrain: Terrain; fort: boolean; seed: number;
+  /** The attacker's age minus the defender's (row A23): each step ahead is an AGE_EDGE multiplier. */
+  ageGap?: number;
+}
 export interface BattleResult { attackerWins: boolean; lossA: number; lossD: number }
 
 /**
  * The one pure battle function. Same inputs, same result, on every replica. The defender gets
  * terrain (hills, mountains, forest) and fort bonuses; the odds follow a square-ish law, so a much
  * bigger army nearly always wins but an even fight is a coin toss. Losses are in strength points.
+ * The more advanced side (row A23) fights as if a little bigger and loses a little less.
  */
 export function resolveBattle(b: BattleInput): BattleResult {
   const rnd = mulberry32(b.seed);
   const roll = rnd();
   const u = rnd();
-  const A = Math.max(0.5, b.attack);
-  const D = Math.max(0.5, b.defend * TERRAIN_DEF[b.terrain] * (b.fort ? 1.5 : 1));
+  const gap = b.ageGap ?? 0;
+  const edgeA = AGE_EDGE ** Math.max(0, gap);
+  const edgeD = AGE_EDGE ** Math.max(0, -gap);
+  const A = Math.max(0.5, b.attack * edgeA);
+  const D = Math.max(0.5, b.defend * edgeD * TERRAIN_DEF[b.terrain] * (b.fort ? 1.5 : 1));
   const p = A ** 1.6 / (A ** 1.6 + D ** 1.6);
   if (roll < p) {
-    const lossA = Math.max(0, Math.min(Math.round(b.defend * (0.25 + 0.35 * u)), Math.floor(b.attack) - 3));
+    const lossA = Math.max(0, Math.min(Math.round((b.defend * (0.25 + 0.35 * u)) / edgeA), Math.floor(b.attack) - 3));
     return { attackerWins: true, lossA, lossD: Math.round(b.defend) };
   }
   const lossA = Math.max(1, Math.min(Math.round(b.attack * (0.35 + 0.35 * u)), Math.ceil(b.attack)));
-  const lossD = Math.max(0, Math.min(Math.round(b.attack * (0.12 + 0.2 * u)), Math.round(b.defend)));
+  const lossD = Math.max(0, Math.min(Math.round((b.attack * (0.12 + 0.2 * u)) / edgeD), Math.round(b.defend)));
   return { attackerWins: false, lossA, lossD };
 }
 
@@ -116,27 +133,49 @@ export function settleMove(world: World, e: Extract<WorldEvent, { type: 'unit_mo
   const to = e.to;
   const tile = world.tiles[to];
   if (!tile) return [];
-  const tileOwner = world.owner[to] ?? -1;
-  const foes = world.units.filter((v) => v.tile === to && v.owner !== a && v.kind !== 'settler' && atWar(world, a, v.owner));
-  const defender = atWar(world, a, tileOwner) ? tileOwner : foes.length ? foes[0]!.owner : -1;
-  if (defender < 0) {
-    if (u.kind === 'fleet' && tile.terrain !== 'ocean') return [];
-    if (u.kind === 'army' && tileOwner >= 0 && tileOwner !== a && relationOf(world, a, tileOwner).stance !== 'alliance') return [];
-    return null;
-  }
-
   const out: WorldEvent[] = [];
   let k = 0;
   const mk = (body: Record<string, unknown> & { type: WorldEvent['type'] }): void => {
     out.push({ id: `${e.id}-w${k++}`, tick: e.tick, actor: a, lamport: e.lamport, ...body } as WorldEvent);
   };
-  const defUnits = world.units.filter((v) => v.tile === to && v.owner === defender && v.kind !== 'settler');
+  // Merchant ships (row A23) never fight: one that sails onto an enemy fleet is sunk; a fleet that sails
+  // onto enemy merchant ships at sea sinks them.
+  if (u.kind === 'trader') {
+    const sinker = world.units.find((v) => v.tile === to && v.kind === 'fleet' && atWar(world, a, v.owner));
+    if (!sinker) return null;
+    mk({ type: 'unit_removed', unitId: u.id, reason: 'battle' });
+    if ((hashString(`sink:${u.id}`) % 100) < 40) {
+      const S = world.countries[sinker.owner]!;
+      mk({ type: 'chronicle', entry: { id: `c-${e.id}-s`, tick: e.tick, year: world.year, kind: 'battle', countries: [sinker.owner, a],
+        text: `Warships of ${S.name} sink a merchant ship of ${world.countries[a]!.name} on the open sea.` } });
+    }
+    return out;
+  }
+  const sinkTraders = (): void => {
+    if (u.kind !== 'fleet' || tile.terrain !== 'ocean') return;
+    for (const v of world.units) {
+      if (v.tile === to && v.kind === 'trader' && atWar(world, a, v.owner)) mk({ type: 'unit_removed', unitId: v.id, reason: 'battle' });
+    }
+  };
+  const tileOwner = world.owner[to] ?? -1;
+  const foes = world.units.filter((v) => v.tile === to && v.owner !== a && isCombatant(v) && atWar(world, a, v.owner));
+  const defender = atWar(world, a, tileOwner) ? tileOwner : foes.length ? foes[0]!.owner : -1;
+  if (defender < 0) {
+    if (u.kind === 'fleet' && tile.terrain !== 'ocean') return [];
+    if (u.kind === 'army' && tileOwner >= 0 && tileOwner !== a && relationOf(world, a, tileOwner).stance !== 'alliance') return [];
+    sinkTraders();
+    if (!out.length) return null;
+    return [e, ...out];
+  }
+
+  const defUnits = world.units.filter((v) => v.tile === to && v.owner === defender && isCombatant(v));
   const holds = tileOwner === defender;
   const g = holds ? garrisonAt(world, to, defender) : { strength: 0, fort: false };
   const defendRaw = defUnits.reduce((s, v) => s + v.strength, 0) + g.strength;
   const raid = u.kind === 'fleet' && tile.terrain !== 'ocean';
   const seed = hashString(`battle:${to}:${e.tick}:${u.id}:${defUnits.map((v) => v.id).join(',')}`);
-  const r = resolveBattle({ attack: u.strength * (raid ? 0.7 : 1), defend: defendRaw, terrain: tile.terrain, fort: g.fort, seed });
+  const ageGap = ageIndex(world.countries[a]?.techAge) - ageIndex(world.countries[defender]?.techAge);
+  const r = resolveBattle({ attack: u.strength * (raid ? 0.7 : 1), defend: defendRaw, terrain: tile.terrain, fort: g.fort, seed, ageGap });
   const winner = r.attackerWins ? a : defender;
   mk({ type: 'battle', tile: to, attacker: a, defender, attackerUnit: u.id, winner, losses: { attacker: r.lossA, defender: r.lossD } });
 
@@ -163,7 +202,14 @@ export function settleMove(world: World, e: Extract<WorldEvent, { type: 'unit_mo
     for (const v of world.units) {
       if (v.tile === to && v.owner === defender) { mk({ type: 'unit_removed', unitId: v.id, reason: 'battle' }); removed.add(v.id); }
     }
-    if (!raid) out.push(e);
+    if (!raid) {
+      out.push(e);
+      for (const v of world.units) {
+        if (v.tile === to && v.kind === 'trader' && !removed.has(v.id) && u.kind === 'fleet' && atWar(world, a, v.owner)) {
+          mk({ type: 'unit_removed', unitId: v.id, reason: 'battle' }); removed.add(v.id);
+        }
+      }
+    }
     if (holds) {
       mk({ type: 'tile_claimed', tile: to, owner: a, from: defender, cause: 'conquest' });
       const capitalTaken = Dc.capitalTile === to;
@@ -482,12 +528,12 @@ export function marchTurn(p: MarchInput): void {
   let armies = units.filter((u) => u.kind === 'army');
   const fleets = units.filter((u) => u.kind === 'fleet');
   // Remnants rejoin: armies sharing a province, one of them worn down, combine into one host (at most
-  // one merge a turn, strength capped at 100). The new host waits a turn before it moves.
+  // one merge a turn, strength capped at STRENGTH_CAP). The new host waits a turn before it moves.
   const byTile = new Map<number, Unit[]>();
   for (const u of armies) if (u.tile >= 0) { const l = byTile.get(u.tile); if (l) l.push(u); else byTile.set(u.tile, [u]); }
   for (const [tile, list] of [...byTile].sort((x, y) => x[0] - y[0])) {
     if (list.length < 2 || Math.min(...list.map((u) => u.strength)) >= 15) continue;
-    const strength = Math.min(100, list.reduce((sum, u) => sum + u.strength, 0));
+    const strength = Math.min(STRENGTH_CAP, list.reduce((sum, u) => sum + u.strength, 0));
     for (const u of list) { emit({ type: 'unit_removed', unitId: u.id, reason: 'disband' }); u.tile = -1; }
     emit({ type: 'unit_spawned', unit: { id: p.uid('u'), owner: me, kind: 'army', tile, strength } });
     armies = armies.filter((u) => u.tile >= 0);
@@ -497,7 +543,8 @@ export function marchTurn(p: MarchInput): void {
   const hostile = (t: number): number => {
     const o = own[t]!;
     if (enemies.has(o)) return o;
-    for (const v of view.units) if (v.tile === t && enemies.has(v.owner) && v.kind !== 'settler') return v.owner;
+    // Enemy armies and fleets anywhere; enemy merchant ships only at sea (fleets hunt them).
+    for (const v of view.units) if (v.tile === t && enemies.has(v.owner) && (isCombatant(v) || (v.kind === 'trader' && terrain(t) === 'ocean'))) return v.owner;
     return -1;
   };
 
@@ -572,23 +619,25 @@ export function marchTurn(p: MarchInput): void {
         u.tile = to; moves++;
       }
     }
-    // Fleets sail towards the sea lanes next to enemy coasts or fleets.
+    // Fleets sail towards the sea lanes next to enemy coasts or fleets, across whole oceans if the
+    // enemy is overseas (row A23), with their own allowance of moves.
     const seaGoals: number[] = [];
     for (let t = 0; t < own.length; t++) {
       if (terrain(t) !== 'ocean') continue;
       if (view.tiles[t]!.neighbors.some((j) => hostile(j) >= 0)) seaGoals.push(t);
     }
     if (seaGoals.length && fleets.length) {
-      const dist = bfs(seaGoals, (t) => terrain(t) === 'ocean', 25);
+      const dist = bfs(seaGoals, (t) => terrain(t) === 'ocean', 120);
+      let sails = 0;
       for (const u of fleets) {
-        if (u.tile < 0 || moves >= 4) continue;
+        if (u.tile < 0 || sails >= 3) continue;
         const d = dist.get(u.tile);
         if (d === undefined || d === 0 || rng() < 0.3) continue;
         const next = view.tiles[u.tile]!.neighbors.filter((j) => dist.get(j) === d - 1);
         if (!next.length) continue;
         const to = next[Math.floor(rng() * next.length)]!;
         emit({ type: 'unit_moved', unitId: u.id, from: u.tile, to, arriveTick: tick + 1 });
-        u.tile = to; moves++;
+        u.tile = to; sails++;
       }
     }
     return;

@@ -23,6 +23,9 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 in Blender (`assets/blender/`, `web/public/models/`, preview sheets) also runs on Fable 5.2
 (`model: "fable"`), so it looks hard at the result and iterates on the design.
 
+**Agent cap (owner, 14 Nov).** This lane's laptop may run up to 7 agents at once (the team-wide
+default of 4 still applies to the other lanes).
+
 ## Rows
 
 | ID | Row | Needs (from other lanes) | Gives (to other lanes) | Checkpoint | Status | Notes |

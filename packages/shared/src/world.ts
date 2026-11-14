@@ -50,7 +50,7 @@ export function applyEvent(world: World, event: WorldEvent): void {
       let left = event.losses.defender;
       for (const u of world.units) {
         if (left <= 0) break;
-        if (u.tile !== event.tile || u.owner !== event.defender || u.kind === 'settler') continue;
+        if (u.tile !== event.tile || u.owner !== event.defender || u.kind === 'settler' || u.kind === 'trader') continue;
         const take = Math.min(left, u.strength);
         u.strength = Math.max(1, u.strength - take);
         left -= take;

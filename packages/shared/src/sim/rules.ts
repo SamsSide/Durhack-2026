@@ -8,9 +8,11 @@ import type {
 import { hashString, type Rng } from '../rng';
 import { countryTiles, regionOwner, relationOf } from '../world';
 import {
-  WAR_EARLIEST, armyStrengthFor, diplomacyTurn, enemiesOf, inTruce, marchTurn, type WarLedger,
+  WAR_EARLIEST, ageScaled, armyStrengthFor, diplomacyTurn, enemiesOf, inTruce, isCombatant, marchTurn, type WarLedger,
 } from './war';
 import { unrestTurn, type UnrestMemory } from './regions';
+import { ageStrength, ageTurn, type AgeMemory } from './ages';
+import { tradeTurn } from './trade';
 
 export type Focus = 'expand' | 'develop' | 'fortify' | 'attack';
 export interface NationPolicy { focus: Focus; targets?: number[] }
@@ -21,6 +23,8 @@ export interface TurnContext {
   wars?: WarLedger;
   /** What it remembers for the unrest of its regions (provinces taken, battles fought; row A18). */
   unrest?: UnrestMemory;
+  /** Its progress towards the next age and the foreign merchant ships it has seen dock (row A23). */
+  ages?: AgeMemory;
 }
 
 // ---- tables ---------------------------------------------------------------------------------
@@ -32,8 +36,10 @@ const STRUCT_POP: Record<StructureKind, number> = { capital: 9000, camp: 600, vi
 const TRADE_KINDS: StructureKind[] = ['port', 'town', 'city', 'factory'];
 
 export const COST = { camp: 4, village: 28, town: 80, city: 220, farm: 12, port: 20, fort: 24, temple: 28, factory: 70, army: 22, fleet: 30 } as const;
-/** Upkeep a turn: bigger armies cost more. */
-const upkeep = (u: Unit): number => (u.kind === 'settler' ? 0.1 : (u.kind === 'fleet' ? 0.15 : 0.1) + u.strength * 0.015);
+/** Upkeep a turn: bigger armies cost more (measured in the strength of its age, so better weapons cost no more to keep).
+ *  Merchant ships pay their own way. */
+const upkeep = (u: Unit, ageMul: number): number => (u.kind === 'trader' ? 0 : u.kind === 'settler' ? 0.1
+  : (u.kind === 'fleet' ? 0.15 : 0.1) + (u.strength / ageMul) * 0.015);
 const claimCost = (owned: number): number => 14 + owned * 2.2;
 
 const isSettlement = (k: StructureKind): boolean => k === 'camp' || k === 'village' || k === 'town' || k === 'city' || k === 'capital';
@@ -48,7 +54,7 @@ export function nationIncome(world: World, countryId: number): number {
     if (s.owner !== countryId) continue;
     inc += STRUCT_INCOME[s.kind] * (TRADE_KINDS.includes(s.kind) ? tradeMul : 1);
   }
-  for (const u of world.units) if (u.owner === countryId) inc -= upkeep(u);
+  for (const u of world.units) if (u.owner === countryId) inc -= upkeep(u, ageStrength(c));
   return inc;
 }
 
@@ -357,8 +363,9 @@ export function nationTurn(
   const trySpawn = (kind: 'army' | 'fleet'): boolean => {
     const forts = countKind('fort');
     if (kind === 'army') {
-      const strength = armyStrengthFor({ ...me, treasury }, forts);
-      const cost = 10 + strength * 0.6;
+      const base = armyStrengthFor({ ...me, treasury }, forts);
+      const strength = ageScaled(me, base);
+      const cost = 10 + base * 0.6 * (1 + 0.15 * (ageStrength(me) - 1));
       if (treasury < cost || myUnits.filter((u) => u.kind === 'army').length >= wantArmies) return false;
       // Raised at a fort facing the enemy if there is one, else at the capital.
       const seats = [capital, ...myStructs.filter((s) => s.kind === 'fort').map((s) => s.tile)].filter((i) => own[i] === countryId);
@@ -375,7 +382,7 @@ export function nationTurn(
     const sea = view.tiles[p.tile]!.neighbors.find((j) => view.tiles[j]!.terrain === 'ocean');
     if (sea === undefined) return false;
     spend(COST.fleet);
-    const strength = Math.max(5, Math.round(armyStrengthFor({ ...me, treasury }, forts) * 0.6));
+    const strength = ageScaled(me, Math.max(5, Math.round(armyStrengthFor({ ...me, treasury }, forts) * 0.6)));
     const u: Unit = { id: uid('u'), owner: countryId, kind: 'fleet', tile: sea, strength };
     emit({ type: 'unit_spawned', unit: u }); myUnits.push(u); return true;
   };
@@ -405,10 +412,13 @@ export function nationTurn(
 
   // --- 4. diplomacy and war (row A6, sim/war.ts): alliances, peace, declarations, trade; then the march
   diplomacyTurn({ view, me: countryId, tick, rng, focus: policy.focus, targets: policy.targets ?? [], ledger: ctx.wars, own, emit });
-  marchTurn({ view, me: countryId, tick, rng, focus: policy.focus, targets: policy.targets ?? [], own, units: myUnits.filter((u) => u.kind !== 'settler'), emit, uid });
+  marchTurn({ view, me: countryId, tick, rng, focus: policy.focus, targets: policy.targets ?? [], own, units: myUnits.filter(isCombatant), emit, uid });
   // Spent armies go home (one a turn), which frees a place for a fresh one.
-  const spent = myUnits.find((u) => u.kind !== 'settler' && u.tile >= 0 && u.strength <= (enemies.length ? 5 : 3));
+  const spent = myUnits.find((u) => isCombatant(u) && u.tile >= 0 && u.strength <= (enemies.length ? 5 : 3));
   if (spent) { emit({ type: 'unit_removed', unitId: spent.id, reason: 'disband' }); spent.tile = -1; }
+
+  // --- 4a. sea trade (row A23, sim/trade.ts): merchant ships sail, dock and bring money to both sides
+  treasury += tradeTurn({ view, me: countryId, tick, own, structs: myStructs, units: myUnits, emit, uid, mem: ctx.ages });
 
   // --- 4b. the unrest of its regions, as it sees it (row A18, sim/regions.ts)
   unrestTurn(view, countryId, tick, emit, ctx.unrest, ctx.wars);
@@ -418,7 +428,7 @@ export function nationTurn(
   for (let i = 0; i < own.length; i++) if (own[i] === countryId) income += TILE_INCOME[view.tiles[i]!.terrain];
   const tradeMul = 0.8 + 0.6 * t.trade;
   for (const s of myStructs) income += STRUCT_INCOME[s.kind] * (TRADE_KINDS.includes(s.kind) ? tradeMul : 1);
-  for (const u of myUnits) if (u.tile >= 0) income -= upkeep(u);
+  for (const u of myUnits) if (u.tile >= 0) income -= upkeep(u, ageStrength(me));
   treasury = Math.max(0, treasury + income * 0.4 - treasury * 0.01);
   let cap = 0;
   for (let i = 0; i < own.length; i++) if (own[i] === countryId) cap += TILE_POP[view.tiles[i]!.terrain];
@@ -428,6 +438,13 @@ export function nationTurn(
     if (pop < m && newPop >= m) notable = { kind: 'growth', text: `The people of ${me.name} number ${m.toLocaleString('en-GB')} and more.` };
   }
   emit({ type: 'country_updated', countryId, patch: { population: newPop, treasury: Math.round(treasury * 10) / 10 } });
+
+  // --- 5b. its age (row A23, sim/ages.ts): progress from its own state; one step at most a year
+  const next = ageTurn(view, countryId, myStructs.filter((s) => own[s.tile] === countryId), treasury, ctx.ages);
+  if (next) {
+    emit({ type: 'country_updated', countryId, patch: { techAge: next.age } });
+    emit({ type: 'chronicle', entry: { id: `c-${countryId}-${tick}-age`, tick, year: view.year, kind: next.kind, countries: [countryId], text: next.text } });
+  }
 
   // --- 6. the chronicle: milestones first, now and then a proclamation
   if (!notable && rng() < 0.014) notable = { kind: 'proclamation', text: fill(tone.proclaim[Math.floor(rng() * tone.proclaim.length)]!, me, regionLabel()) };
