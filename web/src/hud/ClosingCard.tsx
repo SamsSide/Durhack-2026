@@ -31,8 +31,6 @@ export function ClosingCard() {
   const budget = useWorld((s) => s.budget);
   const [open, setOpen] = useState(false);
   const wasPaused = useRef(false);
-  const firstYear = useRef<{ id: string | number; year: number } | null>(null);
-  if (world && firstYear.current?.id !== world.id) firstYear.current = { id: world.id, year: world.year };
 
   const show = useCallback(() => {
     const w = useWorld.getState().world;
@@ -63,7 +61,7 @@ export function ClosingCard() {
   const count = useCountUp(total, open);
   if (!open || !world) return null;
 
-  const a = firstYear.current?.year ?? world.year;
+  const a = world.year - world.tick;   // one tick is one year from the founding, even after a page reload
   const b = world.year;
   const wars = world.chronicle.filter((c) => c.kind === 'war' || c.kind === 'silence').length;
   const facts: [number, string][] = [
