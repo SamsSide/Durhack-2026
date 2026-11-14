@@ -18,6 +18,7 @@ interface Vis {
   mourn: 'off' | 'on' | 'lowering';
   pulse: number; seal: number; coup: number; // timestamps that retrigger the CSS animations
   sealRole: CouncilRole; sealCause: 'succession' | 'restored'; coupRole: CouncilRole;
+  mournCause: string; // what the mourning tooltip says: how the last member left
 }
 type Action =
   | { k: 'event'; e: CouncilChanged | CouncilStatus }
@@ -25,7 +26,7 @@ type Action =
   | { k: 'off'; id: number; stamp: number };
 type Table = Record<number, Vis>;
 
-const blank = (): Vis => ({ ruler: 'active', general: 'active', mourn: 'off', pulse: 0, seal: 0, coup: 0, sealRole: 'ruler', sealCause: 'succession', coupRole: 'ruler' });
+const blank = (): Vis => ({ ruler: 'active', general: 'active', mourn: 'off', pulse: 0, seal: 0, coup: 0, sealRole: 'ruler', sealCause: 'succession', coupRole: 'ruler', mournCause: 'In mourning' });
 const troubled = (v: Vis) => v.ruler === 'vacant' || v.ruler === 'covering' || v.general === 'vacant' || v.general === 'covering';
 
 function reduce(t: Table, a: Action): Table {
@@ -49,8 +50,8 @@ function reduce(t: Table, a: Action): Table {
     if (troubled(v)) v.mourn = 'on';
   } else {
     switch (e.cause) {
-      case 'death': case 'assassination':
-        v[e.role] = 'vacant'; v.mourn = 'on'; v.pulse = now; break;
+      case 'death': case 'assassination': case 'old_age':
+        v[e.role] = 'vacant'; v.mourn = 'on'; v.pulse = now; v.mournCause = DEATH_TEXT[e.cause]; break;
       case 'disconnect': v[e.role] = 'cut'; break;
       case 'succession': case 'restored':
         v[e.role] = 'active'; v.seal = now; v.sealRole = e.role; v.sealCause = e.cause;
@@ -72,6 +73,10 @@ export interface Tip { cap: string; text: string; sub: string; x: number; y: num
 
 const ROLE: Record<CouncilRole, string> = { ruler: 'Ruler', general: 'General' };
 
+const DEATH_TEXT: Record<'death' | 'assassination' | 'old_age', string> = {
+  death: 'Died in office', assassination: 'Assassinated', old_age: 'Died of old age',
+};
+
 function memberName(id: number, role: CouncilRole): string | null {
   return useWorld.getState().world?.countries[id]?.council?.[role]?.name ?? null;
 }
@@ -81,7 +86,9 @@ function pipText(id: number, role: CouncilRole, state: CouncilState): string {
   if (state === 'vacant' || !name) return role === 'ruler' ? 'The throne is empty' : 'No one commands the armies';
   if (state === 'covering') return `${name}, standing in`;
   if (state === 'cut') return `${name}, out of contact`;
-  return name;
+  const born = useWorld.getState().world?.countries[id]?.council?.[role]?.born;
+  const year = useWorld.getState().world?.year;
+  return born !== undefined && year !== undefined ? `${name}, ${Math.max(0, year - born)}` : name;
 }
 
 function Marker({ id, vis, pips, onTip }: { id: number; vis: Vis; pips: boolean; onTip: (t: Tip | null) => void }) {
@@ -114,7 +121,7 @@ function Marker({ id, vis, pips, onTip }: { id: number; vis: Vis; pips: boolean;
         {fresh(vis.pulse) && <div key={`p${vis.pulse}`} className="cn-ring" />}
         {fresh(vis.coup) && <div key={`c${vis.coup}`}><div className="cn-flash" /><img className="cn-coup cn-hit" src={crackedCrownIcon()} alt="Coup" {...hover('Coup', () => (coupName ? `${coupName} seizes power` : 'Coup'))} /></div>}
         {fresh(vis.seal) && <div key={`s${vis.seal}`}><img className="cn-seal cn-hit" src={sealIcon()} alt={sealText} {...hover('Succession', () => sealText)} /><div className="cn-burst" /></div>}
-        {vis.mourn !== 'off' && <img className={`cn-banner cn-hit${vis.mourn === 'lowering' ? ' lower' : ''}`} src={bannerIcon()} alt="In mourning" {...hover('Council', () => 'In mourning')} />}
+        {vis.mourn !== 'off' && <img className={`cn-banner cn-hit${vis.mourn === 'lowering' ? ' lower' : ''}`} src={bannerIcon()} alt="In mourning" {...hover('Council', () => vis.mournCause)} />}
         {pips && (
           <div className="cn-pips cn-hit" {...hover('Council', () => `Council of ${nation}`)}>
             {(['ruler', 'general'] as CouncilRole[]).map((r) => (
