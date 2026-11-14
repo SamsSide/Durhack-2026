@@ -51,7 +51,7 @@ async function playBulletin(url: string): Promise<boolean> {
   return true;
 }
 
-export function useBroadcast(): { bulletin: Bulletin | null; visible: boolean; duration: number; preparing: boolean; noSound: boolean } {
+export function useBroadcast(): { bulletin: Bulletin | null; visible: boolean; duration: number; preparing: boolean; noSound: boolean; footage: string | null } {
   const [bulletin, setBulletin] = useState<Bulletin | null>(null);
   const [visible, setVisible] = useState(false);
   const [duration, setDuration] = useState(25);
@@ -59,6 +59,8 @@ export function useBroadcast(): { bulletin: Bulletin | null; visible: boolean; d
   const alive = useRef(true);
   const [preparing, setPreparing] = useState(false);
   const [noSound, setNoSound] = useState(false);
+  // The globe capture this bulletin was written from, as a data URL: the anchor window's field footage.
+  const [footage, setFootage] = useState<string | null>(null);
   useAudio(); // keeps the hook subscribed to the audio store
 
   useEffect(() => {
@@ -71,6 +73,7 @@ export function useBroadcast(): { bulletin: Bulletin | null; visible: boolean; d
         const shot = await captureGlobe();
         if (!alive.current) return;
         setNoSound(false);
+        setFootage(`data:${shot.mimeType};base64,${shot.imageBase64}`);
         setBulletin(null);
         setPreparing(true);
         setVisible(true);
@@ -124,5 +127,5 @@ export function useBroadcast(): { bulletin: Bulletin | null; visible: boolean; d
     };
   }, []);
 
-  return { bulletin, visible, duration, preparing, noSound };
+  return { bulletin, visible, duration, preparing, noSound, footage };
 }

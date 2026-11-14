@@ -19,7 +19,43 @@ function emit(): void {
 
 function halt(): void {
   token++;
+  detachAnalyser();
   if (el) { el.pause(); el.src = ''; el = null; }
+}
+
+// The news anchor's lip-sync reads the playing bulletin through one shared AnalyserNode.
+// The clip is only routed through Web Audio once the context is really running, so a
+// blocked or missing AudioContext can never silence a bulletin: it just plays directly.
+let actx = null as AudioContext | null;
+let analyser = null as AnalyserNode | null;
+let tapped = null as { el: HTMLAudioElement; node: MediaElementAudioSourceNode } | null;
+
+function detachAnalyser(): void {
+  if (!tapped) return;
+  try { tapped.node.disconnect(); } catch { /* already gone */ }
+  tapped = null;
+}
+
+async function attachAnalyser(a: HTMLAudioElement, mine: number): Promise<void> {
+  try {
+    if (typeof AudioContext === 'undefined') return;
+    actx ??= new AudioContext();
+    if (actx.state !== 'running') {
+      await Promise.race([actx.resume(), new Promise<void>((r) => setTimeout(r, 400))]);
+    }
+    if (actx.state !== 'running' || mine !== token || el !== a) return;
+    if (!analyser) {
+      analyser = actx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.5;
+      analyser.connect(actx.destination);
+    }
+    const node = actx.createMediaElementSource(a);
+    node.connect(analyser);
+    tapped = { el: a, node };
+  } catch (err) {
+    console.warn('bulletin analyser unavailable, the anchor mimes instead', err);
+  }
 }
 
 const DUCK = 0.15;
@@ -52,10 +88,11 @@ async function play(kind: 'narration' | 'anthem' | 'broadcast', id: number | nul
   const a = new Audio(url ?? `/api/country/${id}/${kind}`);
   a.muted = muted;
   el = a;
-  a.onended = () => { if (mine === token) { state = 'idle'; countryId = null; el = null; kindNow = null; applyDuck(); emit(); } };
+  a.onended = () => { if (mine === token) { detachAnalyser(); state = 'idle'; countryId = null; el = null; kindNow = null; applyDuck(); emit(); } };
   try {
     await a.play();
     if (mine === token) { state = kind; applyDuck(); emit(); }
+    if (mine === token && kind === 'broadcast') void attachAnalyser(a, mine);
   } catch (err) {
     if (mine === token) {
       // A 503 (voice unavailable) is normal: the panel shows text only. Log it once.
@@ -75,6 +112,10 @@ export const audio = {
     if (m) stopHerald();
     if (m) { for (const c of chants) c.el.pause(); chants.clear(); }
     emit();
+  },
+  /** The analyser on the bulletin that is playing now, or null (not playing, muted, or Web Audio unavailable). */
+  broadcastAnalyser(): AnalyserNode | null {
+    return state === 'broadcast' && !muted && tapped !== null && tapped.el === el ? analyser : null;
   },
   getState: () => snapshot,
   subscribe(listener: () => void): () => void {
