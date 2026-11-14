@@ -149,7 +149,9 @@ export class UnitModels {
     if (have) return have;
     const parts = this.set.files.get(e.file);
     if (!parts) return null;
-    const m: UnitModel = { key: e.file, parts, norm: normFor(parts), footprint: e.footprint, real: true };
+    // Lane a's unit GLBs face +x (#131); the stand matrix expects +z forward, so turn them a quarter.
+    const norm = new THREE.Matrix4().makeRotationY(-Math.PI / 2).multiply(normFor(parts));
+    const m: UnitModel = { key: e.file, parts, norm, footprint: e.footprint, real: true };
     this.made.set(e.file, m);
     return m;
   }
