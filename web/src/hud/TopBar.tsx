@@ -1,4 +1,5 @@
 import { useWorld } from '../state/world';
+import { TokenMeter } from '../ui';
 import type { WorldStore } from '../state/world';
 import './hud.css';
 
@@ -6,24 +7,15 @@ export const MODES: WorldStore['mapMode'][] = ['political', 'terrain', 'diplomac
 const MODE_LABELS: Record<WorldStore['mapMode'], string> = { political: 'Political', terrain: 'Terrain', diplomacy: 'Diplomacy', strength: 'Strength' };
 const SPEEDS = [1, 2, 4, 8];
 
-function fmt(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`;
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-  return String(n);
-}
-
 export function TopBar({ onCreate }: { onCreate: () => void }) {
   const world = useWorld((s) => s.world);
   useWorld((s) => s.version);
   const connected = useWorld((s) => s.connected);
-  const budget = useWorld((s) => s.budget);
   const mapMode = useWorld((s) => s.mapMode);
   const setMapMode = useWorld((s) => s.setMapMode);
   const send = useWorld((s) => s.send);
   const conn = connected ? 'live' : world ? 'reconnecting' : 'offline';
   const connLabel = { live: 'Live', reconnecting: 'Reconnecting', offline: 'Offline' }[conn];
-  const meterClass = budget ? (budget.capped ? 'capped' : budget.mode) : 'mock';
-  const meterMode = budget ? (budget.capped ? 'Capped' : budget.mode === 'live' ? 'Live' : 'Mock') : 'Mock';
   return (
     <div className="topbar">
       <div className="tb-group">
@@ -60,13 +52,7 @@ export function TopBar({ onCreate }: { onCreate: () => void }) {
             ))}
           </div>
         )}
-        {budget && (
-          <div className={`meter meter-${meterClass}`}>
-            <span className="num">{budget.calls}</span> calls<span className="dot">·</span>
-            <span className="num">{fmt(budget.tokensIn + budget.tokensOut)}</span> tokens<span className="dot">·</span>
-            <span className="mode">{meterMode}</span>
-          </div>
-        )}
+        <TokenMeter />
         <button className="btn primary-dark" onClick={onCreate}>New world</button>
       </div>
     </div>

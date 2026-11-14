@@ -39,36 +39,15 @@
 .seg.on, .seg.on:hover { background: var(--color-parchment); color: var(--color-ink); }
 .seg:disabled { opacity: 0.45; cursor: default; }
 
-.meter { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--color-text-muted); padding: 0 10px; line-height: 26px; border: 1px solid var(--color-border); border-radius: var(--radius-1); background: var(--color-bg); white-space: nowrap; }
-.meter .num { font-family: var(--font-mono); color: var(--color-text); font-size: 12px; }
-.meter .dot { color: var(--color-border); margin: 0 2px; }
-.meter .mode { font-family: var(--font-display); font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; padding: 0 6px; line-height: 16px; border-radius: var(--radius-1); }
-.meter-mock .mode { color: var(--color-text-muted); border: 1px solid var(--color-border); }
-.meter-live .mode { color: var(--color-ink); background: var(--color-accent); }
-.meter-capped { border-color: var(--color-danger); }
-.meter-capped .mode { color: var(--color-text); background: var(--color-danger); }
 
 .btn.primary-dark { background: var(--color-parchment); color: var(--color-ink); border-color: var(--color-parchment); }
 .btn.primary-dark:hover { background: var(--color-parchment-light); color: var(--color-ink); border-color: var(--color-accent); }
 
-/* Decree: bottom right, just above the ticker. */
-.decree {
+/* Decree slot: bottom right, just above the ticker. Lane c's DecreeBox fills it. */
+.decree-slot {
   right: var(--space-4); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-2));
-  width: 380px; height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 12px;
-  background: var(--parchment-fill); border: var(--border-ink); border-radius: var(--radius-1);
-  box-shadow: var(--shadow-1); color: var(--color-ink);
+  width: 380px; height: 48px;
 }
-.decree .cap, .legend-box .cap { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-rubric); }
-.decree input {
-  flex: 1; min-width: 0; background: transparent; border: 0; border-bottom: 1px solid var(--color-ink-muted); border-radius: 0;
-  font-size: var(--text-sm); color: var(--color-ink); padding: 0 0 2px; line-height: 22px; outline: none;
-}
-.decree input::placeholder { font-style: italic; color: var(--color-ink-muted); }
-.decree input:focus { border-bottom-color: var(--color-rubric); }
-.decree .btn { background: var(--color-ink); color: var(--color-parchment-light); border-color: var(--color-ink); }
-.decree .btn:hover { background: var(--color-ink-muted); color: var(--color-parchment-light); }
-.decree .btn:disabled { opacity: 0.45; }
-.decree .done { font-style: italic; color: var(--color-ok); font-size: var(--text-sm); }
 
 /* Diplomacy legend sits above the decree box. */
 .legend-box {
@@ -93,7 +72,7 @@
 .card-dock { top: calc(var(--topbar-height) + var(--space-3)); right: var(--space-3); background: color-mix(in srgb, var(--color-bg) 82%, transparent); border-radius: var(--radius-2); box-shadow: var(--shadow-1); }
 @media (max-width: 1099px) {
   .card-dock { right: 0; top: var(--topbar-height); background: transparent; box-shadow: none; }
-  .decree, .legend-box { right: var(--space-2); }
+  .decree-slot, .legend-box { right: var(--space-2); }
   .topbar { gap: var(--space-2); padding: 0 var(--space-2); }
   .tb-era, .vsep { display: none; }
 }
