@@ -50,6 +50,20 @@ the repo).
 5. Commit subjects: `type: plain sentence` (`feat: upload a photo and get its tags back`).
    Squash-merge PRs; delete the branch after.
 
+## Polish mode: ON
+
+**Toggle:** this heading says `ON` or `OFF`; only the owner changes it (14 Nov, owner).
+
+While it is ON, the team only polishes what exists, because the demo is 2 minutes and every extra
+feature is one more thing to explain. Allowed without asking: bug fixes, visual and UX polish,
+performance, readability, copy, docs, tests, and finishing a feature the owner has already
+approved. **Not allowed without asking: a new major feature** (a new screen, panel, system, game
+mechanic, data model, sponsor integration, or anything that adds a new thing to explain in the
+demo). For one of those, a non-owner lane opens a `needs-owner` issue (`durhack-inbox`) and does
+not build it until the owner says yes; the owner's own session asks the owner (clickable) before
+starting it. When unsure whether something is major, ask. When the heading says OFF, this
+section does not apply.
+
 ## The README is the public face
 
 The repo will be public. `README.md` describes the project to anyone browsing it: what it is,
