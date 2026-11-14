@@ -18,3 +18,6 @@ export { useCollapsed } from './collapse/useCollapsed';
 export { usePresentation, usePresentationKeys } from './collapse/presentation';
 export { PresentationYear } from './collapse/PresentationYear';
 export { ScrollIcon, HourglassIcon, QuillIcon } from './collapse/icons';
+// #311: lane b's ArmyBattleDock (hud/) mounts these in the left dock when an army or battle is picked.
+export { ArmyCard } from './army/ArmyCard';
+export { BattleCard } from './army/BattleCard';
