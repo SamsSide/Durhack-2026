@@ -1,5 +1,5 @@
 // The seam between the network layer and whatever produces the world. The mock runner
-// implements it now; the real engine (rows A3, A7) will implement it later.
+// implements it for `npm run mock`; the real engine (engine/runner.ts) for `npm run dev`.
 import type { AgentStatus, World, WorldEvent } from '@terra/shared';
 
 export type LlmMode = 'mock' | 'live';
@@ -25,8 +25,9 @@ export interface WorldRunner {
   getWorld(): World | null;
   /** The whole run so far, for the timeline scrubber (X3 /api/world/log). */
   getLog(): { initial: World; events: WorldEvent[] } | null;
-  /** Creates a fresh world, starts running it and notifies listeners with a snapshot. */
-  newWorld(opts: NewWorldOptions): World;
+  /** Creates a fresh world (the engine waits for the world bible), starts running it and notifies
+   *  listeners with a snapshot. */
+  newWorld(opts: NewWorldOptions): Promise<World>;
   /** Restarts a saved run with no API calls. */
   replay(id: string): World | null;
   listReplays(): { id: string; name: string; events: number }[];

@@ -1,7 +1,8 @@
-// X3 HTTP routes (mocked in the seed).
+// X3 HTTP routes.
 import express from 'express';
 import type { LlmMode, WorldRunner } from '../runner';
 import { storyRoutes } from '../story/routes';
+import { tigerRoutes } from '../tiger/routes';
 
 export function createApp(runner: WorldRunner, mode: LlmMode) {
   const app = express();
@@ -11,14 +12,20 @@ export function createApp(runner: WorldRunner, mode: LlmMode) {
     res.json({ ok: true, mode, world: runner.getWorld()?.id ?? null });
   });
 
-  app.post('/api/world', (req, res) => {
+  // Waits for the world bible (Gemini in live mode, about 5 s; the template in mock mode).
+  app.post('/api/world', async (req, res) => {
     const body = req.body ?? {};
     if (typeof body.prompt !== 'string' || !body.prompt.trim()) return void res.status(400).json({ error: 'prompt is required' });
-    const world = runner.newWorld({
-      prompt: body.prompt, nations: body.nations, era: body.era, seaLevel: body.seaLevel,
-      aggression: body.aggression, seed: typeof body.seed === 'number' ? body.seed : undefined, imageBase64: body.imageBase64 ?? null,
-    });
-    res.json({ worldId: world.id });
+    try {
+      const world = await runner.newWorld({
+        prompt: body.prompt, nations: body.nations, era: body.era, seaLevel: body.seaLevel,
+        aggression: body.aggression, seed: typeof body.seed === 'number' ? body.seed : undefined, imageBase64: body.imageBase64 ?? null,
+      });
+      res.json({ worldId: world.id });
+    } catch (e) {
+      console.error('world creation failed:', e);
+      res.status(500).json({ error: 'world creation failed' });
+    }
   });
 
   app.get('/api/replays', (_req, res) => { res.json(runner.listReplays()); });
@@ -36,5 +43,6 @@ export function createApp(runner: WorldRunner, mode: LlmMode) {
   });
 
   app.use('/api', storyRoutes(runner));
+  app.use('/api', tigerRoutes(runner));
   return app;
 }

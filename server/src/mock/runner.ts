@@ -39,7 +39,7 @@ export class MockRunner implements WorldRunner {
     return w;
   }
 
-  newWorld(opts: NewWorldOptions): World {
+  async newWorld(opts: NewWorldOptions): Promise<World> {
     const w = mockWorld(opts.seed ?? Math.floor(Math.random() * 1e6));
     w.prompt = opts.prompt;
     if (opts.era) w.era = opts.era;
