@@ -277,7 +277,7 @@ export function settleMove(world: World, e: Extract<WorldEvent, { type: 'unit_mo
     }
   }
   if (chron) {
-    mk({ type: 'chronicle', entry: { id: `c-${e.id}-b`, tick: e.tick, year: world.year, kind: chron.kind, countries: [a, defender], text: chron.text } });
+    mk({ type: 'chronicle', entry: { id: `c-${e.id}-b`, tick: e.tick, year: world.year, kind: chron.kind, countries: chron.kind === 'fall' ? [defender, a] : [a, defender], text: chron.text } });
   }
   if (generalFell && !out.some((x) => x.type === 'country_fell' && x.countryId === loser)) {
     for (const body of deathEvents(world, loser, 'general', 'death', { entryId: `c-${e.id}-gd`, tick: e.tick, year: world.year }, place)) mk(body);

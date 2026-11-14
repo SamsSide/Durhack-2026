@@ -43,3 +43,13 @@ export function displayKind(e: ChronicleEntry, world: World): DisplayKind {
 export function ofName(name: string): string {
   return name.replace(/^The\s/, 'the ');
 }
+
+/** The nation a `fall` line is about. War falls used to list the conqueror first, so prefer the one
+ *  that is no longer alive; otherwise the first listed. */
+export function fallenOf(e: ChronicleEntry, world: World): number | undefined {
+  if (e.countries.length > 1) {
+    const dead = e.countries.filter((id) => world.countries[id] && !world.countries[id]!.alive);
+    if (dead.length === 1) return dead[0];
+  }
+  return e.countries[0];
+}

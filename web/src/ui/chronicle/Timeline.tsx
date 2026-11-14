@@ -2,7 +2,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AgentStatus, ChronicleEntry, World } from '@terra/shared';
 import { Chevron, Diamond } from './Diamond';
-import { KIND_LABEL, LEGEND_ORDER, displayKind, ofName } from './kinds';
+import { KIND_LABEL, LEGEND_ORDER, displayKind, fallenOf, ofName } from './kinds';
 import type { DisplayKind } from './kinds';
 
 const NAME_W = 200;  // the left column of nation names
@@ -67,7 +67,7 @@ function buildLayout(world: World): Layout {
     }
     if (e.kind === 'fall' && e.countries.length > 0) {
       // A fallen (or deleted, which ends in a fall) nation's wars and silence end with it.
-      const gone = e.countries[0]!;
+      const gone = fallenOf(e, world)!;
       for (const [key, w] of openWar) if (w.a === gone || w.b === gone) { w.to = e.year; openWar.delete(key); }
       const s = openSilence.get(gone);
       if (s) { s.to = e.year; openSilence.delete(gone); }
