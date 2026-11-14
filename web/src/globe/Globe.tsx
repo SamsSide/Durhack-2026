@@ -27,6 +27,7 @@ import { Structures } from './structures/Structures';
 import { Units } from './units';
 import { Clouds } from './clouds';
 import { Towns } from './towns';
+import { Living } from './living';
 import { EventBeacons, Spotlight, WarFlash } from './events';
 import { Council } from './council';
 import { Wonders } from './wonders';
@@ -166,6 +167,7 @@ function Scene({ world }: { world: World }) {
       <Trade />
       <CoinBurst />
       <Towns />
+      <Living />
       <EventBeacons />
       <WarFlash />
       <Council />
