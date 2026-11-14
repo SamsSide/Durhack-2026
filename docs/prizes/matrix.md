@@ -183,7 +183,7 @@ Deadlines and the platform are not announced; fill them in when known.
 
 - [ ] Main submission (platform not known; Devpost page not live at 13:35): title, description
       written against the four overall criteria, a "what we learned" section for Research &
-      Learning, video if asked, repository link.
+      Learning, repository link (no video: live table demo).
 - [ ] Tick every sponsor challenge and MLH prize the project enters.
 - [ ] Neptune North: a section headed with their four criteria; the failure demo rehearsed.
 - [ ] Marshall Wace: the pitch opens with "New Worlds"; visit their stand today.
