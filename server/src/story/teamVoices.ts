@@ -3,6 +3,7 @@
 import crypto from 'node:crypto';
 import type { World } from '@terra/shared';
 import { chooseVoice, type VoiceChoice } from './eleven';
+import { governmentKeyOf } from './identity';
 
 const DEFAULTS: VoiceChoice[] = [
   { name: 'Sam', id: 'EDnnAH9hpLWTbuZABb6m' },     // young male, british
@@ -51,7 +52,8 @@ export function narrators(world: World): Map<number, VoiceChoice> {
 
 /** The voice that narrates and chants for a nation: its team voice, else the premade choice. */
 export function voiceForCountry(world: World, id: number): VoiceChoice {
-  return narrators(world).get(id) ?? chooseVoice(world.countries[id]?.voiceStyle);
+  const c = world.countries[id];
+  return narrators(world).get(id) ?? chooseVoice(c?.voiceStyle, c ? governmentKeyOf(c) : undefined);
 }
 
 /** The herald for a decree entry: a team voice picked by hash of the entry id. */

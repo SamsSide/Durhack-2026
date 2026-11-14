@@ -6,6 +6,7 @@ import { relationOf, type World } from '@terra/shared';
 import { llmJson, loreModel, LlmUnavailable, type Schema } from '../llm';
 import type { WorldRunner } from '../runner';
 import { warmChants } from './chant';
+import { nationIdentity } from './identity';
 import {
   chronicleOf, countryLore, regionHistory, regionLore,
   type CountryLore, type RegionLore, type RelationLore,
@@ -49,6 +50,7 @@ type CountryGen = Pick<CountryLore, 'summary' | 'culture' | 'politics' | 'histor
 export function countryPrompt(world: World, id: number): string {
   const c = world.countries[id]!;
   const t = c.temperament;
+  const idn = nationIdentity(world, c);
   const provinces = world.owner.filter((o) => o === id).length;
   const regions = [...new Set(world.regions.filter((r) => r.name && world.owner[r.capitalTile] === id).map((r) => r.name))].slice(0, 6);
   const chron = chronicleOf(world, id, 25).map((e) => `- year ${e.year}: ${e.text}`).join('\n') || '- (nothing recorded yet)';
@@ -67,6 +69,7 @@ export function countryPrompt(world: World, id: number): string {
     `Current year ${world.year}.`,
     `Relations with neighbours:\n${rels}`,
     `Real chronicle (oldest first):\n${chron}`,
+    `Voice: ${idn.chronicleTone} ${idn.narrationTone} Its anthem and words feel of the ${idn.eraKey.replace('_', ' ')} era. Use the voice for tone only, never to add facts.`,
     'Write: summary (2 sentences), culture, politics, history (from the chronicle only), anthemLyrics',
     '(4 to 8 short lines from the founding myth and the real chronicle: its wars, losses, allies),',
     'and relations (one entry per neighbour listed above: with = its id, stance = as listed, story = 1 or 2 sentences',
@@ -80,6 +83,7 @@ function regionPrompt(world: World, id: number): string {
   return [
     `Region: ${r.name} (${r.tiles.length} provinces, unrest ${r.unrest.toFixed(2)} of 1).`,
     `Ruled by: ${owner ? `${owner.name}, a ${owner.government}` : 'nobody'}.`,
+    ...(owner ? [`Voice: ${nationIdentity(world, owner).chronicleTone} Tone only, never add facts.`] : []),
     `Chronicle mentions:\n${regionHistory(world, id) || '(none yet)'}`,
     'Write summary (2 sentences) and history (only what the chronicle mentions; if nothing, say it is quiet).',
   ].join('\n');

@@ -83,7 +83,7 @@ export function storyRoutes(runner: WorldRunner): Router {
     try {
       const lore = await getLore(id, w);
       if (!lore) return void res.status(404).json({ error: 'no such country' });
-      res.type('audio/mpeg').sendFile(await anthemFile(w.countries[id]!, lore.anthemLyrics, playing()));
+      res.type('audio/mpeg').sendFile(await anthemFile(w, w.countries[id]!, lore.anthemLyrics, playing()));
     } catch {
       if (playing()) return void res.type('audio/mpeg').sendFile(path.join(SAMPLES, 'anthem.mp3'));
       res.status(503).json({ error: 'voice unavailable' });
