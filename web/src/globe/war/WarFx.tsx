@@ -13,6 +13,7 @@ import { useProvinceMesh } from '../mesh/context';
 import { useEventStream } from '../status/useEventStream';
 import { ParticlePool } from './particles';
 import { markSacked, onRuinChange } from './ruins';
+import { applyWarDemoCamera, installWarDemo } from './warDemo';
 
 const MAX_BURSTS = 12;
 const MAX_COLUMNS = 24;
@@ -38,6 +39,9 @@ const _p = new THREE.Vector3();
 const _size = new THREE.Vector2();
 const ringGeo = new THREE.RingGeometry(0.92, 1, 56);
 const Z = new THREE.Vector3(0, 0, 1);
+
+/** The two particle pools, shared with the firing effects (Firing.tsx) so their impacts cost no draw calls. */
+export const warPools: { fire: ParticlePool | null; smoke: ParticlePool | null } = { fire: null, smoke: null };
 
 interface Column { tile: number; pos: THREE.Vector3; n: THREE.Vector3; wind: THREE.Vector3; next: number; thick: number }
 interface Ring { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; born: number; size: number }
@@ -76,7 +80,7 @@ export function WarFx() {
   const mesh = useProvinceMesh();
   const world = useWorld((s) => s.world);
   const fx = useMemo(() => {
-    const fire = new ParticlePool(384, true, 1.6, 27);
+    const fire = new ParticlePool(512, true, 1.6, 27);
     const smoke = new ParticlePool(576, false, 0.9, 25);
     const group = new THREE.Group();
     group.add(smoke.points, fire.points);
@@ -91,6 +95,10 @@ export function WarFx() {
     }
     return { fire, smoke, group, rings };
   }, []);
+  useEffect(() => {
+    warPools.fire = fx.fire; warPools.smoke = fx.smoke;
+    return () => { if (warPools.fire === fx.fire) { warPools.fire = null; warPools.smoke = null; } };
+  }, [fx]);
   useEffect(() => () => { fx.fire.dispose(); fx.smoke.dispose(); for (const r of fx.rings) r.mat.dispose(); }, [fx]);
 
   const st = useRef({
@@ -196,6 +204,9 @@ export function WarFx() {
     win.__warFx = (tile, age = 0) => burst(tile, age, performance.now());
     return () => { delete win.__warFx; };
   });
+  // Dev only: __warDemo() stages a war on a real border (warDemo.ts).
+  useEffect(() => (import.meta.env.DEV ? installWarDemo(fx.group) : undefined), [fx]);
+  useFrame(({ camera }) => { if (import.meta.env.DEV) applyWarDemoCamera(camera, performance.now()); }, -0.4);
 
   useEffect(() => onRuinChange((tile, ruin) => {
     if (!ruin) return;

@@ -1,0 +1,1 @@
+export { DecreeFx } from './DecreeFx';

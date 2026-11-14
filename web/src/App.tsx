@@ -9,6 +9,7 @@ import { BeliefBanner, ClosingCard, DiplomacyLegend, Minimap, MODES, TerrainLege
 import { HoverTooltip } from './globe/hover/HoverTooltip';
 import { useEffect, useState } from 'react';
 import { TimelineScrubber } from './globe/timeline';   // B9 timeline (lane a)
+import { DemoPanel } from './hud/DemoPanel';
 import { ArmyBattleDock } from './hud/ArmyBattleDock';   // #311 army and battle cards
 
 // Lane c's NewsBroadcast (X5); resolved at run time so the app builds before it lands.
@@ -81,6 +82,7 @@ export function App() {
         <div className="news-slot"><NewsBroadcast key={epoch} /></div>
       )}
       {world && !showCreate && <PreparePanel />}
+      {import.meta.env.DEV && <DemoPanel />}
       <PresentationYear />
       <ClosingCard />
       {world && <HoverTooltip />}
