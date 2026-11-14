@@ -60,6 +60,10 @@
     "tree": {
       "file": "tree.glb",
       "footprint": 0.3
+    },
+    "trader": {
+      "file": "ages/medieval/trader.glb",
+      "footprint": 0.45
     }
   },
   "styles": {
@@ -281,6 +285,78 @@
       "fort": {
         "file": "highland/fort.glb",
         "footprint": 0.7
+      }
+    }
+  },
+  "ages": {
+    "ancient": {
+      "army": {
+        "file": "ages/ancient/army.glb",
+        "footprint": 0.5
+      },
+      "fleet": {
+        "file": "ages/ancient/fleet.glb",
+        "footprint": 0.5
+      },
+      "trader": {
+        "file": "ages/ancient/trader.glb",
+        "footprint": 0.45
+      }
+    },
+    "medieval": {
+      "army": {
+        "file": "ages/medieval/army.glb",
+        "footprint": 0.5
+      },
+      "fleet": {
+        "file": "ages/medieval/fleet.glb",
+        "footprint": 0.5
+      },
+      "trader": {
+        "file": "ages/medieval/trader.glb",
+        "footprint": 0.45
+      }
+    },
+    "gunpowder": {
+      "army": {
+        "file": "ages/gunpowder/army.glb",
+        "footprint": 0.5
+      },
+      "fleet": {
+        "file": "ages/gunpowder/fleet.glb",
+        "footprint": 0.5
+      },
+      "trader": {
+        "file": "ages/gunpowder/trader.glb",
+        "footprint": 0.45
+      }
+    },
+    "industrial": {
+      "army": {
+        "file": "ages/industrial/army.glb",
+        "footprint": 0.5
+      },
+      "fleet": {
+        "file": "ages/industrial/fleet.glb",
+        "footprint": 0.5
+      },
+      "trader": {
+        "file": "ages/industrial/trader.glb",
+        "footprint": 0.45
+      }
+    },
+    "modern": {
+      "army": {
+        "file": "ages/modern/army.glb",
+        "footprint": 0.5
+      },
+      "fleet": {
+        "file": "ages/modern/fleet.glb",
+        "footprint": 0.5
+      },
+      "trader": {
+        "file": "ages/modern/trader.glb",
+        "footprint": 0.45
       }
     }
   }
