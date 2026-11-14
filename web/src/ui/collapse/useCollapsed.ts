@@ -1,22 +1,16 @@
 import { useCallback, useState } from 'react';
 
-const PREFIX = 'tn-collapsed:';
+// Owner (#275, 21:20): judging is a live demo repeated for every judge, so a reload must always bring
+// back the calm, collapsed screen. The state lives in memory only: it survives remounts (a new world,
+// presentation mode on and off) but never a reload.
+const memory = new Map<string, boolean>();
 
-function read(id: string, fallback: boolean): boolean {
-  try {
-    const v = window.sessionStorage.getItem(PREFIX + id);
-    if (v === '1') return true;
-    if (v === '0') return false;
-  } catch { /* storage blocked: use the default */ }
-  return fallback;
-}
-
-/** Collapsed state for one panel, remembered per browser tab (sessionStorage). */
+/** Collapsed state for one panel, kept until the page reloads. */
 export function useCollapsed(id: string, defaultCollapsed = true): [boolean, (next: boolean) => void] {
-  const [collapsed, setState] = useState(() => read(id, defaultCollapsed));
+  const [collapsed, setState] = useState(() => memory.get(id) ?? defaultCollapsed);
   const set = useCallback((next: boolean) => {
+    memory.set(id, next);
     setState(next);
-    try { window.sessionStorage.setItem(PREFIX + id, next ? '1' : '0'); } catch { /* ignore */ }
   }, [id]);
   return [collapsed, set];
 }
