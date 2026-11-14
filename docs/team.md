@@ -4,11 +4,10 @@
 
 **Owner:** @SamsSide — decides the idea, prizes, plan, contracts and stack; merges `needs-owner` PRs.
 
-Roles are not decided yet. Lane letters are fixed now (branches are `<lane>/<topic>`); each
-lane's focus and paths are set by `durhack-plan` once the idea and stack are chosen.
+Roles were set at kickoff on 14 Nov (`docs/hackathon-plan.md`). Branches are `<lane>/<topic>`.
 
 | Lane | Person | Focus | Owns (paths) | Reach them |
 | --- | --- | --- | --- | --- |
-| a | @SamsSide (owner) | TBD | TBD | `agent-request` / `needs-owner` issue assigned to SamsSide |
-| b | @CutGrass88 | TBD | TBD | `agent-request` issue assigned to CutGrass88 |
-| c | @Justin-CODING-PY | TBD | TBD | `agent-request` issue assigned to Justin-CODING-PY |
+| a | @SamsSide (owner) | World engine and agents | `packages/shared/`, `server/` except `server/src/story/`, `assets/`, `web/public/models/`, root config | `agent-request` / `needs-owner` issue assigned to SamsSide |
+| b | @CutGrass88 | The globe | `web/` except `web/src/ui/` and `web/public/models/` | `agent-request` issue assigned to CutGrass88 |
+| c | @Justin-CODING-PY | Story, sound and interface | `web/src/ui/`, `server/src/story/` | `agent-request` issue assigned to Justin-CODING-PY |
