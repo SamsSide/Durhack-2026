@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { relationOf } from '@terra/shared';
 import type { World } from '@terra/shared';
 import { getPalette } from '../palette';
+import { VK_COAST_BOT, VK_COAST_TOP, VK_LIP, VK_SLOPE, VK_WALL_BOT, VK_WALL_TOP } from './buildProvinceMesh';
 import type { ProvinceMesh } from './buildProvinceMesh';
 import { statusOf } from '../status/statusTint';
 
@@ -70,8 +71,37 @@ export function reliefFactor(world: World, tileId: number): number {
   return f;
 }
 
-function applyRelief(world: World, tileId: number, out: THREE.Color): THREE.Color {
-  const f = reliefFactor(world, tileId);
+/** Lightness of each tone class; neighbours never share a class, so each province reads as its own piece. */
+const TONE_STEPS = [1, 0.935, 1.065, 0.965];
+const toneCache = new WeakMap<World['tiles'], Uint8Array>();
+
+/** Greedy colouring of the province adjacency into four tone classes. Stable for a given tile set. */
+function toneClasses(world: World): Uint8Array {
+  const hit = toneCache.get(world.tiles);
+  if (hit) return hit;
+  const cls = new Uint8Array(world.tiles.length);
+  const used = new Uint8Array(TONE_STEPS.length);
+  for (const t of world.tiles) {
+    used.fill(0);
+    for (const nb of t.neighbors) if (nb < t.id) used[cls[nb]!] = 1;
+    let c = 0;
+    while (c < TONE_STEPS.length - 1 && used[c]) c++;
+    cls[t.id] = c;
+  }
+  toneCache.set(world.tiles, cls);
+  return cls;
+}
+
+/** The tone step for a tile; half strength where the colour itself carries meaning (diplomacy, strength). */
+export function toneFactor(world: World, tileId: number, mode: MapMode): number {
+  const tile = world.tiles[tileId];
+  if (!tile || tile.terrain === 'ocean') return 1;
+  const step = TONE_STEPS[toneClasses(world)[tileId] ?? 0]! - 1;
+  return 1 + (mode === 'diplomacy' || mode === 'strength' ? step * 0.5 : step);
+}
+
+function applyRelief(world: World, tileId: number, out: THREE.Color, mode: MapMode = 'political'): THREE.Color {
+  const f = reliefFactor(world, tileId) * toneFactor(world, tileId, mode);
   out.r = Math.min(1, out.r * f); out.g = Math.min(1, out.g * f); out.b = Math.min(1, out.b * f);
   return out;
 }
@@ -82,7 +112,7 @@ function colorWith(
   out: THREE.Color, str: { value: Float64Array; max: number } | null,
 ): THREE.Color {
   colorStatus(world, tileId, owner, mode, sel, out, str);
-  return applyRelief(world, tileId, out);
+  return applyRelief(world, tileId, out, mode);
 }
 
 function colorStatus(
@@ -108,15 +138,35 @@ export function tileColor(
   return colorWith(world, tileId, owner, mode, selectedCountryId, out, null);
 }
 
+const ROCK = new THREE.Color('#5d554b');
+const SAND_ROCK = new THREE.Color('#9c8a68');
+const rockTmp = new THREE.Color();
+const rockTmp2 = new THREE.Color();
+
+/** Walls: the top colour pulled toward rock (sandy rock on coasts), desaturated, darker at the foot. */
+function wallColor(top: THREE.Color, kind: number, out: THREE.Color): THREE.Color {
+  const coast = kind === VK_COAST_TOP || kind === VK_COAST_BOT;
+  const foot = kind === VK_WALL_BOT || kind === VK_COAST_BOT;
+  out.copy(top).lerp(coast ? SAND_ROCK : ROCK, coast ? 0.5 : 0.6);
+  const g = out.r * 0.3 + out.g * 0.59 + out.b * 0.11;
+  out.lerp(rockTmp.setRGB(g, g, g), 0.3);
+  return out.multiplyScalar(foot ? 0.5 : 0.82);
+}
+
 function fill(mesh: ProvinceMesh, tileId: number, top: THREE.Color): void {
   const attr = mesh.geometry.getAttribute('color') as THREE.BufferAttribute;
   const arr = attr.array as Float32Array;
+  const kinds = mesh.vertexKind;
   const start = mesh.tileVertexStart[tileId]!;
-  const topN = mesh.tileTopVertexCount[tileId]!;
   const end = start + mesh.tileVertexCount[tileId]!;
+  const c = rockTmp2;
   for (let v = start; v < end; v++) {
-    const f = v - start < topN ? 1 : 0.65;
-    arr[v * 3] = top.r * f; arr[v * 3 + 1] = top.g * f; arr[v * 3 + 2] = top.b * f;
+    const kind = kinds[v]!;
+    if (kind === VK_LIP) c.copy(top).lerp(WHITE, 0.14);
+    else if (kind === VK_SLOPE) c.copy(top).multiplyScalar(0.96);
+    else if (kind >= VK_WALL_TOP) wallColor(top, kind, c);
+    else c.copy(top);
+    arr[v * 3] = Math.min(1, c.r); arr[v * 3 + 1] = Math.min(1, c.g); arr[v * 3 + 2] = Math.min(1, c.b);
   }
 }
 

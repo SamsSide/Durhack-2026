@@ -7,14 +7,19 @@ import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeome
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import type { World } from '@terra/shared';
 import { useWorld } from '../../state/world';
-import { CLOSE } from '../constants';
+import { CAM_MAX, CAM_MIN } from '../constants';
 import { getPalette } from '../palette';
 import { useProvinceMesh } from '../mesh/context';
 import type { ProvinceMesh } from '../mesh/buildProvinceMesh';
 
-const REGION_OPACITY = 0.35;
-const PROVINCE_OPACITY = 0.1;
-const PROVINCE_NEAR = 1.4;
+const REGION_OPACITY = 0.55;
+/** Region borders fade in over this camera-distance band (from far to fully shown). */
+const REGION_FAR = 2.2;
+const REGION_FULL = 1.9;
+/** Province lines are always shown: this ink from orbit, rising to the near value close up. */
+const PROVINCE_ORBIT = 0.38;
+const PROVINCE_CLOSE = 0.5;
+const PROVINCE_FREE = 0.2;
 const REBUILD_MS = 500;
 
 interface Layer {
@@ -61,12 +66,12 @@ function setLayer(layer: Layer, positions: number[], colors?: number[]): void {
 }
 
 
-interface Layers { nation: Layer; coastOwned: Layer; coastFree: Layer; region: Layer; province: Layer }
+interface Layers { nation: Layer; coastOwned: Layer; coastFree: Layer; region: Layer; province: Layer; provinceFree: Layer }
 
 function rebuild(layers: Layers, world: World, mesh: ProvinceMesh): void {
   const nationP: number[] = [], nationC: number[] = [];
   const coastOwnedP: number[] = [], coastFreeP: number[] = [];
-  const regionP: number[] = [], provinceP: number[] = [];
+  const regionP: number[] = [], provinceP: number[] = [], provinceFreeP: number[] = [];
   const ink = new THREE.Color(getPalette().ink);
   const inkRgb: [number, number, number] = [ink.r, ink.g, ink.b];
 
@@ -90,7 +95,8 @@ function rebuild(layers: Layers, world: World, mesh: ProvinceMesh): void {
       }
       continue;
     }
-    if (oa >= 0 && ta.region !== tb.region) regionP.push(...pts);
+    if (oa < 0) provinceFreeP.push(...pts);
+    else if (ta.region !== tb.region) regionP.push(...pts);
     else provinceP.push(...pts);
   }
 
@@ -99,6 +105,7 @@ function rebuild(layers: Layers, world: World, mesh: ProvinceMesh): void {
   setLayer(layers.coastFree, coastFreeP);
   setLayer(layers.region, regionP);
   setLayer(layers.province, provinceP);
+  setLayer(layers.provinceFree, provinceFreeP);
 }
 
 function BordersInner({ mesh }: { mesh: ProvinceMesh }) {
@@ -108,8 +115,9 @@ function BordersInner({ mesh }: { mesh: ProvinceMesh }) {
     nation: makeLayer(group, 3, 1, true),
     coastOwned: makeLayer(group, 3, 1, false),
     coastFree: makeLayer(group, 1.5, 0.5, false),
-    region: makeLayer(group, 1, REGION_OPACITY, false, true),
-    province: makeLayer(group, 1, PROVINCE_OPACITY, false),
+    region: makeLayer(group, 1.6, REGION_OPACITY, false, true),
+    province: makeLayer(group, 1, PROVINCE_ORBIT, false),
+    provinceFree: makeLayer(group, 1, PROVINCE_FREE, false),
   }), [group]);
 
   useEffect(() => {
@@ -151,12 +159,13 @@ function BordersInner({ mesh }: { mesh: ProvinceMesh }) {
   useFrame(({ camera }) => {
     const d = camera.position.length();
     for (const l of Object.values(layers)) l.mat.resolution.set(size.width, size.height);
-    const r = Math.min(1, Math.max(0, (CLOSE - d) / 0.2));
+    const r = Math.min(1, Math.max(0, (REGION_FAR - d) / (REGION_FAR - REGION_FULL)));
     layers.region.mat.opacity = REGION_OPACITY * r;
     layers.region.line.visible = r > 0 && layers.region.geo != null;
-    const p = Math.min(1, Math.max(0, (PROVINCE_NEAR - d) / 0.1));
-    layers.province.mat.opacity = PROVINCE_OPACITY * p;
-    layers.province.line.visible = p > 0 && layers.province.geo != null;
+    // Province lines never vanish; a little stronger close up, always below region and nation ink.
+    const near = Math.min(1, Math.max(0, (CAM_MAX - d) / (CAM_MAX - CAM_MIN)));
+    layers.province.mat.opacity = PROVINCE_ORBIT + (PROVINCE_CLOSE - PROVINCE_ORBIT) * near;
+    layers.provinceFree.mat.opacity = PROVINCE_FREE * (0.8 + 0.4 * near);
   });
 
   return <primitive object={group} />;
