@@ -1,0 +1,55 @@
+/* The decree caption (#288): a small parchment plate with the effect in rubric caps and the result in
+   italic serif. Colours and fonts come from theme/tokens.css; the paper is tn-sheet (theme/materials.css).
+   Lane b. */
+.dc-plate {
+  width: 260px;
+  animation: dc-life 5s ease forwards;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55));
+}
+.dc-paper {
+  padding: 6px 12px 8px;
+  border-left: 4px solid var(--dc-mark, var(--color-rubric));
+}
+.dc-label {
+  display: block;
+  padding-bottom: 3px;
+  margin-bottom: 3px;
+  border-bottom: 1px solid var(--color-ink-faint);
+  font-family: var(--font-display);
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dc-mark, var(--color-rubric));
+}
+.dc-text {
+  margin: 0;
+  white-space: normal;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 15px;
+  line-height: 18px;
+  color: var(--color-ink);
+}
+/* one ink mark per effect, dark enough to read on the parchment */
+.dc-meteor { --dc-mark: #9a3412; }
+.dc-plague { --dc-mark: #4a6b14; }
+.dc-famine { --dc-mark: #7a5420; }
+.dc-storm { --dc-mark: #2f3b52; }
+.dc-flood { --dc-mark: #1d4f8a; }
+.dc-prophet { --dc-mark: #8a6514; }
+.dc-goldrush { --dc-mark: #8a6514; }
+.dc-rebellion { --dc-mark: #8f1f17; }
+.dc-none { --dc-mark: var(--color-ink-muted); }
+@keyframes dc-life {
+  0% { opacity: 0; transform: translateY(10px); }
+  8% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 1; transform: translateY(-4px); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dc-plate { animation-name: dc-life-still; }
+  @keyframes dc-life-still { 0%, 100% { opacity: 0; } 6%, 90% { opacity: 1; } }
+}
