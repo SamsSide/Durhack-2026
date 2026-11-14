@@ -18,7 +18,7 @@ a.tn-led-cur:hover { color: var(--gilt-hi); }
 .tn-led-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .tn-led-totals .tn-stat__value { font-size: var(--text-md); font-weight: 600; }
 .tn-led-state { display: flex; align-items: center; gap: 6px; margin: 8px 0 6px; font-size: var(--text-sm); font-style: italic; color: var(--color-ink-muted); text-shadow: var(--engrave-on-paper); }
-.tn-led-list { list-style: none; margin: 0; padding: 2px 0 0; display: flex; flex-direction: column; gap: 5px; max-height: 420px; overflow-y: auto; }
+.tn-led-list { list-style: none; margin: 0; padding: 2px 0 0; display: flex; flex-direction: column; gap: 5px; max-height: 420px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--color-ink-muted) transparent; }
 .tn-led-row {
   min-width: 0; padding: 6px 8px 7px; border-radius: 2px;
   background: rgba(42,31,20,.05); box-shadow: var(--well-paper), inset 0 0 0 1px rgba(42,31,20,.12);

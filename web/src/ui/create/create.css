@@ -25,7 +25,7 @@
 .tn-create-set:disabled { opacity: 0.65; }
 .tn-create-field { margin-top: 13px; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .tn-create .tn-create-prompt {
-  width: 100%; min-height: 70px; max-height: 9em; resize: vertical;
+  width: 100%; min-height: 70px; max-height: 9em; resize: vertical; scrollbar-width: thin; scrollbar-color: rgba(42,31,20,.5) transparent;
   padding: 10px 14px; font-size: 20px; line-height: 27px;
 }
 .tn-create-chips { display: flex; flex-wrap: wrap; gap: 8px; }
