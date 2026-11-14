@@ -75,6 +75,13 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   tag "SIGNAL LOST · silent N yrs · M queued". On restore the letters fly to the other capitals.
 - **Ruler proclamation scrolls** are each tagged AI or AUTOPILOT.
 - **Secession:** restless regions break away as new nations with their own agents and rulers.
+- **A national mood that shifts:** each nation's temperament (aggression, expansion, trade, faith)
+  drifts a little every year with what happens to it. A long war or bitter losses harden it,
+  defeat and exhaustion take the fight out of it, victories make it hungry for land, long peace and
+  trade pacts make merchants of it, and unrest, plague and prophets turn it to its temples; with
+  nothing pushing, it slowly returns to its founding character. The chronicle says when a mood
+  turns ("Years of war have hardened the Dorrin Horde."), the nation card shows its current mood,
+  and its ruler decides with it.
 
 ### The council
 

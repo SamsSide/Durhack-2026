@@ -107,7 +107,7 @@ export interface Country {
   ideology: string;                                      // one sentence
   culture: string[];                                     // 3 to 5 short traits
   foundingMyth: string;                                  // one or two sentences
-  temperament: { aggression: number; expansion: number; trade: number; faith: number }; // each 0 to 1
+  temperament: { aggression: number; expansion: number; trade: number; faith: number }; // each 0 to 1; drifts every year (#317, "National mood" below)
   anthemPrompt: string;                                  // for the music model
   buildingStyle?: BuildingStyle;                         // its architecture (X4 styles); missing means 'medieval'
   nomadic?: boolean;                                     // herders and horse lords: camps as yurts
@@ -325,6 +325,18 @@ export type PaymentReason = 'trade' | 'reparations' | 'plunder' | 'seizure' | 'w
   a small bonus from `WONDER_BONUS: Record<WonderKind, { income: number; defence: number; unrest: number }>`
   in `@terra/shared` (income share, defence share for the whole nation, unrest change per year);
   lane b shows it in the tooltip. A captured wonder changes hands; a razed one is a `ruin`.
+
+- **National mood (owner, #317 item 13, 14 Nov):** `Country.temperament` is no longer fixed at
+  founding. Each year `moodStep` (`sim/mood.ts`, exported from `@terra/shared`) moves every trait by a
+  small step from the year's facts (a war of 6 years or more and lost provinces raise `aggression`;
+  exhaustion and paid reparations lower it; provinces won and reparations received raise
+  `expansion`; trade pacts in a long peace raise `trade`, war lowers it; unrest, plague, famine and a
+  prophet raise `faith`), plus a slow return to its founding values, within founding +-0.3 and
+  0.05..0.95, three decimals. The new values ride in the nation's own yearly `country_updated` patch
+  (`temperament`), so replays are exact; `applyEvent` copies the object. When a trait crosses 0.7
+  upwards or 0.35 downwards the chronicle gets one line (kind `growth`, id ending
+  `-mood-<trait>-<up|down>`, not repeated within 40 years). `moodWords(temperament)` gives the
+  card's words ("Warlike, devout", "Even-tempered").
 
 - **Satellites (owner, #317 item 14, 14 Nov; replaces the #313 stellar-only rule):** a nation in
   the `modern` age or later launches satellites from year 1957 on, up to a cap by age

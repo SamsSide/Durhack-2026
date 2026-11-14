@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { flagSvg, goodOf, landDevastation, movementOf, politicsOf, readinessBand, readinessOf } from '@terra/shared';
+import { flagSvg, goodOf, landDevastation, moodWords, movementOf, politicsOf, readinessBand, readinessOf } from '@terra/shared';
 import type { Stance, World } from '@terra/shared';
 import { onWorldReset, useWorld } from '../../state/world';
 import { useSlowVersion } from '../useSlowVersion';
@@ -90,6 +90,8 @@ function useNationStats(world: World | null, countryId: number) {
   }, [world, countryId, version]);
 }
 
+/** A 0..1 trait as a whole percentage, for the mood tooltip. */
+const pct = (v: number) => `${Math.round(v * 100)}%`;
 /** The fill colour of the war-readiness trough: calm green at peace, through gilt and amber, to war red. */
 const readinessFill = (r: number) => (r < 25 ? 'var(--color-ok)' : r < 50 ? 'var(--gilt)' : r < 75 ? 'var(--stance-hostile)' : 'var(--stance-war)');
 
@@ -232,6 +234,10 @@ function Nation({ countryId }: { countryId: number }) {
         <div className="tn-pair">
           <div title={movement.creed}><span className="tn-cap">Movement</span><span className="tn-pair-v">{movement.name}</span></div>
           <div><span className="tn-cap">Main good</span><span className="tn-pair-v">{stats?.mainGood ? cap(stats.mainGood) : 'None'}</span></div>
+          {/* #317 item 13: the national mood, which drifts with its wars, peace, trade and troubles */}
+          <div className="tn-pair-wide" title={`Aggression ${pct(country.temperament.aggression)}, expansion ${pct(country.temperament.expansion)}, trade ${pct(country.temperament.trade)}, faith ${pct(country.temperament.faith)}`}>
+            <span className="tn-cap">Mood</span><span className="tn-pair-v">{moodWords(country.temperament)}</span>
+          </div>
         </div>
         <div className="tn-grid">
           <div className="tn-stat"><span className="tn-stat__label">Provinces</span><span className="tn-stat__value"><Roll value={stats?.provinces ?? 0} format={fmt} /></span></div>

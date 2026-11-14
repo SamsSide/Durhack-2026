@@ -130,6 +130,7 @@ export function applyEvent(world: World, event: WorldEvent): void {
       if (c) {
         Object.assign(c, event.patch);
         if (event.patch.politics) c.politics = { ...event.patch.politics };   // a copy: replicas never share objects
+        if (event.patch.temperament) c.temperament = { ...event.patch.temperament };   // #317 item 13: the mood drifts; same rule
       }
       break;
     }

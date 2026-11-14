@@ -222,6 +222,7 @@
 .tn-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 10px 2px 8px; }
 .tn-pair > div { display: flex; flex-direction: column; min-width: 0; }
 .tn-pair-v { font-size: 16px; font-weight: 600; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tn-pair > .tn-pair-wide { grid-column: 1 / -1; flex-direction: row; align-items: baseline; gap: 8px; margin-top: -4px; }
 
 /* The stat wells: numbers set into the page */
 .tn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }

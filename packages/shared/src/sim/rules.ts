@@ -13,6 +13,7 @@ import {
 import { unrestTurn, type UnrestMemory } from './regions';
 import { ageStrength, ageTurn, satelliteTurn, type AgeMemory } from './ages';
 import { tradeTurn } from './trade';
+import { MOOD, moodLine, moodStep, type MoodMemory } from './mood';
 import { paymentTurn } from './payments';
 import { TERRAIN_EFFECTS } from './terrain';
 import { chokepoints } from './paths';
@@ -35,6 +36,8 @@ export interface TurnContext {
   ages?: AgeMemory;
   /** B11: provinces it had lost in war when last it looked (to tell a year it lost land). */
   econ?: EconMemory;
+  /** #317 item 13: its founding temperament and years of peace, for the mood drift (sim/mood.ts). */
+  mood?: MoodMemory;
 }
 export interface EconMemory { lost: number; gained: number }
 export const newEconMemory = (): EconMemory => ({ lost: -1, gained: 0 });
@@ -565,9 +568,32 @@ export function nationTurn(
     atWar, avgDevastation: landDevastation(view, countryId), poverty, foodShort, prosperous: !atWar && treasury > 100,
     lostNow: lostYear, gainedNow: gainedYear, warNet, paidReparations: paidRep, gotReparations: gotRep,
   });
-  emit({ type: 'country_updated', countryId, patch: { population: newPop, treasury: Math.round(treasury * 10) / 10, warReadiness, politics } });
+  // #317 item 13: the national mood drifts with the year (sim/mood.ts), recorded in the same patch.
+  let warYears = 0, pactsNow = 0, unrestMax = 0;
+  for (const r of view.relations) {
+    if (r.a !== countryId && r.b !== countryId) continue;
+    if (r.stance === 'war' && enemySet.has(r.a === countryId ? r.b : r.a)) warYears = Math.max(warYears, tick - r.since);
+    else if ((r.stance === 'trade' || r.stance === 'alliance') && view.countries[r.a === countryId ? r.b : r.a]?.alive) pactsNow++;
+  }
+  for (const rid of myRegions) unrestMax = Math.max(unrestMax, view.regions[rid]?.unrest ?? 0);
+  let plague = false, prophet = false;
+  for (let i = view.chronicle.length - 1; i >= 0 && view.chronicle[i]!.tick >= tick - 1; i--) {
+    const d = view.chronicle[i]!.decree;
+    if (!d || d.target.countryId !== countryId) continue;
+    if (d.effect === 'plague' || d.effect === 'famine') plague = true;
+    else if (d.effect === 'prophet') prophet = true;
+  }
+  const moodIn = { atWar, warYears, lostNow: lostYear, gainedNow: gainedYear, warNet, paidReparations: paidRep, gotReparations: gotRep,
+    avgDevastation: landDevastation(view, countryId), pacts: pactsNow, readiness: readinessOf(me), unrest: unrestMax, plague, prophet };
+  const temperament = moodStep(t, moodIn, ctx.mood);
+  const moodMoved = temperament.aggression !== t.aggression || temperament.expansion !== t.expansion || temperament.trade !== t.trade || temperament.faith !== t.faith;
+  emit({ type: 'country_updated', countryId, patch: { population: newPop, treasury: Math.round(treasury * 10) / 10, warReadiness, politics, ...(moodMoved ? { temperament } : {}) } });
   const seized = seizureLine(prevPol.axis, politics.axis, me.name.replace(/^The /, 'the '));
   if (seized) emit({ type: 'chronicle', entry: { id: `c-${countryId}-${tick}-politics`, tick, year: view.year, kind: 'proclamation', countries: [countryId], text: seized } });
+  const mood = moodMoved ? moodLine(t, temperament, moodIn, me.name.replace(/^The /, 'the ')) : null;
+  if (mood && !view.chronicle.some((e) => e.tick >= tick - MOOD.repeatYears && e.id === `c-${countryId}-${e.tick}-${mood.suffix}`)) {
+    emit({ type: 'chronicle', entry: { id: `c-${countryId}-${tick}-${mood.suffix}`, tick, year: view.year, kind: 'growth', countries: [countryId], text: mood.text } });
+  }
 
   // --- 5b. its age (row A23, sim/ages.ts): progress from its own state; one step at most a year
   const next = ageTurn(view, countryId, myStructs.filter((s) => own[s.tile] === countryId), treasury, ctx.ages);
