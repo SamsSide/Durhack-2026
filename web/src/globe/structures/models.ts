@@ -64,6 +64,14 @@ export function loadModels(): Promise<ModelSet> {
 export function partsFor(set: ModelSet, kind: string): ModelPart[] {
   return set.parts.get(kind) ?? set.fallback;
 }
+/**
+ * Hook for culture styles: today every nation shares one model per kind. Once the owner adds
+ * per-style variants to the manifest this will pick one from the country's style.
+ */
+export function modelFor(set: ModelSet, kind: string, _country?: number): { parts: ModelPart[]; footprint: number } {
+  return { parts: partsFor(set, kind), footprint: footprintFor(set, kind) };
+}
+export function hasModel(set: ModelSet, kind: string): boolean { return set.parts.has(kind); }
 export function footprintFor(set: ModelSet, kind: string): number {
   return set.footprint.get(kind) ?? DEFAULT_FOOTPRINT;
 }

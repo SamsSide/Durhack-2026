@@ -33,10 +33,10 @@ export class Trees {
       for (let i = 0; i < count; i++) {
         const seed = t.id * 16 + i;
         const ang = hash01(seed, 21) * Math.PI * 2;
-        const r = g.width * (0.06 + 0.4 * Math.sqrt(hash01(seed, 22)));
+        const r = (g.width * 1.4) * (0.06 + 0.4 * Math.sqrt(hash01(seed, 22)));
         geos.point(g, Math.cos(ang) * r, Math.sin(ang) * r, 0, p);
         const quat = g.align.clone().multiply(new THREE.Quaternion().setFromAxisAngle(this.up, hash01(seed, 23) * Math.PI * 2));
-        this.items.push({ tile: t.id, pos: p.clone(), quat, size: g.width * base * (0.8 + 0.5 * hash01(seed, 24)), inner: r < g.width * 0.26, seed });
+        this.items.push({ tile: t.id, pos: p.clone(), quat, size: (g.width * 1.4) * base * (0.8 + 0.5 * hash01(seed, 24)), inner: r < (g.width * 1.4) * 0.26, seed });
       }
     }
     const parts = partsFor(models, 'tree');

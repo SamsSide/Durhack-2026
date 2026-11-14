@@ -22,6 +22,9 @@ export function smoothstep(a: number, b: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
+/** Tile width as a fraction of the mean centre-to-corner distance (was 1.4; buildings were too big). */
+const WIDTH_K = 1.0;
+
 export interface TileGeo {
   n: THREE.Vector3;       // outward normal at the tile centre
   t1: THREE.Vector3;      // tangent axes
@@ -48,7 +51,7 @@ export class TileGeos {
     c.copy(n);
     for (const p of t.boundary) sum += b.set(p[0], p[1], p[2]).normalize().distanceTo(c);
     const h = this.heights[tile] ?? 1;
-    const width = (sum / Math.max(1, t.boundary.length)) * 1.4 * h;
+    const width = (sum / Math.max(1, t.boundary.length)) * WIDTH_K * h;
     const align = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), n);
     g = { n, t1, t2, h, width, align };
     this.cache.set(tile, g);

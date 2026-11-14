@@ -1,7 +1,7 @@
 // All structures of a world: one InstancedMesh per (kind, sub-mesh), pop-up animations, dust puffs, LOD.
 import * as THREE from 'three';
 import type { World } from '@terra/shared';
-import { footprintFor, partsFor, STRUCTURE_KINDS } from './models';
+import { hasModel, modelFor, STRUCTURE_KINDS } from './models';
 import type { ModelPart, ModelSet } from './models';
 import { clamp01, easeOutBack, hash01, smoothstep } from './placement';
 import type { TileGeo, TileGeos } from './placement';
@@ -12,12 +12,19 @@ const BIG = new Set<string>(['capital', 'city', 'town']);
 const SETTLEMENT = new Set<string>(['camp', 'village', 'town', 'city', 'capital']);
 const BUILD_S = 0.6, UPGRADE_S = 0.55, DESTROY_S = 0.5, PUFF_S = 0.75;
 const PUFF_POOL = 40, PUFF_PARTS = 6;
-const ORBIT_BOOST = 1.6;
+const ORBIT_BOOST = 1.15;
+// Relative scale by kind on top of the manifest footprint: a clear camp-to-capital hierarchy.
+const REL: Record<string, number> = { camp: 0.45, village: 0.6, town: 0.75, city: 0.9, capital: 1.0 };
+const REL_OTHER = 0.7;
+const MAX_SIZE = 0.07;   // absolute cap (times surface radius) so nothing towers over a mountain
 
 interface Anim { type: 'build' | 'upgrade' | 'destroy'; t0: number }
 interface Rec {
   id: string; tile: number; owner: number; kind: string; slot: number;
   g: TileGeo; pos: THREE.Vector3; quat: THREE.Quaternion; size: number; anim: Anim | null;
+  hy: number;               // stable height stretch
+  parent: Rec | null;       // set for the small buildings around a city or capital
+  sats: Rec[];
 }
 interface Pool { kind: string; parts: ModelPart[]; meshes: THREE.InstancedMesh[]; cap: number; list: Rec[]; dirty: boolean }
 interface Puff { t0: number; pos: THREE.Vector3; g: TileGeo; size: number; seed: number }
@@ -34,6 +41,7 @@ export class StructureField {
   private f = 0;               // smoothed zoom factor, 0 from orbit and 1 when close
   private writtenF = -1;
   private first = true;
+  private tints = new Map<number, THREE.Color>();
   private colors = new Map<string, THREE.Color>();
   private m = new THREE.Matrix4();
   private v = new THREE.Vector3();
@@ -42,7 +50,7 @@ export class StructureField {
 
   constructor(private world: World, private geos: TileGeos, private models: ModelSet) {
     for (const kind of STRUCTURE_KINDS) {
-      const pool: Pool = { kind, parts: partsFor(models, kind), meshes: [], cap: 0, list: [], dirty: false };
+      const pool: Pool = { kind, parts: modelFor(models, kind).parts, meshes: [], cap: 0, list: [], dirty: false };
       this.pools.set(kind, pool);
       this.alloc(pool, 32);
     }
@@ -62,13 +70,24 @@ export class StructureField {
     pool.meshes = pool.parts.map((part) => {
       const mesh = new THREE.InstancedMesh(part.geometry, part.material, cap);
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-      if (part.team) mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3);
+      mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3);
       mesh.frustumCulled = false;
       mesh.count = 0;
       this.group.add(mesh);
       return mesh;
     });
     pool.dirty = true;
+  }
+
+  /** Per-nation multiplier for wall and roof colours: small hue and lightness shift from the country id. */
+  private tintOf(owner: number): THREE.Color {
+    let c = this.tints.get(owner);
+    if (!c) {
+      c = new THREE.Color(1, 1, 1).lerp(new THREE.Color().setHSL(hash01(owner, 31), 0.55, 0.55), 0.14);
+      c.multiplyScalar(0.92 + 0.16 * hash01(owner, 32));
+      this.tints.set(owner, c);
+    }
+    return c;
   }
 
   private colorOf(owner: number): THREE.Color {
@@ -96,7 +115,10 @@ export class StructureField {
         continue;
       } else {
         if (r.kind !== s.kind) this.upgrade(r, s.kind, now);
-        if (r.owner !== s.owner) { r.owner = s.owner; this.pools.get(r.kind)!.dirty = true; }
+        if (r.owner !== s.owner) {
+          r.owner = s.owner; this.pools.get(r.kind)!.dirty = true;
+          for (const q of r.sats) { q.owner = s.owner; this.pools.get(q.kind)!.dirty = true; }
+        }
       }
     }
     for (const r of this.recs.values()) {
@@ -104,6 +126,7 @@ export class StructureField {
         r.anim = { type: 'destroy', t0: now };
         this.puff(r, now);
         this.pools.get(r.kind)!.dirty = true;
+        for (const q of r.sats) this.pools.get(q.kind)!.dirty = true;
         this.updateTrees(r.tile);
       }
     }
@@ -125,7 +148,8 @@ export class StructureField {
     const yaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), hash01(id, 7) * Math.PI * 2);
     const rec: Rec = {
       id, tile, owner, kind, slot, g, pos, quat: g.align.clone().multiply(yaw),
-      size: this.sizeOf(g, kind, slot), anim: { type: 'build', t0 },
+      size: this.sizeOf(g, kind, slot, id), anim: { type: 'build', t0 },
+      hy: 0.9 + 0.2 * hash01(id, 12), parent: null, sats: [],
     };
     here.push(rec);
     this.byTile.set(tile, here);
@@ -134,12 +158,52 @@ export class StructureField {
     if (!pool) { this.recs.delete(id); here.pop(); return; }
     pool.list.push(rec);
     pool.dirty = true;
+    this.addSats(rec);
     this.puff(rec, t0 + BUILD_S * 0.35);
     this.updateTrees(tile);
   }
 
-  private sizeOf(g: TileGeo, kind: string, slot: number): number {
-    return g.width * footprintFor(this.models, kind) * (slot > 0 ? 0.8 : 1);
+  private sizeOf(g: TileGeo, kind: string, slot: number, id: string): number {
+    const jit = 0.88 + 0.24 * hash01(id, 11);
+    const s = g.width * modelFor(this.models, kind).footprint * (REL[kind] ?? REL_OTHER) * (slot > 0 ? 0.8 : 1) * jit;
+    return Math.min(s, MAX_SIZE * g.h);
+  }
+
+  /** Cities and capitals get smaller buildings around them so a settlement reads as a place. */
+  private addSats(r: Rec): void {
+    if (r.slot !== 0 || (r.kind !== 'city' && r.kind !== 'capital')) return;
+    const kinds: string[] = [];
+    const n = 2 + Math.floor(hash01(r.id, 13) * 2);
+    for (let i = 0; i < n; i++) kinds.push(hash01(r.id, 14 + i) < 0.5 ? 'town' : 'village');
+    if (r.kind === 'capital') for (const k of ['fort', 'temple']) if (hasModel(this.models, k)) kinds.push(k);
+    const base = hash01(r.tile, 5) * Math.PI * 2 + 2.4 + Math.PI; // opposite the first extra building
+    kinds.forEach((kind, i) => {
+      const pool = this.pools.get(kind);
+      if (!pool) return;
+      const id = `${r.id}#${i}`;
+      const ang = base + (i - (kinds.length - 1) / 2) * (Math.PI * 1.5 / kinds.length) + (hash01(id, 15) - 0.5) * 0.4;
+      const rad = r.g.width * (0.56 + 0.08 * hash01(id, 16));
+      const pos = new THREE.Vector3();
+      this.geos.point(r.g, Math.cos(ang) * rad, Math.sin(ang) * rad, 0.0004, pos);
+      const yaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), hash01(id, 7) * Math.PI * 2);
+      const sat: Rec = {
+        id, tile: r.tile, owner: r.owner, kind, slot: -1, g: r.g, pos, quat: r.g.align.clone().multiply(yaw),
+        size: this.sizeOf(r.g, kind, 0, id) * 0.62, anim: null, hy: 0.9 + 0.2 * hash01(id, 12), parent: r, sats: [],
+      };
+      r.sats.push(sat);
+      pool.list.push(sat);
+      pool.dirty = true;
+    });
+  }
+
+  private dropSats(r: Rec): void {
+    for (const s of r.sats) {
+      const pool = this.pools.get(s.kind)!;
+      const i = pool.list.indexOf(s);
+      if (i >= 0) pool.list.splice(i, 1);
+      pool.dirty = true;
+    }
+    r.sats = [];
   }
 
   private upgrade(r: Rec, kind: string, now: number): void {
@@ -149,16 +213,19 @@ export class StructureField {
     const i = from.list.indexOf(r);
     if (i >= 0) from.list.splice(i, 1);
     from.dirty = true;
+    this.dropSats(r);
     r.kind = kind;
-    r.size = this.sizeOf(r.g, kind, r.slot);
+    r.size = this.sizeOf(r.g, kind, r.slot, r.id);
     r.anim = { type: 'upgrade', t0: now };
     to.list.push(r);
     to.dirty = true;
+    this.addSats(r);
     this.puff(r, now + 0.1);
     this.updateTrees(r.tile);
   }
 
   private remove(r: Rec): void {
+    this.dropSats(r);
     const pool = this.pools.get(r.kind)!;
     const i = pool.list.indexOf(r);
     if (i >= 0) pool.list.splice(i, 1);
@@ -216,13 +283,13 @@ export class StructureField {
     const { m, sc, v } = this;
     pool.list.forEach((r, i) => {
       let sx = 1, sy = 1, sink = 0;
-      const a = r.anim;
+      const a = (r.parent ?? r).anim;
       if (a) {
         const dur = a.type === 'build' ? BUILD_S : a.type === 'upgrade' ? UPGRADE_S : DESTROY_S;
         const raw = (now - a.t0) / dur;
         if (raw < 0) { sx = sy = 0; animating = true; }
         else if (raw >= 1) {
-          if (a.type === 'destroy') { done.push(r); sx = sy = 0; } else { r.anim = null; }
+          if (a.type === 'destroy') { if (!r.parent) done.push(r); sx = sy = 0; } else if (!r.parent) { r.anim = null; }
         } else {
           animating = true;
           if (a.type === 'build') sx = sy = Math.max(0, easeOutBack(raw));
@@ -231,14 +298,12 @@ export class StructureField {
         }
       }
       const s = r.size * base;
-      sc.set(s * sx, s * sy, s * sx);
+      sc.set(s * sx, s * sy * r.hy, s * sx);
       v.copy(r.pos).addScaledVector(r.g.n, -sink);
       m.compose(v, r.quat, sc);
       for (const mesh of pool.meshes) mesh.setMatrixAt(i, m);
-      if (pool.parts.some((p) => p.team)) {
-        this.col.copy(this.colorOf(r.owner));
-        pool.meshes.forEach((mesh, k) => { if (pool.parts[k]!.team) mesh.setColorAt(i, this.col); });
-      }
+      const team = this.colorOf(r.owner), tint = this.tintOf(r.owner);
+      pool.meshes.forEach((mesh, k) => mesh.setColorAt(i, pool.parts[k]!.team ? team : tint));
     });
     pool.meshes.forEach((mesh) => {
       mesh.count = pool.list.length;
