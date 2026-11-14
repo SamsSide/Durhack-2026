@@ -22,6 +22,7 @@ export interface WorldStore {
   flyTo(countryId: number): void;
   send(message: object): void;
   recentEvents: WorldEvent[];
+  clock: { speed: number; target: number; pacing: 'auto' | 'manual'; paused: boolean } | null;   // X2 `clock` (#124); null until the server sends one
 }
 
 let socket: WebSocket | null = null;
@@ -38,6 +39,7 @@ export const useWorld = create<WorldStore>((set, get) => ({
   beliefOf: null,
   mapMode: 'political',
   recentEvents: [],
+  clock: null,
   setMapMode: (mapMode) => set({ mapMode }),
   select: (countryId, tileId = null) => {
     const region = tileId != null ? get().world?.tiles[tileId]?.region ?? -1 : -1;
@@ -77,6 +79,9 @@ function handle(msg: { type: string; [k: string]: unknown }): void {
     }
     case 'budget':
       useWorld.setState({ budget: msg as unknown as WorldStore['budget'] });
+      break;
+    case 'clock':
+      useWorld.setState({ clock: { speed: msg.speed as number, target: msg.target as number, pacing: msg.pacing as 'auto' | 'manual', paused: !!msg.paused } });
       break;
     case 'belief':
       useBelief.getState().set(msg.countryId as number, msg.owner as number[]);

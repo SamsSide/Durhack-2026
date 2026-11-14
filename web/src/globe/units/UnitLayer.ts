@@ -1,13 +1,17 @@
 // The war layer, kept out of React: army counters that march, arrows, battles, smoke, front
 // lines, war pulses, treaty flashes and falls. Units come from world.units (the truth); events
-// only start effects. Lane b (B5).
+// only start effects. Up close each counter stands on a 3D model of its nation's technology age,
+// and trader ships sail the oceans (traders.ts). Lane b (B5, #122).
 import * as THREE from 'three';
 import { flagSvg } from '@terra/shared';
-import type { UnitKind, World, WorldEvent } from '@terra/shared';
+import type { TechAge, UnitKind, World, WorldEvent } from '@terra/shared';
 import type { MeshEdge, ProvinceMesh } from '../mesh/buildProvinceMesh';
 import { getPalette } from '../palette';
 import { COUNTER_H, COUNTER_W, drawClash, drawCounter, drawLoss, drawScroll, drawSettler, toTexture } from './draw';
 import { unitIcon } from './era';
+import { ModelField, standMatrix } from './ModelField';
+import { Traders } from './traders';
+import { UnitModels } from './unitModels';
 import { Pops, Smoke, Sparks, facing, tangentJitter } from './effects';
 import { arcHump, arcPoint, arrowGeometry, arrowMaterial, lineGeometry, lineMaterial, tileFanGeometry, writeArrow } from './ribbons';
 
@@ -26,6 +30,12 @@ const COLUMN_MS = 3000;
 const MAX_COLUMNS = 12;
 const TREATY_WINDOW = 4000;
 const FALL_SHIELD = 6000;
+const MODEL_NEAR = 2.0;         // models fully shown below this camera distance
+const MODEL_FAR = 2.4;          // and gone above this (orbit shows counters only)
+const AGE_POP_MS = 750;         // bounce when a nation reaches a new age
+const CLASH_MS = 2500;          // battle badge, smoke and loss numbers linger so a judge sees them
+const BATTLE_SMOKE_MS = 3000;
+const LOSS_MS = 2000;
 
 function tok(name: string, fallback: string): string {
   if (typeof document === 'undefined') return fallback;
@@ -40,6 +50,7 @@ interface UState {
   from: number; to: number; t0: number; t1: number;
   hopAt: number;
   arrow: Arrow | null;
+  head: THREE.Vector3;          // march direction (world space), kept after the march ends
 }
 
 interface Chip {
@@ -61,6 +72,11 @@ interface Flash { mesh: THREE.Mesh; mat: THREE.Material; born: number; life: num
 interface Column { pos: THREE.Vector3; n: THREE.Vector3; until: number; nextAt: number }
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _j = new THREE.Vector3(), _camDir = new THREE.Vector3();
+const _n = new THREE.Vector3(), _side = new THREE.Vector3(), _mm = new THREE.Matrix4();
+const smooth = (e0: number, e1: number, x: number): number => {
+  const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
+  return t * t * (3 - 2 * t);
+};
 
 export class UnitLayer {
   readonly group = new THREE.Group();
@@ -94,6 +110,16 @@ export class UnitLayer {
   private readonly clashTex: THREE.CanvasTexture;
   private readonly scrollTex: THREE.CanvasTexture;
   private readonly lossTex = new Map<string, THREE.CanvasTexture>();
+
+  private readonly models = new UnitModels();
+  private readonly field = new ModelField();
+  private readonly traders: Traders;
+  private readonly unitSize: number;
+  private readonly ageSeen = new Map<number, TechAge>(); // from country_updated, until world.countries catches up
+  private readonly agePop = new Map<number, number>();
+  private readonly knownAge = new Map<number, TechAge>(); // last age we drew, to spot a real change
+  private readonly teamCol = new Map<number, THREE.Color>();
+  private near = 0;
 
   private dirty = true;
   private lastFront = -1e9;
@@ -132,7 +158,18 @@ export class UnitLayer {
       this.arrowGroup.add(m);
       this.arrows.push({ mesh: m, mat, geo, busy: false, born: 0, holdUntil: 0, toTile: -1, attack: false });
     }
-    this.group.add(this.frontGroup, this.arrowGroup, this.smoke.group, this.sparks.points, this.chipGroup, this.pops.group);
+    // about a town building: half a tile across, capped so nothing towers over a mountain
+    this.unitSize = Math.min(0.04, Math.max(0.01, Math.sqrt((4 * Math.PI) / Math.max(1, world.tiles.length)) * 0.42));
+    world.countries.forEach((c, i) => this.knownAge.set(i, c.techAge ?? 'ancient'));
+    this.traders = new Traders({
+      dirs: this.dirs,
+      heights: mesh.heights,
+      msPerTick: () => this.msPerTick(),
+      model: (owner) => this.models.resolve(this.ageFor(owner), 'trader'),
+      team: (owner) => this.team(owner),
+      pop: (owner, now) => this.popScale(owner, now),
+    }, p.parchment, this.unitSize * 0.8);
+    this.group.add(this.frontGroup, this.arrowGroup, this.field.group, this.traders.group, this.smoke.group, this.sparks.points, this.chipGroup, this.pops.group);
     this.group.name = 'units';
   }
 
@@ -158,6 +195,33 @@ export class UnitLayer {
     const s = easeInOut(Math.max(0, (now - st.t0) / (st.t1 - st.t0)));
     const a = this.dirs[st.from]!, b = this.dirs[st.to]!;
     return arcPoint(out, a, b, this.mesh.heights[st.from]! + CHIP_LIFT, this.mesh.heights[st.to]! + CHIP_LIFT, s, arcHump(a, b) * 0.6);
+  }
+
+  /** The nation's technology age, or undefined when the world gives none. */
+  private ageOf(owner: number): TechAge | undefined {
+    const c = this.world.countries[owner]?.techAge;
+    const seen = this.ageSeen.get(owner);
+    if (seen && c === seen) this.ageSeen.delete(owner);
+    return seen ?? c;
+  }
+
+  private ageFor(owner: number): TechAge {
+    return this.ageOf(owner) ?? 'ancient';
+  }
+
+  private team(owner: number): THREE.Color {
+    let c = this.teamCol.get(owner);
+    if (!c) { c = new THREE.Color(this.colorOf(owner)); this.teamCol.set(owner, c); }
+    return c;
+  }
+
+  /** Scale bounce after an age change: 1 when none. */
+  private popScale(owner: number, now: number): number {
+    const t0 = this.agePop.get(owner);
+    if (t0 == null) return 1;
+    const t = (now - t0) / AGE_POP_MS;
+    if (t >= 1 || t < 0) { if (t >= 1) this.agePop.delete(owner); return 1; }
+    return 1 + 0.55 * Math.sin(Math.PI * t) * (1 - 0.5 * t);
   }
 
   private flag(owner: number): HTMLImageElement | null {
@@ -195,6 +259,8 @@ export class UnitLayer {
     st.to = to;
     st.t0 = now;
     st.t1 = now + Math.min(3000, Math.max(300, ms));
+    const da = this.dirs[from], db = this.dirs[to];
+    if (from !== to && da && db) st.head.subVectors(db, da);
     if (from !== to && st.kind !== 'settler') {
       const arrow = this.takeArrow(now);
       const a = this.dirs[from], b = this.dirs[to];
@@ -220,11 +286,13 @@ export class UnitLayer {
     if (this.disposed) return;
     const now = performance.now();
     const seen = new Set<string>();
+    this.traders.sync(this.world.units, now);
     for (const u of this.world.units) {
+      if (u.kind === 'trader') continue;
       seen.add(u.id);
       let st = this.states.get(u.id);
       if (!st) {
-        st = { id: u.id, owner: u.owner, kind: u.kind, strength: u.strength, from: u.tile, to: u.tile, t0: 0, t1: 0, hopAt: -1e9, arrow: null };
+        st = { id: u.id, owner: u.owner, kind: u.kind, strength: u.strength, from: u.tile, to: u.tile, t0: 0, t1: 0, hopAt: -1e9, arrow: null, head: new THREE.Vector3() };
         this.states.set(u.id, st);
         const pm = this.pendingMoves.get(u.id);
         if (pm && pm.to === u.tile) this.startMove(st, pm.from, pm.to, (pm.arriveTick - pm.tick) * this.msPerTick(), now);
@@ -292,13 +360,13 @@ export class UnitLayer {
       const strength = g.units.reduce((s, u) => s + u.strength, 0);
       const texKey = g.kind === 'settler'
         ? `s|${color}`
-        : `c|${g.owner}|${color}|${unitIcon(g.kind, era)}|${Math.round(strength)}|${g.units.length}|${flag ? 1 : 0}`;
+        : `c|${g.owner}|${color}|${unitIcon(g.kind, era, this.ageOf(g.owner))}|${Math.round(strength)}|${g.units.length}|${flag ? 1 : 0}`;
       if (texKey !== chip.texKey) {
         const p = this.pal;
         const tex = g.kind === 'settler'
           ? this.acquire(texKey, () => drawSettler(color, p.ink, p.parchment))
           : this.acquire(texKey, () => drawCounter({
-            color, flag, icon: unitIcon(g.kind, era), strength, count: g.units.length,
+            color, flag, icon: unitIcon(g.kind, era, this.ageOf(g.owner)), strength, count: g.units.length,
             night: p.night, ink: p.ink, parchment: p.parchment, accent: p.accent,
           }));
         if (chip.texKey) this.release(chip.texKey);
@@ -369,7 +437,12 @@ export class UnitLayer {
           const st = this.states.get(e.unitId);
           const ms = (e.arriveTick - e.tick) * this.msPerTick();
           if (st) this.startMove(st, e.from, e.to, ms, now);
-          else this.pendingMoves.set(e.unitId, e);
+          else if (this.traders.has(e.unitId)) this.traders.move(e.unitId, e.from, e.to, ms);
+          else {
+            // not seen yet: either kind may claim it at the next sync
+            this.pendingMoves.set(e.unitId, e);
+            this.traders.move(e.unitId, e.from, e.to, ms);
+          }
           break;
         }
         case 'unit_removed':
@@ -394,11 +467,26 @@ export class UnitLayer {
           this.onFall(e.countryId, now);
           break;
         case 'country_updated':
-          if (e.patch.flag || e.patch.color) { this.flags.delete(e.countryId); this.dirty = true; }
+          if (e.patch.flag || e.patch.color) { this.flags.delete(e.countryId); this.teamCol.delete(e.countryId); this.dirty = true; }
+          if (e.patch.techAge && e.patch.techAge !== (this.knownAge.get(e.countryId) ?? 'ancient')) this.onAge(e.countryId, e.patch.techAge, now);
           break;
         default:
           break;
       }
+    }
+  }
+
+  /** A nation reached a new age: every unit it owns swaps model and icon with a pop and gilt sparks. */
+  private onAge(country: number, age: TechAge, now: number): void {
+    this.ageSeen.set(country, age);
+    this.knownAge.set(country, age);
+    this.agePop.set(country, now);
+    this.dirty = true;
+    for (const st of this.states.values()) if (st.owner === country) st.hopAt = now;
+    for (const chip of this.chips.values()) {
+      if (chip.owner !== country || chip.pos.lengthSq() === 0) continue;
+      this.sparks.burst(now, chip.pos, 12, 0.009, this.col.accent, 900, 0.035, 250);
+      this.sparks.burst(now, chip.pos, 5, 0.006, this.col.flash, 500, 0.02);
     }
   }
 
@@ -433,7 +521,7 @@ export class UnitLayer {
       }
     }
 
-    this.pops.show(now, 'clash', this.clashTex, P, 0.036, 1, 1800);
+    this.pops.show(now, 'clash', this.clashTex, P, 0.036, 1, CLASH_MS);
     // muzzle flashes: short warm flickers over ~0.8s, then a few gilt sparks
     this.sparks.burst(now, P, 18, 0.013, this.col.flash, 200, 0.01, 750);
     this.sparks.burst(now, P, 8, 0.01, this.col.accent, 450, 0.05, 300);
@@ -441,14 +529,14 @@ export class UnitLayer {
       tangentJitter(_j, n, 0.01);
       const start = P.clone().add(_j);
       const drift = tangentJitter(new THREE.Vector3(), n, 0.012).addScaledVector(n, 0.01);
-      this.smoke.emit(now, start, drift, 0.008, 0.03, 2000, 0.75, this.col.ruin, i * 110);
+      this.smoke.emit(now, start, drift, 0.008, 0.03, BATTLE_SMOKE_MS, 0.75, this.col.ruin, i * 110);
     }
     const loss = (v: number, dx: number, delay: number): void => {
       if (!(v > 0)) return;
       const text = `-${Math.round(v)}`;
       let tex = this.lossTex.get(text);
       if (!tex) { tex = toTexture(drawLoss(text, this.pal.stance.war, this.pal.ink)); this.lossTex.set(text, tex); }
-      this.pops.show(now, 'loss', tex, P, 0.022, 160 / 72, 1500, dx, delay);
+      this.pops.show(now, 'loss', tex, P, 0.022, 160 / 72, LOSS_MS, dx, delay);
     };
     loss(e.losses.attacker, -1.0, 250);
     loss(e.losses.defender, 1.0, 350);
@@ -569,7 +657,8 @@ export class UnitLayer {
     this.lastNow = now;
     const dist = camera.position.length();
     _camDir.copy(camera.position).normalize();
-    const zoom = Math.min(1.25, Math.max(0.8, 1.25 - ((dist - 1.3) / 2.2) * 0.45));
+    const zoom = Math.min(1.25, Math.max(0.68, 1.25 - ((dist - 1.3) / 2.2) * 0.6)); // compact from orbit
+    this.near = smooth(MODEL_FAR, MODEL_NEAR, dist);
 
     for (const st of this.states.values()) {
       if (st.t1 > 0 && now >= st.t1 && st.from !== st.to) { st.from = st.to; this.dirty = true; }
@@ -593,6 +682,18 @@ export class UnitLayer {
       chip.mat.opacity = f * (1 - t) * (d.shatter ? (Math.random() < 0.3 ? 0.4 : 1) : 1);
     }
 
+    // 3D models: counters stand on them up close; traders sail at every distance
+    this.field.begin();
+    if (this.near > 0) {
+      for (const chip of this.chips.values()) this.drawModel(chip, now, 1);
+      for (const chip of this.dying) {
+        const d = chip.dying!;
+        this.drawModel(chip, now, Math.max(0, 1 - (now - d.start) / (d.shatter ? 750 : 450)));
+      }
+    }
+    this.traders.update(this.field, _camDir, dist, now, dt);
+    this.field.end();
+
     // arrows
     const tSec = now / 1000;
     for (const a of this.arrows) {
@@ -607,6 +708,7 @@ export class UnitLayer {
     // fronts
     if (now - this.lastFront >= FRONT_EVERY) this.refreshFronts(now);
     const lineScale = Math.min(2.2, Math.max(0.16, (dist - 1) / 1.5));
+    const toothScale = 1 + Math.max(0, dist - 1.8) * 0.7; // teeth readable from orbit
     for (const [k, f] of this.fronts) {
       let op = 1;
       if (f.fadeStart >= 0) {
@@ -621,6 +723,7 @@ export class UnitLayer {
       }
       f.mat.uniforms.uOpacity!.value = 0.95 * op;
       f.mat.uniforms.uScale!.value = lineScale;
+      f.mat.uniforms.uTooth!.value = toothScale;
       f.mat.uniforms.uTime!.value = tSec;
     }
 
@@ -679,13 +782,45 @@ export class UnitLayer {
     const h = chip.height * zoom;
     chip.sprite.scale.set(h * chip.aspect, h, 1);
     const stack = chip.kind === 'settler' ? 0 : Math.max(0, chip.stack);
-    const base = chip.kind === 'settler' ? 0.5 : -0.18; // settlers sit on the tile, counters just above it
+    // settlers sit on the tile, counters just above it, and above the model when it shows; a
+    // little higher from orbit so they clear the nation names
+    const base = chip.kind === 'settler' ? 0.5 : -0.18 - 0.85 * this.near - 0.25 * (1 - zoom / 1.25);
     chip.sprite.center.set(0.5, base - stack * 0.92 - hop);
     chip.mat.opacity = f;
   }
 
+  /** The age model under a counter, standing where the counter is and facing its march. */
+  private drawModel(chip: Chip, now: number, k: number): void {
+    if (chip.kind !== 'army' && chip.kind !== 'fleet') return;
+    const lead = chip.moving ?? chip.units[0];
+    if (!lead || k <= 0 || chip.pos.lengthSq() === 0) return;
+    const f = facing(chip.pos, _camDir);
+    if (f <= 0) return;
+    const model = this.models.resolve(this.ageFor(chip.owner), chip.kind);
+    const size = this.unitSize * (model.footprint / 0.5) * this.near * k * this.popScale(chip.owner, now);
+    _n.copy(chip.pos).normalize();
+    _v.copy(chip.pos).addScaledVector(_n, 0.0003 - CHIP_LIFT);
+    let hop = 0;
+    for (const u of chip.units) {
+      const t = (now - u.hopAt) / 380;
+      if (t >= 0 && t < 1) hop = Math.max(hop, Math.sin(Math.PI * t));
+    }
+    if (hop) _v.addScaledVector(_n, hop * size * 0.5);
+    // several counters on one tile: step the models sideways so they do not overlap
+    const stack = Math.max(0, chip.stack);
+    if (stack) {
+      _side.crossVectors(_n, lead.head.lengthSq() > 1e-12 ? lead.head : _w.set(0, 1, 0)).normalize();
+      _v.addScaledVector(_side, ((stack % 2) ? 1 : -1) * Math.ceil(stack / 2) * size * 0.9);
+    }
+    const bob = chip.kind === 'fleet' ? Math.sin(now * 0.002 + chip.tile) * 0.07 : 0;
+    this.field.push(model, standMatrix(_mm, _v, lead.head, size, bob), this.team(chip.owner));
+  }
+
   dispose(): void {
     this.disposed = true;
+    this.field.dispose();
+    this.traders.dispose();
+    this.models.dispose();
     for (const chip of this.chips.values()) this.dropChip(chip);
     for (const chip of this.dying) this.dropChip(chip);
     this.chips.clear();

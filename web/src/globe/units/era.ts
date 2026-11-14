@@ -1,5 +1,6 @@
-// Which unit icon an era's armies get, from keywords in the world's era text. Lane b (B5).
-import type { UnitKind } from '@terra/shared';
+// Which unit icon a counter gets: from the owner's technology age (X1 TechAge), else from keywords
+// in the world's era text. Lane b (B5).
+import type { TechAge, UnitKind } from '@terra/shared';
 import type { IconKind } from './draw';
 
 const RULES: Array<[RegExp, IconKind]> = [
@@ -11,13 +12,18 @@ const RULES: Array<[RegExp, IconKind]> = [
   [/ancient|bronze|classical|iron age|stone|antiquity|roman|greek|myth/i, 'spear'],
 ];
 
+const AGE_ICON: Record<TechAge, IconKind> = {
+  ancient: 'spear', medieval: 'sword', gunpowder: 'musket', industrial: 'rifle', modern: 'tank',
+};
+
 export function eraIcon(era: string): IconKind {
   for (const [re, icon] of RULES) if (re.test(era)) return icon;
   return 'sword';
 }
 
-export function unitIcon(kind: UnitKind, era: string): IconKind {
-  if (kind === 'fleet') return 'ship';
+/** The nation's age decides the army icon; with no age, the world's era text does. */
+export function unitIcon(kind: UnitKind, era: string, age?: TechAge): IconKind {
+  if (kind === 'fleet' || kind === 'trader') return 'ship';
   if (kind === 'settler') return 'wagon';
-  return eraIcon(era);
+  return (age && AGE_ICON[age]) || eraIcon(era);
 }

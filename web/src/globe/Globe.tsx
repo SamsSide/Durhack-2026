@@ -18,6 +18,8 @@ import { Political } from './political/Political';
 import { Atmosphere } from './atmosphere/Atmosphere';
 import { Structures } from './structures/Structures';
 import { Units } from './units';
+import { Clouds } from './clouds';
+import { Rivers } from './rivers';
 import { registerCapture } from './capture';
 import { setStatuses } from './status/statusTint';
 
@@ -148,6 +150,7 @@ function Scene({ world }: { world: World }) {
       <Political />
       <Structures />
       <Units />
+      <Rivers />
     </ProvinceMeshContext.Provider>
   );
 }
@@ -163,6 +166,7 @@ export function Globe() {
       <hemisphereLight args={['#fff6e0', '#33414a', 0.6]} />
       <CameraLight />
       <Atmosphere />
+      <Clouds />
       {world && <Scene world={world} />}
       <CameraRig />
       <CaptureBridge />

@@ -51,3 +51,4 @@ pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
 - 14 Nov · building size and variety (#55 feedback)
 - 14 Nov · B7 + #87 + #96 · map states (cut ring, signal lost, autopilot, ruins, dispute and collapse flashes, return ripple, belief refresh), design polish, closing card, camera centred between panels
 - 14 Nov · B5 + map look + styles · war counters, march and attack arrows, battles, fronts, treaties, falls; AoH names along nations (lifted, curved, never clipped, #106), hover tooltip, terrain relief, minimap; per-nation building styles (#91); status tag and ring fixes; self-hosted Cinzel
+- 14 Nov · identity + living map · per-nation identity (government tints, era density, mountain terraces, props, selection grade), units by tech age and trader ships (#122), speed slider and auto pacing (#124), clouds, generated rivers and lakes, model gallery (?gallery) with 4 prototype sets, research docs

@@ -143,3 +143,18 @@ body:has(.tn-herald) .belief-banner { top: 148px; }
 .meter-hit { display: inline-flex; cursor: pointer; border-radius: var(--radius-1); }
 .meter-hit:hover > * { border-color: var(--color-accent); }
 .meter-hit:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* Speed slider: log scale 0.1x to 64x */
+.speedctl { display: flex; align-items: center; gap: 8px; }
+.speed-slider { width: 150px; height: 28px; display: flex; align-items: center; cursor: pointer; touch-action: none; outline-offset: 2px; }
+.speed-slider:focus-visible { outline: 2px solid var(--color-accent); }
+.speed-track { position: relative; width: 100%; height: 4px; background: var(--color-border); border-radius: 2px; }
+.speed-fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--color-accent); border-radius: 2px; }
+.speed-mark { position: absolute; top: -3px; width: 1px; height: 10px; background: var(--color-text-muted); transform: translateX(-50%); }
+.speed-thumb { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: var(--color-parchment); border: 2px solid var(--color-accent); transform: translate(-50%, -50%); }
+.speed-slider.auto { cursor: default; }
+.speed-slider.auto .speed-thumb { background: var(--color-accent); }
+.speed-slider.auto .speed-fill { opacity: 0.55; }
+.speed-val { font-family: var(--font-mono); font-size: 13px; color: var(--color-accent); min-width: 40px; text-align: right; }
+.topbar.compact .speed-slider { width: 90px; }
+.topbar.compact .speed-val { min-width: 34px; }

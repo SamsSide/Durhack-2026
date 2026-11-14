@@ -133,14 +133,15 @@ export function lineMaterial(): THREE.ShaderMaterial {
       uTime: { value: 0 },
       uOpacity: { value: 1 },
       uScale: { value: 1 },
+      uTooth: { value: 1 },
     },
     vertexShader: /* glsl */ `
-      uniform float uScale;
+      uniform float uScale; uniform float uTooth;
       attribute vec3 aOff; attribute float aSide; attribute float aMode;
       varying float vSide; varying float vMode; varying vec3 vPos;
       void main() {
         vSide = aSide; vMode = aMode;
-        vec3 p = position + aOff * uScale;
+        vec3 p = position + aOff * uScale * (aMode > 0.5 ? uTooth : 1.0); // teeth grow from orbit
         vPos = p;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
       }`,
@@ -151,7 +152,7 @@ export function lineMaterial(): THREE.ShaderMaterial {
         float pulse = 0.8 + 0.2 * sin(uTime * 3.0 - (vPos.x + vPos.y + vPos.z) * 70.0);
         vec3 c = uColor * pulse;
         if (vMode < 0.5 && abs(vSide) > 0.7) c = uInk;
-        if (vMode > 0.5) c = mix(uColor, uInk, 0.25);
+        if (vMode > 0.5) c = mix(uColor, uInk, 0.45);
         gl_FragColor = vec4(c, uOpacity);
         ${COLORSPACE}
       }`,
