@@ -243,6 +243,14 @@ npm install
 npm run demo        # the live demo: real Gemini, ElevenLabs and Solana devnet, opened in the browser
 ```
 
+### Preflight
+
+Before the live demo, `npm run demo:check` (the desktop launcher runs it too) tests every enabled
+service and prints one PASS, WARN, FAIL or SKIP line each: Node 22, the install, free ports,
+Gemini (and Gemma or Ollama when `LLM_PROVIDER` picks them), ElevenLabs characters left, and the
+Solana devnet RPC and commons balance. It ends with `READY` or `NOT READY: N failed`; add
+`--json` for one JSON object per line. Under `LLM_MODE=mock` every paid check is skipped.
+
 ### The demo commands
 
 | Command | What |
