@@ -34,14 +34,14 @@ pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
 | B8 | Polish and speed: ocean, atmosphere glow, stars, lighting, a steady 60 frames a second with 500 provinces | | | CP2 | wip | Done: clouds, sky, sun and moon, terrain mode, province layers, beacons and spotlight, wonders. Left: lens flare tone-down, close-zoom yellow fan, meteor showers (parked) |
 | B9 | Stretch: a timeline scrubber that rebuilds the globe at any past year from `GET /api/world/log` | nothing (the mock serves the log) | | CP2 | todo | Cut first if behind |
 | B10 | Devnet hardening: a token account for every nation founded after genesis (`country_founded`), readable memos naming payer and payee, our laptop's own devnet run | a human funds the Commons at the faucet | | CP2 | planned | Owner's devnet run of #180 was clean (#183). Plan `docs/plans/b-economy.md` tasks 0, 1 |
-| B11 | Economy depth in the sim: a docked merchant ship's cargo is paid for, tribute from a beaten nation; loans and defaults if #187 allows | #187 for loans (contract + `rules.ts` hook) | | CP2 | planned | `check-money` and `check-replay` must pass. Tasks 2, 3, 4 (4 cut first) |
+| B11 | Economy depth in the sim: design pending (user + owner): a main good per province, devastation, civilian fear from war readiness, an ideology axis that drifts to the extremes under war | owner decision on the design and its contract changes | | CP2 | planned | Design pending (user + owner). `check-money` and `check-replay` must pass after every sim change |
 | B12 | Economy on the globe: trade-route lines between pact partners, coin bursts on plunder and seizure, a wealth map mode | #187 for the wealth mode (X5) | | CP2 | planned | Tasks 5, 6 |
 | B13 | The 15-second Solana beat: click a gold arc, land on Solana Explorer with the memo visible | B10 memo | | CP2 | planned | Task 7; human test on devnet |
 
 ## Waiting on
 
 <!-- Open agent-request / needs-owner issues this lane is waiting for: #.. -->
-- #187 (needs-owner): wealth map mode in X5, loan and repayment reasons in X1 (B11 task 4, B12 task 6)
+- #187 (needs-owner): wealth map mode in X5 (B12 task 6)
 
 ## Log
 

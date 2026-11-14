@@ -1,11 +1,11 @@
 # Lane b plan: the economy (B10 to B13)
 
-- **Rows:** B10 devnet hardening, B11 economy depth in the sim, B12 economy on the globe, B13 the 15-second Solana beat
+- **Rows:** B10 devnet hardening, B11 economy depth in the sim (**design pending, user + owner**), B12 economy on the globe, B13 the 15-second Solana beat
 - **Branch:** one per task, `b/<task>` (names below)
 - **Paths allowed:** `server/src/chain/`, `packages/shared/src/sim/payments.ts`, `packages/shared/src/sim/trade.ts`, `scripts/solana-keys.ts`, `server/scripts/check-money.ts`, `web/` except `web/src/ui/`, `web/src/audio/`, `web/src/theme/`, `web/public/models/`. Anything else: NEEDS_OTHER_LANE or NEEDS_OWNER.
 - **Contracts:** X1 `payment` and `PaymentReason` (implement, no change unless flagged), X2 `ledger` / `economy` (read), X3 `GET /api/economy` (read), X5 `mapMode` (change flagged)
 - **Background:** `docs/research/solana-economy.md`, `docs/decisions.md` 17:50 and 19:20, issue #183, owner question #187
-- **Done when:** on `main`, a nation founded mid-game pays and is paid on devnet; merchant ships and tribute make visible payments; the globe shows trade routes, coin bursts and (if #187 says yes) a wealth mode; clicking a gold arc opens the transaction on Solana Explorer with a readable memo.
+- **Done when:** on `main`, a nation founded mid-game pays and is paid on devnet; the globe shows trade routes, coin bursts and (if #187 says yes) a wealth mode; clicking a gold arc opens the transaction on Solana Explorer with a readable memo.
 
 ## Where we start
 
@@ -15,6 +15,10 @@ compute-unit errors. So the bridge works. What is left for devnet is the gap the
 **a nation founded after genesis has no token account**, so `canMove` is false and its payments
 are recorded as confirmed with no signature (`settle.ts` line ~295). Plus our own laptop's run.
 
+## B11 is design pending
+
+The user is designing a bigger B11 with the owner: a main good per province, devastation, civilian fear from war readiness, and an ideology axis that drifts to the extremes under war. Tasks 2, 3 and 4 below are the earlier small ideas, kept for reference only: **do not dispatch them**. The coordinator opens the needs-owner issue for B11's contract changes; B11 gets its own plan once the design is settled. Whatever B11 becomes, `check-money` and `check-replay` must pass after every sim change.
+
 ## Flags
 
 | Task | (a) Human | (b) Contract change | (c) Lane a hook |
@@ -22,7 +26,7 @@ are recorded as confirmed with no signature (`settle.ts` line ~295). Plus our ow
 | 1 Late wallets | yes: fund the Commons, run devnet | no | no |
 | 2 Docking pays | no | no (`trade` reason) | no (`tradeTurn` already gets `emit`) |
 | 3 Tribute | no | no (`reparations` reason) | no (`paymentTurn` already gets `ledger`) |
-| 4 Loans and defaults | no | **yes**: `loan`, `repayment` in X1, #187 | **yes**: pass a loan memory from `rules.ts` |
+| 4 Loans and defaults | no | **yes**: `loan`, `repayment` in X1 (B11 design pending; coordinator asks the owner) | **yes**: pass a loan memory from `rules.ts` |
 | 5 Routes and coin bursts | no | no | no |
 | 6 Wealth mode | no | **yes**: `wealth` in X5 `mapMode`, #187 | no |
 | 7 Arc click to Explorer | yes: human test on devnet | no | no |
@@ -33,8 +37,9 @@ are recorded as confirmed with no signature (`settle.ts` line ~295). Plus our ow
 
 ## Parallel batches
 
-- **Batch 1 (now):** Task 1, Task 2, Task 3, Task 5, Task 7. No two share a file.
-- **Batch 2 (after #187 is answered):** Task 6 (yes on wealth), Task 4 (yes on loans; cut first if behind). Task 4 shares `payments.ts` with Task 3, so it starts after Task 3 merges.
+- **Batch 1 (now):** Task 1, Task 5, Task 7. No two share a file.
+- **Batch 2 (after #187 is answered):** Task 6 (wealth mode).
+- **Not dispatched:** Tasks 2, 3, 4 (B11, design pending).
 
 ## Task 1 (B10): wallets for nations founded after genesis
 
@@ -61,7 +66,7 @@ An agent cannot do this (the faucet refuses AI agents).
 3. Put `SOLANA_MODE=devnet` in `.env`, run `npm run dev`, watch the server log for `chain:` lines and the ledger panel turning rows `confirmed`.
 4. If any row fails with a compute-unit error, raise `CU_PER_TRANSFER` in `server/src/chain/settle.ts` (owner's run saw none).
 
-## Task 2 (B11): a merchant ship's cargo is paid for
+## Task 2 (B11): a merchant ship's cargo is paid for (design pending, do not dispatch)
 
 - **Agent:** durhack-builder · **Model:** sonnet · **Branch:** `b/docking-pays`
 - **Parallel with:** 1, 3, 5, 7 (only `trade.ts`)
@@ -71,7 +76,7 @@ An agent cannot do this (the faucet refuses AI agents).
 - **Smoke proof:** `./check.sh`; `check-money` prints a `trade` line with more payments than before and `MONEY CONSERVED`; `check-replay` passes.
 - **HUMAN_TEST:** `npm run mock`, wait for a ship to dock: a gold arc from the port's nation to the shipper's capital, and a ledger row "pepper and cloves by merchant cog".
 
-## Task 3 (B11): tribute from a beaten nation
+## Task 3 (B11): tribute from a beaten nation (design pending, do not dispatch)
 
 - **Agent:** durhack-builder · **Model:** sonnet · **Branch:** `b/tribute`
 - **Parallel with:** 1, 2, 5, 7 (only `payments.ts`)
@@ -81,9 +86,9 @@ An agent cannot do this (the faucet refuses AI agents).
 - **Smoke proof:** `./check.sh`; `check-money` shows more `reparations` payments and `MONEY CONSERVED`; `check-replay` passes.
 - **HUMAN_TEST:** `npm run mock` at high speed through a war and peace: four tribute rows over the following years, each an arc loser to winner.
 
-## Task 4 (B11, optional, cut first): loans and defaults
+## Task 4 (B11, optional, cut first): loans and defaults (design pending, do not dispatch)
 
-- **Blocked on:** #187 (option A). Starts after Task 3 merges (same file).
+- **Blocked on:** the B11 design. Starts after Task 3 merges (same file).
 - **Agent:** durhack-builder · **Model:** sonnet · **Branch:** `b/loans`
 - **Files:** `packages/shared/src/sim/payments.ts` (modify), `packages/shared/src/types.ts` (add the two reasons, as the owner approves), `packages/shared/src/sim/rules.ts` (one line: pass `ctx.loans` to `paymentTurn`, add `loans: new Map()` beside `ctx.wars`; name this hook in the PR, lane a owns the file)
 - **Build:** a rich nation (treasury >= 150) lends 15% of its treasury to a trade or alliance partner under 40 (hash roll 0.05 per year); the borrower repays 1/5 plus 10% interest every 5 years (`repayment`); if it cannot (treasury under the instalment) it defaults: chronicle `<borrower> defaults on its debt to <lender>`, grievance up through the existing relation path, loan dropped. Loan memory lives in `ctx.loans` on each replica, keyed by the lender's `loan` event, so replays rebuild it.
@@ -104,7 +109,7 @@ An agent cannot do this (the faucet refuses AI agents).
 
 ## Task 6 (B12): wealth map mode
 
-- **Blocked on:** #187 (option A or B).
+- **Blocked on:** #187.
 - **Agent:** durhack-frontend · **Model:** sonnet · **Branch:** `b/wealth-mode`
 - **Parallel with:** everything else (files no other task touches)
 - **Files:** `web/src/state/world.ts` (add `'wealth'` to `mapMode`), `web/src/hud/TopBar.tsx` (a "Wealth" button), `web/src/globe/mesh/colors.ts` (colour per nation)
