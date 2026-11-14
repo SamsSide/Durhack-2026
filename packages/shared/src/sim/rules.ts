@@ -13,6 +13,7 @@ import {
 import { unrestTurn, type UnrestMemory } from './regions';
 import { ageStrength, ageTurn, satelliteTurn, type AgeMemory } from './ages';
 import { tradeTurn } from './trade';
+import { paymentTurn } from './payments';
 import { TERRAIN_EFFECTS } from './terrain';
 import { WONDER_BUILD_TICKS, WONDER_COST, planWonder, wonderBonusOf } from './wonders';
 
@@ -445,6 +446,7 @@ export function nationTurn(
 
   // --- 4. diplomacy and war (row A6, sim/war.ts): alliances, peace, declarations, trade; then the march
   diplomacyTurn({ view, me: countryId, tick, rng, focus: policy.focus, targets: policy.targets ?? [], ledger: ctx.wars, own, emit });
+  paymentTurn({ view, me: countryId, tick, ledger: ctx.wars, emit });
   marchTurn({ view, me: countryId, tick, rng, focus: policy.focus, targets: policy.targets ?? [], own, units: myUnits.filter(isCombatant), emit, uid });
   // Spent armies go home (one a turn), which frees a place for a fresh one.
   const spent = myUnits.find((u) => isCombatant(u) && u.tile >= 0 && u.strength <= (enemies.length ? 5 : 3));
@@ -534,6 +536,9 @@ export function isEventValid(world: World, e: WorldEvent): boolean {
       return world.units.some((u) => u.id === e.unitId && u.owner === a);
     case 'country_updated':
       return e.countryId === a;
+    case 'payment':
+      // A nation pays out of its own treasury; plunder and seizure are derived in settleMove with the attacker as actor.
+      return e.from !== e.to && (e.from === a || ((e.reason === 'plunder' || e.reason === 'seizure') && e.to === a));
     case 'relation_changed':
       return (e.a === a || e.b === a) && e.a !== e.b && !!world.countries[e.a === a ? e.b : e.a];
     case 'region_updated':

@@ -15,11 +15,16 @@ import { settleMove } from './war';
 
 const actorKey = (a: WorldEvent['actor']): number => (a === 'world' ? -2 : a === 'decree' ? -1 : a);
 
-/** The canonical order of a batch. Pure; returns a new array. */
+/**
+ * The canonical order of a batch. Pure; returns a new array. Payments (row A27) go last: a nation's
+ * `country_updated` carries an absolute treasury worked out before the batch, so a payment applied
+ * before it would be overwritten and the money would vanish. After it, it lands on the new balance.
+ */
 export function orderEvents(events: WorldEvent[]): WorldEvent[] {
+  const late = (e: WorldEvent): number => (e.type === 'payment' ? 1 : 0);
   return events
     .map((e, i) => ({ e, i }))
-    .sort((x, y) => (x.e.lamport - y.e.lamport) || (actorKey(x.e.actor) - actorKey(y.e.actor)) || (x.i - y.i))
+    .sort((x, y) => (late(x.e) - late(y.e)) || (x.e.lamport - y.e.lamport) || (actorKey(x.e.actor) - actorKey(y.e.actor)) || (x.i - y.i))
     .map((x) => x.e);
 }
 
@@ -49,15 +54,29 @@ export function applyTickBatch(world: World, events: WorldEvent[]): WorldEvent[]
   const ordered = orderEvents(events);
   const losers = clashLosers(ordered);
   const applied: WorldEvent[] = [];
+  const late: WorldEvent[] = [];                  // payments, derived ones included: applied after everything else
   for (const e of ordered) {
-    if (losers.has(e.id) || !isEventValid(world, e)) continue;
+    if (losers.has(e.id) || (e.type !== 'payment' && !isEventValid(world, e))) continue;
     const settled = e.type === 'unit_moved' ? settleMove(world, e) : null;
     if (settled) {
-      for (const d of settled) { applyEvent(world, d); applied.push(d); }
+      for (const d of settled) {
+        if (d.type === 'payment') { late.push(d); continue; }
+        applyEvent(world, d); applied.push(d);
+      }
       continue;
     }
+    if (e.type === 'payment') { late.push(e); continue; }
     applyEvent(world, e);
     applied.push(e);
+  }
+  for (const e of late) {
+    if (e.type !== 'payment' || !isEventValid(world, e)) continue;
+    // What the payer can really afford, so the log and the chain hold the amount that moved.
+    const paid = Math.round(Math.min(Math.max(0, e.amount), Math.max(0, world.countries[e.from]?.treasury ?? 0)) * 100) / 100;
+    if (paid <= 0) continue;
+    const real = paid === e.amount ? e : { ...e, amount: paid };
+    applyEvent(world, real);
+    applied.push(real);
   }
   return applied;
 }
