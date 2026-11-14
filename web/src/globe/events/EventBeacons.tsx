@@ -11,7 +11,7 @@ import { useEventStream } from '../status/useEventStream';
 import { buildStructureCache, classify } from './classify';
 import type { StructureCache } from './classify';
 import { focusTile } from './focus';
-import { underHud } from '../status/hudCover';
+import { hudSlot, underHud } from '../status/hudCover';
 import { iconUrl } from './icons';
 import { KIND_META } from './kinds';
 import { PILLAR_MS, clearBeacons, pruneBeacons, pushStory, useBeacons } from './store';
@@ -173,9 +173,9 @@ export function EventBeacons() {
   // Lay the captions out a few times a second (they move with the globe).
   const lastLayout = useRef(0);
   useFrame(() => {
-    const now = performance.now();
-    if (now - lastLayout.current < 120) return;
-    lastLayout.current = now;
+    const slot = hudSlot(); // B8: in step with the other readers of the page layout (status/hudCover.ts)
+    if (slot === lastLayout.current) return;
+    lastLayout.current = slot;
     layoutLabels();
   });
 

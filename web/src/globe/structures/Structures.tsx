@@ -7,6 +7,7 @@ import { ensureStyles, loadModels, stylesInUse } from './models';
 import type { ModelSet } from './models';
 import { TileGeos } from './placement';
 import { StructureField } from './StructureField';
+import { WORLD_SYNC_S } from '../constants';
 
 export function Structures() {
   const mesh = useProvinceMesh();
@@ -14,6 +15,7 @@ export function Structures() {
   const [models, setModels] = useState<ModelSet | null>(null);
   const field = useRef<StructureField | null>(null);
   const stale = useRef(true);
+  const syncedAt = useRef(-1e9);
   const [group, setGroup] = useState<StructureField['group'] | null>(null);
 
   useEffect(() => {
@@ -34,6 +36,7 @@ export function Structures() {
       f = new StructureField(world, new TileGeos(world, mesh.heights), models);
       field.current = f;
       stale.current = true;
+      syncedAt.current = -1e9;
       setGroup(f.group);
       // A nation founded mid-run can bring a style that is not loaded yet: on a version bump, if the set of
       // styles in use grew, fetch the new ones and re-pool every structure.
@@ -56,7 +59,7 @@ export function Structures() {
     const f = field.current;
     if (!f) return;
     const now = clock.elapsedTime;
-    if (stale.current) { stale.current = false; f.sync(now); }
+    if (stale.current && now - syncedAt.current >= WORLD_SYNC_S) { stale.current = false; syncedAt.current = now; f.sync(now); }
     f.update(now, Math.min(dt, 0.1), camera.position.length());
   });
 

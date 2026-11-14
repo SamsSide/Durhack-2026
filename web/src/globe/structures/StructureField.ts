@@ -49,7 +49,9 @@ interface PropRec {
 }
 interface Look { id: Identity; css: string; style: string | undefined; nomadic: boolean; tint: THREE.Color; team: THREE.Color; era: EraLook }
 interface PropPool { meshes: THREE.InstancedMesh[]; cap: number }
-interface Pool { key: string; kind: string; parts: ModelPart[]; meshes: THREE.InstancedMesh[]; cap: number; list: Rec[]; dirty: boolean }
+// `dirty`: the list or a look changed, so every instance is rewritten. `moving`: some instance is mid pop-up, so
+// only those are rewritten (B8). A pool with nothing to show (empty, or scaled to nothing from orbit) is hidden.
+interface Pool { key: string; kind: string; parts: ModelPart[]; meshes: THREE.InstancedMesh[]; cap: number; list: Rec[]; dirty: boolean; moving: boolean }
 interface Puff { t0: number; pos: THREE.Vector3; g: TileGeo; size: number; seed: number }
 
 export class StructureField {
@@ -86,6 +88,7 @@ export class StructureField {
     this.puffMesh = new THREE.InstancedMesh(puffGeo, puffMat, PUFF_POOL * PUFF_PARTS);
     this.puffMesh.frustumCulled = false;
     this.puffMesh.count = 0;
+    this.puffMesh.visible = false;
     this.group.add(this.puffMesh);
     this.smokeMesh = new THREE.InstancedMesh(
       new THREE.IcosahedronGeometry(1, 0),
@@ -95,6 +98,7 @@ export class StructureField {
     this.smokeMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_SMOKE * 3), 3);
     this.smokeMesh.frustumCulled = false;
     this.smokeMesh.count = 0;
+    this.smokeMesh.visible = false;
     this.group.add(this.smokeMesh);
   }
 
@@ -103,7 +107,7 @@ export class StructureField {
     const m = modelFor(this.models, kind, this.world.countries[owner]);
     let pool = this.pools.get(m.key);
     if (!pool) {
-      pool = { key: m.key, kind, parts: m.parts, meshes: [], cap: 0, list: [], dirty: false };
+      pool = { key: m.key, kind, parts: m.parts, meshes: [], cap: 0, list: [], dirty: false, moving: false };
       this.pools.set(m.key, pool);
       this.alloc(pool, 32);
     }
@@ -129,6 +133,7 @@ export class StructureField {
       mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3);
       mesh.frustumCulled = false;
       mesh.count = 0;
+      mesh.visible = false;
       this.group.add(mesh);
       return mesh;
     });
@@ -487,10 +492,12 @@ export class StructureField {
     const target = smoothstep(CLOSE + 0.2, CLOSE - 0.2, camDist);
     this.f += (target - this.f) * Math.min(1, dt * 7);
     if (Math.abs(target - this.f) < 0.003) this.f = target;
-    const fChanged = Math.abs(this.f - this.writtenF) > 0.0015;
+    // the ends count exactly: at 0 the small kinds and the props stop being drawn at all
+    const fChanged = Math.abs(this.f - this.writtenF) > 0.0015 || (this.f !== this.writtenF && (this.f === 0 || this.f === 1));
     let wrote = false;
     for (const pool of this.pools.values()) {
-      if (pool.dirty || fChanged) { this.write(pool, now); wrote = true; }
+      if (pool.dirty || fChanged) { this.write(pool, now, true); wrote = true; }
+      else if (pool.moving) { this.write(pool, now, false); wrote = true; }
     }
     if (fChanged) this.writtenF = this.f;
     if (wrote || this.propsDirty) this.writeProps(now);
@@ -499,27 +506,43 @@ export class StructureField {
     this.updatePuffs(now);
   }
 
-  private write(pool: Pool, now: number): void {
+  /**
+   * Write a pool's instances. `full` rewrites every matrix and colour; otherwise only the instances mid pop-up
+   * are rewritten and only that span of the matrix buffer is uploaded. A pool that draws nothing is hidden and
+   * only its animation bookkeeping runs.
+   */
+  private write(pool: Pool, now: number, full: boolean): void {
     if (pool.list.length > pool.cap) {
       let cap = pool.cap;
       while (cap < pool.list.length) cap *= 2;
       this.alloc(pool, cap);
+      full = true;
     }
     const f = this.f;
     const big = BIG.has(pool.kind);
     const base = big ? 1 + (ORBIT_BOOST - 1) * (1 - f) : f; // big ones show from orbit, scaled up
+    const shown = base > 0 && pool.list.length > 0;
     let animating = false;
-    const done: Rec[] = [];
+    let done: Rec[] | null = null;
+    let lo = Infinity, hi = -1;
     const { m, sc, v } = this;
-    pool.list.forEach((r, i) => {
+    const list = pool.list, meshes = pool.meshes, parts = pool.parts;
+    pool.dirty = false; // cleared first: finishing an animation below may mark this pool again
+    for (let i = 0; i < list.length; i++) {
+      const r = list[i]!;
       let sx = 1, sy = 1, sink = 0;
       const a = (r.parent ?? r).anim;
+      if (!a && !full) continue;
       if (a) {
         const dur = a.type === 'build' ? BUILD_S : a.type === 'upgrade' ? UPGRADE_S : DESTROY_S;
         const raw = (now - a.t0) / dur;
         if (raw < 0) { sx = sy = 0; animating = true; }
         else if (raw >= 1) {
-          if (a.type === 'destroy') { if (!r.parent) done.push(r); sx = sy = 0; } else if (!r.parent) { r.anim = null; }
+          if (a.type === 'destroy') { if (!r.parent) (done ??= []).push(r); sx = sy = 0; }
+          else if (!r.parent) {
+            r.anim = null;
+            for (const q of r.sats) q.pool.dirty = true; // its small buildings settle at full size on the next write
+          }
         } else {
           animating = true;
           if (a.type === 'build') sx = sy = Math.max(0, easeOutBack(raw));
@@ -527,24 +550,36 @@ export class StructureField {
           else { const k = raw * raw; sx = sy = 1 - k; sink = raw * 0.5 * r.size; }
         }
       }
+      if (!shown) continue;
       const s = r.size * base;
       sc.set(s * sx, s * sy * r.hy, s * sx);
       v.copy(r.pos).addScaledVector(r.g.n, -sink);
       m.compose(v, r.quat, sc);
-      for (const mesh of pool.meshes) mesh.setMatrixAt(i, m);
+      for (let k = 0; k < meshes.length; k++) meshes[k]!.setMatrixAt(i, m);
+      if (i < lo) lo = i;
+      if (i > hi) hi = i;
+      if (!full) continue;
       const look = this.lookOf(r.owner);
       let tint = look.tint;
       if (r.terr === 'ice') tint = this.tmpC.copy(tint).lerp(WHITE, 0.25);
       if (r.kind === 'ruin') tint = this.tmpC.copy(tint).multiplyScalar(0.42); // B14: burnt and grey
-      pool.meshes.forEach((mesh, k) => mesh.setColorAt(i, pool.parts[k]!.team ? look.team : tint));
-    });
-    pool.meshes.forEach((mesh) => {
-      mesh.count = pool.list.length;
-      mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    });
-    pool.dirty = animating;
-    for (const r of done) this.remove(r);
+      for (let k = 0; k < meshes.length; k++) meshes[k]!.setColorAt(i, parts[k]!.team ? look.team : tint);
+    }
+    for (const mesh of meshes) {
+      mesh.visible = shown;
+      if (!shown) continue;
+      mesh.count = list.length;
+      if (full) {
+        mesh.instanceMatrix.clearUpdateRanges();
+        mesh.instanceMatrix.needsUpdate = true;
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      } else if (hi >= lo) {
+        mesh.instanceMatrix.addUpdateRange(lo * 16, (hi - lo + 1) * 16);
+        mesh.instanceMatrix.needsUpdate = true;
+      }
+    }
+    pool.moving = animating;
+    if (done) for (const r of done) this.remove(r);
   }
 
   /** Scale factors of a record's pop-up animation, without changing it. */
@@ -580,12 +615,17 @@ export class StructureField {
             mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3);
             mesh.frustumCulled = false;
             mesh.count = 0;
+            mesh.visible = false;
             this.group.add(mesh);
             return mesh;
           }),
         };
         this.propPools.set(kind, pp);
       }
+      // Props other than platforms are scaled by `vis`: from orbit they are nothing, so they are not drawn (B8).
+      const shown = list.length > 0 && (kind === 'platform' || vis > 0);
+      for (const mesh of pp.meshes) mesh.visible = shown;
+      if (!shown) continue;
       list.forEach((p, i) => {
         const r = p.parent;
         const an = this.animOf(r, now);
@@ -613,7 +653,7 @@ export class StructureField {
   /** Chimney and barrel smoke: a few puffs per stack looping upwards, only when zoomed in. */
   private updateSmoke(now: number): void {
     const mesh = this.smokeMesh;
-    if (!this.smokers.length || this.f < 0.3) { if (mesh.count) { mesh.count = 0; mesh.instanceMatrix.needsUpdate = true; } return; }
+    if (!this.smokers.length || this.f < 0.3) { mesh.count = 0; mesh.visible = false; return; }
     const { m, sc, v } = this;
     let n = 0;
     for (const p of this.smokers) {
@@ -631,6 +671,7 @@ export class StructureField {
       }
     }
     mesh.count = n;
+    mesh.visible = n > 0;
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }
@@ -662,6 +703,7 @@ export class StructureField {
       }
     }
     mesh.count = n;
+    mesh.visible = n > 0;
     mesh.instanceMatrix.needsUpdate = true;
   }
 
