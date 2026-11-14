@@ -247,6 +247,7 @@ export function flagSvg(spec: FlagSpec, width?: number, height?: number): string
 | `POST /api/decree/voice` | a | `{ "audioBase64": "...", "mimeType": "audio/webm" }` (a spoken decree, up to about 15 s) | `{ "transcript": "a plague sweeps the southern coast", "decree": { "text": "A plague sweeps the southern coast", "effect": "plague", "target": { "countryId": 2 } } }`; the decree is applied at once (a `decree` chronicle entry, plus its effect from row A20). Gemini hears the audio directly. `400 { "error": "unsupported audio" }` (webm/opus, ogg, mp3, wav up to about 2 MB) or `{ "error": "no speech heard" }`; `503 { "error": "voice unavailable" }` when Gemini fails; mock mode returns a canned decree. Typed decrees (X2 `decree`) get the same effects |
 | `POST /api/broadcast` | a | `{ "imageBase64": "...", "mimeType": "image/jpeg" }` (a capture of the globe, about 1280 x 720) | `{ "id": "b-7", "tick": 210, "year": 1210, "headline": "War on the Salt Marches", "script": "Good evening. ...", "audio": "/api/broadcast/b-7/audio" }`: Gemini looks at the image and the recent chronicle and writes a 20 to 30 s news bulletin. Gemini takes about 15 to 20 s with the image (show a "preparing bulletin" state). Over `BROADCAST_MAX_PER_RUN` or the LLM cap, or on any failure, it returns a template bulletin from the chronicle instead (never 503); mock mode does the same. `404` with no world, `400` without an image |
 | `GET /api/broadcast/:id/audio` | a | none | `audio/mpeg`: "Terra Nova News." and the bulletin read by a newsreader voice (ElevenLabs), cached; `503 { "error": "voice unavailable" }` over the cap or on failure; mock: a bundled sample |
+| `GET /api/decree/:entryId/herald` | a | none (`entryId` is the id of a `decree` chronicle entry) | `audio/mpeg`: the decree read out by the royal herald (one of the team's voices), cached; `503 { "error": "voice unavailable" }`; mock: a bundled sample. The X6 module plays it automatically when a decree entry arrives |
 
   Lore response:
 
@@ -386,6 +387,9 @@ export const audio: {
   subscribe(listener: () => void): () => void;       // for React's useSyncExternalStore
 };
 ```
+
+  Decrees are heard automatically too: when a `decree` chronicle entry arrives (the decree's own
+  line, not its consequence), the module plays `/api/decree/:entryId/herald`, ducking chants.
 
   War sound is automatic: the module watches `recentEvents` in the store (X5) and, when a war
   is declared or a battle is fought, plays the chants of the nations involved (X3 chant), louder
