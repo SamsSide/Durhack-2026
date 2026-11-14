@@ -8,9 +8,10 @@ import fs from 'node:fs/promises';
 import { currentMode } from '../llm';
 import { getLore, getRegionLore } from './loreAi';
 import { speak } from './eleven';
-import { heraldText, heraldVoice, voiceForCountry } from './teamVoices';
+import { heraldText, heraldVoice } from './teamVoices';
 import { imageLive, paintFlag } from './paintedFlag';
 import { ensureChant } from './chant';
+import { ensureNarration, narrationTarget } from './narration';
 import { anthemFile, anthemLive } from './anthem';
 import { ensureAudio, getBulletin, makeBroadcast } from './broadcast';
 
@@ -61,15 +62,13 @@ export function storyRoutes(runner: WorldRunner): Router {
     if (id === null || !w) return void res.status(404).json({ error: 'no such country' });
     if (currentMode() !== 'live') return void res.type('audio/mpeg').sendFile(path.join(SAMPLES, 'narration.mp3'));
     try {
-      const lore = await getLore(id, w);
-      if (!lore) return void res.status(404).json({ error: 'no such country' });
-      const text = `${lore.summary} ${lore.history}`.replace(/\s+/g, ' ').trim();
-      const voice = voiceForCountry(w, id);
-      const file = path.join(CACHE, 'narration', `${sha(`${voice.id}\n${text}`)}.mp3`);
       if (playing()) {
-        if (!(await exists(file))) return void res.type('audio/mpeg').sendFile(path.join(SAMPLES, 'narration.mp3'));
-      } else await ensure(file, () => speak(text, voice.id));
-      res.type('audio/mpeg').sendFile(file);
+        const t = await narrationTarget(w, id);
+        if (!t) return void res.status(404).json({ error: 'no such country' });
+        res.type('audio/mpeg').sendFile(await exists(t.file) ? t.file : path.join(SAMPLES, 'narration.mp3'));
+        return;
+      }
+      res.type('audio/mpeg').sendFile(await ensureNarration(w, id));
     } catch {
       res.status(503).json({ error: 'voice unavailable' });
     }

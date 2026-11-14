@@ -3,6 +3,7 @@ import type { Server } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { getBudget } from '../llm';
 import { chainHello, onChainMessage } from '../chain';
+import { latestPrepare, onPrepare, prepareWorld } from '../prepare';
 import type { ControlMessage, LlmMode, WorldRunner } from '../runner';
 
 const ACTIONS_WITH_COUNTRY = ['cut', 'restore', 'silence', 'wake', 'delete'];
@@ -25,6 +26,7 @@ export function attachWs(server: Server, runner: WorldRunner, mode: LlmMode): We
   });
   setInterval(() => broadcast(budget()), 2000).unref();
   onChainMessage((m) => broadcast(m)); // row A27: ledger rows and the economy counters
+  onPrepare((m) => broadcast(m));       // row A31: prepare progress
 
   wss.on('connection', (ws) => {
     const world = runner.getWorld();
@@ -34,6 +36,8 @@ export function attachWs(server: Server, runner: WorldRunner, mode: LlmMode): We
     if (world && clock) send(ws, { type: 'clock', ...clock });
     send(ws, budget());
     for (const m of chainHello()) send(ws, m);
+    const prep = world ? latestPrepare(world.id) : null;
+    if (prep) send(ws, prep);
 
     ws.on('message', (raw) => {
       let msg: any;
@@ -54,6 +58,12 @@ export function attachWs(server: Server, runner: WorldRunner, mode: LlmMode): We
         else if ((a === 'blackout' || a === 'pause') && typeof msg.value === 'boolean') runner.control(msg as ControlMessage);
         else if (a === 'speed' && typeof msg.value === 'number' && Number.isFinite(msg.value)) runner.control({ action: 'speed', value: msg.value });
         else if (a === 'pacing' && (msg.value === 'auto' || msg.value === 'manual')) runner.control({ action: 'pacing', value: msg.value });
+        else if (a === 'prepare') {
+          const w = runner.getWorld();
+          if (!w) return send(ws, { type: 'error', message: 'no world to prepare' });
+          if (runner.playback?.()) return send(ws, { type: 'error', message: 'a replay needs no preparing' });
+          void prepareWorld(runner, w);
+        }
         else if (a === 'decree' && typeof msg.text === 'string' && msg.text.trim()) runner.control({ action: 'decree', text: msg.text.trim() });
         else return send(ws, { type: 'error', message: `bad control: ${String(a)}` });
         return;
