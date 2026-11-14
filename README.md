@@ -58,6 +58,9 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   knew; its neighbours notice the silence; *Show beliefs* shows a nation's own (stale) map.
 - **Restore the link** and the missing years merge back in, with border disputes settled on
   screen. The cut and the rulers' proclamations show on the globe.
+- **A cut nation is visible:** it greys under mist, with a small pile of sealed letters and the
+  tag "SIGNAL LOST · silent N yrs · M queued". On restore the letters fly to the other capitals.
+- **Ruler proclamation scrolls** are each tagged AI or AUTOPILOT.
 - **Secession:** restless regions break away as new nations with their own agents and rulers.
 
 ### The council
@@ -79,6 +82,8 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   severity comes from its words and every effect scales with it. Storm decrees bring storms.
 - The decree box shows what the decree did, with real numbers, and it is reported as a dispatch.
   A decree that names no place strikes the whole nation.
+- **Decree visuals:** the camera flies to the target, then the effect plays out: meteor, plague,
+  famine, storm, flood, prophet, gold rush or rebellion, with a result caption.
 
 ### Terra Nova News
 
@@ -99,7 +104,8 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   authority revoked, and a wallet per nation.
 - Every payment between nations (trade dues, tribute, reparations, plunder, seizure, war chests,
   subsidies, pooled war funds) is a memo plus a transfer **signed by the paying nation's key**,
-  settled in 5-second windows; each payment gets a seal on the globe when Solana confirms it.
+  settled in 5-second windows. When Solana confirms a payment, a **red wax seal** stamps on its arc
+  on the globe; click it to open Solana Explorer.
 - Each province makes a good; shortages, a goods market, trade routes, coin bursts and payment
   arcs on the globe, and a treasury ledger in the network panel.
 - Optional **Tiger Data** hypertables chart each nation's territory over time.
@@ -115,20 +121,30 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   same way. Terrain matters for battles, movement, supply and attrition; armies route round
   mountains, stop at enemy lines, and chokepoint forts hold them.
 - **Army formations** of front, flank and back figures for every age, from spearmen and
-  catapults to tanks and beyond; armies fire at each other by era (arrows, cannon,
-  artillery and tracers).
-- **War effects:** explosions, smoke along the front and ruined buildings; devastation, war
+  catapults to tanks and beyond; armies fire at each other by era: arrows, crossbows and
+  trebuchets, cannon, artillery, tank tracers, drones and orbital strike.
+- **Select an army or a battle:** click an army chip or its figures for its troops, general and
+  status; click a battle badge for both sides, losses and the battle-line grid.
+- **War effects:** explosions by era, smoke over the front, and cities turning to ruins and rebuilding; devastation, war
   readiness and politics that drift to extremes under war.
 
 ### The rocket launch
 
 - When a nation reaches the stellar age it launches satellites: each goes up on a **rocket with
-  stage separation and a booster burning up** on the way down, then circles the globe.
+  stage separation, a satellite release and a booster burning up** on re-entry, then the
+  satellite circles the globe.
 
 | | |
 | --- | --- |
 | ![Army formations of front, flank and back figures for every age](assets/preview-formations.png) | ![The rocket, booster and satellite models](assets/preview-launch.png) |
 | Army formations by age | The rocket, booster and satellite |
+
+| | | |
+| --- | --- | --- |
+| ![Armies firing in the modern age](docs/shots/lane-b-firing-modern.jpg) | ![A battle selected, with both sides and the battle-line grid](docs/shots/lane-b-battle-selected.jpg) | ![War at the front](docs/shots/lane-b-war-battle.jpg) |
+| Firing by era | A selected battle | War at the front |
+| ![A cut nation greyed under mist](docs/shots/lane-b-cut-nation.jpg) | ![A satellite rocket at stage separation](docs/shots/lane-b-rocket-separation.jpg) | ![A meteor decree](docs/shots/lane-b-decree-meteor.jpg) |
+| A cut nation | Stage separation | A meteor decree |
 
 ### Music and voices
 
@@ -197,6 +213,21 @@ npm run mock    # a scripted world with no API calls, plus the web app
 ./check.sh      # the smoke gate: lint, build, the app starts (under a minute)
 ```
 
+### Demo panel and dev helpers (dev builds)
+
+Press backquote or `Shift+D`, or open the app with `?demo`: a draggable, resizable, collapsible
+pill. Buttons: Launch rocket, War demo, Seal on chain, Economy demo, Council, Wonder, Shooting
+star; speed presets; Hide HUD and Show HUD for clean screenshots.
+
+Dev helpers, run in the browser console:
+
+- `__launchDemo()`: launch a satellite rocket
+- `__warDemo()`: a scripted battle
+- `__firingDemo(age)`: armies firing the weapons of one age
+- `__decreeDemo(effect)`: play one decree effect
+- `__sealDemo()`: stamp the on-chain seal on a payment
+- `__econDemo()`: the economy demo
+
 ### Keys
 
 Copy `.env.example` to `.env` (git-ignored) and fill in what you need. Every key is optional:
@@ -230,7 +261,8 @@ Keys do nothing while you are typing in a text box.
 | --- | --- | --- |
 | `1` to `6` | Map mode: political, terrain, diplomacy, strength, wealth, politics | Anywhere |
 | `P` | Presentation mode on or off (hides every panel) | Anywhere |
-| `Esc` | Leave presentation mode; close the chronicle timeline, the closing card or the prepare panel | Anywhere |
+| `` ` `` (backquote) or `Shift+D` | Show or hide the demo panel (dev builds; or open with `?demo`) | Anywhere |
+| `Esc` | Clear the army or battle selection; leave presentation mode; close the chronicle timeline, the closing card or the prepare panel | Anywhere |
 | `S` | Spotlight tour of the world's big moments on or off | Anywhere |
 | `H` | Open or close the chronicle timeline | Anywhere |
 | `End` | Show the closing card (what this world cost) | Anywhere |
@@ -261,6 +293,8 @@ Keys do nothing while you are typing in a text box.
 | Click or drag on the minimap | Turn the globe to that spot |
 | Click a map-mode icon by the minimap | Change the map mode |
 | Click a council marker on the globe | Select that nation |
+| Click an army chip or its figures | Select the army: troops, general, status |
+| Click a battle badge | Select the battle: both sides, losses, battle-line grid |
 | Click a feed card or a dispatch tab | Fly to the place it reports on and select that nation |
 | Click a payment arc | Open that payment on the Solana Explorer |
 | Hold the microphone button | Speak a decree |
