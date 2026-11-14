@@ -27,7 +27,7 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 | A2 | World generation: about 500 irregular provinces on a sphere (spherical Voronoi), terrain and elevation from the seed and sea level, provinces grouped into regions, capitals spread apart; `POST /api/world` builds a world from a mock world bible | | X3 `POST /api/world` | CP1 | done | |
 | A3 | The simulation tick: income, claim land, build and upgrade structures by focus, population; real events on the socket; speed and pause | | X2 real events | CP1 | todo | |
 | A4 | Nation agents: one per country with its own replica, an autopilot policy from temperament, heartbeats, and a message bus with a switchable link per agent | | | CP1 | todo | No central decision-maker |
-| A5 | Gemini: the world bible at creation and ruler decisions as schema-checked JSON; `LLM_MODE=mock`; call and token meter, caps, autopilot on any failure; check the real free-tier limits with one call | | `budget` messages | CP1 | todo | Owner: pick the two model ids |
+| A5 | Gemini: the world bible at creation and ruler decisions as schema-checked JSON; `LLM_MODE=mock`; call and token meter, caps, autopilot on any failure; check the real free-tier limits with one call | | `budget` messages | CP1 | wip | Bible and ruler built; wiring in A4. Models: lore 3.5-flash, ruler and bible 3.5-flash-lite |
 | A6 | War and diplomacy: stances, armies with strength, marching along tile paths, battles settled by a pure seeded function, capture tile by tile, peace treaties that hand over land, alliances, a nation falling | | war events to b | CP1.5 | todo | |
 | A7 | Resilience: cut and restore with queued events and reconciliation (disputes written to the chronicle), silence and wake, delete with neighbours carving up the ruins, blackout, `belief` messages | | X2 real controls | CP1.5 | todo | The demo's key moment |
 | A8 | Low-poly models with headless Blender: all 15 keys in X4, exported as GLB with the manifest and a preview sheet | | X4 to b | CP1 | done | Owner's laptop has Blender |
@@ -54,5 +54,6 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 - 14:47 · A2: about 500 provinces, terrain, regions, spread capitals from a seed; POST /api/world builds a world from a template bible
 - 14:48 · A13: Gemini lore and anthem lyrics from the real chronicle, cached, template in mock mode; shared Gemini client with meter and caps in server/src/llm
 - 14:49 · A8: 15 low-poly GLB models (structures, units, tree) with the X4 manifest and a preview sheet, built by headless Blender
+- 14:56 · A5 (part): Gemini world bible (flash-lite, about 5 s) and ruler decisions (about 1 s, 300 tokens in, 80 out) with a call scheduler; wired into the engine in A4
 
 Mocks: `npm run mock` (MockRunner behind the `WorldRunner` interface in `server/src/runner.ts`) stands in for the engine until A3; lore, audio and replays are mocked until A13 to A16 and A9.
