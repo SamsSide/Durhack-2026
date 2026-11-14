@@ -1,4 +1,4 @@
-"""Build the 15 technology-age unit models (5 ages x army, fleet, trader), update the manifest,
+"""Build the 21 technology-age unit models (7 ages x army, fleet, trader), update the manifest,
 render the preview.
 
 Run (from the repo root):

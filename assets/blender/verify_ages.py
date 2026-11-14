@@ -21,7 +21,10 @@ def main():
     manifest = json.load(open(os.path.join(MODELS, "manifest.json")))
     print(f"{'model':26} {'tris':>5} {'x':>5} {'y':>5} {'z':>5} {'ymin':>6} {'meshes':>6} {'mats':>4} team {'KB':>5}  result")
     bad = 0
-    for style, kinds in manifest["ages"].items():
+    groups = dict(manifest["ages"])
+    if "satellite" in manifest["models"]:  # row A26: the one top-level model built with the ages kit
+        groups["models"] = {"satellite": manifest["models"]["satellite"]}
+    for style, kinds in groups.items():
         for kind, ent in kinds.items():
             j, size = read_glb(os.path.join(MODELS, ent["file"]))
             tris = 0

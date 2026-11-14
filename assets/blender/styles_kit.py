@@ -39,6 +39,10 @@ PALETTES = {
     "egyptian": dict(wall="#E6D3A3", stone="#C8A26A", roof="#8A6A45", trim="#2F6E9E", dark="#3A2C20", extra="#D4A93A"),
     # highland (Himalayan): whitewash, rock, dark timber roof, ochre-red band, windows, gold roof
     "highland": dict(wall="#F2EEE4", stone="#8D8578", roof="#4A3A2E", trim="#8E2A1E", dark="#2A2220", extra="#D4A93A"),
+    # arcology (row A26, the future and stellar ages): white shell, pale plaza, teal glass, deep teal,
+    # dark glass, a luminous aqua, parks
+    "arcology": dict(wall="#EEF2EF", stone="#C3CFCE", roof="#58BDB8", trim="#2A8589", dark="#274B55", extra="#B4F5EA",
+                     park="#7DBE8A"),
     "scrap": dict(wall="#6B6B5E", stone="#A79B7C", roof="#8A4B2A", trim="#3E4A3D", dark="#2E2A26", extra="#B0623A"),
 }
 
@@ -275,6 +279,22 @@ class Builder:
         if r_in == 0:
             faces.append([P(r_out, i, h) for i in range(sides)])
             faces.append([P(r_out, i, 0) for i in reversed(range(sides))])
+        self._poly(faces, m, mat)
+
+    def hoop(self, x, y, z, r_out, r_in, t, mat, seg=10, rot=(0, 0, 0)):
+        """A flat ring t thick, centred on (x, y, z), axis along local z (rot stands it up or tilts it)."""
+        m = self._m(x, y, z, rot)
+
+        def P(r, i, zz):
+            return (r * math.cos(2 * PI * i / seg), r * math.sin(2 * PI * i / seg), zz)
+
+        faces = []
+        for i in range(seg):
+            j = (i + 1) % seg
+            faces.append([P(r_out, i, -t / 2), P(r_out, j, -t / 2), P(r_out, j, t / 2), P(r_out, i, t / 2)])
+            faces.append([P(r_in, j, -t / 2), P(r_in, i, -t / 2), P(r_in, i, t / 2), P(r_in, j, t / 2)])
+            faces.append([P(r_out, i, t / 2), P(r_out, j, t / 2), P(r_in, j, t / 2), P(r_in, i, t / 2)])
+            faces.append([P(r_out, j, -t / 2), P(r_out, i, -t / 2), P(r_in, i, -t / 2), P(r_in, j, -t / 2)])
         self._poly(faces, m, mat)
 
     def battered(self, x, y, z0, w, d, h, mat, k=0.83, rz=0.0):
