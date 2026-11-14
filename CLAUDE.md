@@ -92,7 +92,8 @@ The repo has Entire enabled for Claude Code (`.entire/settings.json`, hooks in
 `.claude/settings.json` and `scripts/hooks/`). Our own hooks still run after Entire's (they were
 moved to `scripts/hooks/<hook>.pre-entire`); never delete those files.
 
-- **Each laptop installs the CLI once:** `curl -fsSL https://entire.com/install.sh | bash`
+- **Required on every laptop (owner, 14 Nov).** The session-start hook prints `ENTIRE MISSING` when
+  it isn't installed; fix that before building. **Each laptop installs the CLI once:** `curl -fsSL https://entire.com/install.sh | bash`
   (puts `entire` in `~/.local/bin`; make sure that is on `PATH`). Without it every hook skips
   quietly and nothing breaks, but that laptop's sessions are not recorded.
 - **Pushing sessions is off** (`push_sessions: false`) until the owner turns it on at the event.

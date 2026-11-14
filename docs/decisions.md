@@ -21,3 +21,4 @@
 2026-11-14 15:40 · owner · Visual style is an old atlas; the hologram stays as a beam with the card as a lit parchment page · owner's choice
 2026-11-14 15:40 · owner · Everyone stays up overnight; checkpoints unchanged · owner's answer
 2026-11-14 16:00 · owner · Every merge that finishes something another lane needs is followed by a `ready` issue to each such lane (`ask.sh ready`) · the owner wants lanes notified, never left to notice merges
+2026-11-14 16:30 · owner · Entire is required on every teammate's laptop; the session-start hook flags a missing install · every session should count towards Best Use of Entire

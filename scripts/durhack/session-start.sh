@@ -12,4 +12,12 @@ if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
 else
   echo "  gh is not logged in: run  gh auth login  (needed for issues and PRs)."
 fi
+# Entire records every session for the "Best Use of Entire" prize. The owner requires it on every laptop.
+if command -v entire >/dev/null 2>&1; then
+  echo "  entire: ok ($(entire --version 2>/dev/null | head -1))"
+elif [ -x "$HOME/.local/bin/entire" ]; then
+  echo "  ENTIRE NOT ON PATH: add ~/.local/bin to PATH (e.g. in ~/.bashrc), then restart Claude Code. Until then this laptop's sessions are not recorded."
+else
+  echo "  ENTIRE MISSING: the owner requires it on every laptop. Ask the user to run: curl -fsSL https://entire.com/install.sh | bash  (then put ~/.local/bin on PATH and restart Claude Code). Until then this laptop's sessions are not recorded."
+fi
 exit 0
