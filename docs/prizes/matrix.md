@@ -41,7 +41,7 @@ Sorted by rough expected value per hour. "Core" means the hours are the main pro
 | P20 | Arduino / RS | About 600 to 900 (1st, 3 x VENTUNO Q and kit); about 300 (2nd, 3rd) | 5 to 7 | 12% (three places) | A | Mandatory: UNO Q, camera and USB hub from the loan library; must sense, analyse, decide and act | Physical demo with the borrowed board | Medium (about 15 to 20) |
 | P5 | MLH Tiger Data | About 180 (3 x Stream Deck Mini) | 2 | 12% | A or B | Tiger Cloud Postgres, hypertable, continuous aggregate | MLH prize tick on the submission | Medium (about 11) |
 | P9 | Overall 1st / 2nd | About 500 to 700 (1st), about 400 (2nd) | Core, plus 3 for polish | 3% each | A | None; the theme | Main submission; table demo | Medium (about 10) |
-| P3 | MLH Entire | About 200 (3 x mini projector) | 1, plus a small running tax | 10% | Any | Entire Sessions, Graph, Brain | Show token numbers and session history | Medium (about 10, already set up) |
+| P3 | MLH Entire (not entered, owner 14 Nov) | About 200 (3 x mini projector) | 1, plus a small running tax | 10% | Any | Entire Sessions, Graph, Brain | Show token numbers and session history | Medium (about 10, already set up) |
 | P19 | Waterstons | Raspberry Pi Pico and Pico Inventors Kit (about 40 pounds a set) | 0.5 | 5% | A | None | One line on what is connected to what, and who benefits | Medium (about 9) |
 | P1 | MLH ElevenLabs | About 150 (3 x earbuds) | 1.5 | 5% | A or B | ElevenLabs voice as a core part | MLH prize tick | Low to medium (about 5) |
 | P16 | SGX FX 2: playful trading | About 60 if per team, 180 if each | 3 (a market mode) | 10% | A | None; their price data helps | Demo to SGX FX staff | Low to medium (2 to 6) |
@@ -190,8 +190,7 @@ Deadlines and the platform are not announced; fill them in when known.
 - [ ] Waterstons: one line on what is connected and who benefits.
 - [ ] Arduino / RS: the board is in the demo and returned afterwards.
 - [ ] SGX FX 2 (if the market mode is built): show it to SGX FX staff.
-- [ ] MLH: ElevenLabs, Gemini, Tiger Data and Entire named in the write-up, with what each does.
-- [ ] Entire: session push turned on by the owner before the end; token numbers on a slide.
+- [ ] MLH: ElevenLabs, Gemini and Tiger Data named in the write-up, with what each does (Entire not entered).
 - [ ] QRT Tagged (if run): two laptops, both offline; printer or pens; rehearsed on unseen words.
 - [ ] Marshall Wace meme posted.
 - [ ] DEV post after the event.
