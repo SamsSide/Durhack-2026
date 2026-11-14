@@ -44,3 +44,4 @@ pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
 - 14 Nov · #31 · B1 the first globe: one mesh, raised provinces with cliffs, live owner colours
 - 14 Nov · #46 · B2, B3 camera, picking, selection glow, borders, painted names and flags, map modes and pulses
 - 14 Nov · B4 + design · buildings from the real models, the designed top bar, decree box, legend, beliefs banner, capitals, atmosphere
+- 14 Nov · #59 · placed lane c's DecreeBox and TokenMeter, data-hologram on the card mount
