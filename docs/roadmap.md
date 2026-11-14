@@ -23,7 +23,7 @@ agent budget: lane a carries the most, lane b a middling amount, lane c the leas
 
 ## Checkpoints
 
-Assumes hacking ends Sunday 12:00 (not confirmed).
+Hacking ends Sunday 12:00.
 
 | CP | Time | Means | Status |
 | --- | --- | --- | --- |
@@ -47,7 +47,9 @@ flowchart LR
     A8["A8 · Blender models"]:::next
     A12["A12 · Figma design"]:::next
     A13["A13 · Lore and anthem lyrics"]:::todo --> A14["A14 · Narration and sound module"]:::todo --> A15["A15 · Anthem from history"]:::todo --> A16["A16 · War chants"]:::todo
-    A10["A10 · Remote agents (stretch)"]:::todo
+    A10["A10 · Remote agents"]:::cut
+    A18["A18 · Regions and secession"]:::todo
+    A19["A19 · Flags"]:::todo
     A11["A11 · Tiger Data (stretch)"]:::todo
     A17["A17 · Image input (stretch)"]:::todo
   end

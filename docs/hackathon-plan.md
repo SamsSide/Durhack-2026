@@ -20,8 +20,8 @@ they cannot talk to each other.**
 
 1. A judge gives a prompt. We pick six nations and press Create. A planet forms; six nations are
    named and placed, each with a leader, an ideology and a founding myth. (15 seconds)
-2. Time runs at speed. Borders spread across the hex tiles, camps become villages become cities,
-   low-poly buildings pop up. A chronicle ticker tells the story as it happens.
+2. Time runs at speed. Borders spread province by province, camps become villages become
+   cities, low-poly buildings pop up, every nation flies its own flag. A chronicle ticker tells the story as it happens.
 3. Zoom into a nation and click it. Its border lights up and a hologram rises from its capital
    showing its culture, politics and its history with its neighbours. A voice narrates it; its
    anthem plays, with words written from what has actually happened to it.
@@ -150,12 +150,34 @@ timeline you can drag back through (stretch, row B9).
   `web` (Vite, React, three.js with `@react-three/fiber` and `drei`, `zustand`).
 - **Run:** `npm install`, then `npm run dev` (server on 8787, web on 5173). `npm run mock` runs
   the server with a scripted world and no API calls.
-- **Hosting for the demo:** the owner's laptop. Stretch: nation agents running on the other two
-  laptops (row A10).
+- **Hosting for the demo:** the owner's laptop only. It runs and is shown on one device; the
+  nations are cut off with software switches (the multi-laptop idea, row A10, is cut).
 - **External services:** Gemini (`GEMINI_API_KEY`), ElevenLabs (`ELEVENLABS_API_KEY`), optional
   Tiger Data (`TIGER_DATABASE_URL`).
 - **Assets and design:** low-poly GLB models made with headless Blender (row A8) and the
   interface design in Figma (row A12), both on the owner's laptop, which has those tools.
+
+**The map.** The land is about 500 irregular provinces on a globe (a spherical Voronoi diagram),
+not hexagons, so it reads as a political map. Provinces are grouped into fixed regions. A
+nation names each region when it first settles it, and every region has a flag and a main
+town. A region whose unrest climbs (far from the capital, recently conquered, at odds with the
+ruler's ideology) can break away and become a new nation with its own AI ruler: a new actor
+joining the world mid-run.
+
+**Flags.** Gemini gives every nation and region a flag as a small specification (layout, two to
+four colours, an emblem). It is drawn at once as a crisp vector flag, for free, and works in
+mock mode. Clicking a nation asks for an AI-painted version in the background, which replaces
+the drawn one when it arrives (paid, capped per world).
+
+**Pacing.** At normal speed a world goes from first settlements to empires at war in about
+three minutes, so a judge sees the whole arc in one visit. Speed and pause are on the top bar.
+
+**The viewer** watches, clicks, issues decrees and uses the network switches. They do not
+command a nation.
+
+**Money.** The owner will spend up to 25 pounds over the weekend on Gemini and ElevenLabs.
+Caps in the code (`LLM_MAX_TOKENS_PER_RUN`, `IMAGE_MAX_PER_RUN`) and mock mode by default keep
+it well under that.
 
 **Inputs.** The Create screen takes: a text prompt (required), preset chips (post-apocalyptic,
 bronze age, floating archipelago, ice world, and so on), number of nations (3 to 10), an era
@@ -171,12 +193,12 @@ Gemini for mood and palette (row A17).
 | b · The globe | @CutGrass88 | `web/` except `web/src/ui/`, `web/src/audio/`, `web/src/theme/` and `web/public/models/` | The 3D planet, camera, borders, map modes, buildings, war animation, status visuals, the hologram, performance |
 | c · Interface | @Justin-CODING-PY | `web/src/ui/` | Four screens built from the owner's design against the mock (Create screen, nation card, chronicle, network panel) and the submission |
 
-The split follows each person's agent budget: lane a has by far the most (17 rows), lane b a
-middling amount (9 rows), lane c the least (5 small rows, none of them touching the server).
+The split follows each person's agent budget: lane a has by far the most (18 live rows), lane b
+a middling amount (9 rows), lane c the least (5 small rows, none of them touching the server).
 
 ## 6. Schedule
 
-Assumes hacking ends Sunday 12:00 (not confirmed; the QRT CTF ends then). Adjust if told otherwise.
+Hacking ends Sunday 12:00 (confirmed by the owner).
 
 | Time | Checkpoint | Means |
 | --- | --- | --- |
@@ -191,14 +213,16 @@ Assumes hacking ends Sunday 12:00 (not confirmed; the QRT CTF ends then). Adjust
 
 | Risk | If it happens |
 | --- | --- |
-| The globe is slow with 1,400 tiles, buildings and units | Instanced meshes from the start; fewer tiles (subdivision 10); buildings only when zoomed in |
+| The globe is slow with 500 provinces, buildings and units | Instanced meshes from the start; fewer provinces; buildings only when zoomed in |
+| Irregular provinces take longer than hexagons | Every province is convex (triangle fan), buildings sit at the province centre, armies move centre to centre; if the Voronoi step fails by Sat 18:00, fall back to hexagons behind the same `Tile` type |
+| Secession makes the simulation unstable | Limit it to one breakaway at a time and a cooldown; cut it and keep regions as names and flags |
 | Reconciliation after a cut is buggy | Keep cut simple: queue and replay with last-writer-wins on tiles; the dispute story is a stretch |
 | Gemini rate limits or bad JSON | Autopilot on any failure (same path as silence); JSON schema output; mock mode |
 | ElevenLabs credits or music access | Cache everything; narration first, anthem second; anthem falls back to a short generated tone piece |
 | An AI world generator looks generic, others build one too | The resilience demo and the live wars are the difference; rehearse step 5 most |
 | Blender assets take too long | Kenney-style CC0 packs or coloured primitive shapes; the manifest (X4) stays the same |
 
-Cut order if behind: image input (A17), Tiger Data (A11), remote agents (A10), the timeline
-scrubber (B9), army strength and terrain map modes, beliefs view, war chants, anthem, decree
+Cut order if behind: image input (A17), Tiger Data (A11), painted flags, the timeline
+scrubber (B9), secession (regions stay as names and flags), army strength and terrain map modes, beliefs view, war chants, anthem, decree
 box, fleets, atmosphere polish. Never cut: prompt to world, live growth, the click
 hologram with voice, one war, cut and restore.

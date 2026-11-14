@@ -34,6 +34,8 @@ Real values go in `.env` at the repo root (git-ignored). The owner's keys file i
 | `GEMINI_MODEL_LORE` | lane a | Model id for the world bible and lore (a flash model) |
 | `LLM_MAX_CALLS_PER_MIN` | lane a | Default 20. Above it, nations fall to autopilot |
 | `LLM_MAX_TOKENS_PER_RUN` | lane a | Default 400000. Above it, every nation is on autopilot |
+| `GEMINI_MODEL_IMAGE` | lane a | Image model id for painted flags; empty turns painted flags off |
+| `IMAGE_MAX_PER_RUN` | lane a | Default 12. Painted flags per world |
 | `PORT` | lane a | Server port, default 8787 |
 | `TIGER_DATABASE_URL` | lane a | Optional, row A11 |
 
@@ -46,17 +48,35 @@ Real values go in `.env` at the repo root (git-ignored). The owner's keys file i
 export type Vec3 = [number, number, number];            // on the unit sphere, y is up
 export type Terrain = 'ocean' | 'coast' | 'plains' | 'forest' | 'desert' | 'hills' | 'mountain' | 'ice';
 
-export interface Tile {                                  // static after generation
+export interface Tile {                                  // one province; static after generation
   id: number;                                            // index into World.tiles
   center: Vec3;
-  boundary: Vec3[];                                      // 5 or 6 corners, in order
+  boundary: Vec3[];                                      // an irregular convex polygon: 3 or more corners, in order, counter-clockwise seen from outside
+  region: number;                                        // index into World.regions, -1 for ocean
   neighbors: number[];                                   // tile ids
   terrain: Terrain;
   elevation: number;                                     // 0 to 1
 }
 
+export type FlagLayout = 'plain' | 'horizontal2' | 'horizontal3' | 'vertical2' | 'vertical3'
+  | 'cross' | 'saltire' | 'canton' | 'diagonal' | 'border';
+export type FlagEmblem = 'none' | 'star' | 'sun' | 'moon' | 'tree' | 'tower' | 'wave' | 'mountain'
+  | 'sword' | 'gear' | 'eye' | 'crown' | 'anchor' | 'flame' | 'wheat' | 'skull';
+export interface FlagSpec { layout: FlagLayout; colors: string[]; emblem: FlagEmblem; emblemColor: string } // 2 to 4 colours
+
+export interface Region {                                // a fixed group of neighbouring provinces
+  id: number;                                            // index into World.regions
+  name: string;                                          // '' until first settled, then named in its owner's culture
+  tiles: number[];
+  capitalTile: number;
+  flag: FlagSpec;
+  unrest: number;                                        // 0 to 1; high unrest can end in secession
+}
+
 export interface Country {
-  id: number;                                            // index into World.countries
+  id: number;                                            // index into World.countries; new nations are appended
+  flag: FlagSpec;
+  parent: number | null;                                 // the nation it broke away from, if any
   name: string;                                          // "The Ashen Concord"
   adjective: string;                                     // "Ashen"
   color: string;                                         // "#c8553d"
@@ -101,6 +121,7 @@ export interface World {
   id: string; seed: number; prompt: string; name: string; era: string;
   tick: number; year: number; speed: number; paused: boolean;
   tiles: Tile[];
+  regions: Region[];
   owner: number[];                                       // tile id to country id, -1 is unclaimed
   countries: Country[];
   structures: Structure[];
@@ -124,6 +145,8 @@ export type WorldEvent = Base & (
   | { type: 'relation_changed'; a: number; b: number; stance: Stance; reason: string }
   | { type: 'country_updated'; countryId: number; patch: Partial<Country> }
   | { type: 'country_fell'; countryId: number; conqueror?: number }
+  | { type: 'country_founded'; country: Country; regionId?: number }    // a secession, or a nation created later; its tiles follow as tile_claimed
+  | { type: 'region_updated'; regionId: number; patch: Partial<Pick<Region, 'name' | 'flag' | 'unrest'>> }
   | { type: 'chronicle'; entry: ChronicleEntry }
 );
 
@@ -131,10 +154,16 @@ export function applyEvent(world: World, event: WorldEvent): void;   // mutates;
 export function countryTiles(world: World, countryId: number): number[];
 export function borderEdges(world: World, countryId: number): [Vec3, Vec3][]; // edges between this country and anything else
 export function relationOf(world: World, a: number, b: number): Relation;
+export function regionOwner(world: World, regionId: number): number;   // the owner of its capital tile
+export function flagSvg(spec: FlagSpec, width?: number, height?: number): string; // a complete <svg> string, default 90 x 60
 ```
 
-- **Mock:** `packages/shared/src/mock.ts` exports `mockWorld(): World` (about 600 tiles, 5
-  countries) and `mockEvents(world): Generator<WorldEvent>` (growth, one war, one fall).
+- **Provinces, not hexagons.** The land is irregular provinces (a spherical Voronoi diagram of
+  jittered points, about 500 cells). Every cell is convex, so it can be drawn as a triangle fan
+  from its centre. The name `Tile` is kept in the code; read it as "province".
+- **Mock:** `packages/shared/src/mock.ts` exports `mockWorld(): World` (about 300 provinces,
+  regions, 5 countries with flags) and `mockEvents(world): Generator<WorldEvent>` (growth, one
+  war, one secession, one fall).
 - **Real by:** CP0 for the types and mock (row A1); CP1 for real generation (row A2).
 - **Status:** agreed
 
@@ -195,6 +224,8 @@ export function relationOf(world: World, a: number, b: number): Relation;
 | `GET /api/country/:id/narration` | a | none | `audio/mpeg`: the lore `summary` and `history` spoken |
 | `GET /api/country/:id/anthem` | a | none | `audio/mpeg`, about 30 seconds, sung to `anthemLyrics` |
 | `GET /api/country/:id/chant` | a | none | `audio/mpeg`, 5 to 10 seconds: that nation's war chant |
+| `GET /api/country/:id/flag` | a | none | `image/png`: an AI-painted version of the nation's flag, made on first request and cached. `503` when image generation is off or capped; the interface then keeps the drawn flag |
+| `GET /api/region/:id/lore` | a | none | `{ "regionId": 4, "name": "The Salt Marches", "owner": 2, "summary": "...", "history": "..." }` |
 
   Lore response:
 
@@ -276,6 +307,7 @@ export interface WorldStore {
   connected: boolean;
   selectedCountryId: number | null;
   selectedTileId: number | null;
+  selectedRegionId: number | null;           // set with the tile when zoomed in close; null when zoomed out
   beliefOf: number | null;                   // when set, the globe draws that nation's beliefs
   mapMode: 'political' | 'terrain' | 'diplomacy' | 'strength';  // diplomacy colours every nation by its stance to the selected one
   setMapMode(mode: WorldStore['mapMode']): void;
