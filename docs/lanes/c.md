@@ -36,6 +36,7 @@ budget, run them one at a time in the order below, on Sonnet.
 | C11 | Council on `NationCard`: ruler and general with generated portraits, years in office, a status chip, memory on hover, and Kill (two-click), Cut and Restore buttons per member | A29 | | CP2 | testing | Owner request #170 (Neptune North: resilience inside a nation) |
 | C14 | Terra Nova News anchor window (built by lane a, owner decision 14 Nov): a 360 x 220 broadcast window on the lower-third, an ident, a studio and six original presenters lip-synced to the bulletin, cutaways to the globe capture | X3 broadcast, X6 `audio.broadcastAnalyser()` | | CP2 | testing | `web/src/ui/news/` (`AnchorWindow.tsx`, `studio.ts`, `lipsync.ts`); shots in docs/shots/news-anchor-1..3.jpg |
 | C13 | Economy on `NationCard` (B11-6): status chips (war readiness, devastation, shortages) under the facts, an Economy tab (goods, prices, shortages), politics movement in the Politics tab | B11 | | CP2 | testing | Lane a request #224 |
+| C16 | Presentation mode (P) and a collapsed-by-default screen (ticker, history strip, decree, ledger as icons); decree wider at 1800 px+ | | | CP2 | testing | Owner decision on #276, assigned in #275 |
 | C12 | Prepare mode panel and Create toggle (built by lane a, owner decision 14 Nov) | X2 `prepare` message and control, X3 `prepare: true` (#200) | | CP2 | testing | `web/src/ui/prepare/`; dev mock behind `?mockPrepare=1` until the server sends `prepare` |
 | C15 | Calm UI: left panel, war tabs, node-graph network (built by lane a, owner decision on #245) | | | CP2 | testing | One left panel at a time (`web/src/ui/leftPanel.ts`, `calm.css`): the nation and province card docks left with a ruler line, a stats grid and diplomacy as flag groups; war tabs top right (restores #225, which #226 had overwritten); the Network panel is a node graph with a tray for the picked nation. Figma page "Calm UI (#245)". Map-mode icons for lane b in `web/src/ui/icons/mapmodes/`. Shots: docs/shots/calm-ui-1..3.jpg |
 
@@ -61,4 +62,5 @@ budget, run them one at a time in the order below, on Sonnet.
 - 14 Nov · #159 · C10 visual event feed (EventFeed) for lane b to place
 - 14 Nov · #174 · C11 council on the card: cameo portraits, status chips, memory, Kill / Cut / Restore
 - 14 Nov · #225 · Herald dispatches as small top-right tabs; network controls explained (#217)
-- 14 Nov · this PR · C13 economy on the card: status chips, Economy tab, politics movement
+- 14 Nov · #227 · C13 economy on the card: status chips, Economy tab, politics movement
+- 14 Nov · this PR · C16 presentation mode (P) and a collapsed screen on every reload; decree wider at 1800 px+

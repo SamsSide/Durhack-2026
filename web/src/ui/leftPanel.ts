@@ -5,9 +5,6 @@ import { create } from 'zustand';
 import { useWorld } from '../state/world';
 
 const FOLD_KEY = 'tn-network-folded';
-function readOpen(): boolean {
-  try { return localStorage.getItem(FOLD_KEY) === '0'; } catch { return false; }
-}
 function writeOpen(open: boolean): void {
   try { localStorage.setItem(FOLD_KEY, open ? '0' : '1'); } catch { /* storage unavailable */ }
 }
@@ -22,7 +19,8 @@ interface LeftPanelStore {
 
 export const useLeftPanel = create<LeftPanelStore>((set) => ({
   // A card that is already open wins over a remembered open panel.
-  networkOpen: readOpen() && useWorld.getState().selectedCountryId == null,
+  // Owner (#275): every reload starts calm, so the Network panel always starts folded for the next judge.
+  networkOpen: false,
   setNetworkOpen: (open) => {
     if (open && useWorld.getState().selectedCountryId != null) useWorld.getState().select(null);
     writeOpen(open);

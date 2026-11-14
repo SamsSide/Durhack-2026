@@ -37,3 +37,13 @@
   border: 1px solid var(--color-danger); border-radius: var(--radius-1); box-shadow: var(--well-paper);
 }
 .tn-decree-proclaimed { font-style: normal; font-weight: 500; }
+
+/* Wide screens (#276): the decree field shows about 50 characters on a 1920 x 1080 projector.
+   The slot width is set in lane b's hud.css (.decree-slot, 380px), which lane c may not edit, so it is
+   overridden here with a higher-specificity selector. Smaller screens are unchanged. */
+@media (min-width: 1800px) {
+  body .decree-slot { width: 560px; }
+  .tn-decree { width: 560px; }
+  /* the open history strip stops short of the wider box (its right edge is set in lane a's timeline.css) */
+  body .tls-open { right: calc(var(--space-4) + 560px + var(--space-3)); }
+}
