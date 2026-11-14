@@ -38,6 +38,9 @@ export class MockBackend implements ChainBackend {
   addressOf(countryId: number): string | null { return fakeAddress(`${this.worldId}:nation:${countryId}`); }
   floats() { return { nations: new Map(this.minted), commons: this.commonsMinted }; }
   canMove(): boolean { return true; }
+  /** Every founded nation can move at once; the fake address needs no account. */
+  async openAccount(): Promise<boolean> { return true; }
+  needsAccount(): boolean { return false; }
   balanceOf(): number | null { return null; }
   commonsBalance(): number | null { return null; }
 

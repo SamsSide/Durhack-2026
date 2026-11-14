@@ -53,3 +53,10 @@
 - 2026-11-14 17:50 · Owner: the economy moves to lane b (its owner asked for it): the Solana bridge `server/src/chain/`, `sim/payments.ts`, `sim/trade.ts`, `scripts/solana-keys.ts` and `server/scripts/check-money.ts` join lane b's paths. Contract changes (X1 `payment`, X2 `ledger`/`economy`, X3 economy) still go through the owner. Lane a keeps the demo recording and its signature sidecar.
 
 - 2026-11-14 18:10 · Owner: yes to lane b's #187: a `wealth` map mode (X5) and `loan` / `repayment` payment reasons (X1); lane b adds the small loan-memory hook in `rules.ts` and names it in its PR. Loans are cut first if behind.
+- 2026-11-14 18:00 · Owner: lane a may take work that is blocked or untouched in another lane to finish sooner, after telling that lane in an issue. First: a C5 submission draft and README (lane c keeps the final edit and submits), and B9 the timeline scrubber.
+
+- 2026-11-14 18:30 · Owner: time gears from 1 month a second (speed 1/24, the slowest, for live demo interaction) through 1 season, 1, 2, 3, 4, 8, 16, 32, 64 and 128 years a second; the client shows month and day between yearly ticks and units glide. A prepare mode for demos (`prepare: true` or the `prepare` control): the world waits paused while lore, narration, chants, anthems and first ruler decisions are made, with a readiness panel. A close-zoom tilted camera that looks along the ground at walls and buildings. Lane a builds these, plus a smooth rewrite of the chronicle ticker (lane c's file), and tells the lanes.
+
+- 2026-11-14 18:50 · Owner: yes to lane b's #204 economy core (goods per province, shortages and a goods market paid as `trade`, devastation, war readiness, politics axis and radicalism, a `politics` map mode). Lane b writes `sim/economy.ts`, payments and the hooks in `types.ts`, `applyEvent` and `rules.ts` section 5 itself, in small PRs that pass check.sh, check-money and check-replay; lane a adds the ruler-digest line.
+
+- 2026-11-14 19:00 · Owner: lane a's laptop (SamsSide) may run up to 10 agents at once, up from 7, for throughput during the hackathon; other lanes keep 4.

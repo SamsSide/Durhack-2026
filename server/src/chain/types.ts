@@ -17,6 +17,8 @@ export interface Group {
   amount: number; note: string; year: number;
   /** Coins the Commons advances the payer first, in the same transaction (0: none). */
   advance: number;
+  /** Display names for the memo, without a leading "The" (filled in by the module). */
+  fromName?: string; toName?: string;
   rows: LedgerEntry[];
 }
 export interface GroupResult {
@@ -54,6 +56,11 @@ export interface ChainBackend {
   floats(): { nations: Map<number, number>; commons: number };
   /** True when a payment from or to this nation can actually move on chain. */
   canMove(countryId: number): boolean;
+  /** Opens the token account of a nation founded after genesis (the Commons pays the rent) and
+   *  resolves true once it is confirmed, false when the nation has no wallet or it failed. */
+  openAccount?(countryId: number, name: string): Promise<boolean>;
+  /** True when this nation has a wallet but no token account yet, so payments to or from it wait. */
+  needsAccount?(countryId: number): boolean;
   /** The balance last read from the chain (null: none, use the ledger; the mock). */
   balanceOf(countryId: number): number | null;
   commonsBalance(): number | null;
@@ -67,6 +74,9 @@ export interface ChainBackend {
   backingOff?(): boolean;
   stats(): { transactions: number; feesSol: number };
 }
+
+/** A nation's name as the memo shows it. */
+export const plainName = (n: string) => n.replace(/^The\s+/i, '').trim() || n;
 
 export const explorerTx = (sig: string) => `https://explorer.solana.com/tx/${sig}?cluster=devnet`;
 export const explorerAddress = (a: string) => `https://explorer.solana.com/address/${a}?cluster=devnet`;

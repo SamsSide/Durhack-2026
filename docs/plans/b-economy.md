@@ -1,6 +1,6 @@
 # Lane b plan: the economy (B10 to B13)
 
-- **Rows:** B10 devnet hardening, B11 economy depth in the sim (**design pending, user + owner**), B12 economy on the globe, B13 the 15-second Solana beat
+- **Rows:** B10 devnet hardening, B11 economy depth in the sim (the core five, designed in `docs/research/economy-games.md`; contract changes wait on the owner), B12 economy on the globe, B13 the 15-second Solana beat
 - **Branch:** one per task, `b/<task>` (names below)
 - **Paths allowed:** `server/src/chain/`, `packages/shared/src/sim/payments.ts`, `packages/shared/src/sim/trade.ts`, `scripts/solana-keys.ts`, `server/scripts/check-money.ts`, `web/` except `web/src/ui/`, `web/src/audio/`, `web/src/theme/`, `web/public/models/`. Anything else: NEEDS_OTHER_LANE or NEEDS_OWNER.
 - **Contracts:** X1 `payment` and `PaymentReason` (implement, no change unless flagged), X2 `ledger` / `economy` (read), X3 `GET /api/economy` (read), X5 `mapMode` (change flagged)
@@ -15,9 +15,52 @@ compute-unit errors. So the bridge works. What is left for devnet is the gap the
 **a nation founded after genesis has no token account**, so `canMove` is false and its payments
 are recorded as confirmed with no signature (`settle.ts` line ~295). Plus our own laptop's run.
 
-## B11 is design pending
+## B11: the core five (designed, contract changes pending)
 
-The user is designing a bigger B11 with the owner: a main good per province, devastation, civilian fear from war readiness, and an ideology axis that drifts to the extremes under war. Tasks 2, 3 and 4 below are the earlier small ideas, kept for reference only: **do not dispatch them**. The coordinator opens the needs-owner issue for B11's contract changes; B11 gets its own plan once the design is settled. Whatever B11 becomes, `check-money` and `check-replay` must pass after every sim change.
+Design: [`docs/research/economy-games.md`](../research/economy-games.md) section 3 (rules, numbers,
+build order). Tasks 2, 3 and 4 below are the earlier small ideas, kept for reference only: **do not
+dispatch them** (the goods market replaces Task 2, loans stay with #187). The contract changes are
+in needs-owner #204 (fields on `World` and `Country`, `applyEvent` folding, X5 `'politics'`, and
+whether lane b may write the `rules.ts` and `world.ts` hooks itself).
+
+**After every sim task (B11-1 to B11-4, B11-7), quoted in the PR besides `./check.sh`:**
+`npx tsx server/scripts/check-money.ts` prints `MONEY CONSERVED` and
+`npx tsx server/scripts/check-replay.ts` passes.
+
+| Task | Agent | Branch | Files | Blocked on | Parallel with |
+| --- | --- | --- | --- | --- | --- |
+| B11-1 Pure core | builder, sonnet | `b/economy-core` | `packages/shared/src/sim/economy.ts` (create; new lane b path, named in the issue), `packages/shared/src/index.ts` (one export line) | nothing: code against the proposed optional fields locally | B11-5 |
+| B11-2 Types and devastation | builder, sonnet | `b/economy-types` | `packages/shared/src/types.ts`, `packages/shared/src/world.ts` | owner answer | B11-1, B11-5 |
+| B11-3 Hooks in the turn | builder, sonnet | `b/economy-hooks` | `packages/shared/src/sim/rules.ts` | owner answer, B11-1, B11-2 | B11-5 |
+| B11-4 Market replaces trade dues | builder, sonnet | `b/goods-market` | `packages/shared/src/sim/payments.ts` | B11-1 | B11-2, B11-5 |
+| B11-5 Globe | frontend, sonnet | `b/economy-globe` | `web/src/globe/mesh/colors.ts`, `web/src/globe/Globe.tsx`, `web/src/globe/economy/Readiness.tsx` (create), `web/src/state/world.ts`, `web/src/hud/TopBar.tsx` | X5 `'politics'` for the map mode; the tint and ring start on mock values | B11-1 to B11-4 |
+| B11-6 Nation card | lane c | (theirs) | `web/src/ui/` | owner answer | all; agent-request to lane c after B11-2 merges |
+| B11-7 Balance pass | builder, sonnet | `b/economy-balance` | constants in `sim/economy.ts` only | B11-3, B11-4 | B11-5 |
+
+- **B11-1:** `goodOf(world, tile)`, `PRICE_BASE`, `outputMul(D, WR)`, `needs(world, id)`,
+  `prices(world)`, `marketPlan(world)` (seller surplus split by buyer deficit, war and embargo
+  blocks, far-left half volume), `readinessStep(...)`, `politicsStep(...)`, `movementOf(axis)`,
+  `devastationTick(world)`. Pure, `hashString` only. Smoke proof: `./check.sh`.
+- **B11-2:** add `World.devastation?`, `Country.warReadiness?`, `Country.politics?` exactly as
+  approved; in `applyEvent`: `battle` +20 on its tile, `tile_claimed` conquest +10, `tick` +5 per
+  enemy army on a tile then -3 on every tile, clamp 0..100. Smoke: the three gates.
+- **B11-3:** in section 5 multiply each province's income by `outputMul`, the population cap by
+  `1 - D/200`, army upkeep by `1 - 0.2 x WR/100`; add `warReadiness` and `politics` to the yearly
+  `country_updated` patch; one chronicle line when a far movement takes power. Day one must give
+  the same treasuries as before (compare `check-money` totals at tick 1). Smoke: the three gates.
+- **B11-4:** delete rule 2 (trade dues); add the market settlement every 5 years per buyer
+  (`(tick + me) % 5 === 0`), one merged `trade` payment per seller, capped at 15% of the treasury,
+  note `"6 grain, 2 ore"`. Smoke: the three gates; `check-money` shows `trade` payments.
+- **B11-5:** devastation tint on every tile, the readiness ring at the capital (Mobilised and
+  above), the Politics map mode (red, gold, black; brightness by radicalism). Smoke: `./check.sh`.
+  HUMAN_TEST: `npm run mock` through a war: burnt tiles at the front, a red ring, colours shifting
+  in Politics mode.
+- **B11-7:** run `check-money 600` on two seeds; tune so prices stay inside 60% to 160% of base in
+  peace and a war moves a good past 140%; no nation spends more than 15% a settlement.
+
+**Batches.** Now: B11-1 and B11-5 (mock values). After the owner answers: B11-2 (or lane a), then
+B11-3 and B11-4 together (different files). Then B11-7 and the agent-request to lane c and lane a
+(digest line). Target: on `main` by about 01:00, before CP2.
 
 ## Flags
 
@@ -26,7 +69,7 @@ The user is designing a bigger B11 with the owner: a main good per province, dev
 | 1 Late wallets | yes: fund the Commons, run devnet | no | no |
 | 2 Docking pays | no | no (`trade` reason) | no (`tradeTurn` already gets `emit`) |
 | 3 Tribute | no | no (`reparations` reason) | no (`paymentTurn` already gets `ledger`) |
-| 4 Loans and defaults | no | **yes**: `loan`, `repayment` in X1 (B11 design pending; coordinator asks the owner) | **yes**: pass a loan memory from `rules.ts` |
+| 4 Loans and defaults | no | **yes**: `loan`, `repayment` in X1 (now with #187, outside the core five) | **yes**: pass a loan memory from `rules.ts` |
 | 5 Routes and coin bursts | no | no | no |
 | 6 Wealth mode | no | **yes**: `wealth` in X5 `mapMode`, #187 | no |
 | 7 Arc click to Explorer | yes: human test on devnet | no | no |
@@ -39,7 +82,7 @@ The user is designing a bigger B11 with the owner: a main good per province, dev
 
 - **Batch 1 (now):** Task 1, Task 5, Task 7. No two share a file.
 - **Batch 2 (after #187 is answered):** Task 6 (wealth mode).
-- **Not dispatched:** Tasks 2, 3, 4 (B11, design pending).
+- **Not dispatched:** Tasks 2, 3, 4 (superseded by the B11 tasks above).
 
 ## Task 1 (B10): wallets for nations founded after genesis
 

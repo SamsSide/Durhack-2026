@@ -117,7 +117,12 @@ export interface Country {
   population: number;
   treasury: number;
   council?: Council;                                     // row A29; missing on old replays
+  warReadiness?: number;                                 // #204 (lane b): 0..100, missing means 0; bands 0-19 Peace, 20-49 Watchful, 50-79 Mobilised, 80-100 Total war
+  politics?: { axis: number; radicalism: number };       // #204: axis -100 far left..+100 far right, radicalism 0..100; missing means { axis: 0, radicalism: 10 }
 }
+
+// Goods (#204, lane b): one good per province, derived from terrain and hashString, never stored.
+export type Good = 'grain' | 'fish' | 'timber' | 'stone' | 'ore' | 'salt' | 'gold' | 'furs' | 'oil' | 'uranium';
 
 // Council (row A29, owner decision on #146: ruler and general only).
 export type CouncilRole = 'ruler' | 'general';
@@ -232,6 +237,17 @@ export type PaymentReason = 'trade' | 'reparations' | 'plunder' | 'seizure' | 'w
   an ally paying into a war; `subsidy`: a strong nation paying a weak friend; `pooled`: nations
   that join forces and move together pay into one leader's fund.
 
+- **Economy core (#204, owner decision 14 Nov, built by lane b):** `World.devastation?: number[]`
+  (tile id to 0..100, parallel to `owner`, missing means all 0) is folded inside `applyEvent` with
+  no new event: `battle` +20 on its tile, `tile_claimed` with cause `conquest` +10, and on `tick`
+  +5 on each tile where an enemy army stands then -3 on every tile above 0, clamped 0..100. A
+  nation's own `country_updated` patch carries `warReadiness` and `politics`. Province income is
+  multiplied by `(1 - D/125) x (1 - 0.3 x WR/100)`, the population cap by `(1 - D/200)` and army
+  upkeep by `(1 - 0.2 x WR/100)`. The goods market pays with reason `trade` every 5 years per
+  buyer (one merged payment per seller, at most 15% of the buyer's treasury, note like
+  "6 grain, 2 ore"), replacing the older trade dues. Everything is income-neutral at tick 0.
+  Rules and numbers: `docs/research/economy-games.md` section 3.
+
 - **Council (row A29):** every nation has a ruler and a general, each its own agent. The ruler
   sets focus and stance (today's ruler, the only one calling Gemini every turn); the general picks
   war targets and moves armies (rules, plus a Gemini call only for declaring or ending a war).
@@ -325,17 +341,33 @@ this table from `@terra/shared`.
 { "type": "control", "action": "kill", "countryId": 2, "role": "general" }
 { "type": "control", "action": "cut_member", "countryId": 2, "role": "general" }
 { "type": "control", "action": "restore_member", "countryId": 2, "role": "general" }
+{ "type": "control", "action": "prepare" }
 { "type": "belief", "countryId": 2 }
 ```
 
-  `speed` is any number from 0.1 to 64 (a multiplier on the base rate of two years a second): 0.1
-  is one year every five seconds, 1 is the old normal, 64 is a century in under a second. The
-  server clamps it. `pacing` is `"manual"` (the default: the chosen speed holds) or `"auto"` (the
+  `speed` is any number from 1/24 to 64 (a multiplier on the base rate of two years a second): 1/24
+  is one month a second (a year in 12 s, the slowest, for live interaction in demos), 1 is two
+  years a second, 64 is 128 years a second. The server clamps it. **Gears (owner decision 14 Nov):**
+  the speed control offers named gears, in years per second of game time: 1 month (1/24), 1 season
+  (1/8), 1 year (0.5), 2 years (1), 3 years (1.5), 4 years (2), 8 (4), 16 (8), 32 (16), 64 (32) and
+  128 years (64), plus pause; dragging between gears stays continuous. The simulation still steps
+  one year at a time: the client shows the month and day by interpolating between `tick` events
+  at the current speed, and units glide between tiles over the time a move takes. `pacing` is `"manual"` (the default: the chosen speed holds) or `"auto"` (the
   director: the chosen speed is a ceiling; after a big moment, such as a war declared, a battle for
   a capital, a secession, a fall, a decree, a cut or a restore, the world slows to at most 1 for
   about eight seconds, then eases back up). The server reports the effective speed in a new
   `{ "type": "clock", "speed": 4, "target": 8, "pacing": "auto", "paused": false }` message
   whenever it changes. `blackout` cuts or restores every link at once.
+
+  **Prepare (owner decision 14 Nov, for demos):** `POST /api/world` with `"prepare": true`, or the
+  `prepare` control on the current world, pauses the world at its current tick and pre-makes, in
+  parallel within the budgets: lore and narration for every nation, every nation's war chant, the
+  anthems (up to `ANTHEM_MAX_PER_RUN`) and each ruler's first decision. Progress goes out as
+  `{ "type": "prepare", "worldId": "w-3f9a", "done": false, "ready": 14, "total": 24, "items": [ { "kind": "lore" | "narration" | "chant" | "anthem" | "ruler", "countryId": 2, "status": "pending" | "working" | "ready" | "failed" } ] }`
+  at most twice a second and once more with `"done": true`. Pressing play (`pause` false) at any
+  time starts the world; unfinished items carry on in the background, and the first ruler
+  decisions are applied on the first turn. Mock mode reports simulated progress over about five
+  seconds. A late connection gets the latest `prepare` message after its snapshot.
 
 - **Errors:** an unknown message gets `{ "type": "error", "message": "..." }`; the socket stays open.
 - **Mock:** `npm run mock` starts the real server with `mockWorld()` and `mockEvents()` and
@@ -352,7 +384,7 @@ this table from `@terra/shared`.
 | Route | Giver | Request | Response |
 | --- | --- | --- | --- |
 | `GET /api/health` | a | none | `{ "ok": true, "mode": "mock", "world": "w-3f9a" }` |
-| `POST /api/world` | a | `{ "prompt": "a drowned post-apocalyptic world", "nations": 6, "era": "post-apocalyptic", "seaLevel": 0.55, "aggression": 0.5, "seed": 12345, "imageBase64": null }` (only `prompt` is required; `imageBase64` is an optional picture (JPEG, PNG or WebP, raw base64 or a data URL, under 4 MB decoded) that Gemini reads for mood, palette, setting and sea level, row A17; anything else gets `400 { "error": "unsupported image" }`) | `{ "worldId": "w-3f9a" }`, then a `snapshot` on the socket. In live mode it answers after about 7 s (Gemini writes the world bible); the Create screen shows a loading state meanwhile |
+| `POST /api/world` | a | `{ "prompt": "a drowned post-apocalyptic world", "nations": 6, "era": "post-apocalyptic", "seaLevel": 0.55, "aggression": 0.5, "seed": 12345, "imageBase64": null, "prepare": false }` (only `prompt` is required; `prepare: true` creates the world paused and pre-makes its lore, voices, chants, anthems and first ruler decisions, see X2 Prepare; `imageBase64` is an optional picture (JPEG, PNG or WebP, raw base64 or a data URL, under 4 MB decoded) that Gemini reads for mood, palette, setting and sea level, row A17; anything else gets `400 { "error": "unsupported image" }`) | `{ "worldId": "w-3f9a" }`, then a `snapshot` on the socket. In live mode it answers after about 7 s (Gemini writes the world bible); the Create screen shows a loading state meanwhile |
 | `GET /api/replays` | a | none | `[ { "id": "demo-1", "name": "The Drowned Age", "events": 5210 } ]` |
 | `POST /api/replays/:id/play` | a | none | `{ "worldId": "w-3f9a" }`, then a `snapshot`; events replay with no API calls |
 | `GET /api/world/log` | a | none | `{ "initial": { "...": "the World at tick 0" }, "events": [ ] }`: the whole run, for the timeline scrubber |
@@ -495,7 +527,7 @@ export interface WorldStore {
   selectedTileId: number | null;
   selectedRegionId: number | null;           // set with the tile when zoomed in close; null when zoomed out
   beliefOf: number | null;                   // when set, the globe draws that nation's beliefs
-  mapMode: 'political' | 'terrain' | 'diplomacy' | 'strength' | 'wealth';  // diplomacy colours every nation by its stance to the selected one; wealth by treasury on a gold scale (#187)
+  mapMode: 'political' | 'terrain' | 'diplomacy' | 'strength' | 'wealth' | 'politics';  // diplomacy colours every nation by its stance to the selected one; wealth by treasury on a gold scale (#187)
   setMapMode(mode: WorldStore['mapMode']): void;
   select(countryId: number | null, tileId?: number | null): void;
   showBelief(countryId: number | null): void;
