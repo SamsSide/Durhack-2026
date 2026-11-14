@@ -28,6 +28,7 @@ let worldId: string | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let controller: AbortController | null = null;
 let generation = 0;
+let failures = 0;
 const listeners = new Set<() => void>();
 
 function set(next: EconomyState) { state = next; listeners.forEach((l) => l()); }
@@ -72,10 +73,19 @@ async function poll(gen: number) {
         rows: sortedRows(),
       },
     });
-  } catch {
+    failures = 0;
+  } catch (err) {
     if (gen !== generation) return;
-    delay = RETRY_MS;
-    if (state.status !== 'off') set({ status: 'off', data: null });
+    // A 503 or 404 means the economy is really off. A network blip while it was on keeps the last
+    // data (shown as offline) for up to two more polls, so the Treasury tab does not flicker mid-demo.
+    const definite = err instanceof Error && /^(404|503)$/.test(err.message);
+    failures++;
+    if (!definite && state.status === 'ok' && state.data && failures <= 2) {
+      set({ status: 'ok', data: { ...state.data, online: false } });
+    } else {
+      delay = RETRY_MS;
+      if (state.status !== 'off') set({ status: 'off', data: null });
+    }
   }
   if (gen === generation && listeners.size > 0) timer = setTimeout(() => poll(gen), delay);
 }
