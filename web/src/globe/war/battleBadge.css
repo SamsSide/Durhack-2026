@@ -1,0 +1,15 @@
+/* #311 battle badges on the globe. Colours and fonts come from the theme tokens (theme/tokens.css). */
+.bb-plate {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 7px 3px 6px;
+  font: 600 12px/14px var(--font-mono);
+  cursor: pointer;
+  pointer-events: auto;
+  --edge: var(--stance-war, #b0322a);
+}
+.gs-anchor.gs-hidden .bb-plate { pointer-events: none; }
+.bb-plate:hover, .bb-plate.is-active { outline: 1px solid var(--gilt); outline-offset: 1px; }
+.bb-flag { display: inline-block; width: 18px; height: 12px; line-height: 0; box-shadow: 0 0 0 1px rgba(0, 0, 0, .6); }
+.bb-flag svg { display: block; }
+.bb-swords { color: var(--gilt); flex: none; }
+.bb-num { min-width: 2.6em; text-align: center; }

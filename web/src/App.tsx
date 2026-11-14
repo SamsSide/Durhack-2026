@@ -8,8 +8,9 @@ import { EventFeed } from './hud/lookup';
 import { BeliefBanner, ClosingCard, DiplomacyLegend, Minimap, MODES, TerrainLegend, TopBar, useTimelineOpen, WealthLegend, PoliticsLegend } from './hud';
 import { HoverTooltip } from './globe/hover/HoverTooltip';
 import { useEffect, useState } from 'react';
-import { TimelineScrubber } from './globe/timeline';
-import { DemoPanel } from './hud/DemoPanel';   // B9 timeline (lane a)
+import { TimelineScrubber } from './globe/timeline';   // B9 timeline (lane a)
+import { DemoPanel } from './hud/DemoPanel';
+import { ArmyBattleDock } from './hud/ArmyBattleDock';   // #311 army and battle cards
 
 // Lane c's NewsBroadcast (X5); resolved at run time so the app builds before it lands.
 const NewsBroadcast = (ui as unknown as Record<string, ComponentType | undefined>).NewsBroadcast;
@@ -58,6 +59,7 @@ export function App() {
       {world && <Minimap hidden={timelineOpen} />}
       {/* Calm UI (#245): the card docks on the LEFT, under the folded Network tab; only one left panel is open at a time */}
       {world && dock && <div className={`hud left-dock${dockOut ? ' out' : ''}`}><NationCard key={epoch} countryId={dock.id} regionId={dock.regionId} /></div>}
+      {world && <ArmyBattleDock />}
       <DiplomacyLegend hidden={timelineOpen} />
       <TerrainLegend hidden={timelineOpen} />
       <WealthLegend hidden={timelineOpen} />

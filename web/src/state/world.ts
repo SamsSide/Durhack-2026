@@ -30,10 +30,15 @@ export interface WorldStore {
   selectedCountryId: number | null;
   selectedTileId: number | null;
   selectedRegionId: number | null;
+  selectedUnitId: string | null;     // #311: an army picked on the globe (its counter or formation)
+  selectedBattleTile: number | null; // #311: a battle picked on the globe (its badge)
   beliefOf: number | null;
   mapMode: 'political' | 'terrain' | 'diplomacy' | 'strength' | 'wealth' | 'politics';
   setMapMode(mode: WorldStore['mapMode']): void;
   select(countryId: number | null, tileId?: number | null): void;
+  /** #311: pick an army or a battle (null clears). Either one clears the nation selection and the other. */
+  selectUnit(unitId: string | null): void;
+  selectBattle(tile: number | null): void;
   showBelief(countryId: number | null): void;
   flyTo(countryId: number): void;
   send(message: object): void;
@@ -43,6 +48,17 @@ export interface WorldStore {
 }
 
 let socket: WebSocket | null = null;
+
+// #311: Escape drops an army or battle selection (typing in a field is left alone).
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const el = e.target as HTMLElement | null;
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+    const s = useWorld.getState();
+    if (s.selectedUnitId != null || s.selectedBattleTile != null) useWorld.setState({ selectedUnitId: null, selectedBattleTile: null });
+  });
+}
 
 // One place that knows when the world changed. Modules that keep their own per-world state
 // (caches, refs, local reducers) register here instead of each watching world.id.
@@ -57,6 +73,7 @@ export function resetForWorld(worldId: string | null): void {
   useBelief.getState().set(null, null);
   useWorld.setState((s) => ({
     selectedCountryId: null, selectedTileId: null, selectedRegionId: null, beliefOf: null,
+    selectedUnitId: null, selectedBattleTile: null,
     recentEvents: [], ledger: [], economy: null, clock: null, agents: [],
     prepare: s.prepare && s.prepare.worldId === worldId ? s.prepare : null,
     epoch: s.epoch + 1,
@@ -74,6 +91,8 @@ export const useWorld = create<WorldStore>((set, get) => ({
   selectedCountryId: null,
   selectedTileId: null,
   selectedRegionId: null,
+  selectedUnitId: null,
+  selectedBattleTile: null,
   beliefOf: null,
   mapMode: 'political',
   recentEvents: [],
@@ -84,8 +103,12 @@ export const useWorld = create<WorldStore>((set, get) => ({
   setMapMode: (mapMode) => set({ mapMode }),
   select: (countryId, tileId = null) => {
     const region = tileId != null ? get().world?.tiles[tileId]?.region ?? -1 : -1;
-    set({ selectedCountryId: countryId, selectedTileId: tileId, selectedRegionId: region >= 0 ? region : null });
+    set({ selectedCountryId: countryId, selectedTileId: tileId, selectedRegionId: region >= 0 ? region : null, selectedUnitId: null, selectedBattleTile: null });
   },
+  selectUnit: (unitId) => set(unitId == null ? { selectedUnitId: null }
+    : { selectedUnitId: unitId, selectedBattleTile: null, selectedCountryId: null, selectedTileId: null, selectedRegionId: null }),
+  selectBattle: (tile) => set(tile == null ? { selectedBattleTile: null }
+    : { selectedBattleTile: tile, selectedUnitId: null, selectedCountryId: null, selectedTileId: null, selectedRegionId: null }),
   showBelief: (countryId) => {
     set({ beliefOf: countryId });
     if (countryId == null) useBelief.getState().set(null, null);

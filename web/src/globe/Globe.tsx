@@ -33,6 +33,7 @@ import { Living } from './living';
 import { EventBeacons, Spotlight, WarFlash } from './events';
 import { Council } from './council';
 import { WarFx } from './war/WarFx';
+import { BattleBadges } from './war/BattleBadges';
 import { DecreeFx } from './decree';
 import { Firing } from './war/Firing';
 import { Wonders } from './wonders';
@@ -173,6 +174,7 @@ function Scene({ world }: { world: World }) {
       <Structures />
       <Wonders />
       <Units />
+      <BattleBadges />
       <Routes />
       <Trade />
       <CoinBurst />

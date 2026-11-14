@@ -6,6 +6,7 @@ import { create } from 'zustand';
 import { useWorld } from '../../state/world';
 import { CLOSE } from '../constants';
 import { useProvinceMesh } from '../mesh/context';
+import { armyPicker } from '../units/pick';
 
 /** The tile under the cursor (-1 for none or ocean). Read by HoverHighlight. */
 export const useHover = create<{ tile: number }>(() => ({ tile: -1 }));
@@ -46,6 +47,11 @@ export function Picking(): null {
       const s = useWorld.getState();
       const w = s.world;
       if (!w) return;
+      // #311: an army's counter or formation wins over the province under it
+      const r = dom.getBoundingClientRect();
+      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      const army = armyPicker.current?.(ndc.clone(), camera, r.width, r.height) ?? null;
+      if (army) { s.selectUnit(army); return; }
       const tile = pickTile(e.clientX, e.clientY);
       const owner = tile >= 0 ? w.owner[tile] ?? -1 : -1;
       if (tile < 0 || owner < 0) { s.select(null); return; }
