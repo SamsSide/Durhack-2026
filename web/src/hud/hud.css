@@ -1,0 +1,99 @@
+/* Heads-up interface around the globe. Colours and type come from theme/tokens.css only. */
+.hud { position: absolute; z-index: 5; }
+
+.topbar {
+  position: absolute; z-index: 6; left: 0; top: 0; right: 0; height: var(--topbar-height);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+  padding: 0 var(--space-4);
+  background: linear-gradient(180deg, var(--color-surface-2) 0%, var(--color-surface) 100%);
+  border-bottom: 1px solid var(--color-accent);
+  box-shadow: 0 6px 20px var(--color-bg);
+}
+.tb-group { display: flex; align-items: center; gap: var(--space-3); flex: none; min-width: 0; }
+.tb-name, .tb-era, .wordmark, .conn { white-space: nowrap; }
+.wordmark { font-family: var(--font-display); font-weight: 700; font-size: var(--text-sm); letter-spacing: 0.22em; text-transform: uppercase; color: var(--color-accent); }
+.vsep { width: 1px; height: 26px; background: var(--color-border); }
+.tb-world { max-width: 170px; overflow: hidden; }
+.tb-name { font-family: var(--font-display); font-size: 17px; font-weight: 600; letter-spacing: 0.04em; color: var(--color-text); line-height: 20px; overflow: hidden; text-overflow: ellipsis; }
+.tb-era { font-size: 12px; font-style: italic; color: var(--color-text-muted); line-height: 14px; overflow: hidden; text-overflow: ellipsis; }
+.tb-year { display: flex; align-items: baseline; gap: 6px; padding: 3px 10px; border: 1px solid var(--color-accent); border-radius: var(--radius-1); }
+.tb-year .cap { font-family: var(--font-display); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-text-muted); }
+.tb-year .num { font-family: var(--font-mono); font-size: 16px; font-weight: 600; color: var(--color-accent); }
+.conn { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-sm); color: var(--color-text-muted); }
+.conn i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.conn-live { color: var(--color-text); }
+.conn-live i { background: var(--color-ok); box-shadow: 0 0 6px var(--color-ok); }
+.conn-reconnecting i { background: var(--color-warn); box-shadow: 0 0 6px var(--color-warn); }
+.conn-offline i { background: var(--color-danger); }
+
+.segs { display: flex; border: 1px solid var(--color-border); border-radius: var(--radius-1); background: var(--color-surface); }
+.seg {
+  appearance: none; border: 0; border-left: 1px solid var(--color-border); background: transparent; cursor: pointer;
+  font-family: var(--font-display); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--color-text-muted); padding: 0 11px; line-height: 26px; display: flex; align-items: center;
+}
+.seg:first-child { border-left: 0; }
+.seg:hover { color: var(--color-accent); }
+.seg.mono { font-family: var(--font-mono); letter-spacing: 0; font-size: 12px; padding: 0 9px; }
+.seg.icon { padding: 0 10px; }
+.seg.on, .seg.on:hover { background: var(--color-parchment); color: var(--color-ink); }
+.seg:disabled { opacity: 0.45; cursor: default; }
+
+.meter { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--color-text-muted); padding: 0 10px; line-height: 26px; border: 1px solid var(--color-border); border-radius: var(--radius-1); background: var(--color-bg); white-space: nowrap; }
+.meter .num { font-family: var(--font-mono); color: var(--color-text); font-size: 12px; }
+.meter .dot { color: var(--color-border); margin: 0 2px; }
+.meter .mode { font-family: var(--font-display); font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; padding: 0 6px; line-height: 16px; border-radius: var(--radius-1); }
+.meter-mock .mode { color: var(--color-text-muted); border: 1px solid var(--color-border); }
+.meter-live .mode { color: var(--color-ink); background: var(--color-accent); }
+.meter-capped { border-color: var(--color-danger); }
+.meter-capped .mode { color: var(--color-text); background: var(--color-danger); }
+
+.btn.primary-dark { background: var(--color-parchment); color: var(--color-ink); border-color: var(--color-parchment); }
+.btn.primary-dark:hover { background: var(--color-parchment-light); color: var(--color-ink); border-color: var(--color-accent); }
+
+/* Decree: bottom right, just above the ticker. */
+.decree {
+  right: var(--space-4); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-2));
+  width: 380px; height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 12px;
+  background: var(--parchment-fill); border: var(--border-ink); border-radius: var(--radius-1);
+  box-shadow: var(--shadow-1); color: var(--color-ink);
+}
+.decree .cap, .legend-box .cap { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-rubric); }
+.decree input {
+  flex: 1; min-width: 0; background: transparent; border: 0; border-bottom: 1px solid var(--color-ink-muted); border-radius: 0;
+  font-size: var(--text-sm); color: var(--color-ink); padding: 0 0 2px; line-height: 22px; outline: none;
+}
+.decree input::placeholder { font-style: italic; color: var(--color-ink-muted); }
+.decree input:focus { border-bottom-color: var(--color-rubric); }
+.decree .btn { background: var(--color-ink); color: var(--color-parchment-light); border-color: var(--color-ink); }
+.decree .btn:hover { background: var(--color-ink-muted); color: var(--color-parchment-light); }
+.decree .btn:disabled { opacity: 0.45; }
+.decree .done { font-style: italic; color: var(--color-ok); font-size: var(--text-sm); }
+
+/* Diplomacy legend sits above the decree box. */
+.legend-box {
+  right: var(--space-4); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-2) + 48px + var(--space-2));
+  width: 220px; padding: 12px 16px;
+}
+.legend-box .muted { font-size: var(--text-sm); margin-bottom: 6px; }
+.lg-row { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 22px; }
+.lg-sw { width: 14px; height: 14px; border: 1px solid var(--color-ink); border-radius: var(--radius-1); flex: none; }
+
+.belief-banner {
+  position: absolute; z-index: 6; left: 50%; top: calc(var(--topbar-height) + var(--space-4)); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 14px;
+  background: color-mix(in srgb, var(--color-bg) 92%, transparent); border: 1px solid var(--holo-tint); border-radius: var(--radius-1);
+  color: var(--color-text); font-size: 14px; box-shadow: 0 0 18px var(--holo-scanline);
+}
+.belief-banner .cap { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--holo-tint); }
+.belief-banner .btn { background: transparent; color: var(--holo-tint); border-color: var(--holo-tint); }
+.belief-banner .btn:hover { background: var(--holo-scanline); color: var(--holo-tint); }
+
+/* Nation card dock, top right. */
+.card-dock { top: calc(var(--topbar-height) + var(--space-3)); right: var(--space-3); background: color-mix(in srgb, var(--color-bg) 82%, transparent); border-radius: var(--radius-2); box-shadow: var(--shadow-1); }
+@media (max-width: 1099px) {
+  .card-dock { right: 0; top: var(--topbar-height); background: transparent; box-shadow: none; }
+  .decree, .legend-box { right: var(--space-2); }
+  .topbar { gap: var(--space-2); padding: 0 var(--space-2); }
+  .tb-era, .vsep { display: none; }
+}

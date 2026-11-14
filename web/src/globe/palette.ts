@@ -9,6 +9,13 @@ export interface Palette {
   strengthHigh: string;
   strengthNone: string;
   unclaimedTint: string;
+  ink: string;
+  parchment: string;
+  accent: string;
+  background: string;
+  holo: string;
+  /** Share of the nation colour in the political fill (rest is terrain). */
+  nationFill: number;
 }
 
 const DEFAULTS: Palette = {
@@ -18,11 +25,17 @@ const DEFAULTS: Palette = {
   },
   ocean: '#2b4a5e',
   stance: { war: '#b3261e', hostile: '#d9822b', neutral: '#9a9486', trade: '#3f7cac', alliance: '#4f8a3c' },
-  selectedSelf: '#e8c547',
+  selectedSelf: '#c9a24b',
   strengthLow: '#f3e9c6',
   strengthHigh: '#7a1f12',
   strengthNone: '#d8d2c0',
   unclaimedTint: '#d8d2c0',
+  ink: '#2a1f14',
+  parchment: '#ecdfc0',
+  accent: '#c9a24b',
+  background: '#090b12',
+  holo: '#7fe6d8',
+  nationFill: 0.88,
 };
 
 let cached: Palette | null = null;
@@ -35,6 +48,14 @@ export function getPalette(): Palette {
     const read = (name: string): string => cs.getPropertyValue(name).trim();
     const ocean = read('--globe-ocean');
     if (ocean) { p.ocean = ocean; p.terrain.ocean = ocean; }
+    const tok = (name: string, fallback: string): string => read(name) || fallback;
+    p.ink = tok('--color-ink', p.ink);
+    p.parchment = tok('--color-parchment', p.parchment);
+    p.accent = tok('--color-accent', p.accent);
+    p.selectedSelf = p.accent;
+    p.background = tok('--color-bg', p.background);
+    p.holo = tok('--holo-tint', p.holo);
+    for (const s of Object.keys(p.stance) as Stance[]) p.stance[s] = tok(`--stance-${s}`, p.stance[s]);
     for (const t of Object.keys(p.terrain) as Terrain[]) {
       if (t === 'ocean') continue;
       const v = read(`--globe-land-${t}`);

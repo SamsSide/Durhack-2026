@@ -1,9 +1,10 @@
-// Pulsing gold outline around the selected nation. Lane b.
+// Pulsing cyan (hologram tint) outline around the selected nation. Lane b.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Line } from '@react-three/drei';
 import * as THREE from 'three';
 import { useWorld } from '../../state/world';
+import { getPalette } from '../palette';
 import { useProvinceMesh } from '../mesh/context';
 
 type P3 = [number, number, number];
@@ -62,7 +63,7 @@ export function SelectionGlow() {
       ref={lineRef as never}
       points={points}
       segments
-      color="#ffe9a8"
+      color={getPalette().holo}
       lineWidth={4}
       transparent
       opacity={0.8}
