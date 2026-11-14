@@ -368,13 +368,13 @@ this table from `@terra/shared`.
 { "type": "belief", "countryId": 2 }
 ```
 
-  `speed` is any number from 1/24 to 64 (a multiplier on the base rate of two years a second): 1/24
-  is one month a second (a year in 12 s, the slowest, for live interaction in demos, and the speed
-  every new world starts at, owner 14 Nov), 1 is two
-  years a second, 64 is 128 years a second. The server clamps it. **Gears (owner decision 14 Nov):**
-  the speed control offers named gears, in years per second of game time: 1 month (1/24), 1 season
-  (1/8), 1 year (0.5), 2 years (1), 3 years (1.5), 4 years (2), 8 (4), 16 (8), 32 (16), 64 (32) and
-  128 years (64), plus pause; dragging between gears stays continuous. The simulation still steps
+  `speed` is any number from 1/104 to 5 (a multiplier on the base rate of two years a second): 1/104
+  is one week a second (a year in 52 s, the slowest), 1/24 is one month a second (a year in 12 s,
+  and the speed every new world starts at, owner 14 Nov), 1 is two years a second, 5 is ten years a
+  second. The server clamps it. **Gears (owner decision 14 Nov, revised the same day):**
+  the speed control offers named gears, in game time per second: 1 week (1/104), 2 weeks (1/52),
+  1 month (1/24), 1 season (1/8), 6 months (1/4), 1 year (0.5), 2 years (1), 3 years (1.5), 5 years
+  (2.5) and 10 years (5), plus pause; dragging between gears stays continuous. The simulation still steps
   one year at a time: the client shows the month and day by interpolating between `tick` events
   at the current speed, and units glide between tiles over the time a move takes. `pacing` is `"manual"` (the default: the chosen speed holds) or `"auto"` (the
   director: the chosen speed is a ceiling; after a big moment, such as a war declared, a battle for

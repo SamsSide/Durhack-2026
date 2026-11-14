@@ -6,8 +6,8 @@
 import { useWorld } from './world';
 
 export const BASE_YEARS_PER_SEC = 2;
-export const MIN_SPEED = 1 / 24;
-export const MAX_SPEED = 64;
+export const MIN_SPEED = 1 / 104;
+export const MAX_SPEED = 5;
 const ALMOST = 0.9999;
 
 let frac = 0;                 // 0..1 through the current year

@@ -20,7 +20,7 @@ import { arcHump, arcPoint, arrowGeometry, arrowMaterial, lineGeometry, lineMate
 
 import { DISSOLVE_MS, DWELL_MS, dissolveAlpha, tooFast, viewHeight } from './speed';
 
-const MOVE_MAX_MS = 40_000;     // the longest march: a three-year move at one month a second is 36 s
+const MOVE_MAX_MS = 160_000;    // the longest march: a three-year move at one week a second is 156 s
 const CHIP_LIFT = 0.004;
 const CHIP_H = 0.03;            // counter height, as a share of the view (sizeAttenuation off)
 const SETTLER_H = 0.017;
@@ -214,7 +214,7 @@ export class UnitLayer {
     return out.copy(d).multiplyScalar((this.mesh.heights[tile] ?? 1) + extra);
   }
 
-  /** Real time one year takes at the effective speed (12 s at one month a second). */
+  /** Real time one year takes at the effective speed (12 s at one month a second, 52 s at one week a second). */
   private msPerTick(): number {
     return msPerYear();
   }

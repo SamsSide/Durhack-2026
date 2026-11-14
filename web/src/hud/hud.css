@@ -186,7 +186,7 @@ body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes { opacity: 0; pointer-
 .meter-hit:hover > * { color: var(--color-text); box-shadow: var(--bevel-dark), 0 0 0 1px var(--gilt), 0 2px 3px rgba(0,0,0,.5); }
 .meter-hit:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
-/* Speed: pause, the gear slider (1 month a second to 128 years a second), the readout, Auto.
+/* Speed: pause, the gear slider (1 week a second to 10 years a second), the readout, Auto.
    Eleven stops, evenly spaced; the labels are years of game time a second. */
 .speedctl { display: flex; align-items: center; gap: 8px; }
 /* Pause is a round lacquer medallion in a gilt bezel (tn-button--lacquer tn-button--round). */
@@ -204,7 +204,7 @@ body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes { opacity: 0; pointer-
 .speed-stop.lit { background: var(--gilt-hi); }
 .speed-stop b {
   position: absolute; top: 15px; left: 50%; transform: translateX(-50%); white-space: nowrap;
-  font-family: var(--font-mono); font-size: 11px; font-weight: 500; line-height: 12px; color: var(--color-text-muted); text-shadow: var(--engrave-on-dark);
+  font-family: var(--font-mono); font-size: 10px; word-spacing: -0.3em; font-weight: 500; line-height: 12px; color: var(--color-text-muted); text-shadow: var(--engrave-on-dark);
 }
 .speed-stop b.first { left: -4px; transform: none; }
 .speed-stop b.last { left: auto; right: -5px; transform: none; }
@@ -227,7 +227,7 @@ body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes { opacity: 0; pointer-
 .speed-val.slowed b { color: var(--color-warn); }
 .speedctl.paused .speed-val b { color: var(--color-text-muted); }
 .speedctl.paused .speed-val small { color: var(--gilt-hi); }
-/* Below 1800 px the bar has no room for the labelled scale: a short track with its eleven stops, and
+/* Below 1800 px the bar has no room for the labelled scale: a short track with its ten stops, and
    the readout names the gear. The 1280 px projector layout is tighter still. */
 @media (max-width: 1799px) {
   .speedctl { gap: 6px; }

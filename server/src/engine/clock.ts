@@ -1,6 +1,7 @@
-// Row A25: the clock every runner shares. Speed is any number from 1/24 to 64 (a multiplier on the
-// base rate of two years a second: 1/24 is one month a second, a tick every 12 s). The Clock turns wall time into whole ticks (carrying the
-// fraction, so 64x is 128 ticks a second without drift), runs the pacing director, and tells the
+// Row A25: the clock every runner shares. Speed is any number from 1/104 to 5 (a multiplier on the
+// base rate of two years a second: 1/104 is one week a second, a tick every 52 s; 1/24 is one month a
+// second, a tick every 12 s; 5 is ten years a second). The Clock turns wall time into whole ticks (carrying the
+// fraction, so 5x is 10 ticks a second without drift), runs the pacing director, and tells the
 // network layer when the effective speed changes. TickLoop is the timer around it.
 //
 // Director (pacing 'auto'): the chosen speed is a ceiling (the target). A big moment drops the
@@ -8,8 +9,8 @@
 // over EASE_MS (exponential). A new big moment starts the hold again. Because the whole recovery
 // takes 11 s, the "quiet for 20 s, nudge up" rule is already satisfied: the speed is back at the
 // target well before any 20 s of quiet. Pause always wins.
-export const MIN_SPEED = 1 / 24;   // one month a second: a year (one tick) every 12 s
-export const MAX_SPEED = 64;
+export const MIN_SPEED = 1 / 104;  // one week a second: a year (one tick) every 52 s
+export const MAX_SPEED = 5;        // ten years a second
 export const BASE_TICKS_PER_SEC = 2;
 export const MAX_TICKS_PER_FIRE = 16;
 export const HOLD_MS = 8000;
@@ -25,8 +26,9 @@ export interface ClockState { speed: number; target: number; pacing: Pacing; pau
 /** The speed every new world starts at: one month a second. */
 export const START_SPEED = 1 / 24;
 export const clampSpeed = (v: number): number => Math.min(MAX_SPEED, Math.max(MIN_SPEED, v));
-// Four places, so the slow gears reach the clients whole enough to interpolate months (1/24 = 0.0417).
-const r4 = (x: number): number => Math.round(x * 10000) / 10000;
+// Six places, so the slow gears reach the clients whole enough to interpolate days (1/104 = 0.009615;
+// four places would give 0.0096, 0.2% slow).
+const r4 = (x: number): number => Math.round(x * 1e6) / 1e6;
 
 export class Clock {
   target = START_SPEED;           // every new world starts at one month a second (owner, 14 Nov)

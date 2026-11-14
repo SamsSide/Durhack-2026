@@ -10,7 +10,7 @@ let failed = 0;
 const ok = (cond: boolean, msg: string) => { console.log(`${cond ? 'ok  ' : 'FAIL'} ${msg}`); if (!cond) failed++; };
 
 // 1. Fake clock: ticks per second at each speed over 10 virtual seconds, fires of the clock's own delay.
-for (const speed of [0.1, 1, 8, 64]) {
+for (const speed of [0.1, 1, 2.5, 5]) {
   let t = 0;
   const c = new Clock(() => t);
   c.setTarget(speed);
@@ -42,7 +42,10 @@ for (const speed of [0.1, 1, 8, 64]) {
   while (got < 0 && t < resumed + 20_000) { t += Math.ceil(c.delay(t)); if (c.take(t)) got = t - resumed; }
   ok(during === 0 && Math.abs(got - 6000) <= 150, `fake clock 1/24: pause keeps the phase (no ticks while paused, next tick ${got} ms after resume, want 6000)`);
   c.setTarget(0.001);
-  ok(Math.abs(c.target - 1 / 24) < 1e-9, `speed below 1/24 is clamped to 1/24 (${c.target.toFixed(4)})`);
+  ok(Math.abs(c.target - 1 / 104) < 1e-12, `speed below 1/104 is clamped to 1/104 (${c.target.toFixed(6)})`);
+  c.setTarget(64);
+  ok(c.target === 5, `speed above 5 is clamped to 5 (${c.target})`);
+  ok(c.state(t).speed === 5 && Math.abs(new Clock(() => 0).state().speed - 1 / 24) < 1e-6, 'new clock starts at 1/24; state speed is 5 at the top gear');
   // The director never speeds a slow world up: with a ceiling below 1 a big moment leaves it alone.
   c.setTarget(1 / 24); c.setPacing('auto');
   c.bigMoment(t);
@@ -52,11 +55,24 @@ for (const speed of [0.1, 1, 8, 64]) {
   ok(c.effective(t + 10) === 0.5, 'director with a 0.5 ceiling stays at 0.5 through a big moment');
 }
 
-// 2. Fake clock director: timeline of the effective speed after a war at t=0, target 8.
+// 1c. Fake clock at one week a second (1/104): a tick every 52 s, and the reported speed is accurate
+// enough for the client to interpolate days.
 {
   let t = 0;
   const c = new Clock(() => t);
-  c.setTarget(8); c.setPacing('auto');
+  c.setTarget(1 / 104);
+  const at: number[] = [];
+  while (t < 260_500) { t += Math.ceil(c.delay(t)); if (c.take(t)) at.push(t); }
+  const worst = Math.max(...at.map((x, i) => Math.abs(x - (i + 1) * 52_000)));
+  ok(at.length === 5 && worst <= 1100, `fake clock 1/104: ${at.length} ticks in 260 s, worst offset from the 52 s grid ${worst} ms`);
+  ok(Math.abs(c.state(t).speed - 1 / 104) / (1 / 104) < 1e-4, `1/104 reported to the clients as ${c.state(t).speed} (exact ${1 / 104})`);
+}
+
+// 2. Fake clock director: timeline of the effective speed after a war at t=0, target 4.
+{
+  let t = 0;
+  const c = new Clock(() => t);
+  c.setTarget(4); c.setPacing('auto');
   const states: string[] = [];
   c.onChange = (s) => states.push(`t=${(t / 1000).toFixed(2)}s speed=${s.speed}`);
   const war = { type: 'relation_changed', a: 0, b: 1, stance: 'war', reason: 'x', id: 'e', tick: 1, actor: 0, lamport: 1 } as const;
@@ -64,8 +80,8 @@ for (const speed of [0.1, 1, 8, 64]) {
   c.bigMoment(0);
   const at = (ms: number) => c.state(ms).speed;
   ok(at(0) === 1 && at(HOLD_MS - 1) === 1, `drops to 1x at once and holds ${HOLD_MS / 1000} s`);
-  ok(at(HOLD_MS + 1000) > 1 && at(HOLD_MS + 1000) < 8, `eases in between at +${(HOLD_MS + 1000) / 1000} s: ${at(HOLD_MS + 1000)}`);
-  ok(at(HOLD_MS + EASE_MS) === 8, `back at the target at +${(HOLD_MS + EASE_MS) / 1000} s`);
+  ok(at(HOLD_MS + 1000) > 1 && at(HOLD_MS + 1000) < 4, `eases in between at +${(HOLD_MS + 1000) / 1000} s: ${at(HOLD_MS + 1000)}`);
+  ok(at(HOLD_MS + EASE_MS) === 4, `back at the target at +${(HOLD_MS + EASE_MS) / 1000} s`);
   console.log('  timeline:', [0, 4000, 7999, 8500, 9000, 9500, 10000, 10500, 11000].map((ms) => `${ms / 1000}s:${at(ms)}`).join(' '));
   c.setPaused(true);
   ok(c.take(50_000) === 0, 'pause always wins (no ticks)');
@@ -84,7 +100,7 @@ runner.subscribe({
   events: (e) => eventsPerFire.push(e.length),
   clock: (s) => clocks.push({ at: Date.now() - t0, speed: s.speed, target: s.target, pacing: s.pacing }),
 });
-for (const [speed, secs] of [[1, 5], [8, 5], [64, 5]] as const) {
+for (const [speed, secs] of [[1, 5], [2.5, 5], [5, 5]] as const) {
   runner.setSpeed(speed);
   await wait(300);
   const tick0 = world.tick, cpu0 = process.cpuUsage(), f0 = eventsPerFire.length, ev0 = eventsPerFire.reduce((a, b) => a + b, 0);
@@ -95,7 +111,7 @@ for (const [speed, secs] of [[1, 5], [8, 5], [64, 5]] as const) {
   const cpuPct = ((cpu.user + cpu.system) / 1000 / (secs * 1000)) * 100;
   const verdict = Math.abs(rate - want) / want <= 0.1 ? 'within 10%' : 'BEHIND (honest maximum)';
   console.log(`real engine ${speed}x: ${rate.toFixed(1)} ticks/s (want ${want}) ${verdict}; ${((eventsPerFire.length - f0) / secs).toFixed(1)} events messages/s, ${(evs / secs).toFixed(0)} events/s, cpu ${cpuPct.toFixed(0)}%`);
-  if (speed < 64) ok(verdict === 'within 10%', `real engine ${speed}x within 10%`);
+  ok(verdict === 'within 10%', `real engine ${speed}x within 10%`);
 }
 // 0.1x: the gap between two consecutive ticks should be about 5 s.
 runner.setSpeed(0.1);
@@ -120,15 +136,15 @@ await wait(200);
   ok(Math.abs(runner.clockState().speed - 1 / 24) < 1e-3 && Math.abs(world.speed - 1 / 24) < 1e-9, `real engine reports 1/24 (clock ${runner.clockState().speed})`);
 }
 
-// 4. The real engine director: a war in auto pacing at target 8.
-runner.setSpeed(8);
+// 4. The real engine director: a war in auto pacing at target 4.
+runner.setSpeed(4);
 runner.control({ action: 'pacing', value: 'auto' });
 // The sim can have its own big moment just before ours (it does for seed 77), which would leave the
-// director already at 1x. Wait out any such hold until the clock is really back at 8x, then settle.
+// director already at 1x. Wait out any such hold until the clock is really back at 4x, then settle.
 {
   const settle = Date.now() + HOLD_MS + EASE_MS + 4000;
-  while (Date.now() < settle && runner.clockState().speed !== 8) await wait(100);
-  ok(runner.clockState().speed === 8, `clock settled at 8x before the war (${runner.clockState().speed})`);
+  while (Date.now() < settle && runner.clockState().speed !== 4) await wait(100);
+  ok(runner.clockState().speed === 4, `clock settled at 4x before the war (${runner.clockState().speed})`);
   await wait(500);
 }
 clocks.length = 0;
@@ -142,9 +158,9 @@ console.log('  director clock messages (seconds after the war):', clocks.map((c)
 const first = clocks[0];
 ok(!!first && first.speed <= 1 && Number(rel(first)) < 0.5, `speed dropped to <=1x within one fire of the war (${first ? rel(first) : '?'} s)`);
 const lastC = clocks[clocks.length - 1];
-ok(!!lastC && lastC.speed === 8, `speed back at 8x by 12.5 s (${lastC?.speed})`);
+ok(!!lastC && lastC.speed === 4, `speed back at 4x by 12.5 s (${lastC?.speed})`);
 ok(clocks.length <= 4 * 13, `clock messages throttled (${clocks.length} in 12.5 s)`);
-console.log(`  ticks during the 12.5 s after the war: ${w.tick - tickAtWar} (a 8x-only run would be about 200)`);
+console.log(`  ticks during the 12.5 s after the war: ${w.tick - tickAtWar} (a 4x-only run would be about 100)`);
 
 runner.stop();
 console.log(failed ? `${failed} check(s) failed` : 'all clock checks passed');
