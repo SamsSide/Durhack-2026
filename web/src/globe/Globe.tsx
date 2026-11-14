@@ -31,6 +31,7 @@ import { Towns } from './towns';
 import { Living } from './living';
 import { EventBeacons, Spotlight, WarFlash } from './events';
 import { Council } from './council';
+import { WarFx } from './war/WarFx';
 import { Wonders } from './wonders';
 import { CutVeil } from './show/CutVeil';
 import { RulerScrolls } from './show/RulerScrolls';
@@ -176,6 +177,7 @@ function Scene({ world }: { world: World }) {
       <Living />
       <EventBeacons />
       <WarFlash />
+      <WarFx />
       <Council />
       <CutVeil />
       <RulerScrolls />

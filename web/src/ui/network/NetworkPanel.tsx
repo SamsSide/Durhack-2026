@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useWorld } from '../../state/world';
+import { useSlowVersion } from '../useSlowVersion';
 import { useBelief } from '../../state/belief';
 import { AutoIcon, NetworkGraph } from './NetworkGraph';
 import { NodeTray } from './NodeTray';
@@ -20,7 +21,7 @@ function readTab(): NetTab {
 }
 
 export function NetworkPanel() {
-  useWorld((s) => s.version);
+  useSlowVersion();
   const world = useWorld((s) => s.world);
   const agents = useWorld((s) => s.agents);
   const beliefOf = useWorld((s) => s.beliefOf);

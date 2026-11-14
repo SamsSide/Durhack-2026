@@ -75,6 +75,8 @@ def main():
     groups["models"] = {k: manifest["models"][k] for k in ("army", "fleet", "satellite") if k in manifest["models"]}
     for style, kinds in groups.items():
         for kind, ent in kinds.items():
+            if kind == "formation":                      # checked by verify_formations.py
+                continue
             j, size = read_glb(os.path.join(MODELS, ent["file"]))
             tris = 0
             mn = [1e9] * 3
@@ -103,4 +105,5 @@ def main():
     sys.exit(1 if bad else 0)
 
 
-main()
+if __name__ == "__main__":
+    main()

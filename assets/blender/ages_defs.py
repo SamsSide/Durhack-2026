@@ -583,6 +583,14 @@ def _rocket_bike(b):
 
 def army_future(b):
     """A hover tank on its lift field, a rail gun in a faceted turret, two rocket bikes flying above."""
+    _hover_tank(b)
+    for x, y, zz, roll in ((0.2, 0.14, 0.56, -0.18), (-0.17, -0.13, 0.7, 0.18)):   # the escort
+        with b.lift(x, y, zz, 1.2, rot=(roll, 0, 0)):
+            _rocket_bike(b)
+
+
+def _hover_tank(b):
+    """The future army's hover tank on its lift field (also the future formation's flank)."""
     for x in (-0.2, 0.18):                                                # the lift field on the ground
         for y in (-0.16, 0.16):
             b.cyl(x, y, 0.0, 0.085, 0.006, "glow", seg=8)
@@ -603,9 +611,6 @@ def army_future(b):
     b.box(0.36, 0, zt + 0.03, 0.38, 0.026, 0.012, "glow")
     b.rod((-0.14, 0.07, zt + 0.085), (-0.14, 0.07, zt + 0.19), 0.006, "stealth_dark", seg=3)
     b.ball(-0.14, 0.07, zt + 0.2, 0.014, "glow", seg=4)
-    for x, y, zz, roll in ((0.2, 0.14, 0.56, -0.18), (-0.17, -0.13, 0.7, 0.18)):   # the escort
-        with b.lift(x, y, zz, 1.2, rot=(roll, 0, 0)):
-            _rocket_bike(b)
 
 
 def fleet_future(b):

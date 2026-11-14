@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useWorld } from '../../state/world';
+import { useSlowVersion } from '../../ui/useSlowVersion';
 import { omega, ringFor, ringPos, revision, satNations, satPhases, subscribe, syncWorld } from './launchState';
 import type { Ring } from './launchState';
 
@@ -15,7 +16,7 @@ interface Sat { id: number; color: THREE.Color; r: Ring; phase: number; first: b
 
 export function Orbit() {
   const world = useWorld((s) => s.world);
-  const version = useWorld((s) => s.version);
+  const version = useSlowVersion();
   const geo = useMemo(() => {
     const body = new THREE.BoxGeometry(SAT, SAT * 0.7, SAT * 0.7);
     const panel = new THREE.BoxGeometry(SAT * 1.3, SAT * 0.04, SAT * 0.7);

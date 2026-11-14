@@ -12,6 +12,7 @@ import { getPalette } from '../palette';
 import { PART_NAMES, TOWN_KINDS, WALL_PARTS, buildTown, townKey } from './buildTown';
 import type { PartBuf, PartName, TownParts } from './buildTown';
 import { FADE_FAR, FADE_NEAR, PLASTER } from './style';
+import { isRuinedTile, updateRuins } from '../war/ruins';
 
 const PARTS = PART_NAMES;
 const zeroes = (): Record<PartName, number> => Object.fromEntries(PARTS.map((k) => [k, 0])) as Record<PartName, number>;
@@ -171,8 +172,10 @@ export class TownLayer {
   sync(world: World, now: number, initial: boolean): void {
     const seen = new Set<string>();
     const tiers = cityTiers(world);
+    updateRuins(world);
     for (const s of world.structures) {
       if (!TOWN_KINDS.has(s.kind) || !world.tiles[s.tile]) continue;
+      if (isRuinedTile(s.tile)) continue; // B14: a ruined town sinks away and rises again when rebuilt
       seen.add(s.id);
       const tier: CityTier = tiers.get(s.id) ?? 0;
       const key = townKey(world, s, tier);

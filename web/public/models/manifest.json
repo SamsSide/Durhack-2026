@@ -327,6 +327,20 @@
       "trader": {
         "file": "ages/ancient/trader.glb",
         "footprint": 0.45
+      },
+      "formation": {
+        "front": {
+          "file": "ages/ancient/formation_front.glb",
+          "footprint": 0.2
+        },
+        "flank": {
+          "file": "ages/ancient/formation_flank.glb",
+          "footprint": 0.25
+        },
+        "back": {
+          "file": "ages/ancient/formation_back.glb",
+          "footprint": 0.17
+        }
       }
     },
     "medieval": {
@@ -341,6 +355,20 @@
       "trader": {
         "file": "ages/medieval/trader.glb",
         "footprint": 0.45
+      },
+      "formation": {
+        "front": {
+          "file": "ages/medieval/formation_front.glb",
+          "footprint": 0.18
+        },
+        "flank": {
+          "file": "ages/medieval/formation_flank.glb",
+          "footprint": 0.23
+        },
+        "back": {
+          "file": "ages/medieval/formation_back.glb",
+          "footprint": 0.2
+        }
       }
     },
     "gunpowder": {
@@ -355,6 +383,20 @@
       "trader": {
         "file": "ages/gunpowder/trader.glb",
         "footprint": 0.45
+      },
+      "formation": {
+        "front": {
+          "file": "ages/gunpowder/formation_front.glb",
+          "footprint": 0.17
+        },
+        "flank": {
+          "file": "ages/gunpowder/formation_flank.glb",
+          "footprint": 0.19
+        },
+        "back": {
+          "file": "ages/gunpowder/formation_back.glb",
+          "footprint": 0.18
+        }
       }
     },
     "industrial": {
@@ -369,6 +411,20 @@
       "trader": {
         "file": "ages/industrial/trader.glb",
         "footprint": 0.45
+      },
+      "formation": {
+        "front": {
+          "file": "ages/industrial/formation_front.glb",
+          "footprint": 0.16
+        },
+        "flank": {
+          "file": "ages/industrial/formation_flank.glb",
+          "footprint": 0.18
+        },
+        "back": {
+          "file": "ages/industrial/formation_back.glb",
+          "footprint": 0.19
+        }
       }
     },
     "modern": {
@@ -383,6 +439,20 @@
       "trader": {
         "file": "ages/modern/trader.glb",
         "footprint": 0.45
+      },
+      "formation": {
+        "front": {
+          "file": "ages/modern/formation_front.glb",
+          "footprint": 0.18
+        },
+        "flank": {
+          "file": "ages/modern/formation_flank.glb",
+          "footprint": 0.28
+        },
+        "back": {
+          "file": "ages/modern/formation_back.glb",
+          "footprint": 0.25
+        }
       }
     },
     "future": {
@@ -397,6 +467,20 @@
       "trader": {
         "file": "ages/future/trader.glb",
         "footprint": 0.45
+      },
+      "formation": {
+        "front": {
+          "file": "ages/future/formation_front.glb",
+          "footprint": 0.2
+        },
+        "flank": {
+          "file": "ages/future/formation_flank.glb",
+          "footprint": 0.31
+        },
+        "back": {
+          "file": "ages/future/formation_back.glb",
+          "footprint": 0.19
+        }
       }
     },
     "stellar": {
@@ -411,6 +495,20 @@
       "trader": {
         "file": "ages/stellar/trader.glb",
         "footprint": 0.45
+      },
+      "formation": {
+        "front": {
+          "file": "ages/stellar/formation_front.glb",
+          "footprint": 0.19
+        },
+        "flank": {
+          "file": "ages/stellar/formation_flank.glb",
+          "footprint": 0.23
+        },
+        "back": {
+          "file": "ages/stellar/formation_back.glb",
+          "footprint": 0.32
+        }
       }
     }
   },

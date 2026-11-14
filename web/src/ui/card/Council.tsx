@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Council as CouncilData, CouncilMember, CouncilRole, CouncilState } from '@terra/shared';
 import { useWorld } from '../../state/world';
+import { useSlowVersion } from '../useSlowVersion';
 import { Portrait } from './Portrait';
 
 const ROLES: { role: CouncilRole; label: string; other: string }[] = [
@@ -17,7 +18,7 @@ interface Props { countryId: number; council: CouncilData; color: string; tick: 
 
 /** The Council section of the nation card (row A29): ruler and general, with kill, cut and restore. */
 export function Council({ countryId, council, color, tick, short, frozen }: Props) {
-  useWorld((s) => s.version);
+  useSlowVersion();
   return (
     <section className="tn-council" aria-label="The Council">
       <h3 className="tn-header-bar">The Council</h3>
