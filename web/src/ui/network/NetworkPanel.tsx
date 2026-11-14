@@ -5,6 +5,8 @@ import { NationRow } from './NationRow';
 import { LedgerPanel } from '../economy/LedgerPanel';
 import { EconomyCounter } from '../economy/EconomyCounter';
 import { useEconomy } from '../economy/useEconomy';
+import { TerritoryChart } from '../stats/TerritoryChart';
+import { useStats } from '../stats/useStats';
 import './network.css';
 
 const FOLD_KEY = 'tn-network-folded';
@@ -13,9 +15,9 @@ function readFolded(): boolean {
 }
 
 const TAB_KEY = 'tn-network-tab';
-type NetTab = 'network' | 'treasury';
+type NetTab = 'network' | 'treasury' | 'stats';
 function readTab(): NetTab {
-  try { return localStorage.getItem(TAB_KEY) === 'treasury' ? 'treasury' : 'network'; } catch { return 'network'; }
+  try { const v = localStorage.getItem(TAB_KEY); return v === 'treasury' || v === 'stats' ? v : 'network'; } catch { return 'network'; }
 }
 
 export function NetworkPanel() {
@@ -34,6 +36,7 @@ export function NetworkPanel() {
   const [tab, setTabState] = useState<NetTab>(readTab);
   const economy = useEconomy();
   const economyOn = economy.status === 'ok';
+  const statsOn = useStats().status === 'ok';   // row A11: the tab exists only while Tiger Data answers
   const setTab = (t: NetTab) => {
     setTabState(t);
     try { localStorage.setItem(TAB_KEY, t); } catch { /* storage unavailable */ }
@@ -83,7 +86,7 @@ export function NetworkPanel() {
   }
   const beliefDisabled = beliefOf == null && selected == null;
 
-  const showTab: NetTab = economyOn ? tab : 'network';
+  const showTab: NetTab = (tab === 'treasury' && economyOn) || (tab === 'stats' && statsOn) ? tab : 'network';
 
   return (
     <aside className="tn-net panel">
@@ -95,14 +98,15 @@ export function NetworkPanel() {
         <button className="tn-net-fold" onClick={() => setFold(true)} aria-label="Fold the network panel"><svg width="6" height="10" viewBox="0 0 6 10" aria-hidden="true"><path d="M5 1L1 5L5 9" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg></button>
       </header>
 
-      {economyOn && (
+      {(economyOn || statsOn) && (
         <div className="tn-net-tabs" role="tablist">
           <button type="button" role="tab" aria-selected={showTab === 'network'} className={`tn-net-tabbtn${showTab === 'network' ? ' tn-on' : ''}`} onClick={() => setTab('network')}>Network</button>
-          <button type="button" role="tab" aria-selected={showTab === 'treasury'} className={`tn-net-tabbtn${showTab === 'treasury' ? ' tn-on' : ''}`} onClick={() => setTab('treasury')}>Treasury</button>
+          {economyOn && <button type="button" role="tab" aria-selected={showTab === 'treasury'} className={`tn-net-tabbtn${showTab === 'treasury' ? ' tn-on' : ''}`} onClick={() => setTab('treasury')}>Treasury</button>}
+          {statsOn && <button type="button" role="tab" aria-selected={showTab === 'stats'} className={`tn-net-tabbtn${showTab === 'stats' ? ' tn-on' : ''}`} onClick={() => setTab('stats')}>Stats</button>}
         </div>
       )}
 
-      {showTab === 'treasury' ? <LedgerPanel /> : (<>
+      {showTab === 'stats' ? <TerritoryChart /> : showTab === 'treasury' ? <LedgerPanel /> : (<>
       <button
         className={`tn-switch tn-blackout ${blackedOut ? 'on' : ''}`}
         role="switch"
