@@ -36,7 +36,7 @@ export function Units() {
     };
   }, [mesh, world]);
 
-  useFrame(({ camera }) => ref.current?.update(camera, performance.now()));
+  useFrame(({ camera, size }) => ref.current?.update(camera, performance.now(), size.width, size.height));
 
   return layer ? <primitive object={layer.group} /> : null;
 }

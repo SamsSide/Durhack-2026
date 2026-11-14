@@ -36,3 +36,8 @@
 @keyframes cn-crack { 0% { transform: scale(0.4); opacity: 0; } 15% { transform: scale(1.2); opacity: 1; } 30% { transform: scale(1) rotate(-6deg); } 80% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes cn-flash { 0% { transform: scale(0.6); opacity: 0; } 30% { opacity: 1; } 100% { transform: scale(3); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .cn-banner { animation: none; } }
+/* Council marks can be hovered (tooltip) and clicked (selects the nation). */
+.cn-hit { pointer-events: auto; cursor: pointer; }
+.cn-pip { pointer-events: auto; }
+.gs-anchor.gs-hidden .cn-hit, .gs-anchor.gs-hidden .cn-pip { pointer-events: none; }
+.cn-tip { min-width: 0; z-index: 40; }
