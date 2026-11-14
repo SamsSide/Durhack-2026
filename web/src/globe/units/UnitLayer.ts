@@ -3,7 +3,7 @@
 // only start effects. Up close each counter stands on a 3D model of its nation's technology age,
 // and trader ships sail the oceans (traders.ts). Lane b (B5, #122).
 import * as THREE from 'three';
-import { flagSvg } from '@terra/shared';
+import { ageIndex, flagSvg } from '@terra/shared';
 import type { TechAge, UnitKind, World, WorldEvent } from '@terra/shared';
 import type { MeshEdge, ProvinceMesh } from '../mesh/buildProvinceMesh';
 import { getPalette } from '../palette';
@@ -16,6 +16,7 @@ import { Traders } from './traders';
 import { clockNow, msPerYear } from '../../state/calendar';
 import { UnitModels } from './unitModels';
 import { formationSlots } from './formation';
+import { ROLE_BACK, ROLE_FLANK, ROLE_FRONT, firingFeed } from '../war/firingFeed';
 import { Pops, Smoke, Sparks, facing, tangentJitter } from './effects';
 import { arcHump, arcPoint, arrowGeometry, arrowMaterial, lineGeometry, lineMaterial, tileFanGeometry, writeArrow } from './ribbons';
 
@@ -942,6 +943,7 @@ export class UnitLayer {
 
     // 3D models: counters stand on them up close; traders sail at every distance
     this.field.begin();
+    firingFeed.begin();
     if (this.near > 0) {
       for (const chip of this.chips.values()) this.drawModel(chip, now, 1);
       for (const chip of this.dying) {
@@ -1101,6 +1103,7 @@ export class UnitLayer {
       let strength = 0;
       for (const u of chip.units) strength += u.strength;
       const slots = formationSlots(strength);
+      const fa = k >= 1 && alpha >= 1 ? firingFeed.army(chip.key, chip.owner, ageIndex(age), chip.tile, _v) : -1;
       for (let i = 0; i < slots.length; i++) {
         const s = slots[i]!;
         const fig = s.role === 'front' ? front : this.models.resolveFigure(age, s.role) ?? model;
@@ -1109,6 +1112,7 @@ export class UnitLayer {
         _p.copy(_v).addScaledVector(_right, s.x * gap).addScaledVector(_fwd, (s.z + sway) * gap).setLength(r);
         const fs = this.unitSize * (fig.footprint / 0.5) * scale * FIGURE_K;
         this.field.push(fig, standMatrix(_fm, _p, face, fs), team);
+        if (fa >= 0) firingFeed.figure(fa, s.role === 'front' ? ROLE_FRONT : s.role === 'flank' ? ROLE_FLANK : ROLE_BACK, _p, fs);
         if (fx && fig.anchors.length) this.fx.emit({ anchors: fig.anchors, stand: _fm, size: fs, moving, facing: f }, now, this.lastDt);
       }
       return;
@@ -1117,6 +1121,7 @@ export class UnitLayer {
     const bob = sea ? Math.sin(now * 0.002 + chip.tile) * 0.07 : 0;
     if (sea) _v.addScaledVector(_n, Math.sin(now * 0.0016 + chip.tile * 1.3) * size * 0.035); // riding the swell
     this.field.push(model, standMatrix(_mm, _v, face, size, bob), team);
+    if (!sea && k >= 1 && alpha >= 1) firingFeed.figure(firingFeed.army(chip.key, chip.owner, ageIndex(age), chip.tile, _v), ROLE_BACK, _v, size * 0.5);
     if (fx) this.fx.emit({ anchors: model.anchors, stand: _mm, size, moving, facing: f }, now, this.lastDt);
   }
 
