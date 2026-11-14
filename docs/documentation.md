@@ -1,24 +1,685 @@
-# DurHack 2026 — How it works
+# DurHack 2026 — How Terra Nova works
 
 *Kept current by `durhack-explain`. The code is the truth: where this and the code disagree,
-fix this. Anyone may edit; it is the judges' briefing.*
+fix this. Anyone may edit; it is the judges' briefing. Last rebuilt 14 Nov from `main` at
+`f649a36`. File references are relative to the repo root.*
 
 ## 1. Summary
 
-_TBD once something is built._
+Terra Nova turns one line of text ("a drowned post-apocalyptic world"), and optionally a picture,
+into a living 3D planet. Gemini writes a world bible (nations, leaders, ideologies, founding
+myths); code generates about 500 provinces on a sphere and places the nations; then every nation is
+run by its own independent agent with its own copy of the world and its own Gemini ruler. Nations
+settle, build, trade, pay each other, move through the ages from spears to starships, raise
+wonders, fight wars province by province, lose generals and crown successors. You can cut a
+nation off, silence its ruler or delete it, and the world carries on; restore it and its missing
+years merge back in with border disputes settled on screen. Every nation has a narrated history, an
+anthem sung from what actually happened to it and a war chant (ElevenLabs), and every coin that
+moves between nations is a real token transfer on Solana devnet, signed by the paying nation's
+own wallet.
+
+One sentence: **a new world, composed live by AIs that keep working together when they cannot
+talk to each other.**
 
 ## 2. Architecture
 
-## 3. How a request flows
+What exists on `main` (not the plan):
+
+```mermaid
+flowchart LR
+  subgraph WEB["Browser: Vite, React, three.js (react-three-fiber), zustand"]
+    CREATE["Create screen, card, chronicle, network panel, decree box, ledger (web/src/ui, lane c)"]
+    GLOBE["Globe, map modes, units, towns, wonders, payment arcs (web/src/globe, lane b)"]
+    STORE["World replica store: applyEvent only (web/src/state/world.ts)"]
+    AUDIO["Narration, anthem, chant, news player (web/src/audio, lane a)"]
+  end
+  subgraph SRV["Node 22 server (server/src, lane a; chain lane b)"]
+    HTTP["HTTP routes (net/http.ts) and /ws (net/ws.ts)"]
+    RUNNER["EngineRunner: clock, observer, world decisions (engine/runner.ts)"]
+    BUS["MessageBus with a link per nation (engine/bus.ts)"]
+    AGENTS["NationAgent x N: own replica, own lamport clock (agents/nation.ts)"]
+    RULER["Ruler: digest to Gemini, JSON decision (agents/ruler.ts)"]
+    STORY["Lore, narration, anthem, chant, news (story/)"]
+    CHAIN["Solana ledger and settler (chain/)"]
+    REPLAY["Recorder and ReplayRunner (engine/replays.ts, replayRunner.ts)"]
+    TIGER["Tiger Data writer (tiger/, optional)"]
+  end
+  SHARED["packages/shared: types, sphere, worldgen, applyEvent, applyTickBatch, rules, war, council, wonders, payments"]
+  GEM["Gemini API"]
+  EL["ElevenLabs API"]
+  SOL["Solana devnet"]
+  CREATE -->|POST /api/world| HTTP
+  HTTP --> RUNNER
+  RUNNER --- BUS
+  BUS --- AGENTS
+  AGENTS --> RULER --> GEM
+  RUNNER -->|event batches over /ws| STORE
+  STORE --> GLOBE & CREATE
+  CREATE -->|control messages: cut, restore, silence, delete, kill| HTTP
+  AUDIO -->|/api/story/*| STORY
+  STORY --> GEM & EL
+  RUNNER -->|payment events| CHAIN --> SOL
+  RUNNER --> REPLAY
+  RUNNER --> TIGER
+  SHARED -.-> WEB
+  SHARED -.-> SRV
+```
+
+- **One language, one rulebook.** TypeScript everywhere; `@terra/shared` holds the types and every
+  rule, so the server's agents and the browser apply exactly the same code.
+- **The world is an event log** (event sourcing). `applyEvent(world, event)` in
+  `packages/shared/src/world.ts` is the only code that changes a `World`. Contracts: X1 to X7 in
+  [`contracts.md`](contracts.md).
+- **External services:** Gemini (bible, rulers, lore, decrees, news, chant lyrics), ElevenLabs
+  (speech and music), Solana devnet (the ledger), Tiger Data (optional time series). Every one of
+  them is optional: `LLM_MODE=mock` and `SOLANA_MODE=mock` (the defaults) run the whole world with
+  no network calls.
+
+## 3. How a request flows (the demo path)
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant S as Server (runner)
+  participant G as Gemini
+  participant A as Nation agents (x N)
+  participant C as Chain module
+  B->>S: POST /api/world {prompt, nations, era, seaLevel, image?}
+  S->>G: world bible (flash-lite, JSON schema, image if given)
+  G-->>S: nations, names, temperaments, flags, styles
+  S->>S: generateWorld(bible, seed): provinces, terrain, regions, capitals
+  S-->>B: snapshot over /ws
+  loop every tick (one year; 2 a second at 1x)
+    S->>A: turn(tick) in a seeded shuffled order
+    A->>A: nationTurn on own replica, own events only
+    A->>S: events via the bus
+    S->>A: each batch to every connected agent
+    A->>A: applyTickBatch(replica, batch)
+    S->>S: applyTickBatch(true world, batch)
+    S-->>B: events; browser applyEvent
+    S->>C: payment events (async, never awaited)
+  end
+  A-)G: ruler digest every 30 to 45 s (fire and forget)
+  G--)A: focus, target, stance changes, proclamation
+```
+
+1. **Create.** `POST /api/world` (`server/src/net/http.ts`) calls `EngineRunner.newWorld`
+   (`server/src/engine/runner.ts:83`). `prepareWorld` (`engine/bibleAi.ts:280`) picks a seed and asks
+   Gemini for the world bible; on any failure the deterministic `mockBible` is used.
+2. **Generate.** `generateWorld(bible, { seed, seaLevel })` (`packages/shared/src/sim/worldgen.ts:281`)
+   builds the planet; the runner starts one `NationAgent` per nation, each with a clone of the
+   world (`cloneWorld` shares the static tiles), and a fresh LLM budget (`resetRun`).
+3. **Tick.** `runTick` (`runner.ts:180`) rings the clock, lets every live agent take its turn in an
+   order shuffled by `mulberry32(hash("order:seed:tick"))`, flushes the bus, then makes the world's
+   own decisions: deleted nations collapsing, secession, council deaths and successions.
+4. **A nation's turn** (`agents/nation.ts`, `turn`): it runs `nationTurn` (`sim/rules.ts:163`) on its
+   own replica with its policy (the ruler's last focus, or `autopilotPolicy` from its temperament)
+   and an rng seeded by `turn:seed:tick:id`. It returns only that nation's own events: claims,
+   buildings, armies, marches, diplomacy, payments, age progress, wonders, unrest. Each event gets
+   the next number on the agent's lamport clock. Then a heartbeat.
+5. **The bus** (`engine/bus.ts`) hands each batch to every agent whose link is up and to the
+   observer (the true world). Every receiver applies it with `applyTickBatch` (`sim/sync.ts`).
+6. **The browser** gets the applied events over `/ws` and applies them with plain `applyEvent`
+   (`web/src/state/world.ts:83`): battles were already settled, so it never re-settles them.
+7. **Rulers** are called outside the tick loop (`runner.ts:234`), at most one per step, and their
+   answer is applied as that nation's own events on its next turn.
 
 ## 4. Algorithms and models
 
+### 4.1 Spherical Voronoi provinces
+
+- **What:** a spherical Voronoi diagram of jittered Fibonacci-lattice points, computed as the dual
+  of their 3D convex hull. `packages/shared/src/sphere.ts`, `generateProvinces`.
+- **How:** place `n` points on a Fibonacci spiral (golden-angle steps, even area), jitter each by up
+  to 0.4 of the mean spacing with a seeded rng and push it back to the unit sphere. The convex hull
+  of points on a sphere is their spherical Delaunay triangulation (quickhull3d). Each triangle's
+  outward normal is its circumcentre on the sphere; a province's boundary is the ring of
+  circumcentres of the triangles around its point, so every province is a convex polygon and its
+  neighbours are the points it shares an edge with.
+- **Complexity:** O(n log n) for the hull, O(n) to build cells. n = 500 by default: a few
+  milliseconds.
+- **Why:** irregular provinces read as a political map (the owner's call, `decisions.md` 15:20);
+  hexagons were the fallback and were never needed. Fibonacci points give near-uniform cell sizes
+  with no relaxation step (Lloyd relaxation would have cost iterations for little gain).
+- **Weakness:** cells near the poles of the spiral are slightly less regular; the jitter hides it.
+- **Terrain:** 3 to 5 continent "blobs" placed far apart, domain-warped by fractal value noise for
+  ragged coasts, plus noise; the sea level is a percentile cut (`seaLevel` of the cells become
+  ocean). Biome by latitude, height and a moisture field: ice, coast, mountain, hills, desert,
+  forest, plains (`worldgen.ts`, `buildTerrain`).
+- **Regions and capitals:** regions grow over the land graph; capitals go to the larger landmasses
+  (at least two nations per landmass used, so everyone has a neighbour to meet) and are spread by
+  farthest-point sampling weighted by good terrain (`allocate`, `placeCapitals`).
+- **References:** K. Q. Brown, "Voronoi diagrams from convex hulls" (1979);
+  [quickhull3d](https://www.npmjs.com/package/quickhull3d).
+
+### 4.2 Determinism: replicas that agree without a referee
+
+The core technical claim: every nation's agent, the server's true world and the browser hold the
+same world without anyone being in charge.
+
+- **Seeded randomness only.** `mulberry32` (a 32-bit PRNG) seeded with an FNV-1a hash of a string key
+  (`packages/shared/src/rng.ts`). Every roll has a key: `turn:seed:tick:nation`,
+  `battle:tile:tick:unit:defenders`, `assassin:seed:tick:nation`, `pay:trade:a:b:tick`, and so on.
+  No `Math.random` in the rules.
+- **Deterministic ids.** A nation's events are `e-<nation>-<tick>-<n>`; events derived from a move
+  are `<move id>-w<k>`. Two replicas derive byte-identical events.
+- **Canonical order.** `orderEvents` (`sim/sync.ts`) sorts a batch by lamport timestamp, then actor,
+  then position, with payments last (see 4.9). Lamport clocks: each agent numbers its events and
+  jumps past any higher number it hears.
+- **Same-tick clashes.** Two nations claiming one free province in the same tick: the lowest
+  `hash(tile:tick:nation)` wins (`resolveClaim`, `sim/rules.ts:75`).
+- **Validation.** `isEventValid` drops events that are no longer legal on this replica (a claim on
+  land someone took first, a move of a dead unit).
+- **Battles are derived, not reported.** An army's `unit_moved` into an enemy province is only an
+  intent; every replica runs `settleMove` (`sim/war.ts:131`) on it in the same order and derives
+  the same battle, losses, capture, plunder, fall and general's death.
+- **World decisions in one batch.** Things no single nation can decide (secession, a deleted
+  nation's fall, assassinations and successions, decrees, dispute settlement) are computed by the
+  runner from the true world with pure functions and delivered as one batch of `actor: 'world'`
+  events that every replica applies.
+- **Replays.** Every live run is recorded (`engine/replays.ts`). `ReplayRunner` plays the log with
+  `applyEvent` only, never `applyTickBatch`, so battles are not settled twice. Gemini rulers are not
+  deterministic (and the scheduler jitters with `Math.random`), so the log, not the seed, is the
+  record of a run. `server/scripts/check-replay.ts` records a 200-tick run with a cut, a restore and
+  a delete, replays it and checks the final worlds are identical.
+- **Weakness:** a cut nation's replica deliberately drifts from the truth (that is the demo); it
+  re-converges on restore. There is no automated check that every connected replica equals the
+  truth at every tick; the design (same batches, same order, pure functions) and the replay check
+  are the evidence.
+- **References:** [Lamport timestamps](https://en.wikipedia.org/wiki/Lamport_timestamp);
+  [event sourcing](https://martinfowler.com/eaaDev/EventSourcing.html);
+  [FNV hash](https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function).
+
+### 4.3 Battles
+
+`resolveBattle` (`sim/war.ts:92`), called from `settleMove`. A pure function of
+`{ attack, defend, terrain, fort, seed, ageGap }`.
+
+```
+attack  = army strength x 0.7 if a fleet raids land
+                        x 0.8 if an army lands from the sea      (LANDING_PENALTY 0.2)
+                        x 0.85 while its general's seat is vacant or cut (COVER_STRENGTH)
+defend  = (defending units + garrison) x (1 + wonder defence bonus)
+garrison = (3 + min(15, population / 20000) + settlement or fort value) x age strength
+A = max(0.5, attack x 1.15^max(0, ageGap))
+D = max(0.5, defend x 1.15^max(0, -ageGap) x (1 + terrain defence) x (1.5 if fort or capital))
+P(attacker wins) = A^1.6 / (A^1.6 + D^1.6)
+```
+
+- One `mulberry32` stream seeded from `hash(battle:tile:tick:unit:defenders)` gives the roll and a
+  loss factor. A winning attacker loses 25 to 60% of the defence (less with an age lead); a losing
+  one loses 35 to 70% of its own strength.
+- **The model** is a contest success function (the Tullock form) with exponent 1.6, between
+  Lanchester's linear law (1) and square law (2): a much larger army nearly always wins, an even
+  fight is a coin toss. Terrain defence: forest +25%, hills +40%, mountain +75%, desert +10%, ice +20%.
+- **Consequences** (all derived on every replica): units removed, the province captured, the
+  capital demoted to a city, buildings razed (25%, wonders 20% to ruins), plunder or seizure paid
+  (4.9), the nation falls if it is down to its last few provinces or lost its capital and is small
+  (`shouldFall`), and the loser's general may die (4.6).
+- **Complexity:** O(units + structures) per attack. Fine at demo scale (hundreds of units).
+- **Why not an LLM or a referee:** a battle every few ticks at 64x speed must be instant, cheap and
+  agreed by every replica with no messages.
+- **Reference:** [Lanchester's laws](https://en.wikipedia.org/wiki/Lanchester%27s_laws).
+
+### 4.4 Terrain effects
+
+One table, `TERRAIN_EFFECTS` (`sim/terrain.ts`), read by the sim, the rulers' digests and the globe.
+
+| Terrain | Defence | Supply | Attrition / yr | Move (yrs) | Income | Pop cap |
+| --- | --- | --- | --- | --- | --- | --- |
+| plains, coast | 0 | 1 | 0 | 1 | 0.9 | 900 |
+| forest | 0.25 | 0.8 | 0 | 2 | 0.55 | 500 |
+| hills | 0.4 | 0.7 | 0.01 | 2 | 0.6 | 500 |
+| mountain | 0.75 | 0.5 | 0.03 | 3 | 0.35 | 150 |
+| desert | 0.1 | 0.5 | 0.04 | 2 | 0.25 | 250 |
+| ice | 0.2 | 0.4 | 0.05 | 3 | 0.1 | 80 |
+
+- **Move:** a land unit takes `move` years to enter a province.
+- **Supply:** an army's upkeep is divided by the supply of the ground it stands on, so a campaign in
+  the mountains costs twice as much.
+- **Attrition:** an army outside its own land loses `attrition x strength` a year
+  (`unit_attrition`, `sim/rules.ts:453`), or disbands if that would leave it with 2 or less.
+- **Landing:** an army attacking from the sea fights at 80%.
+
+### 4.5 Technology ages
+
+`sim/ages.ts`. Seven ages: ancient, medieval, gunpowder, industrial, modern, future, stellar.
+
+- The start age comes from the era text by keyword (`startAge`); ruined, drowned and
+  post-apocalyptic worlds start in the ancient age so every demo shows the whole climb.
+- Each year a nation gains progress `0.5 + per town 0.22 + per city or capital 0.5 + per factory
+  0.7 + temples and ports + 0.3 per trade pact or alliance (max 3) + treasury/400 (max 1) +
+  population/40000 (max 3)`. Thresholds (cumulative): 260, 1150, 2900, 4800, 8600, 13000.
+- Crossing a threshold is the nation's own `country_updated { techAge }` plus a chronicle line, so
+  every replica sees it at the same tick. Units raised in an age are stronger (x1, 1.3, 1.8, 2.6,
+  3.8, 5.2, 7, capped at 150 strength); battles give 1.15 per age of lead. Stellar nations launch up
+  to four satellites. Progress is kept in the agent's memory, not the world.
+
+### 4.6 The council: deaths, cover, succession, coups
+
+`sim/council.ts` (pure) and `server/src/engine/council.ts` (the `CouncilKeeper`).
+
+- Every nation has a **ruler** (sets focus and stance: Gemini or autopilot) and a **general** (moves
+  the armies). Seat states: `active`, `covering`, `vacant`, `cut`.
+- **Deaths.** A general can fall when his side loses a battle of combined strength 50 or more, with
+  25% chance, rolled from the battle seed (so every replica derives it). Assassination: 1 in 400 a
+  year per nation, x3 at war, one seeded roll per nation per year. A demo control (`kill`) and a
+  decree ("assassinate the king") can kill a member too.
+- **Cover.** When a seat is vacant or cut, the other member covers: armies attack at 0.85 while the
+  ruler covers the general; while the ruler's seat is empty or cut the nation runs on autopilot.
+- **Succession** 8 years later. The successor's title follows the government (heir, election,
+  appointment) and **inherits the predecessor's memory**: a rolling five-line summary written by
+  `applyEvent` from the battles and wars it lived through (`world.ts`, `councilMemo`). In a military
+  or autocratic government a ruler's death ends in a **coup** 30% of the time: the general takes the
+  throne and leaves his own seat empty.
+- **Why the world decides:** deaths and successions affect several replicas at once, so they are
+  computed from the true world and delivered as one batch, like secession.
+
+### 4.7 Wonders
+
+`sim/wonders.ts`. A nation at peace, past year 120, with 240 or more in the treasury, may start a
+wonder near its capital (2.5% a turn once it qualifies; cost 160). The kind follows its
+architecture (cathedral, pyramid, great wall, colossus, mausoleum, palace of soviets, skyscraper, a
+space elevator in the future and stellar ages). It takes 40 years to build. At most 2 per nation,
+4 per world, begun at least 70 years apart. A finished wonder gives the whole nation +10% income,
++15% defence or -1% unrest a year; captured wonders change hands and 20% are razed to ruins. All
+rolls are hashes of the world, so every replica agrees.
+
+### 4.8 Regions, unrest and secession
+
+`sim/regions.ts`, `server/src/engine/secession.ts`. Each nation publishes the unrest of its regions
+every 5 years, from distance to the capital, recent conquest, foreign provinces, war exhaustion,
+battles and the gap between the ruler's and the region's temper; unrest moves towards its target by
+at most 0.12 a review. From year 150, a region over 0.8 unrest with 6 or more provinces may break
+away (8% a check, one at a time, 120 years apart, never the same region twice, at most 16 nations).
+The breakaway becomes a new nation with its own agent and ruler: a new actor joining mid-run.
+
+### 4.9 Payments and money conservation
+
+`sim/payments.ts`, `settleMove` in `sim/war.ts`, `applyTickBatch` in `sim/sync.ts`.
+
+- **Sources:** trade dues (every 10 years per pact, one in three by hash, the poorer partner pays 4%
+  for the other's main good); reparations the year after a peace from the side that lost ground
+  (15 to 40%); plunder of a sacked town or city (7 or 12% of the defender's treasury); seizure of a
+  fallen capital (30%, or 70% if the nation falls); war chests from allies not in the war (12%);
+  pooled funds between allies fighting together (20% from the weaker); subsidies from a strong rich
+  nation to a weak friend (10%). About 44 to 62 payments in a 600-year world.
+- **Each nation only pays out of its own treasury**, decided on its own replica from shared state
+  and seeded hashes. Plunder and seizure are derived in the battle, so every replica derives them.
+- **The ordering bug and its fix.** A nation's `country_updated` carries its *absolute* new treasury
+  (income minus upkeep, computed before the batch). A payment applied before it was silently
+  overwritten: money vanished from payees or appeared from nowhere. Fix: `orderEvents` sorts
+  payments last, `applyTickBatch` holds derived payments back and applies them after everything
+  else, and each payment is clamped to what the payer holds at that moment; the logged amount is
+  what really moved. `applyEvent` clamps again, so a replay agrees.
+- **Proof:** `server/scripts/check-money.ts` runs 600 headless ticks and, each tick, compares the
+  treasury total with and without the batch's payments: they must match to the cent. It also checks
+  no treasury goes negative and the log replays to the same treasuries. Last result (PR #180):
+  `MONEY CONSERVED`.
+
+### 4.10 The Solana bridge
+
+`server/src/chain/` (lane b since 14 Nov 17:50). `SOLANA_MODE` = `off`, `mock` (default, fake
+signatures, no network) or `devnet`.
+
+```mermaid
+flowchart LR
+  P["payment event applied to the true world"] --> R["ledger row: queued"]
+  R -->|every 5 s window| N["net per (payer, payee)"]
+  N --> T["v1 transaction: optional Commons advance, memo, TransferChecked signed by the payer's wallet; Commons pays the fee"]
+  T -->|send one at a time, max 4 a window| D["devnet"]
+  D -->|getSignatureStatuses every 2 s| C["confirmed: row settled, ledger moves"]
+  D -->|429 or network error| B["exponential backoff, Retry-After honoured"]
+  B --> T
+  C --> UI["ledger and economy messages to the browser, Explorer links"]
+```
+
+- **The sim is the truth; the chain is an exact ledger of money moving between nations.** Income
+  and spending never leave the sim. The chain never makes the tick loop wait: everything is async,
+  caught, backed off and behind a breaker (5 failed windows in a row pause sending for 30 s; the
+  panel shows payments waiting).
+- **Genesis** (`chain/genesis.ts`), once per world: a Token-2022 mint ("<World> Crown", symbol TNC,
+  2 decimals) with on-chain name and symbol, a fixed supply of 1,000,000 minted to the Commons and
+  the **mint authority revoked**; one token account per nation and one for the Commons, each with
+  the MemoTransfer extension (incoming transfers must carry a memo); a float of 10,000 TNC
+  (`SOLANA_FLOAT`) to every nation. One wallet per nation, keys outside the repo
+  (`SOLANA_KEYS_DIR`).
+- **Netting:** queued rows are summed per (payer, payee) each window (`chain/index.ts`, `groups`).
+  If the payer's ledger, less what it has in flight, cannot cover a group, the Commons advances the
+  difference in the same transaction (with its own memo).
+- **Each transaction:** a memo (`TN <first row id> y<year> <reason>: <note>`, under 190 bytes, so
+  two identical payments never share bytes) then a `TransferChecked` signed by the paying nation's
+  own key. The Commons is the only fee payer, so only one wallet needs SOL.
+- **Built for the public devnet RPC** (100 requests per 10 s per IP): a fixed compute-unit limit and
+  no priority fee, so nothing is simulated before sending; sends one at a time; confirmation by HTTP
+  polling (one batched `getSignatureStatuses` every 2 s while anything is in flight), never
+  WebSocket subscriptions; balances read every 30 s with one `getMultipleAccounts`. About 30 to 40
+  RPC calls a minute.
+- **No double pay:** a signed transaction keeps its signature until it is confirmed, fails on chain,
+  or provably can no longer land (its blockhash expired and the signature is unknown). Only then is
+  it rebuilt with a fresh blockhash. A resend of a group already in flight is ignored.
+- **Honesty check:** per nation, `ledger = float + confirmed in - confirmed out + advances` and
+  `onChain` (read from devnet) must agree; `drift` is reported in `GET /api/economy`.
+- **Replays** send nothing; a sidecar `server/replays/<id>.chain.json` keeps the real signatures
+  from a recorded live run so Explorer links still open.
+- **Libraries:** `@solana/kit` 8.6, `@solana/kit-plugin-rpc` and `-signer` 0.23,
+  `@solana-program/token-2022` 0.20, `@solana-program/memo` 0.16 (never `@solana/web3.js`).
+
+### 4.11 Resilience: cut, silence, delete, restore
+
+`engine/bus.ts`, `engine/resilience.ts`, `agents/nation.ts` (`onCut`, `rejoin`), `engine/runner.ts`
+(`onRestore`, `onDelete`, `collapseDeleted`).
+
+```mermaid
+stateDiagram-v2
+  [*] --> Up
+  Up --> Cut: cut (checkpoint replica)
+  Cut --> Up: restore (merge, disputes, queued events)
+  Up --> Silenced: silence ruler (autopilot)
+  Silenced --> Up: wake
+  Up --> Deleted: delete
+  Cut --> Deleted: delete
+  Deleted --> Fallen: 14 years without a heartbeat
+  Fallen --> [*]: land released as ruins, neighbours expand into it
+```
+
+- **Cut link.** The agent keeps running on its own replica: nothing gets in or out. Its events queue
+  in its outbox; the batches it should have heard queue in its inbox; heartbeats are not queued
+  (silence is the point). Its "beliefs" drift from the truth and the browser can show them. After
+  12 years without a heartbeat each neighbour writes one line in the chronicle, in the voice of the
+  era ("the telegraph lines go dead"), and an aggressive neighbour may turn hostile.
+- **Restore (reconciliation).** The agent rebuilds from the checkpoint taken at the cut: it applies
+  every batch it missed in order, then the settlement, then its own queued events as one batch.
+  Every other replica applies the same settlement and queue in the same order, so all agree again.
+- **The dispute rule** (`findDisputes`): every claim the returning nation made on a province the
+  connected world gave to someone else meanwhile is a dispute; **the earlier claim wins** (claim
+  ticks are in the log both sides now share), a tie goes to the `resolveClaim` hash. It reads as
+  fair, it does not depend on which link came back first (a blackout restored in any order settles
+  the same way) and it is a pure function of shared data. Disputes are written into the chronicle
+  ("three border provinces were disputed; two went to...") and flash on the globe.
+- **Silence ruler.** No more Gemini calls: the nation runs on its last focus, then on
+  `autopilotPolicy` from its temperament. Hitting the budget cap takes the same path.
+- **Delete.** The agent is removed. Neighbours notice the silence; 14 years later the world declares
+  it fallen with no conqueror: buildings become ruins, units disband, land is released, and the
+  neighbours carve it up by ordinary expansion.
+- **Payments while cut** wait in the queue with the rest; on chain nothing moves for that nation
+  until restore, when its debts settle in one burst.
+
+### 4.12 The pacing director
+
+`server/src/engine/clock.ts`, `engine/bigMoments.ts`. Speed is continuous from 0.1x to 64x of a base
+rate of 2 years a second. The clock turns wall time into whole ticks and carries the fraction, so
+64x is 128 ticks a second without drift (at most 16 ticks per timer fire). With pacing `auto`, the
+chosen speed is a ceiling: a **big moment** (a war declared, a battle for a capital, a fall, a new
+nation, a decree, a cut, a return, a dispute) drops the speed to `min(target, 1)` for 8 seconds,
+then it eases back exponentially over 3 seconds. Pause always wins. The same director runs in live,
+mock and replay.
+
+### 4.13 Gemini: what it does, models and budgets
+
+All calls go through `server/src/llm/index.ts` (`llmJson`): structured output with a JSON schema
+(`responseMimeType: application/json`), validated again on return, minimal thinking, a meter of
+calls and tokens, and caps. **On any failure it throws and the caller falls back** to a template or
+autopilot; it never retries.
+
+| Use | Model (default) | Input | Where |
+| --- | --- | --- | --- |
+| World bible | `gemini-3.5-flash-lite` (about 5 s; flash took 28 s) | text, plus an optional picture (about 7 s) read for mood, palette, setting and sea level | `engine/bibleAi.ts` |
+| Rulers | `gemini-3.5-flash-lite`, max 220 output tokens | a compact digest: treasury, armies, age, neighbours with relative strength and grievance, recent chronicle, rough ground | `agents/ruler.ts` |
+| Lore (nation and region) | `gemini-3.5-flash` | the nation and its real chronicle | `story/loreAi.ts` |
+| Anthem and chant lyrics | `gemini-3.5-flash` | founding myth plus its wars, losses and allies | `story/loreAi.ts`, `story/chant.ts` |
+| Decrees, typed | flash-lite | text, to `{ effect, target }` (plague, famine, storm, flood, meteor, prophet, gold rush, rebellion) | `engine/decrees.ts` |
+| Decrees, spoken | flash-lite (about 1.3 s) | the audio clip itself, heard directly | `engine/decrees.ts` |
+| Terra Nova News | `gemini-3.5-flash` (about 19 s with the image) | a capture of the globe plus the chronicle, to a bulletin | `story/broadcast.ts` |
+| Painted flags | `GEMINI_MODEL_IMAGE` (empty: off) | flag spec to image | `story/paintedFlag.ts` |
+
+- **Scheduling:** each ruler is due every 30 to 45 s (jittered), sooner after a big event (at least
+  10 s apart), at most one call per step, 20 calls a minute (`LLM_MAX_CALLS_PER_MIN`) and 400,000
+  tokens a run (`LLM_MAX_TOKENS_PER_RUN`). Over either cap every nation drops to autopilot. Lore is
+  written on first click and cached on disk per world.
+- **Mock vs live:** `LLM_MODE=mock` (the default) never calls Gemini: canned bibles, autopilot
+  rulers, template lore and bulletins, a keyword matcher for decrees. The world is fully playable.
+  `live` is for demos only, because the budget is shared by the team (owner's cap: 25 pounds for
+  Gemini and ElevenLabs together).
+- **Why these models:** the 2.5 family is closed to new users; flash-lite is the cheapest for many
+  ruler calls and fast enough for the 15-second creation step.
+
+### 4.14 ElevenLabs: what it does
+
+`server/src/story/` (`eleven.ts`, `anthem.ts`, `chant.ts`, `broadcast.ts`, `teamVoices.ts`).
+
+- **Narration:** text to speech (`eleven_multilingual_v2`) reads each nation's lore; the voice is
+  chosen from its `voiceStyle` and government.
+- **Anthems:** ElevenLabs Music (`music_v1`) with a composition plan: Gemini writes four to eight
+  lines from the nation's real history, and the music is shaped by its era and government
+  (instruments, tempo, language, mood). No two anthems are alike.
+- **War chants:** short shouted chants (`eleven_v3` with the `[shouting]` tag), played when the
+  nation declares war or fights.
+- **Terra Nova News and the herald:** the team's own cloned voices (Sam, Justin, Denis) take turns
+  as news anchors, narrate up to three nations per world, shout some chants and read decrees aloud.
+- **Caching and caps:** everything is generated on first need and cached on disk by a hash of its
+  content. Caps: 20,000 characters a run (30,000 on the Starter plan), 8 anthems, 12 bulletins;
+  above them the routes return 503 and the browser falls back. Mock mode plays bundled samples.
+
+### 4.15 Smaller pieces
+
+- **Diplomacy** (`sim/war.ts`, `diplomacyTurn`): war needs one side; peace, trade and alliance need
+  both, through an "offer" chronicle line that the other side reads on its own replica and accepts
+  on its own turn. Truces of 50 years; no wars before year 70; broken alliances add grievance.
+- **Sea trade** (`sim/trade.ts`): merchant ships sail port to port between trading partners, dock
+  for a year and pay both sides; an enemy fleet sinks them.
+- **Tiger Data** (`server/tiger/`, optional): every event and each nation's growth go to hypertables;
+  it never blocks the tick loop and skips playback.
+
 ## 5. Data
+
+- **World** (X1 in [`contracts.md`](contracts.md)): static `tiles` (centre, boundary, neighbours,
+  terrain, elevation, region) plus mutable `owner[]`, `countries`, `regions`, `structures`, `units`,
+  `relations` (stance, since, grievance), `chronicle`, `agents` (link, ruler, pending events).
+- **Events** (`WorldEvent`): `tick`, `tile_claimed`, `structure_*`, `wonder_*`, `unit_*`, `battle`,
+  `relation_changed`, `country_*`, `region_updated`, `chronicle`, `payment`, `council_*`. Each
+  carries `id`, `tick`, `actor` (a nation, `world` or `decree`) and `lamport`.
+- **Replays:** `server/replays/<id>.head.json` and `.ndjson` per live run (git-ignored); the saved
+  demo `server/replays/demo-1.json` ("The Drowned Age", 600 years, 7,263 events, re-recorded after
+  A28).
+- **Caches on disk:** lore per world, narration, anthems, chants, bulletins, flags (`server/.cache`).
+- **Ledger:** in memory per world, plus the chain sidecar; on devnet, the token accounts.
+- **Secrets:** `.env` (git-ignored); Solana keypairs in `~/.config/durhack/solana`, never in the repo.
 
 ## 6. Problems we hit
 
+**The hardest part (1): keeping Solana honest on a public devnet.** The first live run (PR #171)
+mirrored every nation's treasury to the chain with a Commons "true-up" every 10 s. On the second
+run it fell apart: HTTP 429s from the public RPC, dropped WebSocket subscriptions, "failed to
+estimate" compute errors, and drift over 1,000 coins because income changes every tick but the
+chain can only move every few seconds. The owner's decision (PR #180): stop mirroring treasuries.
+The chain became an **exact ledger of money moving between nations** only, with a 10,000-coin
+float per nation, Commons advances when a payer is short, netting per pair per window, fixed
+compute-unit limits (no simulation call), HTTP status polling instead of WebSockets, exponential
+backoff honouring `Retry-After`, and a "never pay twice" rule tied to blockhash expiry. Lesson: on
+a rate-limited chain, put on chain only the thing that is genuinely a transfer, and make it exact.
+
+**The hardest part (2): money that vanished.** The first payment code passed its tests but the
+totals did not add up: a nation's `country_updated` sets an absolute treasury worked out before the
+batch, so a payment applied earlier in the same tick was overwritten. Payments now go last in the
+canonical order, derived ones are held back, and every payment is clamped to what the payer has
+(PR #165). `check-money.ts` proves conservation to the cent over 600 years.
+
+| Problem | Why | Fix | Where |
+| --- | --- | --- | --- |
+| Battles counted twice in replays | Replaying with `applyTickBatch` re-settles battles already in the log | Playback uses `applyEvent` only | PR #102 |
+| Two nations claim one province in one tick | Agents decide in parallel on their own replicas | `resolveClaim`: lowest hash wins, the same on every replica | `sim/rules.ts` |
+| Demo world drifts as the sim changes | Each new rule changes what a seed produces | The demo is a recorded log, not a seed, so it always replays exactly; `check-replay` guards it; `council` is optional so older logs still load. demo-1 was re-recorded after A28; it predates payments, councils and wonders | `engine/replayRunner.ts` |
+| Lore lost between runs | Lore was kept in memory | Written to disk per world, so replays reuse lore and voices with no API calls | PR #107 |
+| Parallel agents in git worktrees broke the build | A symlinked `node_modules` breaks npm workspaces | Every worktree runs its own `npm install` | `docs/handoffs/a-2026-11-14-1624.md` |
+| The devnet faucet refuses AI agents | faucet.solana.com says agents must not use it | A person funds the Commons wallet; the Commons is the only fee payer, so one wallet needs SOL | `docs/research/solana-economy.md` |
+| Gemini 2.5 closed to new users; the bible took 28 s on flash | Model availability and latency | 3.5 flash-lite for bible and rulers (about 5 s), 3.5 flash for lore | `decisions.md` |
+| Gemini image generation returned 429 | Image billing not enabled | Flags are drawn from a spec at once; painted flags stay off | row A19 |
+| ElevenLabs Music rejected anthem prompts | Its filter refuses prompts naming a national anthem | The bible's wording is softened before composing | `story/anthem.ts` |
+| Timers drifted at high speed | Fixed 1/2/4/8 steps and integer ticks per fire | Continuous speed with a carried fraction and the pacing director | PR #136 |
+| The hologram card did not look good enough | Design | Docked parchment card; labels always face the camera | PR #80 |
+
 ## 7. Limitations and next steps
+
+- **Rulers are not reproducible.** Gemini answers vary, so a live run cannot be re-created from its
+  seed; only its log replays exactly.
+- **The saved demo (demo-1) predates payments, councils and wonders** (A27, A29, A30). A replay of it
+  shows no ledger, deaths or wonders; re-record before judging if those must appear offline.
+- **All agents run in one process** on the owner's laptop; cut and restore are software switches on
+  the bus, not real network partitions. Agents on other laptops (row A10) were cut.
+- **The chain mirrors payments only**, not income; treasuries live in the sim. Devnet may reset,
+  which would break old Explorer links.
+- **Painted flags** need Gemini image billing and are off.
+- **Not built yet:** the timeline scrubber (B9); lane b's economy rows B10 to B13 are in progress.
+  Rows still `testing` (a person has not signed them off): Tiger Data (A11, needs a database URL),
+  anthems and chants (A15, A16), future and stellar ages (A26), terrain (A28), councils (A29),
+  wonders (A30).
+- **Scale:** rules scan all provinces per nation per turn (O(nations x provinces)); fine at 500
+  provinces and 16 nations, not tuned beyond.
+
+### Where the code and the plan or contracts differ
+
+- `docs/research/solana-economy.md` §3.4 describes the chain as a mirror of treasuries kept in step
+  by a Commons true-up, with a cap of 6 transactions a window. The code (PR #180) is an exact ledger
+  of payments only, no true-up, 4 transactions a window by default. `contracts.md` matches the code.
+- The cover penalty (0.85) applies only to a nation's **attacks** (`coverMultiplier` in
+  `settleMove`), not to its defence, although the lane log says "armies fight at 0.85".
+- `hackathon-plan.md` §4 says rulers return "under 150 tokens"; the code allows 220 output tokens.
+- The plan's painted flags on click are off (no image billing), as decided on 14 Nov.
+- `ageIndex`'s comment in `sim/ages.ts` says 0 to 4; there are seven ages (0 to 6).
+- `contracts.md`'s environment table still lists the `SOLANA_*` variables under lane a; the economy
+  moved to lane b on 14 Nov 17:50. Its shared-files table still mentions the hologram (dropped).
 
 ## 8. Judge prep
 
+### The 30-second pitch
+
+"Type a world. Terra Nova builds a planet and gives every nation its own AI: its own copy of the
+world, its own Gemini ruler, its own wallet on Solana. Watch them settle, trade, pay each other,
+march from spears to starships and go to war. Now cut one off mid-war: it keeps going on what it
+last knew. Bring it back and the world merges its missing years and settles the border disputes,
+with no central server deciding anything. Every nation has a narrated history, a war chant and an
+anthem sung from what really happened to it."
+
+### The 2-minute demo
+
+1. A judge gives a prompt (and a picture). Six nations, Create: a planet forms with named nations,
+   leaders and flags (about 5 to 7 s).
+2. Speed up: borders spread, camps become cities, ages advance, ships cross the oceans; the director
+   slows down for every war.
+3. Click a nation: the card, its council, its narrated lore and its anthem.
+4. A war: armies march, battles, chants; the ledger shows plunder and reparations with Explorer
+   links.
+5. **The moment:** cut a nation mid-war, show its beliefs drifting, neighbours notice the silence;
+   delete another and watch it carved up; restore and see the disputes settled and "the Silence" in
+   the chronicle.
+6. Speak a decree ("a plague sweeps the southern coast"); Terra Nova News reports it.
+7. Close on the token meter and the Entire session history.
+
+**If the live demo breaks:** play `demo-1` (`POST /api/replays/demo-1/play`): no API calls, exact
+replay, cached audio. Mock mode (`npm run mock`) needs no keys. Screenshot of a confirmed devnet
+payment: `docs/shots/solana-devnet-payment.jpg`.
+
+### Prize angles
+
+| Prize | The one sentence | Proof |
+| --- | --- | --- |
+| Neptune North (actors work better together) | Independent agents with a common world, deciding alone, progressing when cut off and merging on return | `agents/nation.ts`, `engine/bus.ts`, `engine/resilience.ts` |
+| Marshall Wace (New Worlds) | A new world from one line, with its own history, music and money | the Create screen |
+| MLH Gemini | Gemini rules every nation and is multimodal: a picture in, speech in, the map image in for the news | `llm/index.ts`, `bibleAi.ts`, `decrees.ts`, `broadcast.ts` |
+| MLH ElevenLabs | Narration, history-driven anthems, war chants, a news anchor in the team's own voices | `server/src/story/` |
+| MLH Solana | Every coin between nations is a Token-2022 transfer signed by the payer's own wallet, with a memo | `server/src/chain/` |
+| MLH Entire | Built by agents on three laptops, every session recorded and linked to commits | `.entire/`, `Entire-Checkpoint` trailers |
+
+### Likely questions with answers
+
+**Resilience and AI agents (Neptune North)**
+
+1. *Is there really no central controller?* The runner is a clock and an observer. Each nation
+   decides only its own events on its own replica. Things no single nation owns (a deleted nation's
+   fall, secession, successions, decrees, dispute settlement) are computed from shared data by pure
+   functions and published as one batch.
+2. *How do replicas agree on a battle no one reports?* A battle is derived from a move by a pure,
+   seeded function; every replica applies the same batch in the same order and gets the same result.
+3. *What happens to a cut nation?* It keeps playing on stale beliefs, queues its events and is
+   noticed as silent by neighbours after 12 years.
+4. *How is the merge done?* From a checkpoint taken at the cut: missed batches, then the dispute
+   settlement, then its queued events. Everyone applies the same settlement in the same order.
+5. *Who wins a disputed province?* The earlier claim, by tick; a tie goes to a hash. Same answer
+   whatever order links come back in.
+6. *Is it a real network partition?* No. All agents run in one Node process and the cut is a switch
+   on the bus. Running agents on other laptops was planned and cut for time.
+7. *What if Gemini is down?* Every call has a fallback: autopilot rulers, template lore and bulletins,
+   a keyword decree matcher. The world never waits for an LLM.
+8. *How do you know replays are exact?* `check-replay.ts` records a run with a cut, a restore and a
+   delete, replays it and compares the final worlds field by field.
+
+**Gemini**
+
+9. *Why so few LLM calls?* Rules move the world; the LLM only sets each nation's focus and stance
+   every 30 to 45 s. That keeps it cheap, fast and playable with no LLM.
+10. *What is multimodal here?* A picture shapes the world bible; a spoken decree is heard directly as
+    audio; the news reads a captured image of the globe.
+11. *How do you stop bad JSON?* JSON schema output, validated again on our side; any failure falls
+    back.
+12. *How much does a world cost?* The token meter shows calls and tokens live; caps are 20 calls a
+    minute and 400,000 tokens a run. We have not measured an average cost per world yet.
+
+**ElevenLabs**
+
+13. *Is voice core or a button?* Every nation has narrated lore, a chant played automatically in war
+    and an anthem written from its own history; the news is read aloud every bulletin.
+14. *Whose voices?* Premade voices chosen by culture and government, plus our own cloned voices as
+    news anchors and the decree herald.
+15. *What if credits run out?* Everything is cached by content hash; caps return 503 and the browser
+    falls back; mock mode uses bundled samples.
+
+**Solana**
+
+16. *Why is the chain not the source of truth?* A battle cannot wait 1 to 2 s for a confirmation
+    inside a 500 ms tick, exact replays need a local log, and a devnet outage must not freeze the
+    world on stage. The sim records the debt; the chain proves it was paid, by whom and when.
+17. *Who signs?* The paying nation's own wallet signs the transfer; the Commons only pays fees.
+18. *Can a payment be paid twice?* No: a signed transaction is only rebuilt once its blockhash has
+    expired and its signature is unknown to the chain.
+19. *What about rate limits?* Netting per pair per 5 s window, at most 4 transactions a window, no
+    simulation calls, HTTP polling and backoff: about 30 to 40 RPC calls a minute.
+20. *Is the supply real?* Fixed at 1,000,000 with the mint authority revoked at genesis; every
+    incoming transfer must carry a memo.
+
+**Entire and process**
+
+21. *How did you split the work?* Three lanes (world and story, globe, interface), a contract file
+    for every interface, mocks first, PRs only to `main`, cross-lane requests as GitHub issues.
+22. *How did you use AI?* Claude Code agents built most of the code from short plans; Entire records
+    each session and links it to commits (pushing sessions is off until the owner turns it on).
+
+**Technical depth**
+
+23. *Why spherical Voronoi?* It reads as a political map; Fibonacci points give even cells with no
+    relaxation; the convex hull gives the triangulation in O(n log n).
+24. *How does the battle maths work?* A contest function with exponent 1.6 between Lanchester's
+    linear and square laws, plus terrain, forts, landings, age gap, wonders and command.
+25. *Does it scale?* Comfortably at 500 provinces and up to 16 nations at 64x speed on one laptop;
+    the rules scan provinces per nation, so much larger maps would need spatial indexes. We have not
+    benchmarked beyond the demo size.
+
+### Per-person deep dive
+
+- **Lane a (SamsSide), world, story and sound:** event log and `applyTickBatch`; the battle function;
+  cut and restore with the dispute rule; the Gemini pipeline and budgets; ElevenLabs anthems.
+  Tricky question: "how can replicas agree without a referee?" (section 4.2).
+- **Lane b (CutGrass88), the globe and the economy:** rendering 500 provinces with instancing; map
+  modes; units by age; payment arcs; the Solana ledger and its rate-limit design. Tricky question:
+  "why isn't the treasury on chain?" (Q16).
+- **Lane c (Justin-CODING-PY), interface:** the Create screen, nation card with council controls,
+  chronicle and dispatches, network panel, decree box, ledger panel, projector layout. Tricky
+  question: "what does the network panel actually switch?" (the bus link per nation).
+
 ## 9. Who built what
+
+| Lane | Person | Main PRs |
+| --- | --- | --- |
+| a · World, story and sound | SamsSide (owner) | seed #19, worldgen #32, rules #43, agents and bus #62, Gemini bible and rulers #42, wars #92, resilience #69, replays #102, decrees #101, news #79, image prompt #83, lore #34, narration #45, chants #52, anthems #56, secession #109, ages #127, pacing #136, terrain #153, council #166, wonders #161, payments #165, Solana #157 #171 #180, models #35 #114 #130 #168, design #47 #85, Tiger Data #57 |
+| b · The globe (and the economy from 14 Nov 17:50) | CutGrass88 | planet #31, camera, borders and map modes #46, buildings #54, war animation #113, buildings tinted per nation #86, status visuals #97, identity on the globe #126, provinces and cliffs #132, walled towns and terrain map #141, big moments #162, vehicle effects #167, sun and moon #176, readable globe #178 |
+| c · Interface | Justin-CODING-PY | Create and card #22, chronicle and network panel #38, four screens #58, picture prompt, spoken decrees and news screens #81, projector polish #95 #110 #150, news anchor name #119, event feed #159, ledger panel #155, council on the card #174 |
