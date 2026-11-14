@@ -6,7 +6,7 @@ import { audio } from '../../audio';
 import { useAudio } from '../../audio/useAudio';
 import { RegionView } from './RegionView';
 import { useLore } from './useLore';
-import { CloseIcon, Lines, useCardClass } from './shared';
+import { CloseIcon, Lines, useCardClass, useShort } from './shared';
 import './card.css';
 
 const STANCE_ORDER: Stance[] = ['war', 'hostile', 'alliance', 'trade', 'neutral'];
@@ -48,6 +48,7 @@ function Flag({ countryId, spec }: { countryId: number; spec: Parameters<typeof 
 }
 
 const fmt = (n: number) => Math.round(n).toLocaleString('en-GB');
+const short = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e4 ? `${(n / 1e3).toFixed(1)}K` : fmt(n));
 
 type Tab = 'culture' | 'politics' | 'history' | 'relations';
 const TABS: { id: Tab; label: string }[] = [
@@ -86,10 +87,14 @@ function Nation({ countryId }: { countryId: number }) {
 
   const mine = playing === countryId;
   const speaking = mine && (state === 'narration' || state === 'anthem');
-  const cls = useCardClass(ref, speaking);
+  const isShort = useShort();
+  const agent = useWorld((st) => st.agents.find((a) => a.countryId === countryId));
 
   const country = world?.countries[countryId];
   if (!world || !country) return null;
+  const silenced = country.alive && agent?.link === 'cut';
+  const cls = useCardClass(ref, speaking, silenced, isShort);
+  const silentYears = agent ? Math.max(0, world.tick - agent.lastHeardTick) : 0;
 
   let fallYear: number | null = null;
   if (!country.alive) {
@@ -134,8 +139,8 @@ function Nation({ countryId }: { countryId: number }) {
     .map((r) => ({ other: r.a === countryId ? r.b : r.a, stance: r.stance }))
     .sort((x, y) => STANCE_ORDER.indexOf(x.stance) - STANCE_ORDER.indexOf(y.stance));
 
-  const text = (t: string | undefined, small = false) =>
-    error ? null : loading || !lore ? <Lines /> : <p className={`tn-p tn-fade${small ? ' tn-small' : ''}`}>{t}</p>;
+  const text = (t: string | undefined, small = false, clamp = false) =>
+    error ? null : loading || !lore ? <Lines /> : <p className={`tn-p tn-fade${small ? ' tn-small' : ''}${clamp ? ' tn-clamp' : ''}`}>{t}</p>;
 
   return (
     <div className={cls} ref={ref}>
@@ -143,28 +148,39 @@ function Nation({ countryId }: { countryId: number }) {
         <header className="tn-head">
           <Flag countryId={countryId} spec={country.flag} />
           <div className="tn-head-text">
+            <div className="tn-gov">{country.government}</div>
             <h2 className="tn-name">{country.name}</h2>
             <div className="tn-sub">Led by {country.leader}</div>
             {!country.alive && <div className="tn-fallen">{fallYear != null ? `Fallen in Y${fallYear}` : 'Fallen'}</div>}
           </div>
           <button type="button" className="tn-close" aria-label="Close" onClick={() => select(null)}><CloseIcon /></button>
         </header>
-        <p className="tn-ideology">{country.ideology}</p>
+        {silenced ? (
+          <div className="tn-silence">
+            <div className="tn-silence-top"><span className="tn-silence-cap">Link cut</span><span className="tn-silence-yrs">silent {silentYears} {silentYears === 1 ? 'yr' : 'yrs'}</span></div>
+            <div className="tn-silence-txt">It rules on from the world as it knew it in Y{world.year - silentYears}.{!isShort && ' Its map no longer matches the truth.'}</div>
+          </div>
+        ) : (
+          <p className="tn-ideology">{country.ideology}</p>
+        )}
         <div className="tn-facts">
-          <div><span className="tn-cap">Government</span><span className="tn-v">{country.government}</span></div>
-          <div><span className="tn-cap">Provinces</span><span className="tn-v tn-mono">{fmt(provinces)}</span></div>
-          <div><span className="tn-cap">Population</span><span className="tn-v tn-mono">{fmt(country.population)}</span></div>
-          <div><span className="tn-cap">Treasury</span><span className="tn-v tn-mono">{fmt(country.treasury)} crowns</span></div>
+          <div><span className="tn-cap">Provinces</span><span className="tn-v">{fmt(provinces)}</span></div>
+          <div><span className="tn-cap">Population</span><span className="tn-v">{short(country.population)}</span></div>
+          <div><span className="tn-cap">Treasury</span><span className="tn-v">{fmt(country.treasury)}</span></div>
         </div>
 
-        <section className="tn-sec">
-          <h3>Summary</h3>
-          {text(lore?.summary)}
-          {error && (
-            <p className="tn-muted">No lore is available yet. <button type="button" className="tn-link" onClick={retry}>Try again</button></p>
-          )}
-          {!error && (loading || !lore) && <p className="tn-muted" style={{ marginTop: 6 }}>Consulting the archives...</p>}
-        </section>
+        {!isShort && (
+          <section className="tn-sec">
+            {text(lore?.summary, false, true)}
+            {error && (
+              <p className="tn-muted">No lore is available yet. <button type="button" className="tn-link" onClick={retry}>Try again</button></p>
+            )}
+            {!error && (loading || !lore) && <p className="tn-muted" style={{ marginTop: 6 }}>Consulting the archives...</p>}
+          </section>
+        )}
+        {isShort && error && (
+          <p className="tn-muted">No lore is available yet. <button type="button" className="tn-link" onClick={retry}>Try again</button></p>
+        )}
 
         <div className="tn-tabs" role="tablist">
           {TABS.map((t) => (
@@ -208,7 +224,12 @@ function Nation({ countryId }: { countryId: number }) {
           {button('narration')}
           {button('anthem')}
         </div>
-        {speaking && <div className="tn-pulse" aria-hidden="true" />}
+        {speaking && (
+          <>
+            <div className="tn-progress" aria-hidden="true"><div /></div>
+            <div className="tn-now">{state === 'anthem' ? `Anthem of ${country.name}` : `Narration of ${country.name}`}</div>
+          </>
+        )}
         {mine && state === 'anthem' && lore && lore.anthemLyrics.length > 0 && (
           <div className="tn-lyrics tn-fade">
             {lore.anthemLyrics.map((l, i) => <div key={i}>{l}</div>)}

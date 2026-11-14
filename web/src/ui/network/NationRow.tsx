@@ -33,31 +33,36 @@ export function NationRow({ country, agent, tick, selected, onSelect, onControl 
   };
 
   const years = agent ? Math.max(0, tick - agent.lastHeardTick) : 0;
-  const cls = ['tn-nrow', selected ? 'tn-sel' : '', cut ? 'tn-cut' : '', gone ? 'tn-gone' : ''].filter(Boolean).join(' ');
+  const cls = ['tn-nrow', selected ? 'tn-sel' : '', cut ? 'tn-is-cut' : '', gone ? 'tn-gone' : ''].filter(Boolean).join(' ');
   return (
     <li className={cls} style={{ ['--tn-nation' as string]: country.color }}>
       <div className="tn-nr-top">
         <span className="tn-sw" />
         <button className="tn-nr-name" onClick={() => onSelect(country.id)}>{country.name}</button>
-        {deleted && <span className="tn-state del">Deleted</span>}
-        {fallen && <span className="tn-state del">Fallen</span>}
+        {agent && !gone && (cut
+          ? <span className="tn-state cut"><i className="tn-pulse" />Cut</span>
+          : <span className="tn-state up"><i />Link up</span>)}
+        {gone && <span className="tn-state del">{deleted ? `Deleted Y${tick}` : 'Fallen'}</span>}
       </div>
-      {deleted && <div className="tn-nr-sub ruin">Its lands lie in ruin; neighbours are carving them up.</div>}
+      {gone && (
+        <div className="tn-nr-sub ruin">
+          {deleted ? 'Its neighbours are carving up its lands.' : 'Its lands lie in ruin.'}
+        </div>
+      )}
       {agent && !gone && (
         <>
-          <div className="tn-nr-states">
-            {cut ? <span className="tn-state cut"><i />Cut</span> : <span className="tn-state up"><i />Link up</span>}
-            {auto ? <span className="tn-state auto">Autopilot</span> : <span className="tn-state llm">LLM ruler</span>}
-          </div>
           {cut && (
             <div className="tn-nr-sub mono">
-              {agent.pendingEvents} events queued · silent {years} {years === 1 ? 'yr' : 'yrs'}
+              silent {years} {years === 1 ? 'yr' : 'yrs'} · {agent.pendingEvents} {agent.pendingEvents === 1 ? 'event' : 'events'} queued
             </div>
           )}
-          <div className="tn-nr-btns">
-            <button className="btn xs" onClick={() => onControl(cut ? 'restore' : 'cut', country.id)}>{cut ? 'Restore' : 'Cut'}</button>
-            <button className="btn xs" onClick={() => onControl(auto ? 'wake' : 'silence', country.id)}>{auto ? 'Wake' : 'Silence'}</button>
-            <button className="btn xs danger" onClick={del}>{confirming ? 'Confirm delete' : 'Delete'}</button>
+          <div className="tn-nr-line">
+            {auto ? <span className="tn-state auto">Autopilot</span> : <span className="tn-state llm">LLM ruler</span>}
+            <div className="tn-nr-btns">
+              <button className={`btn xs ${cut ? 'restore' : ''}`} onClick={() => onControl(cut ? 'restore' : 'cut', country.id)}>{cut ? 'Restore' : 'Cut'}</button>
+              <button className="btn xs" onClick={() => onControl(auto ? 'wake' : 'silence', country.id)}>{auto ? 'Wake' : 'Silence'}</button>
+              <button className="btn xs danger" onClick={del}>{confirming ? 'Confirm' : 'Delete'}</button>
+            </div>
           </div>
         </>
       )}

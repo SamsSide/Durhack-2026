@@ -80,18 +80,6 @@ function buildLayout(world: World): Layout {
   return { marks, hasWorld, wars, silences, kinds };
 }
 
-/** Merge overlapping periods: the Silence band runs across all lanes, so who was cut does not matter. */
-function mergeBands(periods: { from: number; to: number }[]): { from: number; to: number }[] {
-  const sorted = [...periods].sort((p, q) => p.from - q.from);
-  const out: { from: number; to: number }[] = [];
-  for (const p of sorted) {
-    const last = out[out.length - 1];
-    if (last && p.from <= last.to) last.to = Math.max(last.to, p.to);
-    else out.push({ ...p });
-  }
-  return out;
-}
-
 export function Timeline({ world, agents, observed, selectedId, onPick, onClose }: {
   world: World;
   agents: AgentStatus[];
@@ -144,18 +132,18 @@ export function Timeline({ world, agents, observed, selectedId, onPick, onClose 
   const lanesH = lanes.length * LANE_H;
 
   // The Silence: chronicle periods first; a period still open runs to now only while that link is cut.
-  const silencePeriods: { from: number; to: number }[] = [];
+  const silencePeriods: { c: number; from: number; to: number }[] = [];
   const fromChronicle = new Set<number>();
   for (const s of layout.silences) {
     fromChronicle.add(s.c);
     const stillCut = agentOf.get(s.c)?.link === 'cut';
-    silencePeriods.push({ from: s.from, to: s.to ?? (stillCut ? world.year : s.from + 1) });
+    silencePeriods.push({ c: s.c, from: s.from, to: s.to ?? (stillCut ? world.year : s.from + 1) });
   }
   for (const s of observed) {
     if (fromChronicle.has(s.c)) continue;
-    silencePeriods.push({ from: Math.max(start, s.from), to: s.to ?? world.year });
+    silencePeriods.push({ c: s.c, from: Math.max(start, s.from), to: s.to ?? world.year });
   }
-  const bands = mergeBands(silencePeriods);
+  const bands = silencePeriods.filter((b) => world.countries[b.c]);
 
   const legend = LEGEND_ORDER.filter((k) => layout.kinds.has(k));
   const recent: ChronicleEntry[] = [];
@@ -263,15 +251,16 @@ export function Timeline({ world, agents, observed, selectedId, onPick, onClose 
                 height={lanesH}
                 style={{ left: NAME_W }}
               >
-                {bands.map((b) => {
+                {bands.map((b, i) => {
                   const bx = x(b.from);
                   const bw = Math.max(4, x(b.to) - bx);
+                  const by = laneIndex(b.c) * LANE_H + 3;
                   return (
-                    <g key={`s${b.from}`}>
-                      <rect className="tn-tl-silence" x={bx} y={0} width={bw} height={lanesH} />
-                      <line className="tn-tl-silence-edge" x1={bx} y1={0} x2={bx} y2={lanesH} />
-                      <line className="tn-tl-silence-edge" x1={bx + bw} y1={0} x2={bx + bw} y2={lanesH} />
-                      {bw > 70 && <text className="tn-tl-silence-label" x={bx + 4} y={11}>The Silence</text>}
+                    <g key={`s${i}-${b.c}-${b.from}`}>
+                      <rect className="tn-tl-silence" x={bx} y={by} width={bw} height={LANE_H - 6} rx={1} />
+                      {bw > 56 && (
+                        <text className="tn-tl-silence-label" x={bx + bw / 2} y={by + (LANE_H - 6) / 2 + 3.5} textAnchor="middle">Silence</text>
+                      )}
                     </g>
                   );
                 })}

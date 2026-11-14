@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { RefObject } from 'react';
 
 export function CloseIcon() {
@@ -16,8 +17,19 @@ export function Lines() {
   );
 }
 
-/** Class for the card root. The hologram was dropped (owner, PR #75): the card is always the docked
- *  parchment `.panel`; `tn-speaking` marks narration or the anthem with a gilt rule, no glow. */
-export function useCardClass(_ref: RefObject<HTMLElement | null>, speaking: boolean): string {
-  return `panel tn-card${speaking ? ' tn-speaking' : ''}`;
+/** Class for the card root: the docked parchment `.panel`; `.speaking` (tokens.css) is the gilt top rule while
+ *  narration or the anthem plays. `.tn-silenced` and `.tn-short` are set by the caller. */
+export function useCardClass(_ref: RefObject<HTMLElement | null>, speaking: boolean, silenced = false, short = false): string {
+  return `panel tn-card${speaking ? ' speaking' : ''}${silenced ? ' tn-silenced' : ''}${short ? ' tn-short' : ''}`;
+}
+
+/** True while the viewport is under 800 px tall (the card drops its summary). */
+export function useShort(): boolean {
+  const [short, setShort] = useState(() => window.innerHeight < 800);
+  useEffect(() => {
+    const on = () => setShort(window.innerHeight < 800);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  return short;
 }
