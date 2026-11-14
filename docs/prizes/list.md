@@ -126,21 +126,24 @@ Research & Learning; Polish & Completion.
 | --- | --- | --- | --- | --- | --- | --- |
 | P9 | 1st / 2nd (/ 3rd) place overall | DurHack | 1st: 15.6 inch FHD portable monitor and a keyboard. 2nd: instant-print camera and a 100 pound Amazon gift card. 3rd: not seen | Main track | The four criteria above; theme Composition | Ceremony slides |
 | P10 | Spirit of the Dino Award | DurHack | Dinosaur-skeleton brick set and a dino keyring | Side | Not stated | Ceremony slide |
-| P11 | New Worlds | Marshall Wace | Not confirmed (a hacker asked in Discord whether "quest 3s" were for this or MW's other challenge; no answer) | Sponsor, open theme | A project that explores the idea of New Worlds | Discord #marshall-wace, 13:24 |
+| P11 | New Worlds | Marshall Wace | MW prize slide shows a Meta Quest 3, a T-shirt, a jacket, a gilet and a North Face duffel; which item goes with which challenge or place is not stated | Sponsor, open theme | A project that explores the idea of New Worlds | Discord #marshall-wace, 13:24 |
 | P12 | Best meme | Marshall Wace | A duffel bag | Side | Best meme in #marshall-wace-memes | Discord #marshall-wace |
 | P13 | Tagged: Information Hidden in Plain Sight | QRT | Not announced (2025: 500 / 250 / 150 pounds per person) | Sponsor, set task | Encoder turns a secret three-word phrase into a physical artefact; decoder recovers it from a photo or short video. Live test with unseen words | Discord #qrt, 12:28; [brief](briefs/qrt-hidden-in-plain-sight.pdf), [word list](briefs/qrt-word-list.csv) |
 | P14 | Spray n' Tag CTF | QRT | Not announced | Sponsor, closed (CTF) | Hack The Box CTF: 15 challenges, Sat 12:00 to Sun 12:00, crew of up to 4. Event password is in #qrt (not copied here: sharing it outside the event is a disqualification, as are sharing flags and write-ups) | Discord #qrt, 12:29; <https://ctf.hackthebox.com/event/details/qrt-spray-n-tag-ctf-3753> |
 | P15 | Challenge 1: Protect Your Assets From a Trading Market Storm | SGX FX (BidFX) | Sonos Era 100 SL and a 50 pound Deliveroo voucher | Sponsor, open, data optional | A tool that helps investors spot danger, get alerted, understand exposure, prepare, maybe profit | Discord #sgx-fx, 13:16-13:25; [brief](briefs/sgx-fx-challenges.docx); dataset link in #sgx-fx |
 | P16 | Challenge 2: Get Creative In The Trading Market Storm | SGX FX (BidFX) | JBL Go 5 and a 20 pound Deliveroo voucher | Sponsor, open, playful | A playful, original way to learn or explore trading: game, art, music, electronics | Same |
-| P17 | The Accenture Challenge | Accenture | Not announced | Sponsor, open theme | Redesign a frustrating accepted process with modern AI and LLMs | Discord #accenture, 13:09 |
+| P17 | The Accenture Challenge | Accenture | Prize slide shows a mechanical keyboard and mouse set, Sony over-ear headphones and an Accenture duffel bag (places not stated) | Sponsor, open theme | Redesign a frustrating accepted process with modern AI and LLMs | Discord #accenture, 13:09 |
 | P18 | Actors work better together | Neptune North | 1st: 1,000 pounds in vouchers of your choice for the team. 2nd and 3rd: a mechanical keyboard | Sponsor, open with tight criteria | Systems working together in a distributed way, even when communications are interrupted | Discord #neptune-north, 12:44; [brief](briefs/neptune-north-challenge.pdf) |
-| P19 | Waterstons challenge | Waterstons | Not announced | Sponsor, open theme | Make the world a better place by connecting things that aren't usually connected | Discord #waterstons, 12:42 |
-| P20 | Arduino hardware challenge | RS Group, with Arduino | 1st: a 16 GB VENTUNO Q and a Plug and Make kit for every team member. Runners-up: a 4 GB UNO Q and a Plug and Make kit each | Sponsor, hardware | Build something with Arduino hardware (primarily the UNO Q) that connects the physical and digital worlds using sensors. Lending library on the top floor; queues are long | Discord #rs, 13:27 |
+| P19 | Waterstons challenge | Waterstons | Raspberry Pi Pico and a Raspberry Pi Pico Inventors Kit | Sponsor, open theme | Make the world a better place by connecting things that aren't usually connected | Discord #waterstons, 12:42 |
+| P20 | Arduino hardware challenge | RS Group, with Arduino | 1st: a 16 GB VENTUNO Q and a Plug and Make kit for every team member. Runners-up: a 4 GB UNO Q and a Plug and Make kit each | Sponsor, hardware | Build an intelligent system that can sense, analyse and respond to the real world. Mandatory hardware: Arduino UNO Q, camera, USB hub. Optional: sensors, nodes. Prizes for 1st, 2nd and 3rd. Loan library on the top floor; queues are long | Discord #rs, 13:27 |
 | P21 | Challenge 1: receipt data | P&G | 1st AirPods Pro; 2nd poker sets; 3rd 100 pound keyboard voucher | Sponsor, data | Innovating with complex receipt data for consumer and business insights | Ceremony slides (owner confirmed the prize slide was P&G's); workshop 13:15 TLC042 |
 | P22 | Challenge 2: sensors | P&G | Same as P21 ("each challenge") | Sponsor, hardware/sensors | Understanding product performance through novel sensor approaches in baby/fem | Same |
-| P23 | Sentiment analysis (name not confirmed) | Marshall Wace | Not confirmed (see P11) | Sponsor, set task | Train a model for sentiment analysis of movies "from scratch"; materials "on github" at the MW workshop | Discord #marshall-wace, 12:19-12:43; #general 13:19 |
+| P23 | MicroGPT workshop challenge | Marshall Wace | "There are prizes to win" (see P11 for the prize slide) | Sponsor, set task | Train a tiny language model on your laptop and see if it can tell good movie reviews from bad ones; from scratch; materials on GitHub at the MW workshop | Discord #marshall-wace, 12:19-12:43; #general 13:19 |
+| P24 | Hackiest Hack | Hackathons UK | A Blahaj (IKEA shark plush) | Side | Not stated; the hackiest project | Ceremony slide |
 
-Not yet seen: any challenge from Newton, Durham Venture Lab, TPP, Hackathons UK or The Keyboard
+MLH hub for the weekend: <https://mlh.link/durhack2026>.
+
+Not yet seen: any challenge from Newton, Durham Venture Lab, TPP or The Keyboard
 Company (their channels are empty); whether prizes are per person or per team where not stated;
 the submission deadline and platform; whether a team may enter several sponsor challenges or
 submit more than one project.
@@ -241,3 +244,33 @@ voucher.
 sentiment analysis challenge, does this mean training fully from scratch or finetuning?" Shiv
 (MW): "from scratch! there will be plenty of materials and guidance to walk you through it ...
 will be given in time for the workshop on github."
+
+### Added from the second set of ceremony slides (14 Nov, 14:20)
+
+**P20 RS / Arduino slide.** "Challenge: build an intelligent system that can sense, analyse and
+respond to real world. Capture data from the environment; analyse sensor inputs; make a
+decision; trigger an action. Example solutions: smart safety monitoring; predictive maintenance;
+environmental sensing; accessibility solutions. Mandatory hardware: Arduino UNO Q, camera, USB
+hubs. Option modules: sensors, nodes. Prizes for 1st, 2nd & 3rd place. Hardware available
+through the Product Loan Library."
+
+**P18 Neptune North, "For example, you could...".** Search and rescue drones: coordinate a drone
+swarm that splits up a search area and keeps covering it when some drones lose contact.
+Warehouse robots: design robots that share out picking jobs and avoid collisions without waiting
+for a central scheduler. Teams of AI agents: have several LLM agents divide up a large problem,
+keep working when cut off, and merge their results when they reconnect. Remote sensor networks:
+build sensors that agree on what they're seeing in a remote area, even when only some of them
+can talk to each other.
+
+**P15 SGX FX Challenge 1 slide.** "Build something that helps traders... Stay safe: keep
+traders' money safe when things get rocky. Early warning: spot danger and alert traders early.
+Predict what's next: understand the risk and predict what's next. Spot opportunities: turn the
+chaos into profit. We provided our historical pricing data but you can use ANY data."
+
+**P19 Waterstons slide.** "Improve the world by connecting things that usually aren't. Raspberry
+Pi Pico. Raspberry Pi Pico Inventors Kit."
+
+**P23 Marshall Wace MicroGPT workshop slide.** "Train a tiny language model on your laptop and
+see if it can tell good movie reviews from bad ones. review> i expected to hate it, but it was
+charming. sentiment: 100% positive. continues: ... it's a good looking, great, good movie. There
+are prizes to win!"
