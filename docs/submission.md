@@ -332,14 +332,14 @@ it is a teaching tool for distributed systems and resilience.
 ### Gaps
 
 - **Main track:** many rows are `testing` (A15, A16, A19, A26, A28, A29, A30, B5, B7, B9, C1 to
-  C4, C6 to C15) and need a human pass before the video.
+  C4, C6 to C15) and need a human pass before the table demo.
 - **Neptune North:** strong. Risk is only the question "is it really distributed?": all agents in
   one process, the cut is a software switch. Council kill (A29, C11) is `testing`.
 - **Marshall Wace:** framing only; needs the pitch to open with "New Worlds" and a visit to
   their stand.
 - **Waterstons:** weak fit; the "who benefits" line is thin.
 - **ElevenLabs:** anthem and chant (A15, A16) not yet listened to by a person; character budget
-  is 30,000 per run on the Starter plan, so record the demo world's audio once.
+  is 30,000 per run on the Starter plan, so prepare the demo world's audio once.
 - **Gemini:** painted flags need image billing and return 503; spoken decrees not yet tested with
   a real browser microphone (A20 note); the MLH Gemini category date label needs checking on the
   DurHack Devpost.
@@ -351,28 +351,61 @@ it is a teaching tool for distributed systems and resilience.
 
 ---
 
-## 3. Video plan: two minutes
+## 3. The 2-minute table demo
 
-Matches the demo script in `docs/hackathon-plan.md` section 2. Record at 1920x1080 in live mode
-(`LLM_MODE=live`, `SOLANA_MODE=devnet`) after prepare mode has finished (readiness panel green,
-audio cached). Keep `server/replays/demo-1.json` (`POST /api/replays/demo-1/play`) as the backup
-take. Record the voice-over separately and lay it over the screen capture. Total about 2:00.
+There is **no video**. Judging is a 2-minute live demo on the owner's laptop (1920x1080) running
+the real app, given again for every judge who comes to the table. Two minutes is the hard
+maximum. Matches `docs/hackathon-plan.md` section 2. Where a sponsor form asks for a demo video
+link, write "live demo at the table; no video" `[check]` if the form insists on a link.
 
-| Time | Shot | Click and do | Say |
-| --- | --- | --- | --- |
-| 0:00 to 0:08 | Title card, then the Create screen | Type "a drowned post-apocalyptic world", drop a picture on the drop zone, set six nations, tick Prepare | "Terra Nova. New Worlds, composed live by AIs." |
-| 0:08 to 0:18 | The planet forms | Press Create, wait for Prepare to finish, press Play. Pan across the six named nations with flags | "Gemini reads the prompt and the picture and writes a world bible. Every nation gets its own AI." |
-| 0:18 to 0:32 | Time runs | Gears at a few years a second. Borders spread, towns grow walls, boats and caravans move, ages advance, chronicle ticker scrolls | "Rules move the world; Gemini only rules each nation, a few words every half a minute." |
-| 0:32 to 0:45 | A nation card | Click a nation: its card docks left. Open the Council tab; play narration, then a few bars of the anthem | "Its anthem is written from what has actually happened to it, sung by ElevenLabs." |
-| 0:45 to 0:57 | War | A war starts: armies march round mountains, battles flash, war chant. Switch the minimap to the diplomacy icon | "Wars are settled province by province by a seeded function. No referee." |
-| 0:57 to 1:08 | Money | Click a gold payment arc, land on the Solana Explorer page (Success, devnet, memo); back, open the Treasury tab | "Every payment is a real devnet transfer signed by the paying nation. Fixed supply, nobody can print money." |
-| 1:08 to 1:28 | The moment | Open the Network panel (node graph). Cut one nation mid-war: static ring, press Show beliefs, drift visible. Delete a second nation: it crumbles | "Cut off, it keeps building on what it last knew. Delete one and its neighbours carve up the ruins." |
-| 1:28 to 1:38 | Inside a nation | On a card, Kill the general (two clicks). Stand-in covers, then a successor with the old memory | "Even inside a nation, the actors recover." |
-| 1:38 to 1:50 | Restore and decree | Restore the link: missing years merge, disputes settled, "the Silence" in the chronicle. Hold the mic: "a plague in the north" | "Bring it back and the history merges in. A spoken decree is heard by Gemini." |
-| 1:50 to 2:00 | Close | Terra Nova News with the animated anchor for a few seconds, then the token meter card (End key), then the repo URL and the Entire sessions page | "This whole world cost N tokens. Built by three people and their agents." |
+### On screen before a judge arrives
 
-Safety shots to capture too: the Explorer page (`docs/shots/solana-devnet-payment.jpg`), the
-10-years-a-second gear (`gears-10y.jpg`) and the Tiger Data territory chart `[check]`.
+- The app running in live mode (`LLM_MODE=live`, `SOLANA_MODE=devnet`) on a **prepared world**:
+  created earlier with Prepare ticked, readiness panel green, audio cached, a few hundred years
+  in so there are cities, a war under way and at least one gold payment in the ledger.
+- Presentation mode on (key **P**) and the collapsed-by-default screen from lane c (#276): globe,
+  top bar and minimap only; chronicle, history, decree and ledger open on click. Time paused or
+  at 1 month a second, camera in orbit.
+- A second browser tab with the Solana Explorer page of a recent payment, as a safety shot.
+- Backup if live breaks: replay `demo-1` from the Create screen (Replay button, or
+  `POST /api/replays/demo-1/play`); no API calls, exact, audio cached.
+
+### The script (say the words in quotes; click what is in the middle column)
+
+| Time | Click and do | Say |
+| --- | --- | --- |
+| 0:00 to 0:10 | Nothing to click. Slow orbit, six named nations with flags. Press the gears to a few years a second | "Terra Nova: a new world composed live by AIs. Every nation has its own Gemini ruler, deciding on its own." |
+| 0:10 to 0:25 | Time runs: borders spread, ages advance. Click a gold payment arc: the Solana Explorer page opens (Success, devnet, memo). Back | "Every payment is a real Solana transfer signed by the paying nation, with the reason in the memo." |
+| 0:25 to 0:50 | **The moment.** Open the Network panel, cut one nation. Press Show beliefs: its map drifts, pulsing holo over what it no longer knows | "I cut this nation off. It keeps ruling on what it last knew. No central server; this is what it believes." |
+| 0:50 to 1:05 | Click that nation, kill its ruler (two clicks). A stand-in covers, then a successor with the old memory | "Kill its ruler and the council recovers; the successor inherits the memory." |
+| 1:05 to 1:25 | Restore the link: missing years merge in, disputes settled, "the Silence" in the chronicle. Hold the mic: "a plague in the north" | "Bring it back and the history merges in. A spoken decree is heard by Gemini and the engine applies it." |
+| 1:25 to 1:45 | Open Terra Nova News: the animated anchor reads the plague, in the ElevenLabs voice | "The news reads a picture of the globe and a voice reports it." |
+| 1:45 to 2:00 | Gears to 10 years a second for a few seconds, then key End for the token meter, one sentence for the prize the judge is here for | "Ten years a second, no referee: rules and seeded functions move the world. This whole world cost N tokens." |
+
+Tailor the last sentence to the judge: Neptune North, "agents that keep working apart"; Solana,
+"every coin is a signed transfer"; ElevenLabs, "anthems and the anchor are sung and spoken from
+what happened"; Marshall Wace, "a new world from one line".
+
+### 20-second version (a judge in a hurry)
+
+Orbit, gears up: "Every nation is run by its own AI." Cut a nation, Show beliefs: "Cut off, it
+keeps going on what it last knew." Restore: "Bring it back and its history merges in." Offer to
+show the rest.
+
+### Reset routine between judges (about 10 seconds)
+
+1. Press **Escape** to close any open panel or card, then **P** to return to presentation mode.
+2. If the link was cut, restore it; unpause time; set the gears back to a few years a second.
+3. If the world has run too far (late ages, many nations dead, a quiet stretch with no war) or
+   anything looks broken: open the Create screen and press **Replay** on `demo-1` (a saved world
+   in a known strong state), or switch to the second prepared world tab. A replay needs no API
+   calls, so a stack of judges does not burn the Gemini or ElevenLabs budget.
+4. Press **Home** on the timeline scrubber to jump a replay back to tick 0, then run the gears.
+5. Keep two prepared worlds: one live (the main script) and `demo-1` (instant reset and backup).
+   Refresh the Explorer tab only if the devnet page has expired.
+
+Safety shots: the Explorer page (`docs/shots/solana-devnet-payment.jpg`), the 10-years-a-second
+gear (`gears-10y.jpg`) and the Tiger Data territory chart `[check]`.
 
 ---
 
@@ -380,13 +413,14 @@ Safety shots to capture too: the Explorer page (`docs/shots/solana-devnet-paymen
 
 - [ ] Find the submission platform and deadline (Devpost page was not live on 14 Nov 13:35);
       hacking ends Sunday 12:00 `[check]`.
-- [ ] Hand-test the `testing` rows that appear in the video: anthem, chant, council kill, spoken
+- [ ] Hand-test the `testing` rows that appear in the table demo: anthem, chant, council kill, spoken
       decree with a real microphone, prepare mode, news anchor, Treasury tab `[check]`.
 - [ ] Fund the Commons wallet from the devnet faucet; run `SOLANA_MODE=devnet` once and save a
-      fresh Explorer link for the video and the write-up `[check]`.
+      fresh Explorer link for the demo and the write-up `[check]`.
 - [ ] Re-confirm the "35 payments, drift 0" figure on the final build or drop the number `[check]`.
-- [ ] Record the video to the plan above, upload it (YouTube or Vimeo, unlisted is fine) and paste
-      the link.
+- [ ] Rehearse the 2-minute table demo and the reset routine (section 3) three times in a row;
+      there is no video to upload. If a form requires a demo link, write "live demo at the table;
+      no video" `[check]`.
 - [ ] Make the repository public (or confirm judges can see it). First decide on Entire session
       push: once on, transcripts become public with the repo `[check]`.
 - [ ] Owner: turn on Entire `push_sessions`, set up Graph, Brain, the mirror and if possible one
