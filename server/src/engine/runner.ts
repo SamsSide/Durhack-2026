@@ -31,7 +31,11 @@ const GENERAL_RE = /\b(general|marshal|commander|captain|warlord)s?\b/i;
 export class EngineRunner implements WorldRunner {
   private world: World | null = null;        // the truth: only ever changed by applying published events
   private initial: World | null = null;
+  // The whole run is NOT kept here: at the top gear it grew by hundreds of MB. The recorder
+  // (engine/replays.ts) writes every event to disk and GET /api/world/log streams it from there.
+  // Headless checks that replay the run in-process ask for the in-memory copy with keepLog.
   private log: WorldEvent[] = [];
+  private readonly keepLog: boolean;
   private listeners = new Set<RunnerListener>();
   private lamport = 0;
   private decrees = 0;
@@ -52,12 +56,14 @@ export class EngineRunner implements WorldRunner {
   private council = new CouncilKeeper();     // row A29: assassinations, successions, the council controls
   private loop = new TickLoop(this.clock, (n, now) => this.step(n, now));
 
-  constructor() {
+  constructor(opts: { keepLog?: boolean } = {}) {
+    this.keepLog = !!opts.keepLog;
     this.clock.onChange = (s) => { for (const l of this.listeners) l.clock?.(s); };
   }
 
   getWorld(): World | null { return this.world; }
-  getLog() { return this.world && this.initial ? { initial: this.initial, events: this.log } : null; }
+  /** The run so far, only when made with keepLog (headless checks); the server reads the recorder's files. */
+  getLog() { return this.keepLog && this.world && this.initial ? { initial: this.initial, events: this.log } : null; }
   /** One nation's agent (for rows A7, A18 and headless checks). */
   getAgent(countryId: number): NationAgent | undefined { return this.agents.get(countryId); }
   getBus(): MessageBus { return this.bus; }
@@ -92,7 +98,7 @@ export class EngineRunner implements WorldRunner {
     this.stop();
     for (const a of this.agents.values()) a.retired = true;
     this.world = w;
-    this.initial = structuredClone(w);
+    this.initial = this.keepLog ? structuredClone(w) : null;
     this.log = [];
     this.lamport = 0;
     this.outgoing = [];
@@ -265,7 +271,7 @@ export class EngineRunner implements WorldRunner {
     const batch = this.outgoing;
     this.outgoing = [];
     this.scanned = 0;
-    this.log.push(...batch);
+    if (this.keepLog) for (const e of batch) this.log.push(e);
     for (const l of this.listeners) l.events?.(batch);
   }
 

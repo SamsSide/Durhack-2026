@@ -30,7 +30,7 @@ const port = Number(process.env.PORT ?? 8787);
 const live: WorldRunner = mockFlag ? new MockRunner() : new EngineRunner();
 if (mockFlag) forceMockMode(true);
 // Every run is recorded (row A9); the hub lets a saved run be played in place of the live world.
-bindRecorder(live);
+const recorder = bindRecorder(live);
 const runner: WorldRunner = new RunnerHub(live);
 bindLore(runner);
 bindTiger(runner);
@@ -39,7 +39,7 @@ bindChain(runner);
 if (mockFlag) runner.subscribe({ snapshot: () => resetRun() });
 if (mockFlag) void runner.newWorld({ prompt: 'a patchwork world of five young nations', seed: 1337 });
 
-const server = http.createServer(createApp(runner, mode));
+const server = http.createServer(createApp(runner, mode, recorder));
 attachWs(server, runner, mode);
 server.listen(port, () => {
   console.log(`terra server on :${port} (mode ${mode}${mockFlag ? ', mock world' : ''})`);

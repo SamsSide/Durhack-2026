@@ -176,6 +176,14 @@ export interface World {
   chronicle: ChronicleEntry[];                           // oldest first
   agents: AgentStatus[];
 }
+```
+
+`chronicle` is a recent window, not the whole run (owner, 14 Nov): `applyEvent` keeps about the last
+500 lines (`CHRONICLE_KEEP`, trimmed in steps of 100), never trims a line from the last 40 years, and
+keeps every `founding` line and every secession line (`c-secession-...`) for the whole run. Every
+replica, snapshot and browser trims the same way. The whole history is in `GET /api/world/log`.
+
+```ts
 
 type Base = { id: string; tick: number; actor: number | 'world' | 'decree'; lamport: number };
 export type WorldEvent = Base & (
@@ -403,7 +411,7 @@ this table from `@terra/shared`.
 | `POST /api/world` | a | `{ "prompt": "a drowned post-apocalyptic world", "nations": 6, "era": "post-apocalyptic", "seaLevel": 0.55, "aggression": 0.5, "seed": 12345, "imageBase64": null, "prepare": false }` (only `prompt` is required; `prepare: true` creates the world paused and pre-makes its lore, voices, chants, anthems and first ruler decisions, see X2 Prepare; `imageBase64` is an optional picture (JPEG, PNG or WebP, raw base64 or a data URL, under 4 MB decoded) that Gemini reads for mood, palette, setting and sea level, row A17; anything else gets `400 { "error": "unsupported image" }`) | `{ "worldId": "w-3f9a" }`, then a `snapshot` on the socket. In live mode it answers after about 7 s (Gemini writes the world bible); the Create screen shows a loading state meanwhile |
 | `GET /api/replays` | a | none | `[ { "id": "demo-1", "name": "The Drowned Age", "events": 5210 } ]` |
 | `POST /api/replays/:id/play` | a | none | `{ "worldId": "w-3f9a" }`, then a `snapshot`; events replay with no API calls |
-| `GET /api/world/log` | a | none | `{ "initial": { "...": "the World at tick 0" }, "events": [ ] }`: the whole run, for the timeline scrubber |
+| `GET /api/world/log` | a | none | `{ "initial": { "...": "the World at tick 0" }, "events": [ ] }`: the whole run, for the timeline scrubber. Streamed from the recording on disk (`server/replays/<worldId>.ndjson`); the server keeps no log in memory. Same shape as before |
 | `GET /api/country/:id/lore` | a | none | see below |
 | `GET /api/country/:id/narration` | a | none | `audio/mpeg`: the lore `summary` and `history` spoken |
 | `GET /api/country/:id/anthem` | a | none | `audio/mpeg`, about 30 seconds, sung to `anthemLyrics` |

@@ -32,7 +32,8 @@ export interface RunnerListener {
 
 export interface WorldRunner {
   getWorld(): World | null;
-  /** The whole run so far, for the timeline scrubber (X3 /api/world/log). */
+  /** The whole run so far, if this runner holds it in memory (a replay; headless checks). The live
+   *  engine and the mock return null: the server streams X3 /api/world/log from the recorder's files. */
   getLog(): { initial: World; events: WorldEvent[] } | null;
   /** Creates a fresh world (the engine waits for the world bible), starts running it and notifies
    *  listeners with a snapshot. */

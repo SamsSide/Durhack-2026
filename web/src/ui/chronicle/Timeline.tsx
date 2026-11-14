@@ -27,7 +27,7 @@ interface Layout {
   kinds: Set<DisplayKind>;
 }
 
-/** One pass over the chronicle, oldest first. Memoised on its length (entries are only appended). */
+/** One pass over the chronicle, oldest first. Memoised on its length and newest line (see below). */
 function buildLayout(world: World): Layout {
   const marks: Mark[] = [];
   const wars: War[] = [];
@@ -98,8 +98,10 @@ export function Timeline({ world, agents, observed, selectedId, onPick, onClose 
 }) {
   const chron = world.chronicle;
   const len = chron.length;
-  // world is mutated in place by applyEvent and the chronicle only grows, so its length is the key.
-  const layout = useMemo(() => buildLayout(world), [world.id, len, world.countries.length]);
+  // world is mutated in place by applyEvent. The chronicle grows, then is trimmed to a recent window
+  // (shared applyEvent, CHRONICLE_KEEP), so its length alone can repeat: the newest line's id is the key too.
+  const newestId = len > 0 ? chron[len - 1]!.id : '';
+  const layout = useMemo(() => buildLayout(world), [world.id, len, newestId, world.countries.length]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);

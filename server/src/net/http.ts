@@ -7,8 +7,10 @@ import { storyRoutes } from '../story/routes';
 import { tigerRoutes } from '../tiger/routes';
 import { chainRoutes } from '../chain/routes';
 import { prepareWorld } from '../prepare';
+import { writeLog, writeRecordedLog, type Recorder } from '../engine/replays';
 
-export function createApp(runner: WorldRunner, mode: LlmMode) {
+/** `recorder` (row A9) is where the live run's log is read from; without it the runner's own log is used. */
+export function createApp(runner: WorldRunner, mode: LlmMode, recorder?: Recorder) {
   const app = express();
   app.use(express.json({ limit: '12mb' }));
 
@@ -48,10 +50,27 @@ export function createApp(runner: WorldRunner, mode: LlmMode) {
     res.json({ worldId: world.id });
   });
 
-  app.get('/api/world/log', (_req, res) => {
-    const log = runner.getLog();
-    if (!log) return void res.status(404).json({ error: 'no world' });
-    res.json(log);
+  // The whole run, for the timeline scrubber. The live run is streamed from the recorder's files (the
+  // engine keeps no log in memory); a replay from the file it already loaded. Same shape either way.
+  app.get('/api/world/log', async (_req, res) => {
+    try {
+      const w = runner.getWorld();
+      const files = w && recorder && !runner.playback?.() ? await recorder.settled(w.id) : null;
+      if (files) {
+        res.type('application/json');
+        await writeRecordedLog(res, files);
+        return void res.end();
+      }
+      const log = runner.getLog();
+      if (!log) return void res.status(404).json({ error: 'no world' });
+      res.type('application/json');
+      await writeLog(res, JSON.stringify(log.initial), (function* () { for (const e of log.events) yield JSON.stringify(e); })());
+      res.end();
+    } catch (e) {
+      console.warn('world log failed:', e instanceof Error ? e.message : e);
+      if (res.headersSent) res.destroy();
+      else res.status(500).json({ error: 'the log could not be read' });
+    }
   });
 
   // Row A20: a spoken decree. Gemini hears the audio and interprets it in one call; the decree is

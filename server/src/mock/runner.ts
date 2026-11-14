@@ -9,8 +9,6 @@ import { loadReplay } from '../engine/replays';
 
 export class MockRunner implements WorldRunner {
   private world: World | null = null;
-  private initial: World | null = null;
-  private log: WorldEvent[] = [];
   private gen: Generator<WorldEvent> | null = null;
   private pending: WorldEvent | null = null;
   private listeners = new Set<RunnerListener>();
@@ -28,13 +26,12 @@ export class MockRunner implements WorldRunner {
 
   clockState(): ClockState { return this.clock.state(); }
   getWorld(): World | null { return this.world; }
-  getLog() { return this.world && this.initial ? { initial: this.initial, events: this.log } : null; }
+  /** The mock keeps no log in memory: GET /api/world/log streams the recorder's files (engine/replays.ts). */
+  getLog() { return null; }
 
   private load(w: World, paused = false): World {
     this.stop();
     this.world = w;
-    this.initial = structuredClone(w);
-    this.log = [];
     this.gen = mockEvents(w);
     this.pending = null;
     this.clock.setPaused(paused);                // row A31: prepare mode starts the world paused
@@ -112,7 +109,6 @@ export class MockRunner implements WorldRunner {
       this.lamport = Math.max(this.lamport, e.lamport);
     }
     if (anyBigMoment(batch, w)) this.clock.bigMoment();
-    this.log.push(...batch);
     // Cut nations "hear" nothing; up nations are heard at the current tick.
     for (const a of w.agents) {
       if (a.deleted) continue;
