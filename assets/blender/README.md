@@ -115,3 +115,26 @@ everything else, and renders `assets/preview-future.png`):
   `build_ages.py` and `build_future.py` after it.
 - A quick look, nothing exported: `PREVIEW_ONLY=1 PREVIEW_OUT=/tmp/p.png` before the command;
   `PREVIEW_PX=40` renders at globe scale.
+
+## Wonders (row A30, contract X4 `wonders`)
+
+8 landmarks, one per `WonderKind`, in `web/public/models/wonders/<kind>.glb`, built on their own so no
+other GLB is touched (also adds the `wonders` section to `manifest.json`, keeping everything else, and
+renders `assets/preview-wonders.png`):
+
+    blender --background --factory-startup --python assets/blender/build_wonders.py
+    python3 assets/blender/verify_wonders.py    # under 3,000 triangles, bounds, one `team` material, under 120 KB
+
+- `wonders_defs.py`: one function per wonder, on the styles `Builder` with one shared palette (`wonders`,
+  registered into `PALETTES` on import). Same rules as every model (primitives, +Y up, origin at the base
+  centre, fits 1 x 1 x 1, flat shaded, one `team` material), but the budget is 3,000 triangles and the
+  model is one landmark, not a settlement: one big silhouette and two or three colour blocks.
+- `great_wall` is one segment: the wall runs along x across the whole box (x = -0.5 to 0.5 exactly, the
+  verifier checks it) with the watchtower in the middle, so lane b can repeat it end to end along a border.
+- `team` parts: wall banners and flags; the mausoleum's frieze and minaret rings; the sphinx's headcloth
+  and the entrance banners; the colossus's sash, belt, shield and the ship's sail; the cathedral's rose
+  windows; the palace's stars, banners and pylon roofs; the towers' crown strips; the elevator's ring
+  tops, climbers and station ring.
+- `footprint` is 2.0 (about two tiles wide), 1.6 for the two tall ones and 1.0 for the wall segment.
+- A quick look, nothing exported: `PREVIEW_ONLY=1 PREVIEW_OUT=/tmp/p.png` before the command;
+  `PREVIEW_PX=70` renders at the size a wonder has from orbit, `PREVIEW_KINDS=pyramid,colossus` a subset.
