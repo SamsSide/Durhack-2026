@@ -25,8 +25,8 @@ pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
 | ID | Row | Needs (from other lanes) | Gives (to other lanes) | Checkpoint | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | B1 | The first globe, in the slot the seed's `App.tsx` provides and reading the seed's X5 store: every province (an irregular convex polygon, drawn as a triangle fan) coloured by terrain with an owner tint; take over `App.tsx` and `web/src/state/` | A1 only | | CP0 | testing | Raised terraced provinces, live recolour, beliefs kept. Human test issue to follow |
-| B2 | Camera and selection: orbit, smooth zoom from whole planet to a few tiles, click a tile to select its nation, a glowing border round the selected nation, `flyTo` | | selection to c | CP1 | next | Plan: `docs/plans/b-globe.md` (Task 3) |
-| B3 | The political map: borders for every nation, thinner region borders inside them when zoomed in, each nation's flag (`flagSvg`) by its name label, labels that fade with zoom, a colour pulse when a tile changes owner, and the map modes in X5 (political and diplomacy first; terrain and strength after) | | | CP1 | next | Plan: `docs/plans/b-globe.md` (Tasks 4-6). Grand-strategy map conventions |
+| B2 | Camera and selection: orbit, smooth zoom from whole planet to a few tiles, click a tile to select its nation, a glowing border round the selected nation, `flyTo` | | selection to c | CP1 | testing | Smooth orbit and zoom, click and double-click, hover highlight, pulsing gold selection border |
+| B3 | The political map: borders for every nation, thinner region borders inside them when zoomed in, each nation's flag (`flagSvg`) by its name label, labels that fade with zoom, a colour pulse when a tile changes owner, and the map modes in X5 (political and diplomacy first; terrain and strength after) | | | CP1 | testing | Inked borders, names and flags painted on the land, map mode buttons and keys 1-4 with crossfade, owner-change pulse |
 | B4 | Structures: instanced models from the X4 manifest (box fallback), a pop-up build animation, upgrades, trees, detail only when zoomed in | nothing (boxes until A8's models land) | | CP1 | todo | City-builder feel |
 | B5 | Units and war: armies marching between tiles with their strength shown, volleys and flashes on a battle, smoke on captured tiles, a front line between nations at war | nothing (the mock emits wars) | | CP1.5 | todo | HOI-style army counters with strength numbers, movement arrows, front lines |
 | B6 | The hologram: on selection a beam rises from the capital and projects lane c's `NationCard` with scan lines, glow and flicker; it follows the camera and docks to the side on a narrow screen | nothing (the seed's placeholder card and default colours until C2 and A12 land) | | CP1.5 | todo | See X5 |
@@ -41,4 +41,5 @@ pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
 ## Log
 
 <!-- One line per merged PR: time · PR # · what. Newest last. -->
-- 14 Nov · B1 · the first globe: one mesh, raised provinces with cliffs, live owner colours
+- 14 Nov · #31 · B1 the first globe: one mesh, raised provinces with cliffs, live owner colours
+- 14 Nov · B2, B3 · camera, picking, selection glow, borders, painted names and flags, map modes and pulses
