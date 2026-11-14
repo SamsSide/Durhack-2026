@@ -7,11 +7,18 @@
 
 Read first: `docs/hackathon-plan.md` section 4 ("How the world works") and `docs/contracts.md`.
 
+**Running in parallel.** A1 goes first and alone. The moment it merges, four tracks run at once
+on this laptop, none sharing files: *engine* (A2, A3, A4, A5, A6, A7, A18, A9 in order, in
+`packages/shared/src/sim/` and `server/src/engine/`, `agents/`, `net/`), *story and sound*
+(A13, A19, A14, A15, A16 in order, in `server/src/story/` and `web/src/audio/`), *models* (A8,
+in `assets/` and `web/public/models/`) and *design* (A12, in Figma, `web/src/theme/` and
+`docs/design/`). At most four agents at once.
+
 ## Rows
 
 | ID | Row | Needs (from other lanes) | Gives (to other lanes) | Checkpoint | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| A1 | Scaffold the npm workspaces (`packages/shared`, `server`, `web` shell with every dependency lanes b and c need), the X1 types, `applyEvent`, `mockWorld`, `mockEvents`, `npm run mock` serving X2 and the mock X3 routes, a first `tokens.css` (X7) and the audio stub (X6); add the stack steps to `check.sh` | | X1, X2, X3 mock, X6 stub, X7 default to b and c | CP0 | next | Unblocks everyone; do first |
+| A1 | **The seed (30 minutes, first, alone).** Everything the other lanes depend on, so that after it nobody waits: npm workspaces with every dependency all three lanes need; `packages/shared` with the X1 types, `applyEvent`, `flagSvg`, `mockWorld`, `mockEvents`; `npm run mock` serving X2 and mock versions of every X3 route (lore, region lore, sample audio, sample flag, world log); the X5 store, working against the mock; the app shell `App.tsx` with a slot for the globe and the four interface components placed (side dock for the card until the hologram exists); named placeholder exports for those components in `web/src/ui/index.ts`; the X6 audio stub; a default `tokens.css` (X7); a box-and-cone model fallback note in X4; stack steps in `check.sh` | | X1 to X7, all usable against the mock, to b and c | CP0 | next | After merging, `web/src/state/` and `App.tsx` pass to lane b and `web/src/ui/` to lane c |
 | A2 | World generation: about 500 irregular provinces on a sphere (spherical Voronoi), terrain and elevation from the seed and sea level, provinces grouped into regions, capitals spread apart; `POST /api/world` builds a world from a mock world bible | | X3 `POST /api/world` | CP1 | todo | |
 | A3 | The simulation tick: income, claim land, build and upgrade structures by focus, population; real events on the socket; speed and pause | | X2 real events | CP1 | todo | |
 | A4 | Nation agents: one per country with its own replica, an autopilot policy from temperament, heartbeats, and a message bus with a switchable link per agent | | | CP1 | todo | No central decision-maker |

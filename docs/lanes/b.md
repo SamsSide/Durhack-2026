@@ -7,19 +7,32 @@
 
 Read first: `docs/hackathon-plan.md` section 4 ("How the world works") and `docs/contracts.md`.
 
+**No row here waits on another lane.** Everything is built against `npm run mock`, which emits
+wars, secessions, falls and every control, and against fallbacks that stay in for good (boxes
+for missing models, a placeholder card in the hologram). When the real thing merges it simply
+replaces the mock; nothing in this lane changes.
+
+**Before A1 merges (about 30 minutes):** pull, read the plan and contracts, and write the lane
+plan for B1 to B3 with `durhack-plan` (lane mode), so building starts the minute A1 lands.
+
+**Running in parallel.** After B1, rows can run two or three at a time because each has its own
+folder: B2 `web/src/globe/camera/`, B3 `web/src/globe/political/`, B4 `web/src/globe/structures/`,
+B5 `web/src/globe/units/`, B6 `web/src/globe/hologram/`, B7 `web/src/globe/status/`. Suggested
+pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
+
 ## Rows
 
 | ID | Row | Needs (from other lanes) | Gives (to other lanes) | Checkpoint | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| B1 | Web app shell, the X5 store connected to `npm run mock`, and a globe drawing every province (an irregular convex polygon, drawn as a triangle fan) coloured by terrain with an owner tint | A1 (X1, X2 mock) | X5 to c | CP0 | next | Start on the mock the moment A1 merges |
+| B1 | The first globe, in the slot the seed's `App.tsx` provides and reading the seed's X5 store: every province (an irregular convex polygon, drawn as a triangle fan) coloured by terrain with an owner tint; take over `App.tsx` and `web/src/state/` | A1 only | | CP0 | next | Start the moment A1 merges |
 | B2 | Camera and selection: orbit, smooth zoom from whole planet to a few tiles, click a tile to select its nation, a glowing border round the selected nation, `flyTo` | | selection to c | CP1 | todo | |
 | B3 | The political map: borders for every nation, thinner region borders inside them when zoomed in, each nation's flag (`flagSvg`) by its name label, labels that fade with zoom, a colour pulse when a tile changes owner, and the map modes in X5 (political and diplomacy first; terrain and strength after) | | | CP1 | todo | Grand-strategy map conventions |
-| B4 | Structures: instanced models from the X4 manifest (box fallback), a pop-up build animation, upgrades, trees, detail only when zoomed in | A8 (X4), falls back without it | | CP1 | todo | City-builder feel |
-| B5 | Units and war: armies marching between tiles with their strength shown, volleys and flashes on a battle, smoke on captured tiles, a front line between nations at war | A6 events, mock until then | | CP1.5 | todo | |
-| B6 | The hologram: on selection a beam rises from the capital and projects lane c's `NationCard` with scan lines, glow and flicker; it follows the camera and docks to the side on a narrow screen | C2 (a placeholder card until then); A12 (X7) | the hologram to c | CP1.5 | todo | See X5 |
-| B7 | Agent status on the globe: a cut nation behind a static ring, an autopilot marker, a deleted nation crumbling to ruins, and the beliefs view (`beliefOf`) | A7, mock until then | | CP1.5 | todo | Makes resilience visible |
+| B4 | Structures: instanced models from the X4 manifest (box fallback), a pop-up build animation, upgrades, trees, detail only when zoomed in | nothing (boxes until A8's models land) | | CP1 | todo | City-builder feel |
+| B5 | Units and war: armies marching between tiles with their strength shown, volleys and flashes on a battle, smoke on captured tiles, a front line between nations at war | nothing (the mock emits wars) | | CP1.5 | todo | |
+| B6 | The hologram: on selection a beam rises from the capital and projects lane c's `NationCard` with scan lines, glow and flicker; it follows the camera and docks to the side on a narrow screen | nothing (the seed's placeholder card and default colours until C2 and A12 land) | | CP1.5 | todo | See X5 |
+| B7 | Agent status on the globe: a cut nation behind a static ring, an autopilot marker, a deleted nation crumbling to ruins, and the beliefs view (`beliefOf`) | nothing (the mock accepts every control) | | CP1.5 | todo | Makes resilience visible |
 | B8 | Polish and speed: ocean, atmosphere glow, stars, lighting, a steady 60 frames a second with 500 provinces | | | CP2 | todo | |
-| B9 | Stretch: a timeline scrubber that rebuilds the globe at any past year from `GET /api/world/log` | A9 | | CP2 | todo | Cut first if behind |
+| B9 | Stretch: a timeline scrubber that rebuilds the globe at any past year from `GET /api/world/log` | nothing (the mock serves the log) | | CP2 | todo | Cut first if behind |
 
 ## Waiting on
 

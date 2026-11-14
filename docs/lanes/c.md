@@ -7,14 +7,26 @@
 
 Read first: `docs/hackathon-plan.md` section 4 ("How the world works") and `docs/contracts.md`.
 
+**No row here waits on another lane.** The seed (A1) ships the store, the app shell with your
+four components already placed, mock routes for lore and audio, and default colours. Each row
+replaces one placeholder in `web/src/ui/` with the real component. When lane a's design (A12)
+lands, only the variable values change; when lane b's hologram lands, it picks up your card.
+
+**Before A1 merges (about 30 minutes):** pull, read the plan and contracts, and write the lane
+plan for C1 and C2 with `durhack-plan` (lane mode).
+
+**Running in parallel.** Each row has its own folder (`web/src/ui/create/`, `card/`,
+`chronicle/`, `network/`), so C1 to C4 can run in any order or two at a time. To save agent
+budget, run them one at a time in the order below, on Sonnet.
+
 ## Rows
 
 | ID | Row | Needs (from other lanes) | Gives (to other lanes) | Checkpoint | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| C1 | Create screen: prompt, preset chips, number of nations, era, sea level, aggression; calls `POST /api/world` | A1; B1 (app shell) | | CP1 | next | Use the X7 variables; restyle when A12 lands |
-| C2 | `NationCard`: the flag (drawn with `flagSvg`, swapped for the painted one from X3 when it loads), name, leader, government, ideology, culture, politics, history, the relations list with each neighbour's stance and story, and the play buttons for narration and anthem (X6) | A1 (X3 lore mock, X6 stub); B1 (X5) | the card to b (shown in the hologram) | CP1 | todo | Plain component, 380 px wide, transparent background. When a region is selected it shows the region's name, flag and story instead (X3 region lore) |
-| C3 | Chronicle: a live ticker of the story and a scrollable timeline; clicking an entry selects and flies to that nation | B1 (X5) | | CP1.5 | todo | |
-| C4 | Network panel: per nation cut, restore, silence, wake and delete; blackout; speed and pause; the token meter; the decree box; the "what it believes" toggle; the map mode buttons | B1 (X5) | | CP1.5 | todo | Sends X2 control messages; works fully against the mock |
+| C1 | Create screen: prompt, preset chips, number of nations, era, sea level, aggression; calls `POST /api/world` | A1 only | | CP1 | next | Use the X7 variables; the designed values arrive with A12 |
+| C2 | `NationCard`: the flag (drawn with `flagSvg`, swapped for the painted one from X3 when it loads), name, leader, government, ideology, culture, politics, history, the relations list with each neighbour's stance and story, and the play buttons for narration and anthem (X6) | A1 only | the card to b (shown in the hologram) | CP1 | todo | Plain component, 380 px wide, transparent background. When a region is selected it shows the region's name, flag and story instead (X3 region lore) |
+| C3 | Chronicle: a live ticker of the story and a scrollable timeline; clicking an entry selects and flies to that nation | A1 only | | CP1.5 | todo | |
+| C4 | Network panel: per nation cut, restore, silence, wake and delete; blackout; speed and pause; the token meter; the decree box; the "what it believes" toggle; the map mode buttons | A1 only | | CP1.5 | todo | Sends X2 control messages; works fully against the mock |
 | C5 | Submission: the project text against the overall criteria and each sponsor's, the video, the prize ticks, the README | all | | CP3 | todo | Mostly writing; platform and deadline not announced yet |
 
 ## Waiting on

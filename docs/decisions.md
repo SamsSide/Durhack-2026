@@ -17,3 +17,6 @@
 2026-11-14 15:20 · owner · Runs and demos on one device; row A10 (agents on other laptops) is cut · owner's choice
 2026-11-14 15:20 · owner · A world's full arc takes about three minutes at normal speed · a judge sees it in one visit
 2026-11-14 15:20 · owner · Spend up to 25 pounds on Gemini and ElevenLabs, with caps in the code · owner's budget
+2026-11-14 15:40 · owner · Row A1 is a 30-minute seed holding every shared piece (types, mock server and routes, store, app shell, placeholders, default colours); after it no row waits on another lane · the owner wants every teammate's agents running all the time
+2026-11-14 15:40 · owner · Visual style is an old atlas; the hologram stays as a beam with the card as a lit parchment page · owner's choice
+2026-11-14 15:40 · owner · Everyone stays up overnight; checkpoints unchanged · owner's answer
