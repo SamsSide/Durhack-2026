@@ -1,0 +1,59 @@
+/* Shared motion (the polish pass). Every enter, exit, swap and press in the interface comes from here,
+   driven by the --motion-* tokens in theme/tokens.css. Rules:
+   - Only opacity and the individual transform properties (translate, scale) are animated. They compose
+     with an element's own `transform`, so a centred plate (translateX(-50%)) can still slide in.
+   - Keyframes only name the far end (`from` on the way in, `to` on the way out): the element always
+     settles on its own styles, so an older war tab can rest at 80% and nothing keeps a stale transform.
+   - Reduced motion is handled once, in the tokens (distances go to 0, times shrink to a short fade). */
+
+/* The travel of one element. Not inherited: a child never picks up its panel's direction. */
+@property --m-x { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --m-y { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --m-s { syntax: '<number>'; inherits: false; initial-value: 1; }
+
+@keyframes tn-m-in { from { opacity: 0; translate: var(--m-x) var(--m-y); scale: var(--m-s); } }
+@keyframes tn-m-out { to { opacity: 0; translate: var(--m-x) var(--m-y); scale: var(--m-s); } }
+@keyframes tn-m-fade-in { from { opacity: 0; } }
+@keyframes tn-m-fade-out { to { opacity: 0; } }
+/* A key or tab that has just become the active one settles into place. */
+@keyframes tn-m-key { from { opacity: 0.5; scale: 0.94; } }
+@keyframes tn-m-tab { from { opacity: 0.5; translate: 0 2px; } }
+
+/* ---- Building blocks: put the direction class and one of in/out on an element ---- */
+.tn-m-from-left { --m-x: calc(-1 * var(--motion-slide)); }
+.tn-m-from-right { --m-x: var(--motion-slide); }
+.tn-m-from-below { --m-y: var(--motion-slide); }
+.tn-m-from-above { --m-y: calc(-1 * var(--motion-slide)); }
+.tn-m-in { animation: tn-m-in var(--motion-panel) var(--motion-ease) backwards; }
+.tn-m-out, .tn-m-out.tn-m-in { animation: tn-m-out var(--motion-exit) var(--motion-ease-exit) forwards; pointer-events: none; }
+.tn-m-veil-in { animation: tn-m-fade-in var(--motion-veil) var(--motion-ease-swap) backwards; }
+.tn-m-veil-out { animation: tn-m-fade-out var(--motion-exit) var(--motion-ease-swap) forwards; pointer-events: none; }
+/* Content that replaced other content in the same place (nation to nation, tab to tab): it fades up
+   through the page instead of popping. */
+.tn-m-swap { --m-y: var(--motion-slide-sm); animation: tn-m-in var(--motion-base) var(--motion-ease) backwards; }
+.tn-m-swap-fade { animation: tn-m-fade-in var(--motion-base) var(--motion-ease-swap) backwards; }
+/* A light stagger for the children of a list that arrives as a whole. */
+.tn-m-stagger > * { --m-y: var(--motion-slide-sm); animation: tn-m-in var(--motion-panel) var(--motion-ease) backwards; }
+.tn-m-stagger > :nth-child(2) { animation-delay: calc(1 * var(--motion-stagger)); }
+.tn-m-stagger > :nth-child(3) { animation-delay: calc(2 * var(--motion-stagger)); }
+.tn-m-stagger > :nth-child(4) { animation-delay: calc(3 * var(--motion-stagger)); }
+.tn-m-stagger > :nth-child(5) { animation-delay: calc(4 * var(--motion-stagger)); }
+.tn-m-stagger > :nth-child(6) { animation-delay: calc(5 * var(--motion-stagger)); }
+.tn-m-stagger > :nth-child(7) { animation-delay: calc(6 * var(--motion-stagger)); }
+.tn-m-stagger > :nth-child(n + 8) { animation-delay: calc(7 * var(--motion-stagger)); }
+
+/* ---- Controls: one hover, press and focus feel ----
+   Hover is a colour change over --motion-fast (set where each control is defined); press is a 1px
+   drop for plates and a small squeeze for round and icon controls, both over --motion-instant. */
+.tn-chip, .chip, .btn, .tn-link, .tn-rel, .tn-t-item, .meter-hit {
+  transition: color var(--motion-fast) var(--motion-ease-swap), opacity var(--motion-fast) var(--motion-ease-swap),
+    translate var(--motion-instant) var(--motion-ease-swap), scale var(--motion-instant) var(--motion-ease-swap);
+}
+button.tn-seg:active, button.tn-booktab:not(.tn-booktab--active):active, button.tn-chip:active, button.chip:active,
+.btn:active:not(:disabled), .tn-rel:active, .tn-t-item:not(:disabled):active { translate: 0 1px; }
+.tn-button--round:active:not(:disabled), button.mm-mode.tn-seg:active { scale: var(--motion-press); }
+button.mm-mode.tn-seg:active { translate: none; }
+/* The key that has just been chosen settles in (a segment, a map mode, a book tab). */
+.tn-seg--active, .tn-seg[aria-pressed="true"], .tn-seg[aria-selected="true"], .tn-seg.on { animation: tn-m-key var(--motion-base) var(--motion-ease); }
+.tn-booktab--active, .tn-booktab[aria-selected="true"] { animation: tn-m-tab var(--motion-base) var(--motion-ease); }
+/* Focus: the same ring everywhere, drawn at once (a ring that fades in reads as lag on a keyboard). */

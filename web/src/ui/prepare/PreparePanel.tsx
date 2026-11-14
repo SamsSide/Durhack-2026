@@ -6,6 +6,7 @@ import { useWorld } from '../../state/world';
 import type { PrepareItem } from '../../state/world';
 import { isPaused, playedBefore, requestPrepare, usePrepareUi } from './state';
 import './prepare.css';
+import { usePresence } from '../motion/usePresence';
 
 const KINDS: { kind: PrepareItem['kind']; label: string }[] = [
   { kind: 'lore', label: 'Lore' },
@@ -45,7 +46,8 @@ export function PreparePanel() {
     return () => window.removeEventListener('keydown', onKey);
   }, [panel, hide]);
 
-  if (!prepare || !panel || !world) return null;
+  const { mounted, leaving } = usePresence(!!prepare && panel && !!world);
+  if (!mounted || !prepare || !world) return null;
   const { done, ready, total, items } = prepare;
   const failed = items.filter((it) => it.status === 'failed').length;
   const ids = [...new Set(items.map((it) => it.countryId))];
@@ -53,8 +55,8 @@ export function PreparePanel() {
   const pct = total > 0 ? Math.min(100, ((ready + failed) / total) * 100) : 0;
 
   return (
-    <div className="tn-prep-veil" onClick={hide}>
-      <section className={`tn-lacquer tn-frame tn-prep${done ? ' done' : ''}`} role="dialog" aria-label="Preparing the world" onClick={(e) => e.stopPropagation()}>
+    <div className={`tn-prep-veil ${leaving ? 'tn-m-veil-out' : 'tn-m-veil-in'}`} onClick={hide}>
+      <section className={`tn-lacquer tn-frame tn-prep tn-m-from-below ${leaving ? 'tn-m-out' : 'tn-m-in'}${done ? ' done' : ''}`} role="dialog" aria-label="Preparing the world" onClick={(e) => e.stopPropagation()}>
         <span className="tn-cartouche">{done ? 'Ready for the demo' : 'Before the demo'}</span>
         <header className="tn-prep-head">
           <div>

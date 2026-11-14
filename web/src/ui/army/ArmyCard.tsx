@@ -12,6 +12,7 @@ import '../card/card.css';
 import { TroopTile } from './TroopTile';
 import { MOCK_BATTLE_TILE, MOCK_UNIT_ID, mockArmyInfo } from './mock';
 import './army.css';
+import { Roll } from '../motion/Roll';
 
 export const AGE_LABEL: Record<ArmyInfo['techAge'], string> = {
   ancient: 'Ancient', medieval: 'Medieval', gunpowder: 'Gunpowder', industrial: 'Industrial',
@@ -86,7 +87,7 @@ export function ArmyCard({ unitId }: { unitId: string }) {
         <div className="tn-grid tn-army-grid">
           <div className="tn-stat" title={`Strength ${info.strength}, about ${info.soldiers.toLocaleString('en-GB')} soldiers`}>
             <span className="tn-stat__label">Soldiers</span>
-            <span className="tn-stat__value">{info.soldiers.toLocaleString('en-GB')}</span>
+            <span className="tn-stat__value"><Roll value={info.soldiers} /></span>
           </div>
           <div className="tn-stat" title="The unit strength the counter on the globe shows">
             <span className="tn-stat__label">Strength</span>

@@ -9,7 +9,8 @@ import { useCamera } from '../../state/camera';
 import { useWorld } from '../../state/world';
 import { useLeftPanelKind } from '../../ui/leftPanel';
 import { CAM_MAX, CAM_MIN } from '../constants';
-import { flyControlsTo, onFocusTile } from '../events/focus';
+import { FOCUS_DISTANCE, onFocusTile } from '../events/focus';
+import { SETTLE, SHIFT_SMOOTH, SMOOTH, flySmoothTime, orbitAngle, prefersReducedMotion, smoothDamp } from './motion';
 import { GroundSky } from './GroundSky';
 import {
   GROUND_CLEARANCE, GROUND_MIN, GROUND_PITCH, GROUND_START, TerrainLookup, groundTilt, groundView,
@@ -18,8 +19,6 @@ import {
 const NONE = 0, ROTATE = 1, TOUCH_ROTATE = 64; // camera-controls ACTION values
 const LEFT_PANEL_PX = 340 + 16 + 12; // the left panel, its margin and a gap: the globe centres in the rest
 const FLY_DISTANCE = 1.6;
-const FLY_SMOOTH = 0.4; // about 1.2 s to settle
-const SMOOTH = 0.25;
 const DOLLY_SPEED = 0.6;
 const TURN_KEYS = 1.4;          // Q and E: radians per second around the local normal
 const TURN_DRAG = 0.5;          // right drag or ctrl-drag: turns per screen height
@@ -38,6 +37,7 @@ export function CameraRig() {
   const panel = useLeftPanelKind();
   const panelOpen = useRef(false);
   const shiftPx = useRef(0);
+  const shiftVel = useRef({ v: 0 });
   panelOpen.current = panel !== 'none';
   const flyingUntil = useRef(0);
   const dom = useThree((s) => s.gl.domElement);
@@ -138,9 +138,13 @@ export function CameraRig() {
   useFrame((state, dt) => {
     const cam = state.camera as THREE.PerspectiveCamera;
     const goal = panelOpen.current && state.size.width > 900 ? LEFT_PANEL_PX / 2 : 0;
-    const k = 1 - Math.exp(-Math.min(dt, 0.1) * 8);
-    shiftPx.current += (goal - shiftPx.current) * k;
-    if (Math.abs(goal - shiftPx.current) < 0.05) shiftPx.current = goal;
+    // A damped spring, not an exponential chase: the globe starts moving gently as the panel starts
+    // to slide, and a panel that closes again mid-shift turns it round without a jolt.
+    if (prefersReducedMotion()) { shiftPx.current = goal; shiftVel.current.v = 0; }
+    else if (shiftPx.current !== goal) {
+      shiftPx.current = smoothDamp(shiftPx.current, goal, shiftVel.current, SHIFT_SMOOTH, Math.min(dt, 0.05));
+      if (Math.abs(goal - shiftPx.current) < 0.05 && Math.abs(shiftVel.current.v) < 2) { shiftPx.current = goal; shiftVel.current.v = 0; }
+    }
     const { width, height } = state.size;
     if (shiftPx.current === 0) {
       if (cam.view?.enabled) cam.clearViewOffset();
@@ -236,6 +240,26 @@ export function CameraRig() {
     }
   });
 
+  // Every fly-to goes through here: look straight down at a point from `distance`, over a time scaled
+  // by how far that is. A fly-to that arrives mid-flight retargets the same damped move (the controls
+  // keep their velocity), so a second click bends the path instead of restarting it.
+  const flyTo = (centre: readonly [number, number, number], distance: number) => {
+    const c = ref.current;
+    if (!c) return;
+    const len = Math.hypot(centre[0], centre[1], centre[2]) || 1;
+    const polar = Math.acos(Math.min(1, Math.max(-1, centre[1] / len)));
+    let azimuth = Math.atan2(centre[0], centre[2]);
+    azimuth += Math.round((c.azimuthAngle - azimuth) / (2 * Math.PI)) * 2 * Math.PI; // shortest way round
+    const animate = !prefersReducedMotion();
+    const smooth = flySmoothTime(orbitAngle(c.azimuthAngle, c.polarAngle, azimuth, polar), c.distance, distance);
+    c.smoothTime = smooth;
+    flyingUntil.current = performance.now() + smooth * SETTLE * 1000;
+    void c.rotateTo(azimuth, polar, animate);
+    void c.dollyTo(distance, animate);
+  };
+  const fly = useRef(flyTo);
+  fly.current = flyTo;
+
   const nonce = useCamera((s) => s.nonce);
   useEffect(() => {
     const c = ref.current;
@@ -244,15 +268,7 @@ export function CameraRig() {
     const country = target != null ? w?.countries[target] : undefined;
     const centre = country && w ? w.tiles[country.capitalTile]?.center : undefined;
     if (!c || !centre) return;
-    const len = Math.hypot(centre[0], centre[1], centre[2]) || 1;
-    const polar = Math.acos(Math.min(1, Math.max(-1, centre[1] / len)));
-    let azimuth = Math.atan2(centre[0], centre[2]);
-    const cur = c.azimuthAngle;
-    azimuth += Math.round((cur - azimuth) / (2 * Math.PI)) * 2 * Math.PI; // shortest way round
-    c.smoothTime = FLY_SMOOTH;
-    flyingUntil.current = performance.now() + 1400;
-    void c.rotateTo(azimuth, polar, true);
-    void c.dollyTo(FLY_DISTANCE, true);
+    fly.current(centre, FLY_DISTANCE);
   }, [nonce]);
 
   // Fly to a single tile: beacon clicks, the spotlight tour, 'terra:focus-tile' from the feed.
@@ -260,8 +276,7 @@ export function CameraRig() {
     const c = ref.current;
     const centre = useWorld.getState().world?.tiles[tile]?.center;
     if (!c || !centre) return;
-    flyingUntil.current = performance.now() + 1400;
-    flyControlsTo(c, centre);
+    fly.current(centre, FOCUS_DISTANCE);
   }), []);
 
   // minDistance and dollySpeed are set every frame by the ground view above.

@@ -13,17 +13,16 @@
   width: var(--left-panel-width);
   display: flex; flex-direction: column; justify-content: flex-start;
   pointer-events: none;
-  animation: left-dock-in 240ms var(--ease-out) both;
+  --m-x: calc(-1 * var(--motion-slide));
+  animation: tn-m-in var(--motion-panel) var(--motion-ease) backwards;
 }
 .left-dock > * { pointer-events: auto; min-height: 0; }
-.left-dock.out { animation: left-dock-out 240ms var(--ease-out) both; }
+.left-dock.out { animation: tn-m-out var(--motion-exit) var(--motion-ease-exit) forwards; }
 .left-dock.out > * { pointer-events: none; }
-@keyframes left-dock-in { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
-@keyframes left-dock-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-28px); } }
 /* The picture-card feed shares the left column: it steps aside while a panel is open. */
-.event-feed-slot { transition: opacity var(--dur-fast) var(--ease-out); }
+/* It fades both ways: visibility flips after the fade out and before the fade in. */
+.event-feed-slot { transition: opacity var(--motion-base) var(--motion-ease-swap), visibility 0s linear 0s; }
 body:has(.left-dock:not(.out)) .event-feed-slot,
-body:has(.tn-net) .event-feed-slot { opacity: 0; visibility: hidden; }
-@media (prefers-reduced-motion: reduce) { .left-dock, .left-dock.out { animation: none; } }
+body:has(.tn-net) .event-feed-slot { opacity: 0; visibility: hidden; transition: opacity var(--motion-fast) var(--motion-ease-swap), visibility 0s linear var(--motion-fast); }
 /* While the card is open the folded Network tab is only a way back: it drops its counters and fits the column. */
 body:has(.left-dock:not(.out)) .tn-net-tab > :not(.tn-nt-title):not(.tn-state):not(svg) { display: none; }

@@ -6,6 +6,7 @@ import '../feed/feed.css';
 import '../economy/economy.css';
 import '../meter/meter.css';
 import './help.css';
+import { usePresence } from '../motion/usePresence';
 import { useHelp } from './useHelp';
 
 const QIcon = () => (
@@ -79,10 +80,11 @@ const KEYS: [string, string][] = [
 export function HelpScreen() {
   const open = useHelp((s) => s.open);
   const set = useHelp((s) => s.set);
-  if (!open) return null;
+  const { mounted, leaving } = usePresence(open);
+  if (!mounted) return null;
   return (
-    <div className="tn-help-veil" onClick={() => set(false)}>
-      <div className="tn-help tn-sheet tn-frame tn-frame--corners" role="dialog" aria-modal="true" aria-label="Help" onClick={(e) => e.stopPropagation()}>
+    <div className={`tn-help-veil ${leaving ? 'tn-m-veil-out' : 'tn-m-veil-in'}`} onClick={() => set(false)}>
+      <div className={`tn-help tn-sheet tn-frame tn-frame--corners tn-m-from-below ${leaving ? 'tn-m-out' : 'tn-m-in'}`} role="dialog" aria-modal="true" aria-label="Help" onClick={(e) => e.stopPropagation()}>
         <header className="tn-help-head">
           <h2 className="tn-help-title">How to read Terra Nova</h2>
           <p className="tn-help-sub">A living planet. Every nation is ruled by its own AI. Press <Key k="?" /> or <Key k="Esc" /> to close.</p>
@@ -90,7 +92,7 @@ export function HelpScreen() {
             <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" /></svg>
           </button>
         </header>
-        <div className="tn-help-grid">
+        <div className="tn-help-grid tn-m-stagger">
           <Section title="Top bar">
             <Row icon={<b className="tn-help-name">Name</b>} label="World name and age">at the left, with the year and date beside them.</Row>
             <Row icon={<Dot cls="live" />} label="Live">the server connection. Reconnecting or Offline if it drops.</Row>

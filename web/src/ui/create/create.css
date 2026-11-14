@@ -8,7 +8,8 @@
   display: flex; flex-direction: column;
   padding: 0;
   font-family: var(--font-serif);
-  animation: tn-create-in 200ms ease-out;
+  --m-y: var(--motion-slide);
+  animation: tn-m-in var(--motion-veil) var(--motion-ease) backwards;
 }
 .tn-create-body {
   flex: 1; min-height: 0; contain: paint;
@@ -16,7 +17,6 @@
   padding: 28px 34px 20px;
   scrollbar-width: thin; scrollbar-color: rgba(42,31,20,.5) transparent;
 }
-@keyframes tn-create-in { from { opacity: 0; } to { opacity: 1; } }
 .tn-cap { text-shadow: var(--engrave-on-paper); font-family: var(--font-display); font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-ink); }
 .tn-cap b { font-family: var(--font-mono); font-weight: 600; color: var(--color-rubric); font-size: 13px; margin-left: 6px; letter-spacing: 0; }
 .tn-create .tn-create-title { font-size: var(--text-2xl); line-height: 44px; margin: 0 0 2px; text-transform: uppercase; text-align: center; text-shadow: var(--engrave-on-paper); }
@@ -78,7 +78,6 @@
 .tn-create-rname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tn-create-rev { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-ink-muted); white-space: nowrap; }
 @media (max-width: 720px) { .tn-create-grid { grid-template-columns: 1fr; } .tn-create-body { padding: 24px 20px 16px; } }
-@media (prefers-reduced-motion: reduce) { .tn-create { animation: none; } }
 
 /* C6: optional picture drop zone */
 .tn-create-drop {
@@ -110,7 +109,8 @@
   width: 600px; max-width: calc(100vw - 32px); padding: 30px 32px 22px;
   font-family: var(--font-serif);
   transform: translateY(26vh);
-  animation: tn-create-in 200ms ease-out;
+  --m-y: var(--motion-slide);
+  animation: tn-m-in var(--motion-veil) var(--motion-ease) backwards;
 }
 .tn-founding h2 { font-size: 22px; line-height: 28px; margin: 2px 0 0; text-transform: uppercase; text-shadow: var(--engrave-on-paper); }
 .tn-fo-prompt { margin: 4px 0 0; font-style: italic; font-size: 16px; line-height: 21px; color: var(--color-ink-muted); }
@@ -130,7 +130,7 @@
   background: linear-gradient(90deg, var(--color-rubric) 0%, transparent 100%);
   background-size: 200px 2px; animation: scribe 1.6s linear infinite;
 }
-@media (prefers-reduced-motion: reduce) { .tn-founding, .tn-fo-pen { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .tn-fo-pen { animation: none; } }
 
 /* 720 px projector: the whole form through the Create button fits without scrolling. */
 @media (max-height: 800px) {

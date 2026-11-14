@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useCollapsed } from './useCollapsed';
+import { usePresence } from '../motion/usePresence';
 import './collapse.css';
 
 export interface CollapsibleProps {
@@ -28,6 +29,8 @@ function Chevron() {
 /** One panel that starts as a single round lacquer icon and opens in place; the chevron folds it away again. */
 export function Collapsible({ id, label, icon, chevron = 'corner', defaultCollapsed = true, wrapClass, wrapStyle, keepMounted, children }: CollapsibleProps) {
   const [collapsed, setCollapsed] = useCollapsed(id, defaultCollapsed);
+  // The open panel stays up for one exit (class tn-m-leaving) before the icon takes its place.
+  const { mounted, leaving } = usePresence(!collapsed);
   const button = (
     <button
       type="button"
@@ -41,7 +44,7 @@ export function Collapsible({ id, label, icon, chevron = 'corner', defaultCollap
       <span className="tn-tooltip tn-collapsed-tip" role="tooltip">Show {label}</span>
     </button>
   );
-  if (collapsed) {
+  if (!mounted) {
     if (!keepMounted) return button;
     return <div className={`${wrapClass ?? ''} tn-collapsed-${id}`} style={wrapStyle}>{children}{button}</div>;
   }
@@ -57,7 +60,9 @@ export function Collapsible({ id, label, icon, chevron = 'corner', defaultCollap
       <Chevron />
     </button>
   );
+  const out = leaving ? ' tn-m-leaving' : '';
+  // No wrapper asked for: a box-less one (display: contents) still carries the leaving class.
   return wrapClass != null || wrapStyle
-    ? <div className={wrapClass} style={wrapStyle}>{children}{fold}</div>
-    : <>{children}{fold}</>;
+    ? <div className={`${wrapClass ?? ''} tn-collapse-open${out}`} style={wrapStyle}>{children}{fold}</div>
+    : <div className={`tn-collapse-bare${out}`}>{children}{fold}</div>;
 }

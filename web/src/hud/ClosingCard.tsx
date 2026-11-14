@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useWorld } from '../state/world';
+import { usePresence } from '../ui/motion/usePresence';
 import './hud.css';
 
 // Window event any code can dispatch to open the closing card.
@@ -58,8 +59,9 @@ export function ClosingCard() {
   }, [show, close, open]);
 
   const total = budget ? budget.tokensIn + budget.tokensOut : 0;
-  const count = useCountUp(total, open);
-  if (!open || !world) return null;
+  const { mounted, leaving } = usePresence(open);
+  const count = useCountUp(total, mounted);   // the number holds while the card fades out
+  if (!mounted || !world) return null;
 
   const a = world.year - world.tick;   // one tick is one year from the founding, even after a page reload
   const b = world.year;
@@ -71,12 +73,12 @@ export function ClosingCard() {
     [wars, 'wars and silences'],
   ];
   return (
-    <div className="closing-veil" onClick={close}>
-      <div className="closing tn-lacquer tn-frame tn-frame--corners" role="dialog" aria-label="What this world cost" onClick={(e) => e.stopPropagation()}>
+    <div className={`closing-veil ${leaving ? 'tn-m-veil-out' : 'tn-m-veil-in'}`} onClick={close}>
+      <div className={`closing tn-lacquer tn-frame tn-frame--corners tn-m-from-below ${leaving ? 'tn-m-out' : 'tn-m-in'}`} role="dialog" aria-label="What this world cost" onClick={(e) => e.stopPropagation()}>
         <div className="cap tn-cartouche">{world.name} · years {a} to {b}</div>
         <h1 className="tn-gilt-text">This whole world cost</h1>
         <div className="cl-hero"><span className="cl-num tn-gilt-text">{fmt(count)}</span><span className="cl-unit">tokens</span></div>
-        <div className="cl-stats">
+        <div className="cl-stats tn-m-stagger">
           {facts.map(([n, label]) => <div key={label}><b>{fmt(n)}</b><span>{label}</span></div>)}
         </div>
         <div className="cl-foot">

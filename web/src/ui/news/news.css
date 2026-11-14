@@ -12,8 +12,8 @@
 }
 /* The lacquer frame's inner rule would cross the tag; the tag carries its own gilt edge instead. */
 .tn-news.tn-frame::before { inset: 4px; border-radius: 1px; }
-.tn-news-in { animation: tn-news-up 200ms ease-out both; }
-.tn-news-out { animation: tn-news-down 200ms ease-in both; }
+.tn-news-in { animation: tn-news-up var(--motion-panel) var(--motion-ease) both; }
+.tn-news-out { animation: tn-news-down var(--motion-exit) var(--motion-ease-exit) both; }
 
 .tn-news-tag {
   flex: none;
@@ -109,8 +109,8 @@
   box-shadow: 0 0 0 1px #000, 0 0 0 2px rgba(201,162,75,.35);
 }
 .tn-anchorwin .tn-cartouche { top: 1px; }
-.tn-newscast-in .tn-anchorwin { animation: tn-anchorwin-up 320ms var(--ease-out) both; }
-.tn-newscast-out .tn-anchorwin { animation: tn-anchorwin-down 200ms ease-in both; }
+.tn-newscast-in .tn-anchorwin { animation: tn-anchorwin-up var(--motion-veil) var(--motion-ease) both; }
+.tn-newscast-out .tn-anchorwin { animation: tn-anchorwin-down var(--motion-exit) var(--motion-ease-exit) both; }
 /* It rises out of the strip: unrolled from its bottom edge. */
 @keyframes tn-anchorwin-up { from { clip-path: inset(100% -16px 0 -16px); opacity: 0.4; } to { clip-path: inset(-24px -16px 0 -16px); opacity: 1; } }
 @keyframes tn-anchorwin-down { from { clip-path: inset(-24px -16px 0 -16px); opacity: 1; } to { clip-path: inset(100% -16px 0 -16px); opacity: 0; } }
@@ -144,9 +144,9 @@
   overflow: hidden;
   border-radius: 1px;
   pointer-events: none;
-  animation: tn-pip-in 260ms var(--ease-out) 140ms both;
+  animation: tn-pip-in var(--motion-veil) var(--motion-ease-swap) 140ms both;
 }
-.tn-pip-out { animation: tn-pip-off 260ms ease-in both; }
+.tn-pip-out { animation: tn-pip-off var(--motion-veil) var(--motion-ease-exit) both; }
 .tn-pip-glass {
   position: absolute; inset: 0;
   background:
@@ -180,7 +180,7 @@
   background: linear-gradient(90deg, rgba(9,11,18,.94) 0, rgba(9,11,18,.9) 62%, rgba(9,11,18,.62) 100%);
   border-top: 1px solid var(--gilt);
   box-shadow: 0 -1px 0 rgba(0,0,0,.8), inset 3px 0 0 var(--lacquer-claret-hi);
-  animation: tn-pip-strap 320ms var(--ease-out) 260ms both;
+  animation: tn-pip-strap var(--motion-veil) var(--motion-ease) 260ms both;
 }
 .tn-pip-place {
   font-family: var(--font-display); font-weight: 700; font-size: 11px; line-height: 1.15;

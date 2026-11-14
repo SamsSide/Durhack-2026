@@ -143,13 +143,13 @@ export function SpeedControl() {
         onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onKeyDown={onKey}
       >
         <div className="speed-track" ref={track}>
-          <i className="speed-fill" style={{ width: `${fill * 100}%` }} />
+          <i className="speed-fill-clip"><i className="speed-fill" style={{ transform: `translateX(${(fill - 1) * 100}%)` }} /></i>
           {GEARS.map((g, i) => (
             <i key={g.name} className={`speed-stop${i === gear ? ' on' : ''}${i / N <= fill + 0.001 ? ' lit' : ''}`} style={{ left: `${(i / N) * 100}%` }} title={g.name}>
               {g.label && <b className={i === 0 ? 'first' : i === N ? 'last' : undefined}>{g.label}</b>}
             </i>
           ))}
-          <i className="speed-thumb" style={{ left: `${pos * 100}%` }} />
+          <i className="speed-thumb-rail" style={{ transform: `translateX(${pos * 100}%)` }}><i className="speed-thumb" /></i>
         </div>
       </div>
 <span className={`speed-val${slowed ? ' slowed' : ''}`} aria-label={paused ? `Paused at ${readout}` : readout} title={paused ? `Paused at ${readout}` : slowed ? `The director slowed the world from ${speedText(target)}` : 'Game time per second'}>

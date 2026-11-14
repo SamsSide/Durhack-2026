@@ -1,4 +1,5 @@
 import { useWorld } from '../state/world';
+import { usePresence } from '../ui/motion/usePresence';
 import './hud.css';
 
 const STANCES: [string, string][] = [
@@ -13,10 +14,11 @@ export function DiplomacyLegend({ hidden = false }: { hidden?: boolean }) {
   const world = useWorld((s) => s.world);
   const selected = useWorld((s) => s.selectedCountryId);
   const mapMode = useWorld((s) => s.mapMode);
-  if (hidden || !world || mapMode !== 'diplomacy') return null;
+  const { mounted, leaving } = usePresence(!hidden && !!world && mapMode === 'diplomacy');
+  if (!mounted || !world) return null;
   const country = selected != null ? world.countries.find((c) => c.id === selected) : undefined;
   return (
-    <div className="hud legend-box tn-lacquer tn-frame">
+    <div className={`hud legend-box tn-lacquer tn-frame${leaving ? ' tn-m-out' : ''}`}>
       <div className="cap tn-cartouche">Diplomacy</div>
       <div className="muted">{country ? `Towards ${country.name}` : 'Select a nation to see its friends and enemies'}</div>
       {country && (

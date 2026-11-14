@@ -6,7 +6,7 @@ import type { CutPeriod } from './Timeline';
 import { fallenOf, ofName } from './kinds';
 
 const SHOW_MS = 8000;   // each tab fades out about 8 s after it appears
-const LEAVE_MS = 400;   // the tab-out fade
+const LEAVE_MS = 200;   // the tab-out fade (--motion-exit, plus a frame)
 const WAR_WINDOW_MS = 60_000;
 const MAX_TABS = 3;     // a busy world must not bury the globe
 

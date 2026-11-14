@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useWorld } from '../../state/world';
 import { useSlowVersion } from '../useSlowVersion';
 import { useBelief } from '../../state/belief';
@@ -13,6 +13,7 @@ import { useEconomy } from '../economy/useEconomy';
 import { TerritoryChart } from '../stats/TerritoryChart';
 import { useStats } from '../stats/useStats';
 import './network.css';
+import { usePresence } from '../motion/usePresence';
 
 const TAB_KEY = 'tn-network-tab';
 type NetTab = 'network' | 'treasury' | 'stats';
@@ -34,13 +35,16 @@ export function NetworkPanel() {
   // The fold state lives in the left-panel store (#245): opening the Network closes the nation card.
   const folded = !useLeftPanel((st) => st.networkOpen);
   const setNetworkOpen = useLeftPanel((st) => st.setNetworkOpen);
+  const presence = usePresence(!folded);   // the open panel stays up while it slides away
   const [pickedId, setPicked] = useState<number | null>(null);
   const isShort = useShort();
   const [tab, setTabState] = useState<NetTab>(readTab);
   const economy = useEconomy();
   const economyOn = economy.status === 'ok';
   const statsOn = useStats().status === 'ok';   // row A11: the tab exists only while Tiger Data answers
+  const tabTouched = useRef(false);   // the tab body only fades up after a tab change, never with the panel
   const setTab = (t: NetTab) => {
+    tabTouched.current = true;
     setTabState(t);
     try { localStorage.setItem(TAB_KEY, t); } catch { /* storage unavailable */ }
   };
@@ -57,7 +61,7 @@ export function NetworkPanel() {
   const upCount = live.filter((a) => a.link === 'up').length;
   const cutCount = live.filter((a) => a.link === 'cut').length;
 
-  if (folded) {
+  if (!presence.mounted) {
     return (
       <button className="tn-net-tab tn-lacquer tn-frame tn-frame--slim" onClick={() => setFold(false)} aria-label="Open the network panel">
         <span className="tn-nt-title">The Network</span>
@@ -94,7 +98,7 @@ export function NetworkPanel() {
 
   return (
     // The frame sits on the aside and must not scroll (it would clip the cartouche and corners), so the body scrolls inside it.
-    <aside className={`tn-net tn-sheet tn-frame tn-frame--corners${isShort ? ' tn-net-short' : ''}`}>
+    <aside className={`tn-net tn-sheet tn-frame tn-frame--corners${isShort ? ' tn-net-short' : ''}${presence.leaving ? ' tn-m-out' : ''}`}>
       <h2 className="tn-net-title tn-cartouche" title="Cut a nation off, silence its AI or delete it, and watch the rest carry on.">The Network</h2>
       <div className="tn-net-body">
       <header className="tn-net-head">
@@ -110,6 +114,7 @@ export function NetworkPanel() {
         </div>
       )}
 
+      <div key={showTab} className={tabTouched.current ? 'tn-m-swap' : undefined}>
       {showTab === 'stats' ? <TerritoryChart /> : showTab === 'treasury' ? <LedgerPanel /> : (<>
       <NetworkGraph countries={world.countries} agents={agents} picked={picked} compact={isShort} onPick={(id) => { setPicked(id); flyTo(id); }} />
       <div className="tn-graph-key" aria-hidden="true">
@@ -168,6 +173,7 @@ export function NetworkPanel() {
 
       <PrepareSwitch />
       </>)}
+      </div>
       </div>
     </aside>
   );

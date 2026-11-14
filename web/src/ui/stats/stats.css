@@ -21,7 +21,7 @@
 .tn-st-tick { font-family: var(--font-mono); font-size: var(--text-cap); fill: var(--color-ink-muted); font-variant-numeric: tabular-nums; }
 .tn-st-halo { fill: none; stroke: var(--color-parchment); stroke-width: 4.5; stroke-linejoin: round; stroke-linecap: round; }
 .tn-st-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-.tn-st-plot g { transition: opacity var(--dur-fast) var(--ease-out); }
+.tn-st-plot g { transition: opacity var(--motion-fast) var(--motion-ease-swap); }
 .tn-st-dim { opacity: 0.22; }
 .tn-st-lift .tn-st-line { stroke-width: 3; }
 .tn-st-cross { stroke: var(--color-ink); stroke-width: 1; opacity: 0.55; }
