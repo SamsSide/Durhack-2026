@@ -32,6 +32,8 @@
 .tn-k-return { fill: var(--kind-return); }
 .tn-k-dispute { fill: var(--kind-dispute); }
 .tn-k-decree { fill: var(--kind-decree); }
+.tn-k-death { fill: var(--kind-death, #5a4a3c); }
+.tn-k-succession { fill: var(--kind-succession, #b08d3a); }
 
 /* Outlined ink button on parchment (reference: .ticker .btn, .btn.small) */
 .tn-btn {

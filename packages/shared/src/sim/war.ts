@@ -19,6 +19,7 @@ import { countryTiles, relationOf } from '../world';
 import { TERRAIN_EFFECTS, LANDING_PENALTY } from './terrain';
 import { wonderBonusOf } from './wonders';
 import { AGE_EDGE, STRENGTH_CAP, ageIndex, ageStrength } from './ages';
+import { coverMultiplier, deathEvents, generalFalls } from './council';
 
 /** No nation declares a war of its own before this tick. */
 export const WAR_EARLIEST = 70;
@@ -178,9 +179,14 @@ export function settleMove(world: World, e: Extract<WorldEvent, { type: 'unit_mo
   const raid = u.kind === 'fleet' && tile.terrain !== 'ocean';
   const seed = hashString(`battle:${to}:${e.tick}:${u.id}:${defUnits.map((v) => v.id).join(',')}`);
   const ageGap = ageIndex(world.countries[a]?.techAge) - ageIndex(world.countries[defender]?.techAge);
-  const r = resolveBattle({ attack: u.strength * (raid ? 0.7 : 1) * landing, defend: defendRaw * (1 + wonderBonusOf(world.structures, defender).defence), terrain: tile.terrain, fort: g.fort, seed, ageGap });
+  // While the ruler covers a fallen or cut-off general, the armies fight at COVER_STRENGTH (row A29).
+  const cover = coverMultiplier(world, a);
+  const r = resolveBattle({ attack: u.strength * (raid ? 0.7 : 1) * landing * cover, defend: defendRaw * (1 + wonderBonusOf(world.structures, defender).defence), terrain: tile.terrain, fort: g.fort, seed, ageGap });
   const winner = r.attackerWins ? a : defender;
   mk({ type: 'battle', tile: to, attacker: a, defender, attackerUnit: u.id, winner, losses: { attacker: r.lossA, defender: r.lossD } });
+  // The loser's general may fall in a big battle (row A29); derived here, so every replica agrees.
+  const loser = r.attackerWins ? defender : a;
+  const generalFell = generalFalls(world, loser, u.strength + defendRaw, seed);
 
   const A = world.countries[a]!;
   const Dc = world.countries[defender]!;
@@ -262,6 +268,9 @@ export function settleMove(world: World, e: Extract<WorldEvent, { type: 'unit_mo
   }
   if (chron) {
     mk({ type: 'chronicle', entry: { id: `c-${e.id}-b`, tick: e.tick, year: world.year, kind: chron.kind, countries: [a, defender], text: chron.text } });
+  }
+  if (generalFell && !out.some((x) => x.type === 'country_fell' && x.countryId === loser)) {
+    for (const body of deathEvents(world, loser, 'general', 'death', { entryId: `c-${e.id}-gd`, tick: e.tick, year: world.year }, place)) mk(body);
   }
   return out;
 }

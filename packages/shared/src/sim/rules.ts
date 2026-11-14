@@ -8,7 +8,7 @@ import type {
 import { hashString, type Rng } from '../rng';
 import { countryTiles, regionOwner, relationOf } from '../world';
 import {
-  WAR_EARLIEST, ageScaled, armyStrengthFor, diplomacyTurn, enemiesOf, inTruce, isCombatant, marchTurn, type WarLedger,
+  WAR_EARLIEST, ageScaled, armyStrengthFor, diplomacyTurn, enemiesOf, inTruce, isCombatant, marchTurn, type MarchInput, type WarLedger,
 } from './war';
 import { unrestTurn, type UnrestMemory } from './regions';
 import { ageStrength, ageTurn, satelliteTurn, type AgeMemory } from './ages';
@@ -444,13 +444,11 @@ export function nationTurn(
     }
   }
 
-  // --- 4. diplomacy and war (row A6, sim/war.ts): alliances, peace, declarations, trade; then the march
+  // --- 4. diplomacy and war (row A6, sim/war.ts): alliances, peace, declarations, trade are the ruler's
+  // call; then the general's step (row A29) moves the armies
   diplomacyTurn({ view, me: countryId, tick, rng, focus: policy.focus, targets: policy.targets ?? [], ledger: ctx.wars, own, emit });
   paymentTurn({ view, me: countryId, tick, ledger: ctx.wars, emit });
-  marchTurn({ view, me: countryId, tick, rng, focus: policy.focus, targets: policy.targets ?? [], own, units: myUnits.filter(isCombatant), emit, uid });
-  // Spent armies go home (one a turn), which frees a place for a fresh one.
-  const spent = myUnits.find((u) => isCombatant(u) && u.tile >= 0 && u.strength <= (enemies.length ? 5 : 3));
-  if (spent) { emit({ type: 'unit_removed', unitId: spent.id, reason: 'disband' }); spent.tile = -1; }
+  generalStep({ view, me: countryId, tick, rng, focus: policy.focus, targets: policy.targets ?? [], own, units: myUnits, emit, uid }, enemies.length > 0);
 
   // --- 4.1 attrition (row A28): an army outside its own land loses strength on hostile ground, in canonical unit order
   const gone = new Set(out.flatMap((e) => (e.type === 'unit_removed' ? [e.unitId] : [])));
@@ -504,6 +502,22 @@ export function nationTurn(
     emit({ type: 'chronicle', entry: { id: `c-${countryId}-${tick}`, tick, year: view.year, kind: notable.kind, countries: [countryId], text: notable.text } });
   }
   return out;
+}
+
+// ---- the general's step (row A29) -------------------------------------------------------------
+
+/**
+ * The general picks the war targets and moves the armies and fleets (marchTurn), and sends spent
+ * armies home. He acts while his state is `active` (or `covering` for a missing ruler). When he has
+ * fallen or is cut off, the ruler covers and gives the same orders, so the same logic runs; the
+ * difference is in battle, where settleMove reads the council and the armies fight at COVER_STRENGTH.
+ * Declaring and ending wars stay with the ruler (diplomacyTurn).
+ */
+export function generalStep(p: MarchInput, atWar: boolean): void {
+  marchTurn({ ...p, units: p.units.filter(isCombatant) });
+  // Spent armies go home (one a turn), which frees a place for a fresh one.
+  const spent = p.units.find((u) => isCombatant(u) && u.tile >= 0 && u.strength <= (atWar ? 5 : 3));
+  if (spent) { p.emit({ type: 'unit_removed', unitId: spent.id, reason: 'disband' }); spent.tile = -1; }
 }
 
 // ---- validation ------------------------------------------------------------------------------

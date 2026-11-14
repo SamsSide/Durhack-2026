@@ -20,8 +20,13 @@ import { secessionBatch } from './secession';
 import { currentMode, getBudget, resetRun } from '../llm';
 import { Clock, TickLoop, clampSpeed, type ClockState } from './clock';
 import { anyBigMoment } from './bigMoments';
+import { CouncilKeeper } from './council';
 
 const AGENTS_HEARTBEAT_MS = 1000;
+/** Row A29: decree words that kill a council member, and those that name the general. */
+const KILL_RE = /\b(kill\w*|slay\w*|slain|murder\w*|assassin\w*|poison\w*|behead\w*|struck down|strikes? down)\b/i;
+const LEADER_RE = /\b(leader|ruler|king|queen|chancellor|speaker|emperor|empress|khan|sultan|president|regent|general|marshal|commander|captain|warlord)s?\b/i;
+const GENERAL_RE = /\b(general|marshal|commander|captain|warlord)s?\b/i;
 
 export class EngineRunner implements WorldRunner {
   private world: World | null = null;        // the truth: only ever changed by applying published events
@@ -44,6 +49,7 @@ export class EngineRunner implements WorldRunner {
   private worldSeq = 0;
   private scanned = 0;                          // how much of `outgoing` the director has looked at
   private clock = new Clock();
+  private council = new CouncilKeeper();     // row A29: assassinations, successions, the council controls
   private loop = new TickLoop(this.clock, (n, now) => this.step(n, now));
 
   constructor() {
@@ -102,6 +108,8 @@ export class EngineRunner implements WorldRunner {
     this.deletedAt.clear();
     this.fallen.clear();
     this.worldSeq = 0;
+    this.council = new CouncilKeeper();
+    this.council.observe(w);
     const rulerOn = currentMode() === 'live' && !!process.env.GEMINI_API_KEY;
     for (const c of w.countries) this.addAgent(c.id, bible.nations[c.id]?.regionNames, rulerOn);
     this.syncStatuses();
@@ -185,6 +193,25 @@ export class EngineRunner implements WorldRunner {
     this.bus.flush();
     this.collapseDeleted(tick);
     this.secede(tick);
+    this.councilTurn(tick);
+  }
+
+  /** Row A29: the world's council news for the year (successions, assassinations), as one batch. */
+  private councilTurn(tick: number): void {
+    const w = this.world!;
+    const bodies = this.council.turn(w, tick, (id) => {
+      const a = this.agents.get(id);
+      return !!a && !a.deleted && !!w.countries[id]?.alive;
+    });
+    if (bodies.length) this.bus.deliver(bodies.map((b) => this.worldEvent(b)));
+    this.council.observe(w);
+  }
+
+  /** Delivers council bodies from a control or decree as one world batch. */
+  private councilBatch(bodies: ReturnType<CouncilKeeper['kill']>): void {
+    if (!bodies.length) return;
+    this.bus.deliver(bodies.map((b) => this.worldEvent(b)));
+    this.council.observe(this.world!);
   }
 
   /** Row A18: a restless region may break away. The world decides (findSecession, a pure function of
@@ -375,6 +402,10 @@ export class EngineRunner implements WorldRunner {
       case 'silence': live(msg.countryId)?.silence(); break;
       case 'wake': { const a = live(msg.countryId); if (a) { a.wake(); this.scheduler.notify(a.id); } break; }
       case 'delete': this.onDelete(msg.countryId); break;
+      // Row A29: the council controls; the world decides, every replica applies the one batch.
+      case 'kill': if (live(msg.countryId)) this.councilBatch(this.council.kill(w, msg.countryId, msg.role)); break;
+      case 'cut_member': if (live(msg.countryId)) this.councilBatch(this.council.cut(w, msg.countryId, msg.role)); break;
+      case 'restore_member': if (live(msg.countryId)) this.councilBatch(this.council.restore(w, msg.countryId, msg.role)); break;
       case 'blackout': {
         // Every link at once; restore-all goes in ascending id order (the outcome of the disputes
         // does not depend on the order: the earlier claim wins).
@@ -408,6 +439,12 @@ export class EngineRunner implements WorldRunner {
     if (!w) return;
     const events = decreeEvents(w, decree, w.tick, { n: ++this.decrees, lamport: () => ++this.lamport });
     this.bus.deliver(events);
+    // Row A29: a decree that strikes down a leader or a general kills one (its target nation, else one by hash).
+    if (KILL_RE.test(decree.text) && LEADER_RE.test(decree.text)) {
+      const alive = w.countries.filter((c) => c.alive && c.council && this.agents.get(c.id) && !this.agents.get(c.id)!.deleted);
+      const target = decree.target.countryId ?? alive[hashString(`decree-kill:${decree.text}:${w.tick}`) % Math.max(1, alive.length)]?.id;
+      if (target !== undefined) this.councilBatch(this.council.kill(w, target, GENERAL_RE.test(decree.text) ? 'general' : 'ruler'));
+    }
     this.syncStatuses();
     this.flushOut();
     this.pushAgents(true);

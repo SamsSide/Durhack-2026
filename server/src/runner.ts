@@ -1,6 +1,6 @@
 // The seam between the network layer and whatever produces the world. The mock runner
 // implements it for `npm run mock`; the real engine (engine/runner.ts) for `npm run dev`.
-import type { AgentStatus, World, WorldEvent } from '@terra/shared';
+import type { AgentStatus, CouncilRole, World, WorldEvent } from '@terra/shared';
 import type { ClockState, Pacing } from './engine/clock';
 
 export type LlmMode = 'mock' | 'live';
@@ -12,6 +12,7 @@ export interface NewWorldOptions {
 
 export type ControlMessage =
   | { action: 'cut' | 'restore' | 'silence' | 'wake' | 'delete'; countryId: number }
+  | { action: 'kill' | 'cut_member' | 'restore_member'; countryId: number; role: CouncilRole }
   | { action: 'blackout' | 'pause'; value: boolean }
   | { action: 'speed'; value: number }
   | { action: 'pacing'; value: Pacing }

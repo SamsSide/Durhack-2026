@@ -1,7 +1,8 @@
 // applyEvent is the only code that changes a World (server and browser both use it).
-import type { Relation, Vec3, World, WorldEvent } from './types';
+import type { CouncilMember, CouncilRole, Relation, Vec3, World, WorldEvent } from './types';
 
 export function applyEvent(world: World, event: WorldEvent): void {
+  const memo = councilMemo(world, event);
   switch (event.type) {
     case 'tick':
       world.tick = event.tick;
@@ -98,7 +99,7 @@ export function applyEvent(world: World, event: WorldEvent): void {
       break;
     }
     case 'country_founded':
-      world.countries.push({ ...event.country });
+      world.countries.push(structuredClone(event.country));
       world.agents.push({
         countryId: event.country.id, link: 'up', ruler: 'autopilot', deleted: false,
         lastHeardTick: event.tick, pendingEvents: 0,
@@ -122,7 +123,57 @@ export function applyEvent(world: World, event: WorldEvent): void {
       payee.treasury = Math.round((payee.treasury + amount) * 100) / 100;
       break;
     }
+    case 'council_changed': {
+      // Row A29: sets the member (a copy: replicas never share objects); the ruler is also the leader.
+      const c = world.countries[event.countryId];
+      if (!c) break;
+      c.council ??= { ruler: null, general: null, state: { ruler: 'vacant', general: 'vacant' } };
+      c.council[event.role] = event.member ? { ...event.member } : null;
+      if (event.role === 'ruler' && event.member) c.leader = event.member.name;
+      break;
+    }
+    case 'council_status': {
+      const council = world.countries[event.countryId]?.council;
+      if (council) council.state[event.role] = event.state;
+      break;
+    }
   }
+  for (const [id, role, line] of memo) rememberLine(world, id, role, line);
+}
+
+// ---- council memory (row A29) ----------------------------------------------------------------
+
+/** How many lines a council member's memory keeps. */
+export const MEMORY_LINES = 5;
+
+/** Appends one line to a council member's rolling memory (the last MEMORY_LINES lines are kept). */
+export function rememberLine(world: World, countryId: number, role: CouncilRole, line: string): void {
+  const m: CouncilMember | null | undefined = world.countries[countryId]?.council?.[role];
+  if (!m) return;
+  m.memory = [...(m.memory ? m.memory.split('\n') : []), line].slice(-MEMORY_LINES).join('\n');
+}
+
+/** The lines an event adds to council memories, read from the world before the event is applied:
+ *  generals remember their battles, rulers their wars, peaces and alliances. */
+function councilMemo(world: World, e: WorldEvent): [number, CouncilRole, string][] {
+  if (e.type !== 'battle' && e.type !== 'relation_changed') return [];
+  const name = (id: number): string => (world.countries[id]?.name ?? 'a fallen people').replace(/^The /, 'the ');
+  const y = e.tick + world.year - world.tick;          // the event's year, even on a replica whose clock lags
+  if (e.type === 'battle') {
+    const r = world.tiles[e.tile]?.region ?? -1;
+    const place = (r >= 0 && world.regions[r]?.name) || 'the border';
+    const line = (me: number, foe: number): string => `${y}: ${e.winner === me ? 'beat' : 'lost to'} ${name(foe)} at ${place}`;
+    return [[e.attacker, 'general', line(e.attacker, e.defender)], [e.defender, 'general', line(e.defender, e.attacker)]];
+  }
+  const lo = Math.min(e.a, e.b), hi = Math.max(e.a, e.b);
+  const prev = world.relations.find((x) => x.a === lo && x.b === hi)?.stance ?? 'neutral';
+  if (prev === e.stance) return [];
+  const words = e.stance === 'war' ? ['declared war on', 'was attacked by'] : prev === 'war' ? ['made peace with', 'made peace with']
+    : e.stance === 'alliance' ? ['swore an alliance with', 'swore an alliance with'] : null;
+  if (!words) return [];
+  const first = typeof e.actor === 'number' && e.actor === e.b ? e.b : e.a;
+  const second = first === e.a ? e.b : e.a;
+  return [[first, 'ruler', `${y}: ${words[0]} ${name(second)}`], [second, 'ruler', `${y}: ${words[1]} ${name(first)}`]];
 }
 
 /** Raises the grievance between two nations (creating a neutral relation if there is none yet). */

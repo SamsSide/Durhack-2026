@@ -15,7 +15,7 @@
 // ownership), its capital, the parent's troops in the region going over, a garrison army, the
 // relation with the parent, and the chronicle lines.
 import {
-  armyStrengthFor, hashString, mulberry32, SECESSION_MARK,
+  armyStrengthFor, foundingCouncil, hashString, mulberry32, SECESSION_MARK,
   type ChronicleKind, type Country, type SecessionPlan, type Stance, type Structure, type StructureKind,
   type World, type WorldEvent,
 } from '@terra/shared';
@@ -120,6 +120,7 @@ export function secessionBatch(world: World, plan: SecessionPlan, mk: (body: Bod
     alive: true, population, treasury,
     techAge: parent.techAge ?? 'ancient',
   };
+  country.council = foundingCouncil(country, world.seed, tick);     // row A29: its rebel leader and a general
 
   const events: WorldEvent[] = [];
   const add = (b: Body): void => { events.push(mk(b)); };

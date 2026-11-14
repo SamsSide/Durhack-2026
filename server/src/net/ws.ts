@@ -6,6 +6,7 @@ import { chainHello, onChainMessage } from '../chain';
 import type { ControlMessage, LlmMode, WorldRunner } from '../runner';
 
 const ACTIONS_WITH_COUNTRY = ['cut', 'restore', 'silence', 'wake', 'delete'];
+const COUNCIL_ACTIONS = ['kill', 'cut_member', 'restore_member'];   // row A29, with a role
 
 export function attachWs(server: Server, runner: WorldRunner, mode: LlmMode): WebSocketServer {
   const wss = new WebSocketServer({ server, path: '/ws' });
@@ -47,6 +48,9 @@ export function attachWs(server: Server, runner: WorldRunner, mode: LlmMode): We
       if (msg.type === 'control') {
         const a = msg.action;
         if (ACTIONS_WITH_COUNTRY.includes(a) && typeof msg.countryId === 'number') runner.control(msg as ControlMessage);
+        else if (COUNCIL_ACTIONS.includes(a) && typeof msg.countryId === 'number' && (msg.role === 'ruler' || msg.role === 'general')) {
+          runner.control({ action: a, countryId: msg.countryId, role: msg.role });
+        }
         else if ((a === 'blackout' || a === 'pause') && typeof msg.value === 'boolean') runner.control(msg as ControlMessage);
         else if (a === 'speed' && typeof msg.value === 'number' && Number.isFinite(msg.value)) runner.control({ action: 'speed', value: msg.value });
         else if (a === 'pacing' && (msg.value === 'auto' || msg.value === 'manual')) runner.control({ action: 'pacing', value: msg.value });
