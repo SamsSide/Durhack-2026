@@ -13,6 +13,7 @@ import {
 import { unrestTurn, type UnrestMemory } from './regions';
 import { ageStrength, ageTurn, type AgeMemory } from './ages';
 import { tradeTurn } from './trade';
+import { TERRAIN_EFFECTS } from './terrain';
 
 export type Focus = 'expand' | 'develop' | 'fortify' | 'attack';
 export interface NationPolicy { focus: Focus; targets?: number[] }
@@ -29,8 +30,6 @@ export interface TurnContext {
 
 // ---- tables ---------------------------------------------------------------------------------
 
-const TILE_INCOME: Record<Terrain, number> = { ocean: 0, coast: 0.9, plains: 0.9, forest: 0.55, hills: 0.6, desert: 0.25, mountain: 0.35, ice: 0.1 };
-const TILE_POP: Record<Terrain, number> = { ocean: 0, coast: 900, plains: 900, forest: 500, hills: 500, desert: 250, mountain: 150, ice: 80 };
 const STRUCT_INCOME: Record<StructureKind, number> = { capital: 5, camp: 0.3, village: 1.2, town: 3, city: 6, farm: 1.4, port: 2.6, fort: 0, temple: 0.4, factory: 7, ruin: 0 };
 const STRUCT_POP: Record<StructureKind, number> = { capital: 9000, camp: 600, village: 2200, town: 6000, city: 14000, farm: 2500, port: 1800, fort: 0, temple: 300, factory: 1000, ruin: 0 };
 const TRADE_KINDS: StructureKind[] = ['port', 'town', 'city', 'factory'];
@@ -38,8 +37,9 @@ const TRADE_KINDS: StructureKind[] = ['port', 'town', 'city', 'factory'];
 export const COST = { camp: 4, village: 28, town: 80, city: 220, farm: 12, port: 20, fort: 24, temple: 28, factory: 70, army: 22, fleet: 30 } as const;
 /** Upkeep a turn: bigger armies cost more (measured in the strength of its age, so better weapons cost no more to keep).
  *  Merchant ships pay their own way. */
-const upkeep = (u: Unit, ageMul: number): number => (u.kind === 'trader' ? 0 : u.kind === 'settler' ? 0.1
-  : (u.kind === 'fleet' ? 0.15 : 0.1) + (u.strength / ageMul) * 0.015);
+const upkeep = (u: Unit, ageMul: number, tiles: World['tiles']): number => (u.kind === 'trader' ? 0 : u.kind === 'settler' ? 0.1
+  : ((u.kind === 'fleet' ? 0.15 : 0.1) + (u.strength / ageMul) * 0.015)
+    / (u.kind === 'army' ? TERRAIN_EFFECTS[tiles[u.tile]?.terrain ?? 'plains'].supply : 1));
 const claimCost = (owned: number): number => 14 + owned * 2.2;
 
 const isSettlement = (k: StructureKind): boolean => k === 'camp' || k === 'village' || k === 'town' || k === 'city' || k === 'capital';
@@ -49,18 +49,18 @@ export function nationIncome(world: World, countryId: number): number {
   if (!c) return 0;
   const tradeMul = 0.8 + 0.6 * c.temperament.trade;
   let inc = 0;
-  for (let i = 0; i < world.owner.length; i++) if (world.owner[i] === countryId) inc += TILE_INCOME[world.tiles[i]!.terrain];
+  for (let i = 0; i < world.owner.length; i++) if (world.owner[i] === countryId) inc += TERRAIN_EFFECTS[world.tiles[i]!.terrain].income;
   for (const s of world.structures) {
     if (s.owner !== countryId) continue;
     inc += STRUCT_INCOME[s.kind] * (TRADE_KINDS.includes(s.kind) ? tradeMul : 1);
   }
-  for (const u of world.units) if (u.owner === countryId) inc -= upkeep(u, ageStrength(c));
+  for (const u of world.units) if (u.owner === countryId) inc -= upkeep(u, ageStrength(c), world.tiles);
   return inc;
 }
 
 export function populationCapacity(world: World, countryId: number): number {
   let cap = 0;
-  for (let i = 0; i < world.owner.length; i++) if (world.owner[i] === countryId) cap += TILE_POP[world.tiles[i]!.terrain];
+  for (let i = 0; i < world.owner.length; i++) if (world.owner[i] === countryId) cap += TERRAIN_EFFECTS[world.tiles[i]!.terrain].pop;
   for (const s of world.structures) if (s.owner === countryId) cap += STRUCT_POP[s.kind];
   return cap;
 }
@@ -230,7 +230,7 @@ export function nationTurn(
       if (spots.length) {
         const to = spots[Math.floor(rng() * spots.length)]!;
         settlerTiles.add(to);
-        emit({ type: 'unit_moved', unitId: u.id, from: u.tile, to, arriveTick: tick + 2 });
+        emit({ type: 'unit_moved', unitId: u.id, from: u.tile, to, arriveTick: tick + Math.max(2, TERRAIN_EFFECTS[view.tiles[to]!.terrain].move) });
       } else {
         emit({ type: 'unit_removed', unitId: u.id, reason: 'disband' });
         settlersLeft--;
@@ -259,7 +259,7 @@ export function nationTurn(
       const terr = view.tiles[j]!.terrain;
       if ((terr === 'mountain' || terr === 'ice') && rng() > 0.1) continue;
       const reg = view.tiles[j]!.region;
-      const sc = TILE_INCOME[terr] + TILE_POP[terr] / 1500 + (reg === capRegion ? 0.7 : myRegions.has(reg) ? 0.35 : 0)
+      const sc = TERRAIN_EFFECTS[terr].income + TERRAIN_EFFECTS[terr].pop / 1500 + (reg === capRegion ? 0.7 : myRegions.has(reg) ? 0.35 : 0)
         + a.n * 0.18 + rng() * 0.45;
       if (sc > bestScore) { bestScore = sc; bestTile = j; bestFrom = a.from; }
     }
@@ -282,9 +282,10 @@ export function nationTurn(
       if (regId !== capRegion) notable ??= { kind: 'growth', text: `${me.name} settles the land the people call ${name}.` };
     }
     if (settlersLeft < 3 && rng() < 0.6 && spend(COST.camp)) {
+      const terr0 = view.tiles[bestTile]!.terrain;
       const u: Unit = { id: uid('u'), owner: countryId, kind: 'settler', tile: bestFrom, strength: 1, target: bestTile };
       emit({ type: 'unit_spawned', unit: u });
-      emit({ type: 'unit_moved', unitId: u.id, from: bestFrom, to: bestTile, arriveTick: tick + 2 });
+      emit({ type: 'unit_moved', unitId: u.id, from: bestFrom, to: bestTile, arriveTick: tick + Math.max(2, TERRAIN_EFFECTS[terr0].move) });
       settlerTiles.add(bestTile);
       settlersLeft++;
     }
@@ -417,6 +418,18 @@ export function nationTurn(
   const spent = myUnits.find((u) => isCombatant(u) && u.tile >= 0 && u.strength <= (enemies.length ? 5 : 3));
   if (spent) { emit({ type: 'unit_removed', unitId: spent.id, reason: 'disband' }); spent.tile = -1; }
 
+  // --- 4.1 attrition (row A28): an army outside its own land loses strength on hostile ground, in canonical unit order
+  const gone = new Set(out.flatMap((e) => (e.type === 'unit_removed' ? [e.unitId] : [])));
+  for (const u of view.units) {
+    if (u.owner !== countryId || u.kind !== 'army' || u.tile < 0 || gone.has(u.id) || own[u.tile] === countryId) continue;
+    const terr = view.tiles[u.tile]!.terrain;
+    const rate = TERRAIN_EFFECTS[terr].attrition;
+    if (terr === 'ocean' || rate <= 0) continue;
+    const loss = Math.max(1, Math.round(u.strength * rate));
+    if (u.strength > 3 && u.strength - loss > 2) emit({ type: 'unit_attrition', unitId: u.id, loss, terrain: terr });
+    else emit({ type: 'unit_removed', unitId: u.id, reason: 'disband' });
+  }
+
   // --- 4a. sea trade (row A23, sim/trade.ts): merchant ships sail, dock and bring money to both sides
   treasury += tradeTurn({ view, me: countryId, tick, own, structs: myStructs, units: myUnits, emit, uid, mem: ctx.ages });
 
@@ -425,13 +438,13 @@ export function nationTurn(
 
   // --- 5. money and people
   let income = 0;
-  for (let i = 0; i < own.length; i++) if (own[i] === countryId) income += TILE_INCOME[view.tiles[i]!.terrain];
+  for (let i = 0; i < own.length; i++) if (own[i] === countryId) income += TERRAIN_EFFECTS[view.tiles[i]!.terrain].income;
   const tradeMul = 0.8 + 0.6 * t.trade;
   for (const s of myStructs) income += STRUCT_INCOME[s.kind] * (TRADE_KINDS.includes(s.kind) ? tradeMul : 1);
-  for (const u of myUnits) if (u.tile >= 0) income -= upkeep(u, ageStrength(me));
+  for (const u of myUnits) if (u.tile >= 0) income -= upkeep(u, ageStrength(me), view.tiles);
   treasury = Math.max(0, treasury + income * 0.4 - treasury * 0.01);
   let cap = 0;
-  for (let i = 0; i < own.length; i++) if (own[i] === countryId) cap += TILE_POP[view.tiles[i]!.terrain];
+  for (let i = 0; i < own.length; i++) if (own[i] === countryId) cap += TERRAIN_EFFECTS[view.tiles[i]!.terrain].pop;
   for (const s of myStructs) cap += STRUCT_POP[s.kind];
   const newPop = Math.max(500, Math.round(pop + (cap - pop) * 0.05 + pop * 0.004 + (rng() - 0.5) * 20));
   for (const m of [10000, 25000, 50000, 100000, 200000]) {
@@ -476,6 +489,7 @@ export function isEventValid(world: World, e: WorldEvent): boolean {
     case 'unit_spawned':
       return e.unit.owner === a && !world.units.some((u) => u.id === e.unit.id);
     case 'unit_moved':
+    case 'unit_attrition':
     case 'unit_removed':
       return world.units.some((u) => u.id === e.unitId && u.owner === a);
     case 'country_updated':

@@ -16,6 +16,7 @@ import type {
 } from '../types';
 import { hashString, mulberry32, type Rng } from '../rng';
 import { countryTiles, relationOf } from '../world';
+import { TERRAIN_EFFECTS, LANDING_PENALTY } from './terrain';
 import { AGE_EDGE, STRENGTH_CAP, ageIndex, ageStrength } from './ages';
 
 /** No nation declares a war of its own before this tick. */
@@ -27,7 +28,6 @@ const OFFER_TTL = 30;
 
 // ---- strength -------------------------------------------------------------------------------
 
-const TERRAIN_DEF: Record<Terrain, number> = { ocean: 1, coast: 1, plains: 1, desert: 1, forest: 1.15, hills: 1.3, mountain: 1.6, ice: 1.2 };
 const GARRISON: Partial<Record<StructureKind, number>> = { camp: 1, village: 3, town: 6, city: 10, capital: 14, fort: 12, port: 2 };
 const RAZEABLE: StructureKind[] = ['farm', 'port', 'fort', 'temple', 'factory'];
 
@@ -69,7 +69,7 @@ export function defenceEstimate(world: World, tile: number, defender: number): n
   let d = 0;
   for (const u of world.units) if (u.tile === tile && u.owner === defender && isCombatant(u)) d += u.strength;
   const g = world.owner[tile] === defender ? garrisonAt(world, tile, defender) : { strength: 0, fort: false };
-  return (d + g.strength) * TERRAIN_DEF[world.tiles[tile]!.terrain] * (g.fort ? 1.5 : 1);
+  return (d + g.strength) * (1 + TERRAIN_EFFECTS[world.tiles[tile]!.terrain].defence) * (g.fort ? 1.5 : 1);
 }
 
 // ---- the battle -----------------------------------------------------------------------------
@@ -95,7 +95,7 @@ export function resolveBattle(b: BattleInput): BattleResult {
   const edgeA = AGE_EDGE ** Math.max(0, gap);
   const edgeD = AGE_EDGE ** Math.max(0, -gap);
   const A = Math.max(0.5, b.attack * edgeA);
-  const D = Math.max(0.5, b.defend * edgeD * TERRAIN_DEF[b.terrain] * (b.fort ? 1.5 : 1));
+  const D = Math.max(0.5, b.defend * edgeD * (1 + TERRAIN_EFFECTS[b.terrain].defence) * (b.fort ? 1.5 : 1));
   const p = A ** 1.6 / (A ** 1.6 + D ** 1.6);
   if (roll < p) {
     const lossA = Math.max(0, Math.min(Math.round((b.defend * (0.25 + 0.35 * u)) / edgeA), Math.floor(b.attack) - 3));
@@ -172,10 +172,12 @@ export function settleMove(world: World, e: Extract<WorldEvent, { type: 'unit_mo
   const holds = tileOwner === defender;
   const g = holds ? garrisonAt(world, to, defender) : { strength: 0, fort: false };
   const defendRaw = defUnits.reduce((s, v) => s + v.strength, 0) + g.strength;
+  // An army that attacks from the sea fights at a penalty (row A28).
+  const landing = u.kind === 'army' && tile.terrain !== 'ocean' && world.tiles[u.tile]?.terrain === 'ocean' ? 1 - LANDING_PENALTY : 1;
   const raid = u.kind === 'fleet' && tile.terrain !== 'ocean';
   const seed = hashString(`battle:${to}:${e.tick}:${u.id}:${defUnits.map((v) => v.id).join(',')}`);
   const ageGap = ageIndex(world.countries[a]?.techAge) - ageIndex(world.countries[defender]?.techAge);
-  const r = resolveBattle({ attack: u.strength * (raid ? 0.7 : 1), defend: defendRaw, terrain: tile.terrain, fort: g.fort, seed, ageGap });
+  const r = resolveBattle({ attack: u.strength * (raid ? 0.7 : 1) * landing, defend: defendRaw, terrain: tile.terrain, fort: g.fort, seed, ageGap });
   const winner = r.attackerWins ? a : defender;
   mk({ type: 'battle', tile: to, attacker: a, defender, attackerUnit: u.id, winner, losses: { attacker: r.lossA, defender: r.lossD } });
 
@@ -596,7 +598,7 @@ export function marchTurn(p: MarchInput): void {
       front.sort((x, y) => (y.score - x.score) || (x.to - y.to));
       const best = front[0]!;
       if (best.ratio >= 0.7 || rng() < 0.15) {
-        emit({ type: 'unit_moved', unitId: best.u.id, from: best.u.tile, to: best.to, arriveTick: tick + 1 });
+        emit({ type: 'unit_moved', unitId: best.u.id, from: best.u.tile, to: best.to, arriveTick: tick + (best.u.kind === 'army' ? TERRAIN_EFFECTS[terrain(best.to)].move : 1) });
         best.u.tile = -1;                           // it has acted this turn
       }
     }
@@ -615,7 +617,7 @@ export function marchTurn(p: MarchInput): void {
         const next = view.tiles[u.tile]!.neighbors.filter((j) => dist.get(j) === d - 1);
         if (!next.length) continue;
         const to = next[Math.floor(rng() * next.length)]!;
-        emit({ type: 'unit_moved', unitId: u.id, from: u.tile, to, arriveTick: tick + 1 });
+        emit({ type: 'unit_moved', unitId: u.id, from: u.tile, to, arriveTick: tick + TERRAIN_EFFECTS[terrain(to)].move });
         u.tile = to; moves++;
       }
     }
@@ -660,7 +662,7 @@ export function marchTurn(p: MarchInput): void {
     const next = view.tiles[a.tile]!.neighbors.filter((j) => dist.get(j) === d - 1);
     if (!next.length) continue;
     const to = next[Math.floor(rng() * next.length)]!;
-    emit({ type: 'unit_moved', unitId: a.id, from: a.tile, to, arriveTick: tick + 1 });
+    emit({ type: 'unit_moved', unitId: a.id, from: a.tile, to, arriveTick: tick + TERRAIN_EFFECTS[terrain(to)].move });
     a.tile = to; moves++;
   }
 }

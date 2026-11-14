@@ -103,6 +103,7 @@ export type WorldEvent = Base & (
   | { type: 'structure_destroyed'; structureId: string }
   | { type: 'unit_spawned'; unit: Unit }
   | { type: 'unit_moved'; unitId: string; from: number; to: number; arriveTick: number }
+  | { type: 'unit_attrition'; unitId: string; loss: number; terrain: Terrain }
   | { type: 'unit_removed'; unitId: string; reason: 'battle' | 'disband' | 'collapse' }
   | { type: 'battle'; tile: number; attacker: number; defender: number; attackerUnit: string; winner: number; losses: { attacker: number; defender: number } }
   | { type: 'relation_changed'; a: number; b: number; stance: Stance; reason: string }
