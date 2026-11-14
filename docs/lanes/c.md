@@ -39,6 +39,7 @@ budget, run them one at a time in the order below, on Sonnet.
 | C16 | Presentation mode (P) and a collapsed-by-default screen (ticker, history strip, decree, ledger as icons); decree wider at 1800 px+ | | | CP2 | testing | Owner decision on #276, assigned in #275 |
 | C17 | Decree result in the UI: a war-tab style dispatch with `decree.result`, and the decree box shows the result line | A20 severity (#288) | | CP2 | testing | Owner decision on #288 |
 | C18 | Event feed by priority (#279): big news only, full two-line sentences, a kind tag, at most one card every 2 s, small news grouped; small 288x162 captures | | | CP2 | testing | Lane b request #279 |
+| C19 | Help screen: a "?" button (and the `?` / `F1` keys) opening one overlay that labels every control and icon, closed by default; README controls table updated | | | CP2 | testing | Owner decision on #317 item 3 |
 | C12 | Prepare mode panel and Create toggle (built by lane a, owner decision 14 Nov) | X2 `prepare` message and control, X3 `prepare: true` (#200) | | CP2 | testing | `web/src/ui/prepare/`; dev mock behind `?mockPrepare=1` until the server sends `prepare` |
 | C15 | Calm UI: left panel, war tabs, node-graph network (built by lane a, owner decision on #245) | | | CP2 | testing | One left panel at a time (`web/src/ui/leftPanel.ts`, `calm.css`): the nation and province card docks left with a ruler line, a stats grid and diplomacy as flag groups; war tabs top right (restores #225, which #226 had overwritten); the Network panel is a node graph with a tray for the picked nation. Figma page "Calm UI (#245)". Map-mode icons for lane b in `web/src/ui/icons/mapmodes/`. Shots: docs/shots/calm-ui-1..3.jpg |
 
@@ -69,3 +70,4 @@ budget, run them one at a time in the order below, on Sonnet.
 - 14 Nov · #289 · C17 decree result in the decree box and as a dispatch tab
 - 14 Nov · #293 · C18 event feed by priority, full sentences, decade grouping (#279)
 - 14 Nov · C17 checked on the real A20 decree (#301, #303): effect word and fly-to work; result line moved beside the box, off the minimap
+- 14 Nov · C19 help screen: round "?" button (third in the bottom-left row) and `?` / `F1` keys open one overlay labelling the top bar, feed tags, map modes, panels and keys; closed on every reload
