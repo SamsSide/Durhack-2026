@@ -146,20 +146,67 @@ body:has(.tn-news) .minimap { opacity: 0; pointer-events: none; }
 .meter-hit:hover > * { border-color: var(--color-accent); }
 .meter-hit:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
-/* Speed slider: log scale 0.1x to 64x */
+/* Speed: pause, the gear slider (1 month a second to 128 years a second), the readout, Auto.
+   Eleven stops, evenly spaced; the labels are years of game time a second. */
 .speedctl { display: flex; align-items: center; gap: 8px; }
-.speed-slider { width: 150px; height: 28px; display: flex; align-items: center; cursor: pointer; touch-action: none; outline-offset: 2px; }
-.speed-slider:focus-visible { outline: 2px solid var(--color-accent); }
-.speed-track { position: relative; width: 100%; height: 4px; background: var(--color-border); border-radius: 2px; }
+.speed-pause {
+  width: 30px; height: 30px; flex: none; display: grid; place-items: center; padding: 0; cursor: pointer;
+  background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-1);
+}
+.speed-pause:hover { color: var(--color-accent); border-color: var(--color-accent); }
+.speed-pause.on { background: var(--color-accent); color: var(--color-ink); border-color: var(--color-accent); }
+.speed-pause:focus-visible, .speed-slider:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.speed-slider { width: 232px; height: 36px; padding: 0 6px; box-sizing: content-box; cursor: pointer; touch-action: none; user-select: none; }
+.speed-track { position: relative; width: 100%; height: 4px; margin-top: 9px; background: var(--color-border); border-radius: 2px; }
 .speed-fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--color-accent); border-radius: 2px; }
-.speed-mark { position: absolute; top: -3px; width: 1px; height: 10px; background: var(--color-text-muted); transform: translateX(-50%); }
-.speed-thumb { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: var(--color-parchment); border: 2px solid var(--color-accent); transform: translate(-50%, -50%); }
-.speed-slider.auto { cursor: default; }
+.speed-stop { position: absolute; top: -3px; width: 2px; height: 10px; margin-left: -1px; background: var(--color-text-muted); border-radius: 1px; font-style: normal; }
+.speed-stop.lit { background: var(--color-accent); }
+.speed-stop b {
+  position: absolute; top: 15px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500; line-height: 12px; color: var(--color-text-muted);
+}
+.speed-stop b.first { left: -4px; transform: none; }
+.speed-stop b.last { left: auto; right: -5px; transform: none; }
+.speed-stop.on b { color: var(--color-accent); font-weight: 600; }
+.speed-thumb {
+  position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; box-sizing: border-box;
+  background: var(--color-parchment); border: 2px solid var(--color-accent); transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 3px var(--color-bg); transition: left var(--dur-fast, 120ms) var(--ease-out);
+}
+.speed-slider.dragging .speed-thumb { transition: none; box-shadow: 0 0 0 3px var(--color-bg), 0 0 0 5px rgba(201, 162, 75, 0.35); }
+.speed-fill { transition: width var(--dur-fast, 120ms) var(--ease-out); }
+.speed-slider.dragging .speed-fill { transition: none; }
 .speed-slider.auto .speed-thumb { background: var(--color-accent); }
-.speed-slider.auto .speed-fill { opacity: 0.55; }
-.speed-val { font-family: var(--font-mono); font-size: 13px; color: var(--color-accent); min-width: 40px; text-align: right; }
-.topbar.compact .speed-slider { width: 90px; }
-.topbar.compact .speed-val { min-width: 34px; }
+.speedctl.paused .speed-fill, .speedctl.paused .speed-stop.lit { background: var(--color-text-muted); }
+.speed-val { display: flex; flex-direction: column; justify-content: center; width: 50px; flex: none; font-family: var(--font-mono); white-space: nowrap; }
+.speed-val b { font-size: 16px; font-weight: 600; line-height: 18px; color: var(--color-accent); }
+.speed-val small { font-size: 10px; line-height: 12px; color: var(--color-text-muted); }
+.speed-val.slowed b { color: var(--color-warn); }
+.speedctl.paused .speed-val b { color: var(--color-text-muted); }
+.speedctl.paused .speed-val small { color: var(--color-accent); }
+/* Below 1800 px the bar has no room for the labelled scale: a short track with its eleven stops, and
+   the readout names the gear. The 1280 px projector layout is tighter still. */
+@media (max-width: 1799px) {
+  .speedctl { gap: 6px; }
+  .speed-slider { width: 120px; height: 28px; }
+  .speed-track { margin-top: 12px; }
+  .speed-stop b { display: none; }
+  .speed-stop { width: 1px; margin-left: 0; height: 8px; top: -2px; }
+}
+.topbar.compact .speedctl { gap: 5px; }
+.topbar.compact .speed-slider { width: 76px; padding: 0 5px; }
+.topbar.compact .speed-pause { width: 28px; height: 28px; }
+.topbar.compact .speed-val { width: 46px; }
+.topbar.compact .speed-val small { letter-spacing: -0.02em; }
+.topbar.compact .tb-year.dated .cap { display: none; }
+.topbar.compact .tb-year.dated { gap: 5px; padding: 2px 6px; }
+.topbar.compact .tb-date { font-size: 12px; }
+
+/* The year plate: the month (and the day at slow gears) beside the year, a hairline for the year so far */
+.tb-year { position: relative; }
+.tb-date { font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: var(--color-text); width: 3ch; white-space: nowrap; }
+.tb-date.day { width: 6ch; text-align: right; }
+.tb-yearbar { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--color-accent); opacity: 0.75; }
 
 /* Terrain legend: wider than the diplomacy one to fit the effects line */
 .legend-box.legend-terrain { width: 420px; max-width: calc(100vw - 2 * var(--space-3)); box-sizing: border-box; }

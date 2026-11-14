@@ -1,5 +1,5 @@
-// Row A25: the clock every runner shares. Speed is any number from 0.1 to 64 (a multiplier on the
-// base rate of two years a second). The Clock turns wall time into whole ticks (carrying the
+// Row A25: the clock every runner shares. Speed is any number from 1/24 to 64 (a multiplier on the
+// base rate of two years a second: 1/24 is one month a second, a tick every 12 s). The Clock turns wall time into whole ticks (carrying the
 // fraction, so 64x is 128 ticks a second without drift), runs the pacing director, and tells the
 // network layer when the effective speed changes. TickLoop is the timer around it.
 //
@@ -8,7 +8,7 @@
 // over EASE_MS (exponential). A new big moment starts the hold again. Because the whole recovery
 // takes 11 s, the "quiet for 20 s, nudge up" rule is already satisfied: the speed is back at the
 // target well before any 20 s of quiet. Pause always wins.
-export const MIN_SPEED = 0.1;
+export const MIN_SPEED = 1 / 24;   // one month a second: a year (one tick) every 12 s
 export const MAX_SPEED = 64;
 export const BASE_TICKS_PER_SEC = 2;
 export const MAX_TICKS_PER_FIRE = 16;
@@ -23,7 +23,8 @@ export type Pacing = 'auto' | 'manual';
 export interface ClockState { speed: number; target: number; pacing: Pacing; paused: boolean }
 
 export const clampSpeed = (v: number): number => Math.min(MAX_SPEED, Math.max(MIN_SPEED, v));
-const r2 = (x: number): number => Math.round(x * 100) / 100;
+// Four places, so the slow gears reach the clients whole enough to interpolate months (1/24 = 0.0417).
+const r4 = (x: number): number => Math.round(x * 10000) / 10000;
 
 export class Clock {
   target = 1;
@@ -83,7 +84,7 @@ export class Clock {
   bigMoment(at = this.now()): void {
     if (this.pacing !== 'auto') return;
     this.bigAt = at;
-    this.acc = 0;                // drop the unplayed backlog: the slowdown starts now
+    this.acc %= 1;               // drop the unplayed backlog (the slowdown starts now), keep the year's phase
     this.poll(at, true);
   }
 
@@ -106,7 +107,7 @@ export class Clock {
       const n = this.ran.filter((x) => x.at >= from).reduce((s, x) => s + x.n, 0);
       speed = Math.min(speed, n / (WINDOW_MS / 1000) / BASE_TICKS_PER_SEC);
     }
-    return { speed: r2(Math.max(0, speed)), target: this.target, pacing: this.pacing, paused: this.paused };
+    return { speed: r4(Math.max(0, speed)), target: this.target, pacing: this.pacing, paused: this.paused };
   }
 
   /** Whole ticks to run now (0 if paused or not yet due). Carries the fraction. */

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useWorld } from '../state/world';
 import { TokenMeter } from '../ui';
 import { SpeedControl } from './SpeedControl';
+import { Calendar } from './Calendar';
 import type { WorldStore } from '../state/world';
 import './hud.css';
 
@@ -27,7 +28,6 @@ export function TopBar({ onCreate }: { onCreate: () => void }) {
   const connected = useWorld((s) => s.connected);
   const mapMode = useWorld((s) => s.mapMode);
   const setMapMode = useWorld((s) => s.setMapMode);
-  const send = useWorld((s) => s.send);
   const compact = useCompact();
   const conn = connected ? 'live' : world ? 'reconnecting' : 'offline';
   const connLabel = { live: 'Live', reconnecting: 'Reconnecting', offline: 'Offline' }[conn];
@@ -42,7 +42,7 @@ export function TopBar({ onCreate }: { onCreate: () => void }) {
               <div className="tb-name" title={world.name}>{world.name}</div>
               <div className="tb-era" title={world.era}>{world.era}</div>
             </div>
-            <div className="tb-year"><span className="cap">Year</span><span className="num">{world.year}</span></div>
+            <Calendar />
           </>
         )}
         <span className={`conn conn-${conn}`}><i /><span className="conn-word">{connLabel}</span></span>
@@ -57,13 +57,6 @@ export function TopBar({ onCreate }: { onCreate: () => void }) {
         </div>
       )}
       <div className="tb-group">
-        {world && (
-          <div className="segs">
-            <button className={`seg icon ${world.paused ? 'on' : ''}`} title="Pause" aria-label="Pause" onClick={() => send({ type: 'control', action: 'pause', value: !world.paused })}>
-              <svg width="10" height="11" viewBox="0 0 10 11"><rect width="3.5" height="11" fill="currentColor" /><rect x="6.5" width="3.5" height="11" fill="currentColor" /></svg>
-            </button>
-          </div>
-        )}
         {world && <SpeedControl />}
         {world && (
           <button className="btn onair" title="Terra Nova News" onClick={() => window.dispatchEvent(new CustomEvent('terra:news-broadcast'))}>

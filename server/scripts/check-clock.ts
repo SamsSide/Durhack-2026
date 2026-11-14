@@ -21,6 +21,37 @@ for (const speed of [0.1, 1, 8, 64]) {
   ok(maxPerFire <= MAX_TICKS_PER_FIRE, `fake clock ${speed}x: never more than ${MAX_TICKS_PER_FIRE} ticks in a fire`);
 }
 
+// 1b. Fake clock at one month a second (1/24): a tick every 12 s, no drift, pause keeps the phase,
+// and anything slower is clamped.
+{
+  let t = 0;
+  const c = new Clock(() => t);
+  c.setTarget(1 / 24);
+  const at: number[] = [];
+  while (t < 120_500) { t += Math.ceil(c.delay(t)); if (c.take(t)) at.push(t); }
+  const worst = Math.max(...at.map((x, i) => Math.abs(x - (i + 1) * 12_000)));
+  ok(at.length === 10 && worst <= 20, `fake clock 1/24: ${at.length} ticks in 120 s, worst offset from the 12 s grid ${worst} ms`);
+  // 6 s into a year, pause for 30 s, resume: the tick lands 6 s after the resume.
+  while (t < 126_000) { t += 100; c.take(t); }
+  c.setPaused(true);
+  let during = 0;
+  while (t < 156_000) { t += Math.ceil(c.delay(t)); during += c.take(t); }
+  c.setPaused(false);
+  const resumed = t;
+  let got = -1;
+  while (got < 0 && t < resumed + 20_000) { t += Math.ceil(c.delay(t)); if (c.take(t)) got = t - resumed; }
+  ok(during === 0 && Math.abs(got - 6000) <= 150, `fake clock 1/24: pause keeps the phase (no ticks while paused, next tick ${got} ms after resume, want 6000)`);
+  c.setTarget(0.001);
+  ok(Math.abs(c.target - 1 / 24) < 1e-9, `speed below 1/24 is clamped to 1/24 (${c.target.toFixed(4)})`);
+  // The director never speeds a slow world up: with a ceiling below 1 a big moment leaves it alone.
+  c.setTarget(1 / 24); c.setPacing('auto');
+  c.bigMoment(t);
+  ok(Math.abs(c.effective(t + 10) - 1 / 24) < 1e-9 && Math.abs(c.effective(t + HOLD_MS + 500) - 1 / 24) < 1e-9, `director with a 1/24 ceiling stays at 1/24 through a big moment (${c.state(t + 10).speed})`);
+  c.setTarget(0.5);
+  c.bigMoment(t);
+  ok(c.effective(t + 10) === 0.5, 'director with a 0.5 ceiling stays at 0.5 through a big moment');
+}
+
 // 2. Fake clock director: timeline of the effective speed after a war at t=0, target 8.
 {
   let t = 0;
@@ -75,6 +106,19 @@ const end = Date.now() + 12_000;
 while (Date.now() < end && stamps.length < 2) { await wait(50); if (world.tick !== last) { stamps.push(Date.now()); last = world.tick; } }
 if (stamps.length === 2) { const gap = stamps[1]! - stamps[0]!; ok(Math.abs(gap - 5000) / 5000 <= 0.1, `real engine 0.1x: ${gap} ms between ticks (want about 5000)`); }
 else ok(false, 'real engine 0.1x: could not see two ticks in 12 s');
+
+// 1/24 (one month a second): one tick every 12 s, plus or minus 0.5 s.
+runner.setSpeed(1 / 24);
+await wait(200);
+{
+  const st: number[] = [];
+  let lt = world.tick;
+  const until = Date.now() + 26_000;
+  while (Date.now() < until && st.length < 2) { await wait(20); if (world.tick !== lt) { st.push(Date.now()); lt = world.tick; } }
+  if (st.length === 2) { const gap = st[1]! - st[0]!; ok(Math.abs(gap - 12_000) <= 500, `real engine 1/24: ${gap} ms between ticks (want 12000 plus or minus 500)`); }
+  else ok(false, 'real engine 1/24: could not see two ticks in 26 s');
+  ok(Math.abs(runner.clockState().speed - 1 / 24) < 1e-3 && Math.abs(world.speed - 1 / 24) < 1e-9, `real engine reports 1/24 (clock ${runner.clockState().speed})`);
+}
 
 // 4. The real engine director: a war in auto pacing at target 8.
 runner.setSpeed(8);

@@ -13,11 +13,12 @@ import { unitIcon } from './era';
 import { ModelField, standMatrix } from './ModelField';
 import { VehicleFx } from './vehicleFx';
 import { Traders } from './traders';
+import { clockNow, msPerYear } from '../../state/calendar';
 import { UnitModels } from './unitModels';
 import { Pops, Smoke, Sparks, facing, tangentJitter } from './effects';
 import { arcHump, arcPoint, arrowGeometry, arrowMaterial, lineGeometry, lineMaterial, tileFanGeometry, writeArrow } from './ribbons';
 
-const TICK_MS = 500;            // one tick at 1x
+const MOVE_MAX_MS = 40_000;     // the longest march: a three-year move at one month a second is 36 s
 const CHIP_LIFT = 0.004;
 const CHIP_H = 0.03;            // counter height, as a share of the view (sizeAttenuation off)
 const SETTLER_H = 0.017;
@@ -49,7 +50,7 @@ const easeInOut = (t: number): number => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 
 
 interface UState {
   id: string; owner: number; kind: UnitKind; strength: number;
-  from: number; to: number; t0: number; t1: number;
+  from: number; to: number; t0: number; t1: number; years: number;
   hopAt: number;
   flickAt?: number;
   arrow: Arrow | null;
@@ -131,6 +132,8 @@ export class UnitLayer {
   private lastFront = -1e9;
   private lastNow = 0;
   private lastDt = 16;
+  private clockMs = msPerYear();   // real ms a year took at the last frame
+  private lastClockAt = 0;
   private disposed = false;
 
   constructor(mesh: ProvinceMesh, world: World) {
@@ -189,8 +192,29 @@ export class UnitLayer {
     return out.copy(d).multiplyScalar((this.mesh.heights[tile] ?? 1) + extra);
   }
 
+  /** Real time one year takes at the effective speed (12 s at one month a second). */
   private msPerTick(): number {
-    return TICK_MS / Math.max(0.25, this.world.speed || 1);
+    return msPerYear();
+  }
+
+  /** Keeps the marches in step with the world clock: they wait while it is paused, and stretch or
+   *  shrink what is left of them when the speed changes, so a unit never jumps or runs ahead. */
+  private followClock(now: number, dt: number): void {
+    const { paused } = clockNow();
+    const ms = msPerYear();
+    const k = paused ? 0 : ms / this.clockMs;
+    this.clockMs = ms;
+    if (!paused && Math.abs(k - 1) < 1e-6) return;
+    for (const st of this.states.values()) {
+      if (now >= st.t1 || st.from === st.to) continue;
+      if (paused) { st.t0 += dt; st.t1 += dt; }
+      else {
+        const p = (now - st.t0) / (st.t1 - st.t0), total = Math.min(MOVE_MAX_MS, Math.max(300, st.years * ms));
+        st.t0 = now - p * total; st.t1 = st.t0 + total;
+      }
+      if (st.arrow) st.arrow.holdUntil = st.t1 + ARROW_LINGER;
+    }
+    this.traders.retime(now, paused ? dt : 0, paused ? 1 : k, ms);
   }
 
   private colorOf(owner: number): string {
@@ -265,8 +289,9 @@ export class UnitLayer {
   private startMove(st: UState, from: number, to: number, ms: number, now: number): void {
     st.from = from;
     st.to = to;
+    st.years = ms / this.msPerTick();
     st.t0 = now;
-    st.t1 = now + Math.min(3000, Math.max(300, ms));
+    st.t1 = now + Math.min(MOVE_MAX_MS, Math.max(300, ms));
     const da = this.dirs[from], db = this.dirs[to];
     if (from !== to && da && db) st.head.subVectors(db, da);
     if (from !== to && st.kind !== 'settler') {
@@ -300,7 +325,7 @@ export class UnitLayer {
       seen.add(u.id);
       let st = this.states.get(u.id);
       if (!st) {
-        st = { id: u.id, owner: u.owner, kind: u.kind, strength: u.strength, from: u.tile, to: u.tile, t0: 0, t1: 0, hopAt: -1e9, arrow: null, head: new THREE.Vector3() };
+        st = { id: u.id, owner: u.owner, kind: u.kind, strength: u.strength, from: u.tile, to: u.tile, t0: 0, t1: 0, years: 1, hopAt: -1e9, arrow: null, head: new THREE.Vector3() };
         this.states.set(u.id, st);
         const pm = this.pendingMoves.get(u.id);
         if (pm && pm.to === u.tile) this.startMove(st, pm.from, pm.to, (pm.arriveTick - pm.tick) * this.msPerTick(), now);
@@ -698,6 +723,8 @@ export class UnitLayer {
     const dt = this.lastNow ? Math.min(100, now - this.lastNow) : 16;
     this.lastNow = now;
     this.lastDt = dt;
+    this.followClock(now, now - (this.lastClockAt || now));
+    this.lastClockAt = now;
     const dist = camera.position.length();
     _camDir.copy(camera.position).normalize();
     const zoom = Math.min(1.25, Math.max(0.68, 1.25 - ((dist - 1.3) / 2.2) * 0.6)); // compact from orbit
