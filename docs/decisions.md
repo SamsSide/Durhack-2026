@@ -60,3 +60,5 @@
 - 2026-11-14 18:50 · Owner: yes to lane b's #204 economy core (goods per province, shortages and a goods market paid as `trade`, devastation, war readiness, politics axis and radicalism, a `politics` map mode). Lane b writes `sim/economy.ts`, payments and the hooks in `types.ts`, `applyEvent` and `rules.ts` section 5 itself, in small PRs that pass check.sh, check-money and check-replay; lane a adds the ruler-digest line.
 
 - 2026-11-14 19:00 · Owner: lane a's laptop (SamsSide) may run up to 10 agents at once, up from 7, for throughput during the hackathon; other lanes keep 4.
+
+- 2026-11-14 19:05 · Owner: on lane c's #203, build the strategic core now (terrain-aware army paths, zone of control, chokepoint forts; lane a) and cities that visibly grow walls by tier at close zoom (derived `cityTier`); about 1,000 provinces only if frame rate allows; resources and trade are already covered by B11; districts and farmers go to 'What's next'.

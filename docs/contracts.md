@@ -248,6 +248,17 @@ export type PaymentReason = 'trade' | 'reparations' | 'plunder' | 'seizure' | 'w
   "6 grain, 2 ore"), replacing the older trade dues. Everything is income-neutral at tick 0.
   Rules and numbers: `docs/research/economy-games.md` section 3.
 
+- **Strategic map (#203, owner decision 14 Nov, built by lane a):** armies path with Dijkstra over
+  `TERRAIN_EFFECTS[t].move` (round mountains, through passes) instead of plain BFS; **zone of
+  control**: an army that enters a province next to an enemy army, fort or city stops there and must
+  fight before moving on; a ruler with focus `fortify` builds forts first on the chokepoints of the
+  cheapest enemy paths to its capital and big cities. No new events (marches, battles and
+  `structure_built` as today). **City walls** are derived, not simulated:
+  `cityTier(world, structureId): 0 | 1 | 2 | 3 | 4` exported from `@terra/shared` (0 none, 1 palisade,
+  2 stone wall round the core, 3 a second ring, 4 walled core with gate forts), from the city's share
+  of its nation's population; lane b (or lane a for it) draws a closed wall ring round the city
+  footprint at close zoom, rebuilt only when the tier changes.
+
 - **Council (row A29):** every nation has a ruler and a general, each its own agent. The ruler
   sets focus and stance (today's ruler, the only one calling Gemini every turn); the general picks
   war targets and moves armies (rules, plus a Gemini call only for declaring or ending a war).
