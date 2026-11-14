@@ -6,13 +6,17 @@ import { setTileColor } from './mesh/colors';
 
 const FADE_MS = 400;
 const PULSE_MS = 800;
-const MAX_PULSES = 60;
+const MAX_PULSES = 220;
+const DISPUTE_MS = 1500;
+const COLLAPSE_MS = 1000;
 const WHITE = new THREE.Color('#ffffff');
 const CONQUEST = new THREE.Color('#ff5a3c');
+const GILT = new THREE.Color('#c9a24b');
+const ASH = new THREE.Color('#6f6c68');
 const EPS = 1 / 512;
 
 interface Fade { start: number; r: number; g: number; b: number }
-interface Pulse { start: number; r: number; g: number; b: number }
+interface Pulse { start: number; dur: number; r: number; g: number; b: number }
 
 export class ColorFx {
   private base: Float32Array;
@@ -64,14 +68,23 @@ export class ColorFx {
     this.kick();
   }
 
-  /** Flash a tile that just changed owner. Call after `repaint` so `base` is the new owner colour. */
-  pulse(id: number, cause: string): void {
+  /**
+   * Flash a tile that just changed owner. Call after `repaint` so `base` is the new owner colour.
+   * Dispute flashes gilt for 1.5 s; collapse holds ash grey, then fades (`delay` staggers a
+   * collapse tile by tile).
+   */
+  pulse(id: number, cause: string, delay = 0): void {
     if (id < 0 || id >= this.tileCount) return;
     const i = id * 3;
     const peak = this.c.setRGB(this.base[i]!, this.base[i + 1]!, this.base[i + 2]!);
-    if (cause === 'conquest') peak.copy(CONQUEST); else peak.lerp(WHITE, 0.6);
+    let dur = PULSE_MS;
+    if (cause === 'conquest') peak.copy(CONQUEST);
+    else if (cause === 'dispute') { peak.copy(GILT); dur = DISPUTE_MS; }
+    else if (cause === 'collapse') { peak.copy(ASH); dur = COLLAPSE_MS; }
+    else peak.lerp(WHITE, 0.6);
     this.pulses.delete(id);
-    this.pulses.set(id, { start: performance.now(), r: peak.r, g: peak.g, b: peak.b });
+    this.pulses.set(id, { start: performance.now() + delay, dur, r: peak.r, g: peak.g, b: peak.b });
+    if (delay > 0) setTileColor(this.mesh, id, peak); // hold the flash colour until its turn
     this.fades.delete(id);
     while (this.pulses.size > MAX_PULSES) {
       const oldest = this.pulses.keys().next().value as number;
@@ -104,7 +117,8 @@ export class ColorFx {
       setTileColor(this.mesh, id, this.c.setRGB(f.r + (b[i]! - f.r) * e, f.g + (b[i + 1]! - f.g) * e, f.b + (b[i + 2]! - f.b) * e));
     }
     for (const [id, p] of this.pulses) {
-      const t = (now - p.start) / PULSE_MS;
+      const t = (now - p.start) / p.dur;
+      if (t < 0) continue;
       if (t >= 1) { this.pulses.delete(id); this.settle(id); continue; }
       const e = 1 - (1 - t) * (1 - t); // ease out
       const i = id * 3;

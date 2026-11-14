@@ -3,6 +3,7 @@ import { Borders } from './Borders';
 import { BeliefBorders } from './BeliefBorders';
 import { Capitals } from './Capitals';
 import { NationLabels } from './NationLabels';
+import { Status } from '../status/Status';
 
 export function Political() {
   return (
@@ -11,6 +12,7 @@ export function Political() {
       <BeliefBorders />
       <Capitals />
       <NationLabels />
+      <Status />
     </>
   );
 }

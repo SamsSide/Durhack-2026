@@ -3,6 +3,7 @@ import { relationOf } from '@terra/shared';
 import type { World } from '@terra/shared';
 import { getPalette } from '../palette';
 import type { ProvinceMesh } from './buildProvinceMesh';
+import { statusOf } from '../status/statusTint';
 
 export type MapMode = 'political' | 'terrain' | 'diplomacy' | 'strength';
 
@@ -23,7 +24,7 @@ function strengthByCountry(world: World): { value: Float64Array; max: number } {
   return { value, max };
 }
 
-function colorWith(
+function colorBase(
   world: World, tileId: number, owner: number, mode: MapMode, sel: number | null,
   out: THREE.Color, str: { value: Float64Array; max: number } | null,
 ): THREE.Color {
@@ -47,6 +48,24 @@ function colorWith(
   if (!country) return out.set(terrain);
   out.set(terrain);
   return out.lerp(tmp.set(country.color), pal.nationFill);
+}
+
+/** The base colour, then dimmed for a cut nation or greyed to ruin for a deleted one. */
+function colorWith(
+  world: World, tileId: number, owner: number, mode: MapMode, sel: number | null,
+  out: THREE.Color, str: { value: Float64Array; max: number } | null,
+): THREE.Color {
+  colorBase(world, tileId, owner, mode, sel, out, str);
+  const tile = world.tiles[tileId];
+  if (owner < 0 || !tile || tile.terrain === 'ocean') return out;
+  const st = statusOf(owner);
+  if (!st) return out;
+  const pal = getPalette();
+  if (st === 'cut') return out.lerp(tmp.set(pal.night), 0.42).lerp(tmp.set(pal.silence), 0.1);
+  // deleted: drain the colour towards ruin grey
+  const g = out.r * 0.3 + out.g * 0.59 + out.b * 0.11;
+  out.lerp(tmp.setRGB(g, g, g), 0.6);
+  return out.lerp(tmp.set(pal.ruin), 0.45);
 }
 
 export function tileColor(

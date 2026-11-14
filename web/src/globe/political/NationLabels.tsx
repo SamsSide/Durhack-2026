@@ -9,6 +9,7 @@ import { useWorld } from '../../state/world';
 import { CLOSE } from '../constants';
 import { getPalette } from '../palette';
 import { useProvinceMesh } from '../mesh/context';
+import { statusOf } from '../status/statusTint';
 
 const EXTRA_LIFT = 0.002;
 const RENDER_ORDER = 20;
@@ -19,6 +20,7 @@ interface LabelData {
   key: string;
   name: string;
   kind: 'nation' | 'region';
+  owner: number;
   pos: [number, number, number];
   size: number;
   flag: FlagSpec;
@@ -32,6 +34,7 @@ function FlagLabel({ data }: { data: LabelData }) {
   const groupRef = useRef<THREE.Group>(null);
   const textRef = useRef<any>(null); // troika Text instance
   const flagMat = useRef<THREE.MeshBasicMaterial>(null);
+  const strike = useRef<THREE.Mesh>(null);
   const [textWidth, setTextWidth] = useState(data.name.length * data.size * 0.75);
 
   const posVec = useMemo(() => new THREE.Vector3(...data.pos), [data.pos]);
@@ -62,6 +65,9 @@ function FlagLabel({ data }: { data: LabelData }) {
       : clamp01((CLOSE - d) / 0.2);
     const facing = camera.position.dot(dir) / d;
     if (facing < 0.1) alpha = 0;
+    const deleted = statusOf(data.owner) === 'deleted';
+    if (deleted) alpha *= 0.5;
+    if (strike.current) strike.current.visible = deleted;
     g.visible = alpha > 0.01;
     if (!g.visible) return;
     // Keep names legible at any zoom: scale with distance from the surface.
@@ -103,6 +109,10 @@ function FlagLabel({ data }: { data: LabelData }) {
         {data.name}
         <meshBasicMaterial transparent depthWrite={false} toneMapped={false} />
       </Text>
+      <mesh ref={strike} position={[0, 0, 0.0005]} visible={false} renderOrder={RENDER_ORDER + 1}>
+        <planeGeometry args={[total, Math.max(0.0012, data.size * 0.07)]} />
+        <meshBasicMaterial color={INK} transparent opacity={0.75} depthWrite={false} toneMapped={false} />
+      </mesh>
       </Billboard>
     </group>
   );
@@ -143,7 +153,7 @@ export function NationLabels() {
         const c = world.countries[id];
         if (!c || c.alive === false || tiles.length === 0 || !c.name) continue;
         const size = Math.min(0.12, Math.max(0.03, 0.018 * Math.sqrt(tiles.length)));
-        out.push({ key: `n${id}`, name: c.name, kind: 'nation', pos: lift(mesh.centroidOf(tiles)), size, flag: c.flag });
+        out.push({ key: `n${id}`, name: c.name, kind: 'nation', owner: id, pos: lift(mesh.centroidOf(tiles)), size, flag: c.flag });
       }
       for (const r of world.regions) {
         if (!r.name || r.tiles.length === 0) continue;
@@ -151,7 +161,7 @@ export function NationLabels() {
         const oc = owner >= 0 ? world.countries[owner] : undefined;
         if (!oc || oc.alive === false) continue;
         const size = 0.5 * Math.min(0.12, Math.max(0.03, 0.018 * Math.sqrt(byOwner.get(owner)?.length ?? 1)));
-        out.push({ key: `r${r.id}`, name: r.name, kind: 'region', pos: lift(mesh.centroidOf(r.tiles)), size: Math.max(size, 0.02), flag: r.flag });
+        out.push({ key: `r${r.id}`, name: r.name, kind: 'region', owner, pos: lift(mesh.centroidOf(r.tiles)), size: Math.max(size, 0.02), flag: r.flag });
       }
       setLabels(out);
     };

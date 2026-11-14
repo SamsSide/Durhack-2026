@@ -30,7 +30,7 @@ pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
 | B4 | Structures: instanced models from the X4 manifest (box fallback), a pop-up build animation, upgrades, trees, detail only when zoomed in | nothing (boxes until A8's models land) | | CP1 | testing | Real models in nation colour, pop-up builds with dust, upgrades, sinking ruins, trees, detail when close; smaller, clustered, per-nation tint (feedback #55) |
 | B5 | Units and war: armies marching between tiles with their strength shown, volleys and flashes on a battle, smoke on captured tiles, a front line between nations at war | nothing (the mock emits wars) | | CP1.5 | todo | HOI-style army counters with strength numbers, movement arrows, front lines |
 | B6 | The hologram: on selection a beam rises from the capital and projects lane c's `NationCard` with scan lines, glow and flicker; it follows the camera and docks to the side on a narrow screen | nothing (the seed's placeholder card and default colours until C2 and A12 land) | | CP1.5 | cut | Removed by owner in #77 (card is docked, no hologram) |
-| B7 | Agent status on the globe: a cut nation behind a static ring, an autopilot marker, a deleted nation crumbling to ruins, and the beliefs view (`beliefOf`) | nothing (the mock accepts every control) | | CP1.5 | todo | Makes resilience visible |
+| B7 | Agent status on the globe: a cut nation behind a static ring, an autopilot marker, a deleted nation crumbling to ruins, and the beliefs view (`beliefOf`) | nothing (the mock accepts every control) | | CP1.5 | testing | Makes resilience visible |
 | B8 | Polish and speed: ocean, atmosphere glow, stars, lighting, a steady 60 frames a second with 500 provinces | | | CP2 | todo | Includes polishing the coast cliffs (feedback on #33) |
 | B9 | Stretch: a timeline scrubber that rebuilds the globe at any past year from `GET /api/world/log` | nothing (the mock serves the log) | | CP2 | todo | Cut first if behind |
 
@@ -49,3 +49,4 @@ pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
 - 14 Nov · #72 · captureGlobe and the NewsBroadcast slot
 - 14 Nov · #77 · card docked, no hologram, labels face the camera; B6 cut
 - 14 Nov · building size and variety (#55 feedback)
+- 14 Nov · B7 + #87 + #96 · map states (cut ring, signal lost, autopilot, ruins, dispute and collapse flashes, return ripple, belief refresh), design polish, closing card, camera centred between panels
