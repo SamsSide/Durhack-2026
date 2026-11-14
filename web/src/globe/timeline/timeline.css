@@ -16,8 +16,6 @@
   transition: right var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
 .tls-open.tls-past { border-color: var(--color-accent); }
-body:has(.card-dock:not(.out)) .tls-open { right: calc(var(--space-4) + var(--card-width) + var(--space-3) + 222px + var(--space-3)); }
-body:has(.card-dock:not(.out)):has(.legend-terrain) .tls-open { right: calc(var(--space-4) + var(--card-width) + var(--space-3) + 420px + var(--space-3)); }
 @media (max-width: 1280px) {
   .tls { left: calc(var(--space-3) + var(--net-width) + var(--space-3)); }
 }

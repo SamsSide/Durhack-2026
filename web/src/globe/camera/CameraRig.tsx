@@ -7,6 +7,7 @@ import { CameraControls } from '@react-three/drei';
 import type { CameraControls as CameraControlsImpl } from '@react-three/drei';
 import { useCamera } from '../../state/camera';
 import { useWorld } from '../../state/world';
+import { useLeftPanelKind } from '../../ui/leftPanel';
 import { CAM_MAX, CAM_MIN } from '../constants';
 import { flyControlsTo, onFocusTile } from '../events/focus';
 import { GroundSky } from './GroundSky';
@@ -15,6 +16,7 @@ import {
 } from './groundView';
 
 const NONE = 0, ROTATE = 1, TOUCH_ROTATE = 64; // camera-controls ACTION values
+const LEFT_PANEL_PX = 340 + 16 + 12; // the left panel, its margin and a gap: the globe centres in the rest
 const FLY_DISTANCE = 1.6;
 const FLY_SMOOTH = 0.4; // about 1.2 s to settle
 const SMOOTH = 0.25;
@@ -33,6 +35,10 @@ const wrapPi = (a: number): number => a - Math.round(a / (2 * Math.PI)) * 2 * Ma
 
 export function CameraRig() {
   const ref = useRef<CameraControlsImpl>(null);
+  const panel = useLeftPanelKind();
+  const panelOpen = useRef(false);
+  const shiftPx = useRef(0);
+  panelOpen.current = panel !== 'none';
   const flyingUntil = useRef(0);
   const dom = useThree((s) => s.gl.domElement);
   const world = useWorld((s) => s.world);
@@ -57,7 +63,7 @@ export function CameraRig() {
     c.touches.three = NONE;
     const A = (c.constructor as unknown as { ACTION: Record<string, number> }).ACTION;
     c.touches.two = (A.TOUCH_DOLLY ?? 0) as typeof c.touches.two;
-    // What you select is centred on screen: no sideways view shift for the docked card (#245).
+    // The view shift for the left panel is a projection offset (see the frame hook below), not a focal offset.
     void c.setFocalOffset(0, 0, 0, false);
     // Dev only: lets a browser review set the zoom exactly (window.__cam.dollyTo(3.5, false)).
     if (import.meta.env.DEV) {
@@ -126,6 +132,22 @@ export function CameraRig() {
       window.removeEventListener('pointercancel', onUp);
     };
   }, [dom]);
+
+  // Left panel: shift the picture right by half the panel, so what is centred sits in the free
+  // area to the right of it. A projection offset, so every overlay that projects stays in step.
+  useFrame((state, dt) => {
+    const cam = state.camera as THREE.PerspectiveCamera;
+    const goal = panelOpen.current && state.size.width > 900 ? LEFT_PANEL_PX / 2 : 0;
+    const k = 1 - Math.exp(-Math.min(dt, 0.1) * 8);
+    shiftPx.current += (goal - shiftPx.current) * k;
+    if (Math.abs(goal - shiftPx.current) < 0.05) shiftPx.current = goal;
+    const { width, height } = state.size;
+    if (shiftPx.current === 0) {
+      if (cam.view?.enabled) cam.clearViewOffset();
+    } else {
+      cam.setViewOffset(width, height, -shiftPx.current, 0, width, height);
+    }
+  });
 
   // Ground view: runs right after the controls wrote the orbit pose (priority -1) and before every
   // other layer reads the camera. It swings that pose around the ground point under the camera, so

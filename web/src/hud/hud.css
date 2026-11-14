@@ -75,9 +75,6 @@
   width: 220px; padding: 12px 16px;
 }
 body:has(.minimap) .legend-box { bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 48px + var(--space-3) + 122px + var(--mm-strip) + var(--space-3)); }
-body:has(.card-dock:not(.out)) .minimap { right: calc(var(--space-4) + var(--card-width) + var(--space-3)); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3)); }
-body:has(.card-dock:not(.out)) .legend-box { right: calc(var(--space-4) + var(--card-width) + var(--space-3)); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3)); }
-body:has(.card-dock:not(.out)):has(.minimap) .legend-box { bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 122px + var(--mm-strip) + var(--space-3)); }
 .minimap, .legend-box, .mm-modes { transition: right var(--dur-fast) var(--ease-out), bottom var(--dur-fast) var(--ease-out); }
 
 /* Map-mode strip (#245): icon-only buttons sitting on the top edge of the minimap, same width.
@@ -91,7 +88,6 @@ body:has(.card-dock:not(.out)):has(.minimap) .legend-box { bottom: calc(var(--sp
   box-shadow: var(--shadow-1);
 }
 body:has(.mm-modes) .minimap { border-top-left-radius: 0; border-top-right-radius: 0; }
-body:has(.card-dock:not(.out)) .mm-modes { right: calc(var(--space-4) + var(--card-width) + var(--space-3)); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 122px - 1px); }
 .mm-mode {
   position: relative; flex: 1 1 0; display: grid; place-items: center; padding: 0; cursor: pointer;
   appearance: none; border: 0; border-left: 1px solid var(--color-border); background: transparent;
@@ -130,10 +126,6 @@ body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes { opacity: 0; pointer-
 .belief-banner .btn { background: transparent; color: var(--holo-tint); border-color: var(--holo-tint); }
 .belief-banner .btn:hover { background: var(--holo-scanline); color: var(--holo-tint); }
 
-/* Nation card dock: right 16, top 64. No box of its own: the card is lane c's .panel. */
-.card-dock { right: var(--space-4); top: 64px; width: var(--card-width); animation: card-in 240ms var(--ease-out) both; }
-.card-dock.out { animation: card-out 240ms var(--ease-out) both; pointer-events: none; }
-@keyframes card-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(28px); } }
 @media (max-width: 1280px) {
   .decree-slot, .legend-box, .minimap, .mm-modes { right: var(--space-3); }
 }
@@ -152,7 +144,6 @@ body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes { opacity: 0; pointer-
 .onair { display: inline-flex; align-items: center; gap: 6px; }
 .onair-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--color-danger); }
 
-@media (prefers-reduced-motion: reduce) { .card-dock, .card-dock.out { animation: none; } }
 
 /* Closing card: what the world cost (docs/design/reference.html) */
 .closing-veil {
