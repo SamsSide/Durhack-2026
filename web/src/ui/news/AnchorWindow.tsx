@@ -6,6 +6,7 @@ import { H, REST, W, drawFootage, drawIdent, drawStudio, lookFor, paintSet, read
 import type { Bulletin } from './useBroadcast';
 import { beatsFor, type Beat } from './focus';
 import { pipFeed, setPipShot } from '../../globe/pip/shot';
+import { WarReport } from './WarReport';
 
 /** The ident stays up this long after the bulletin starts (the voice opens with "Terra Nova News."). */
 const IDENT_HOLD_S = 1.5;
@@ -251,6 +252,7 @@ export function AnchorWindow({ bulletin, footage }: Props) {
         <div className={`tn-pip ${liveShot.out ? 'tn-pip-out' : ''}`}>
           <span className="tn-pip-glass" />
           <span className="tn-pip-live"><span className="tn-pip-live-dot" />Live</span>
+          {liveShot.beat.battle && <WarReport battle={liveShot.beat.battle} />}
           <div className="tn-pip-strap">
             <span className="tn-pip-place">{liveShot.beat.place}</span>
             {liveShot.beat.caption && <span className="tn-pip-caption">{liveShot.beat.caption}</span>}

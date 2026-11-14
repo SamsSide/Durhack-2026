@@ -1,7 +1,7 @@
 // Focus beats: the places a bulletin talks about, and when. The broadcast window cuts to a live
 // picture of each one (web/src/globe/pip). The server sends them as `focus` on POST /api/broadcast
 // (lane a, issue #288, PR #301); a dev build makes its own from the recent events for a server without it.
-import type { NewsFocus, World, WorldEvent } from '@terra/shared';
+import type { NewsBattle, NewsFocus, World, WorldEvent } from '@terra/shared';
 import { useWorld } from '../../state/world';
 
 /** One beat as the server sends it. `atSecond` counts from the start of the bulletin's audio. */
@@ -20,6 +20,8 @@ export interface Beat {
   cutIn: boolean;
   /** The next shot follows this one with no anchor between: a straight cut out. */
   cutOut: boolean;
+  /** Owner #317: a war beat: the battle for the war-report strap. */
+  battle?: NewsBattle;
 }
 
 const MAX_BEATS = 3;
@@ -55,7 +57,11 @@ function synthesise(world: World, events: readonly WorldEvent[], script: string)
     const e = events[i]!;
     if (kinds.has(e.type)) continue; // one of each kind, so the three shots differ
     const before = out.length;
-    if (e.type === 'battle') add(e.tile, e.defender, `${adj(e.attacker)} and ${adj(e.defender)} armies meet in battle`);
+    if (e.type === 'battle') {
+      add(e.tile, e.defender, `${adj(e.attacker)} and ${adj(e.defender)} armies meet in battle`);
+      const last = out[out.length - 1];
+      if (last?.tile === e.tile) last.battle = { tile: e.tile, attackerId: e.attacker, defenderId: e.defender };
+    }
     else if (e.type === 'country_fell') add(world.countries[e.countryId]?.capitalTile, e.countryId, `The capital of ${name(e.countryId)} has fallen`);
     else if (e.type === 'wonder_started') add(e.tile, e.countryId, `Work begins on ${e.name}`);
     else if (e.type === 'wonder_built') { const s = structure(e.structureId); add(s?.tile, e.countryId, `${s?.name ?? 'A wonder'} stands complete`); }
@@ -70,6 +76,13 @@ function synthesise(world: World, events: readonly WorldEvent[], script: string)
   const named = live.filter((c) => script.includes(c.name));
   for (const c of [...named, ...live]) add(c.capitalTile, c.id, `The capital, seat of ${c.leader}`);
   return out.map((b, i) => ({ ...b, atSecond: FALLBACK_AT[i] ?? 0 }));
+}
+
+/** A war beat's battle, if it names two nations of this world. */
+function saneBattle(world: World, b: NewsBattle | undefined): NewsBattle | undefined {
+  if (!b || !Number.isInteger(b.tile) || !world.tiles[b.tile]) return undefined;
+  if (!world.countries[b.attackerId] || !world.countries[b.defenderId] || b.attackerId === b.defenderId) return undefined;
+  return b;
 }
 
 /**
@@ -100,7 +113,7 @@ export function beatsFor(bulletin: { focus?: FocusBeat[]; script: string }): Bea
       if (gap - ANCHOR_GAP_S >= SHOT_MIN_S) prev.duration = Math.min(prev.duration, gap - ANCHOR_GAP_S);
       else { prev.duration = gap; prev.cutOut = true; }
     }
-    beats.push({ tile: b.tile, atSecond: b.atSecond, duration: SHOT_S, place: placeOf(world, b.tile, b.countryId), caption: String(b.caption ?? '').trim(), cutIn: !!prev?.cutOut, cutOut: false });
+    beats.push({ tile: b.tile, atSecond: b.atSecond, duration: SHOT_S, place: placeOf(world, b.tile, b.countryId), caption: String(b.caption ?? '').trim(), cutIn: !!prev?.cutOut, cutOut: false, battle: saneBattle(world, b.battle) });
   }
   return beats;
 }

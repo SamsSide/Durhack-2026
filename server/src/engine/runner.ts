@@ -92,7 +92,7 @@ export class EngineRunner implements WorldRunner {
     const { bible, seed } = await prepareWorld(opts);
     const provinces = typeof opts.provinces === 'number' && Number.isFinite(opts.provinces)
       ? Math.max(200, Math.min(2000, Math.round(opts.provinces))) : undefined;
-    const w = generateWorld(bible, { seed, seaLevel: opts.seaLevel, provinces });
+    const w = generateWorld(bible, { seed, seaLevel: opts.seaLevel, provinces, aggression: opts.aggression });
     w.prompt = opts.prompt;
     if (gen !== this.generation) return w;        // a newer request won the race; it installs its own
     this.stop();

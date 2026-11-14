@@ -5,7 +5,8 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { ChronicleEntry, ChronicleKind, NewsFocus, StructureKind, World } from '@terra/shared';
+import { militaryStrength } from '@terra/shared';
+import type { ChronicleEntry, ChronicleKind, NewsBattle, NewsFocus, StructureKind, World, WorldEvent } from '@terra/shared';
 import { currentMode, getBudget, loreModel, validate, type Schema } from '../llm';
 import { speak, VoiceUnavailable } from './eleven';
 import { anchorFor } from './teamVoices';
@@ -159,12 +160,54 @@ async function ask(w: World, f: ReturnType<typeof facts>, ps: Place[], imageBase
 // a war's front province, a fallen capital, a wonder) and the newest notable buildings. Gemini picks
 // from the numbered list; the template and mock mode take the first two.
 
-interface Place { countryId: number | null; tile: number; caption: string; names: string[] }
+interface Place { countryId: number | null; tile: number; caption: string; names: string[]; battle?: NewsBattle }
+
+// --- battles seen (owner #317: the war report) -----------------------------------------------
+// The world keeps no battle events, so the story routes feed every batch here (noteEvents); a war
+// beat then points at the newest clash between the pair, with the losses summed on that tile.
+interface SeenBattle { tile: number; attacker: number; defender: number; lastTick: number; lossA: number; lossD: number }
+const BATTLE_GAP = 4;          // ticks without a clash before a new one on the tile counts as a new battle
+const seenBattles: SeenBattle[] = [];
+
+/** Every applied batch (from the runner); a snapshot (new world, replay) clears the record. */
+export function noteEvents(events: readonly WorldEvent[]): void {
+  for (const e of events) {
+    if (e.type !== 'battle') continue;
+    const i = seenBattles.findIndex((b) => b.tile === e.tile && e.tick - b.lastTick <= BATTLE_GAP
+      && ((b.attacker === e.attacker && b.defender === e.defender) || (b.attacker === e.defender && b.defender === e.attacker)));
+    const b = i >= 0 ? seenBattles.splice(i, 1)[0]! : { tile: e.tile, attacker: e.attacker, defender: e.defender, lastTick: e.tick, lossA: 0, lossD: 0 };
+    const flipped = b.attacker !== e.attacker;
+    b.lossA += flipped ? e.losses.defender : e.losses.attacker;
+    b.lossD += flipped ? e.losses.attacker : e.losses.defender;
+    b.lastTick = e.tick;
+    seenBattles.push(b);                    // newest last
+    if (seenBattles.length > 40) seenBattles.shift();
+  }
+}
+export function clearBattles(): void { seenBattles.length = 0; }
+
+/** The war report for a war between `a` and `b`: their newest battle, else the front tile. */
+function battleFor(w: World, a: number, b: number, front: number): NewsBattle {
+  const seen = [...seenBattles].reverse().find((x) => (x.attacker === a && x.defender === b) || (x.attacker === b && x.defender === a));
+  const attackerId = seen?.attacker ?? a, defenderId = seen?.defender ?? b;
+  return {
+    tile: seen && w.tiles[seen.tile] ? seen.tile : front, attackerId, defenderId,
+    strength: { attacker: militaryStrength(w, attackerId), defender: militaryStrength(w, defenderId) },
+    ...(seen ? { losses: { attacker: seen.lossA, defender: seen.lossD } } : {}),
+  };
+}
 
 const WORDS_PER_SECOND = 2.6;
+/** The caption, or its other wording when the place name already holds the noun (#317: never
+ *  "Ormand City grows into a city" or "A new harbour in Harbour Bay"). */
+const unless = (word: RegExp, r: string, plain: string, other: string): string => (word.test(r) ? other : plain);
 const BUILT_CAPTION: Partial<Record<StructureKind, (where: string) => string>> = {
-  factory: (r) => `Steel works rise in ${r}`, city: (r) => `${r} grows into a city`, temple: (r) => `A temple rises in ${r}`,
-  fort: (r) => `New walls rise in ${r}`, port: (r) => `A new harbour in ${r}`, town: (r) => `${r} grows into a town`,
+  factory: (r) => unless(/\b(steel|works?)\b/i, r, `Steel works rise in ${r}`, `Mills and furnaces rise in ${r}`),
+  city: (r) => unless(/\b(city|town)\b/i, r, `${r} grows into a city`, `${r} comes of age`),
+  temple: (r) => unless(/\btemple\b/i, r, `A temple rises in ${r}`, `A new shrine in ${r}`),
+  fort: (r) => unless(/\b(walls?|fort)\b/i, r, `New walls rise in ${r}`, `${r} is fortified`),
+  port: (r) => unless(/\b(harbou?r|port)\b/i, r, `A new harbour in ${r}`, `New quays in ${r}`),
+  town: (r) => unless(/\b(city|town)\b/i, r, `${r} grows into a town`, `${r} starts to bustle`),
 };
 const KIND_CAPTION: Partial<Record<ChronicleKind, (nation: string) => string>> = {
   founding: (n) => `${n} is founded`, proclamation: (n) => `${n} proclaims`, growth: (n) => `${n} grows`,
@@ -196,8 +239,10 @@ function places(w: World): Place[] {
       add({ countryId: c?.id ?? null, tile: t, caption: e.decree.result.split(':')[0]!, names: [c ? bare(c.name) : '', regionName(t), e.decree.effect] });
     } else if ((e.kind === 'war' || e.kind === 'battle') && e.countries.length >= 2) {
       const [a, b] = e.countries as [number, number];
-      const t = front(a, b) ?? front(b, a);
-      if (t !== undefined) add({ countryId: w.owner[t]! >= 0 ? w.owner[t]! : null, tile: t, caption: `War on the ${regionName(t) || bare(country(a)?.name ?? 'border')} front`, names: [bare(country(a)?.name ?? ''), bare(country(b)?.name ?? ''), regionName(t)] });
+      const f = front(a, b) ?? front(b, a);
+      const battle = f !== undefined ? battleFor(w, a, b, f) : undefined;
+      const t = battle?.tile;
+      if (t !== undefined) add({ countryId: w.owner[t]! >= 0 ? w.owner[t]! : battle!.attackerId, tile: t, caption: `War on the ${regionName(t) || bare(country(a)?.name ?? 'border')} front`, names: [bare(country(a)?.name ?? ''), bare(country(b)?.name ?? ''), regionName(t)], battle });
     } else if (e.kind === 'fall' && c0) {
       add({ countryId: c0.id, tile: c0.capitalTile, caption: `${c0.name} falls`, names: [bare(c0.name), regionName(c0.capitalTile)] });
     } else if (e.kind === 'wonder' && c0) {
@@ -211,8 +256,11 @@ function places(w: World): Place[] {
   // Active wars not in the recent lines.
   for (const r of w.relations) {
     if (r.stance !== 'war' || !w.countries[r.a]?.alive || !w.countries[r.b]?.alive) continue;
-    const t = front(r.a, r.b);
-    if (t !== undefined) add({ countryId: r.a, tile: t, caption: `War on the ${regionName(t) || bare(w.countries[r.a]!.name)} front`, names: [bare(w.countries[r.a]!.name), bare(w.countries[r.b]!.name), regionName(t)] });
+    // Owner #317: a war over open land (the warmonger's) has no shared border yet; its newest battle or the aggressor's capital stands in.
+    const f = front(r.a, r.b) ?? front(r.b, r.a);
+    const battle = battleFor(w, r.a, r.b, f ?? w.countries[r.a]!.capitalTile);
+    const t = battle.tile;
+    add({ countryId: w.owner[t]! >= 0 ? w.owner[t]! : battle.attackerId, tile: t, caption: `War on the ${regionName(t) || bare(w.countries[r.a]!.name)} front`, names: [bare(w.countries[r.a]!.name), bare(w.countries[r.b]!.name), regionName(t)], battle });
   }
   // The newest notable buildings.
   const built = w.structures.filter((s) => BUILT_CAPTION[s.kind] && w.countries[s.owner]?.alive).sort((a, b) => b.builtTick - a.builtTick || (a.id < b.id ? -1 : 1)).slice(0, 4);
@@ -266,7 +314,7 @@ function timeBeats(chosen: { place: Place; caption: string }[], spokenText: stri
     sec = Math.max(sec, prev + 3, 0);
     sec = Math.min(sec, Math.max(0, total - 2));
     prev = sec;
-    out.push({ countryId: c.place.countryId, tile: c.place.tile, atSecond: Math.round(sec * 10) / 10, caption: c.caption });
+    out.push({ countryId: c.place.countryId, tile: c.place.tile, atSecond: Math.round(sec * 10) / 10, caption: c.caption, ...(c.place.battle ? { battle: c.place.battle } : {}) });
   });
   return out;
 }
@@ -289,6 +337,14 @@ function focusFor(ps: Place[], picks: { place: number; caption: string }[] | und
     const at = (p: Place) => Math.min(...p.names.map((n) => { const i = n ? lower.indexOf(n.toLowerCase()) : -1; return i < 0 ? Infinity : i; }));
     const named = ps.filter((p) => at(p) < Infinity).sort((a, b) => at(a) - at(b));
     for (const place of [...named, ...ps.filter((p) => !named.includes(p))].slice(0, 2)) chosen.push({ place, caption: place.caption });
+  }
+  // Owner #317: a bulletin that speaks of war shows a battle (the war-report strap rides on that beat).
+  const war = ps.find((p) => p.battle);
+  if (war && /\b(war|wars|battle|battles|armies|army|front|siege)\b/i.test(spokenText.replace(/\bno (war|battle)s?\b/gi, '')) && !chosen.some((c) => c.place.battle)) {
+    const c = { place: war, caption: war.caption };
+    if (chosen.length >= (picks?.length ? 3 : 2)) chosen[chosen.length - 1] = c; else chosen.push(c);
+    const at = (p: Place) => { const l = spokenText.toLowerCase(); return Math.min(...p.names.map((n) => { const i = n ? l.indexOf(n.toLowerCase()) : -1; return i < 0 ? Infinity : i; })); };
+    chosen.sort((x, y) => at(x.place) - at(y.place));
   }
   return timeBeats(chosen, spokenText);
 }

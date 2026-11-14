@@ -94,7 +94,9 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 
 - Gemini watches the globe and writes a bulletin; an **animated, lip-synced anchor** reads it in
   a broadcast window, in one of the team's own cloned voices (ElevenLabs).
-- The broadcast **cuts to a live picture-in-picture** of the place each story is about.
+- The broadcast **cuts to a live picture-in-picture** of the place each story is about. A story
+  about a war cuts to the battle with a **war report** over it: both flags, the two armies and
+  each side's losses.
 - Each nation also has a narrated history, an **anthem** written from what has actually happened
   to it, and a **war chant**.
 
@@ -122,6 +124,9 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 
 ### War
 
+- **Every world has a warmonger:** one ruler, the nation nearest a rival, is always hot-blooded
+  (at least the Create screen's Aggression), and while the world is at peace it may start the
+  first war from year 20 instead of year 70, so a war is on show within the first minute or two.
 - **Wars are fought province by province** with seeded battles that every replica computes the
   same way. Terrain matters for battles, movement, supply and attrition; armies route round
   mountains, stop at enemy lines, and chokepoint forts hold them.

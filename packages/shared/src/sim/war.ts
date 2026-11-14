@@ -22,8 +22,56 @@ import { AGE_EDGE, STRENGTH_CAP, ageIndex, ageStrength } from './ages';
 import { coverMultiplier, deathEvents, generalFalls } from './council';
 import { costTo, inZoc, nextStep, sig, zocTiles } from './paths';
 
-/** No nation declares a war of its own before this tick. */
+/** No nation declares a war of its own before this tick (except a warmonger, below). */
 export const WAR_EARLIEST = 70;
+/** Owner #317: every world has at least one warmonger, a ruler this aggressive or more. */
+export const WARMONGER_AGGRESSION = 0.85;
+/** While the world has had no war, a warmonger may start the first one from this tick. */
+export const WARMONGER_EARLIEST = 20;
+
+/** A ruler hot-blooded enough to start the world's first war early. */
+export const isWarmonger = (c: Country | undefined): boolean => !!c && c.temperament.aggression >= WARMONGER_AGGRESSION;
+
+/** True while no war has been declared anywhere yet (no relation at war, no war in the chronicle). */
+export function noWarYet(world: World): boolean {
+  if (world.relations.some((r) => r.stance === 'war')) return false;
+  return !world.chronicle.some((e) => e.kind === 'war');
+}
+
+/** The warmonger's early window: before WAR_EARLIEST, from WARMONGER_EARLIEST, while the world is at peace. */
+export function earlyWarmonger(world: World, countryId: number, tick: number): boolean {
+  return tick >= WARMONGER_EARLIEST && tick < WAR_EARLIEST && isWarmonger(world.countries[countryId]) && noWarYet(world);
+}
+
+/** How far (in provinces) a warmonger looks over open land for its first victim. */
+export const WARMONGER_REACH = 14;
+
+/** Nations a nation can reach by land within `steps` provinces, over its own land and unclaimed land
+ *  (the march in marchTurn takes the same roads), nearest first. Bordering nations come at distance 1. */
+export function reachableNations(world: World, me: number, steps = WARMONGER_REACH): number[] {
+  const dist = new Map<number, number>();
+  const q: number[] = [];
+  for (let t = 0; t < world.owner.length; t++) if (world.owner[t] === me) { dist.set(t, 0); q.push(t); }
+  const found = new Map<number, number>();
+  for (let h = 0; h < q.length; h++) {
+    const t = q[h]!, d = dist.get(t)!;
+    for (const j of world.tiles[t]!.neighbors) {
+      if (dist.has(j) || world.tiles[j]!.terrain === 'ocean') continue;
+      const o = world.owner[j]!;
+      if (o >= 0 && o !== me) {
+        if (world.countries[o]?.alive && !found.has(o)) found.set(o, d + 1);
+        continue;
+      }
+      if (d + 1 >= steps) continue;
+      dist.set(j, d + 1); q.push(j);
+    }
+  }
+  return [...found].sort((a, b) => (a[1] - b[1]) || (a[0] - b[0])).map(([o]) => o);
+}
+
+/** May this nation declare a war of its own this tick? */
+export const mayStartWar = (world: World, countryId: number, tick: number): boolean =>
+  tick >= WAR_EARLIEST || earlyWarmonger(world, countryId, tick);
 /** After any change of stance, no new war between the pair for this long. */
 export const TRUCE_TICKS = 50;
 /** An offer stays open this long. */
@@ -480,13 +528,16 @@ export function diplomacyTurn(p: DiplomacyInput): void {
   }
 
   // 3. War: an attack focus, a target over the border, no truce, and armies ready.
-  if (p.focus === 'attack' && tick >= WAR_EARLIEST && enemies.length === 0) {
+  if (p.focus === 'attack' && mayStartWar(view, me, tick) && enemies.length === 0) {
     const near = borderingNations(view, me);
+    // Owner #317: the warmonger's first war may go over open land to a nation it can march to.
+    const early = earlyWarmonger(view, me, tick);
+    if (early) for (const o of reachableNations(view, me)) near.add(o);
     const target = p.targets.find((o) => near.has(o) && stance(o) !== 'war' && stance(o) !== 'alliance' && !inTruce(view, me, o, tick));
     if (target !== undefined) {
       const armies = view.units.filter((u) => u.owner === me && u.kind === 'army');
       const theirS = militaryStrength(view, target);
-      if (armies.length >= 2 && myS >= 0.8 * theirS + 5 && rng() < 0.2) {
+      if (armies.length >= (early ? 1 : 2) && myS >= 0.8 * theirS + 5 && rng() < 0.2) {
         const place = placeWith(target);
         const why = CASUS[hashString(`casus:${me}:${target}:${tick}`) % CASUS.length]!.replace('{r}', place);
         const betray = stance(target) === 'trade' ? ', tearing up its trade pact' : '';

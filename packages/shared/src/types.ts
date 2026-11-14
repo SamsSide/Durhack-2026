@@ -106,7 +106,19 @@ export interface DecreeOutcome {
 }
 
 /** Owner #288: one beat of a news bulletin's picture: where to look while the anchor speaks of it. */
-export interface NewsFocus { countryId: number | null; tile: number; atSecond: number; caption: string }
+export interface NewsFocus {
+  countryId: number | null; tile: number; atSecond: number; caption: string;
+  /** Owner #317: set on a beat about a war: the battle the picture shows, for the war-report strap. */
+  battle?: NewsBattle;
+}
+/** Owner #317: a war beat's battle. `tile` is the newest clash between the two (or their front when none
+ *  was fought yet). Strengths are unit strength (the web turns them into soldiers): `strength` each
+ *  side's armies and fleets now, `losses` what each side lost on that tile, when the server saw it. */
+export interface NewsBattle {
+  tile: number; attackerId: number; defenderId: number;
+  strength?: { attacker: number; defender: number };
+  losses?: { attacker: number; defender: number };
+}
 
 export interface AgentStatus {
   countryId: number;
