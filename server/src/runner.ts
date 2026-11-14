@@ -31,6 +31,8 @@ export interface WorldRunner {
   /** Restarts a saved run with no API calls. */
   replay(id: string): World | null;
   listReplays(): { id: string; name: string; events: number }[];
+  /** True while a saved run is playing back (Tiger and the recorder skip their writes). Optional. */
+  playback?(): boolean;
   start(): void;
   stop(): void;
   setSpeed(speed: number): void;

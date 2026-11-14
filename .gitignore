@@ -37,4 +37,6 @@ Thumbs.db
 
 # Terra Nova
 server/.cache/
-server/replays/
+server/replays/*
+!server/replays/demo-*.json
+!server/replays/README.md
