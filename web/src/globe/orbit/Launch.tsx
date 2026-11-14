@@ -16,7 +16,8 @@ import { holdSun, sunDir } from '../celestial/sun';
 import { groundView } from '../camera/groundView';
 import type { Ring } from './launchState';
 import { C, Pool, pointScale } from './launchFx';
-import { buildVehicle, rocketKit } from './launchModels';
+import { buildVehicle, rocketKit, rocketKitReady } from './launchModels';
+import type { RocketKit } from './launchModels';
 import type { Vehicle } from './launchModels';
 
 // Demo camera (dev): distance from the subject at each beat, and how fast the shot follows.
@@ -44,6 +45,7 @@ interface Flight {
   id: number;
   t0: number;
   veh: Vehicle;
+  kit: RocketKit;      // the rocket of the launching nation's age
   ring: Ring;
   phase: number;
   pad: THREE.Vector3;
@@ -75,7 +77,7 @@ function bezD(b: Flight['b'], s: number, out: THREE.Vector3): THREE.Vector3 {
 const rnd = (out: THREE.Vector3, k: number) => out.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(2 * k);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-function plan(world: World, id: number, t0: number): Omit<Flight, 'veh'> | null {
+function plan(world: World, id: number, t0: number): Omit<Flight, 'veh' | 'kit'> | null {
   const c = world.countries[id];
   const tile = c ? world.tiles[c.capitalTile] : undefined;
   if (!c || !tile) return null;
@@ -131,6 +133,7 @@ export function Launch() {
       }
     };
     const enqueue = (id: number) => {
+      rocketKit(useWorld.getState().world?.countries[id]?.techAge);   // start loading its rocket now
       const r = st.current;
       if (r.queue.length >= QUEUE_MAX) { deliver(id, Math.random() * Math.PI * 2); return; }   // too many at once: straight to orbit
       r.queue.push(id);
@@ -177,6 +180,7 @@ export function Launch() {
         }
         if (pick < 0 || !world.countries[pick]) return null;
         const r = st.current;
+        rocketKit(world.countries[pick]!.techAge);
         r.queue.unshift(pick);
         r.lastStart = -99;
         demo.current = { country: pick, flight: null, F: null, D: 0.3, end: 0 };
@@ -199,26 +203,27 @@ export function Launch() {
     const world = useWorld.getState().world;
 
     // lift-off for the next in the queue
-    if (world && r.queue.length && r.flights.length < MAX_ACTIVE && t - r.lastStart >= GAP) {
+    if (world && r.queue.length && r.flights.length < MAX_ACTIVE && t - r.lastStart >= GAP && rocketKitReady(world.countries[r.queue[0]!]?.techAge)) {
       const id = r.queue.shift()!;
       const p = plan(world, id, t);
       if (p) {
-        const veh = buildVehicle(rocketKit(), new THREE.Color(world.countries[id]!.color));
+        const kit = rocketKit(world.countries[id]!.techAge);
+        const veh = buildVehicle(kit, new THREE.Color(world.countries[id]!.color));
         veh.root.scale.setScalar(ROCKET_H);
         veh.booster.scale.setScalar(ROCKET_H);
         group.add(veh.root, veh.booster);
-        r.flights.push({ ...p, veh });
+        r.flights.push({ ...p, veh, kit });
         r.lastStart = t;
         const dm = demo.current;
         if (dm && !dm.flight && dm.country === id) dm.flight = r.flights[r.flights.length - 1]!;
       }
     }
 
-    const kit = rocketKit();
     for (let i = r.flights.length - 1; i >= 0; i--) {
       const f = r.flights[i]!;
       const e = t - f.t0;
       const { root, upper, lower, booster } = f.veh;
+      const kit = f.kit;
       const tau = Math.min(1, Math.max(0, (e - HOLD) / ASCENT));
       const s = f.accel * tau * tau + (1 - f.accel) * tau;
 
