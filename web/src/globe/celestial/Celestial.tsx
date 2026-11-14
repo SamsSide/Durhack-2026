@@ -244,7 +244,16 @@ void main() {
 /** Faint warm dots at towns, cities and capitals, only on the night side. One draw call. */
 function CityLights() {
   const world = useWorld((s) => s.world);
-  const version = useWorld((s) => s.version);
+  // B8: the lights only change when a town, city or capital appears, goes or grows, not on every tick.
+  const lit = useWorld((s) => {
+    let n = 0, h = 0;
+    for (const st of s.world?.structures ?? []) {
+      if (st.kind !== 'town' && st.kind !== 'city' && st.kind !== 'capital') continue;
+      n++;
+      h = (h * 31 + st.tile * 131 + st.kind.charCodeAt(1)) | 0;
+    }
+    return `${n}:${h}`;
+  });
   const mat = useMemo(() => new THREE.ShaderMaterial({
     vertexShader: CITY_VERT, fragmentShader: CITY_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     uniforms: { uSun: { value: sunDir }, uColor: { value: new THREE.Color('#ffc46a') }, uScale: { value: 1 } },
@@ -264,10 +273,11 @@ function CityLights() {
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.setAttribute('aSize', new THREE.Float32BufferAttribute(size, 1));
     return g;
-  }, [world, version]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [world, lit]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => geo.dispose(), [geo]);
   useEffect(() => () => mat.dispose(), [mat]);
-  useFrame(({ gl }) => { mat.uniforms.uScale.value = (gl.getPixelRatio() * gl.domElement.clientHeight) / 2400; });
+  // size.height is the canvas height r3f already measured: reading clientHeight here forced a layout every frame
+  useFrame(({ gl, size }) => { mat.uniforms.uScale.value = (gl.getPixelRatio() * size.height) / 2400; });
   return <points geometry={geo} material={mat} renderOrder={2} raycast={noRaycast} frustumCulled={false} />;
 }
 

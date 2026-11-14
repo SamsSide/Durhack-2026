@@ -24,6 +24,7 @@ interface Town {
   parts: TownParts;
   anim: { type: 'build' | 'destroy'; t0: number } | null;
   wallT0: number | null;
+  at?: Record<PartName, number>; // first instance of each part, as of the last full write
 }
 
 /** A box house with a pyramid roof; the `roof` attribute tells the shader which faces take the roof colour. */
@@ -87,6 +88,7 @@ export class TownLayer {
   private riverMat: THREE.ShaderMaterial;
   private river: THREE.Mesh;
   private dirty = true;
+  private layout = true; // the set of towns or a town's parts changed: every instance must be packed again
   private riverDirty = true;
   private f = 0;
   private m = new THREE.Matrix4();
@@ -186,7 +188,7 @@ export class TownLayer {
         if (have.anim?.type === 'destroy') have.anim = { type: 'build', t0: now };
         if (wallsNew && !initial) have.wallT0 = now;
       }
-      this.dirty = this.riverDirty = true;
+      this.dirty = this.layout = this.riverDirty = true;
     }
     for (const t of this.towns.values()) {
       if (!seen.has(t.id) && t.anim?.type !== 'destroy') {
@@ -207,6 +209,8 @@ export class TownLayer {
     (this.mats.grounds as THREE.MeshStandardMaterial).opacity = f;
     this.riverMat.uniforms.uTime!.value = now;
     this.riverMat.uniforms.uWide!.value = f;
+    // B8: out of sight (the orbit view) nothing here is drawn, so the buffers wait until the towns fade in.
+    if (!this.group.visible) return;
     if (this.dirty) this.write(now);
     if (this.riverDirty) this.writeRiver(now);
   }
@@ -232,7 +236,34 @@ export class TownLayer {
     return { k, kw, busy, done };
   }
 
+  /**
+   * B8: while towns only rise or sink, write just their own instances (matrices only, the colours do not
+   * move) and upload just those ranges. False when a town is gone and the buffers must be packed again.
+   */
+  private writeBusy(now: number): boolean {
+    let busy = false;
+    for (const t of this.towns.values()) {
+      if (!t.anim && t.wallT0 == null) continue;
+      const a = this.animOf(t, now);
+      if (a.done || !t.at) return false;
+      busy ||= a.busy;
+      if (t.parts.river) this.riverDirty = true;
+      for (const k of PARTS) {
+        const n = t.parts[k].count;
+        if (n === 0) continue;
+        const mesh = this.meshes[k];
+        this.writePart(mesh, t.parts[k], t.at[k], a.k, WALL_PARTS.has(k) ? a.k * a.kw : a.k, false);
+        mesh.instanceMatrix.addUpdateRange(t.at[k] * 16, n * 16);
+        mesh.instanceMatrix.needsUpdate = true;
+      }
+    }
+    this.dirty = busy;
+    return true;
+  }
+
   private write(now: number): void {
+    if (!this.layout && this.writeBusy(now)) return;
+    this.layout = false;
     const counts = zeroes();
     const done: string[] = [];
     let busy = false;
@@ -253,6 +284,7 @@ export class TownLayer {
     for (const t of this.towns.values()) {
       const a = anims.get(t.id);
       if (!a) continue;
+      t.at = { ...at };
       for (const k of PARTS) {
         const ky = WALL_PARTS.has(k) ? a.k * a.kw : a.k;
         at[k] = this.writePart(this.meshes[k], t.parts[k], at[k], a.k, ky);
@@ -261,6 +293,7 @@ export class TownLayer {
     for (const k of PARTS) {
       const mesh = this.meshes[k];
       mesh.count = at[k];
+      mesh.instanceMatrix.clearUpdateRanges();
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
@@ -268,7 +301,7 @@ export class TownLayer {
     this.dirty = busy;
   }
 
-  private writePart(mesh: THREE.InstancedMesh, buf: PartBuf, start: number, kxz: number, ky: number): number {
+  private writePart(mesh: THREE.InstancedMesh, buf: PartBuf, start: number, kxz: number, ky: number, colours = true): number {
     const { m, p, q, s, c } = this;
     const tr = buf.tr, col = buf.col;
     const n = buf.count;
@@ -279,7 +312,7 @@ export class TownLayer {
       s.set(tr[o + 7]! * kxz + 1e-7, tr[o + 8]! * ky + 1e-7, tr[o + 9]! * kxz + 1e-7);
       m.compose(p, q, s);
       mesh.setMatrixAt(start + i, m);
-      mesh.setColorAt(start + i, c.setRGB(col[i * 3]!, col[i * 3 + 1]!, col[i * 3 + 2]!));
+      if (colours) mesh.setColorAt(start + i, c.setRGB(col[i * 3]!, col[i * 3 + 1]!, col[i * 3 + 2]!));
     }
     return start + n;
   }
