@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { World } from '@terra/shared';
-import { useWorld } from '../../state/world';
+import { onWorldReset, useWorld } from '../../state/world';
 import type { LedgerRow } from '../../state/world';
 import { tileHeight } from '../mesh/buildProvinceMesh';
 import './trade.css';
@@ -175,6 +175,11 @@ export function Trade() {
 
   useEffect(() => {
     seen.current = new Set();
+    // A new world: no arc or label of the old one stays on screen.
+    const offReset = onWorldReset(() => {
+      seen.current = new Set();
+      for (const s of pool.slots) { s.active = false; s.mesh.visible = false; s.head.visible = false; s.label.style.opacity = '0'; s.label.style.visibility = 'hidden'; s.shown = false; }
+    });
     const spawn = (row: LedgerRow) => {
       const w = useWorld.getState().world;
       if (!w) return;
@@ -211,11 +216,12 @@ export function Trade() {
     // Rows already in the store when we mount are history: remember them, do not draw them.
     for (const r of useWorld.getState().ledger) if (r.status === 'confirmed' || r.status === 'simulated') seen.current.add(r.id);
     let last = useWorld.getState().ledger;
-    return useWorld.subscribe((s) => {
+    const off = useWorld.subscribe((s) => {
       if (s.ledger === last) return;
       last = s.ledger;
       take(s.ledger.slice(-12));
     });
+    return () => { off(); offReset(); };
   }, [pool, world?.id]);
 
   const tmp = useMemo(() => new THREE.Vector3(), []);

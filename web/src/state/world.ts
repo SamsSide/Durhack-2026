@@ -23,6 +23,7 @@ export interface WorldStore {
   economy: EconomyStatus | null;
   world: World | null;
   version: number;
+  epoch: number;                  // bumps every time a different world arrives; key per-world UI on it
   agents: AgentStatus[];
   budget: { calls: number; tokensIn: number; tokensOut: number; callsPerMin: number; capped: boolean; mode: 'mock' | 'live' } | null;
   connected: boolean;
@@ -43,9 +44,30 @@ export interface WorldStore {
 
 let socket: WebSocket | null = null;
 
+// One place that knows when the world changed. Modules that keep their own per-world state
+// (caches, refs, local reducers) register here instead of each watching world.id.
+const resetListeners = new Set<(worldId: string | null) => void>();
+export function onWorldReset(fn: (worldId: string | null) => void): () => void {
+  resetListeners.add(fn);
+  return () => { resetListeners.delete(fn); };
+}
+
+/** Wipe everything that belongs to the old world: selection, belief view, recent events, ledger, economy, clock, prepare. */
+export function resetForWorld(worldId: string | null): void {
+  useBelief.getState().set(null, null);
+  useWorld.setState((s) => ({
+    selectedCountryId: null, selectedTileId: null, selectedRegionId: null, beliefOf: null,
+    recentEvents: [], ledger: [], economy: null, clock: null, agents: [],
+    prepare: s.prepare && s.prepare.worldId === worldId ? s.prepare : null,
+    epoch: s.epoch + 1,
+  }));
+  for (const fn of [...resetListeners]) { try { fn(worldId); } catch (err) { console.warn('world reset listener failed', err); } }
+}
+
 export const useWorld = create<WorldStore>((set, get) => ({
   world: null,
   version: 0,
+  epoch: 0,
   agents: [],
   budget: null,
   connected: false,
@@ -80,6 +102,7 @@ function handle(msg: { type: string; [k: string]: unknown }): void {
   switch (msg.type) {
     case 'snapshot': {
       const world = msg.world as World;
+      if (s.world?.id !== world.id) resetForWorld(world.id);   // a reconnect to the same world keeps everything
       useWorld.setState({ world, version: s.version + 1, agents: world.agents ?? [], recentEvents: [], ledger: [], prepare: s.prepare?.worldId === world.id ? s.prepare : null });
       break;
     }
@@ -124,7 +147,8 @@ function handle(msg: { type: string; [k: string]: unknown }): void {
       useBelief.getState().set(msg.countryId as number, msg.owner as number[]);
       break;
     case 'none':
-      useWorld.setState({ world: null, agents: [], recentEvents: [], ledger: [], economy: null, prepare: null, selectedCountryId: null, selectedTileId: null, selectedRegionId: null });
+      resetForWorld(null);
+      useWorld.setState({ world: null, prepare: null });
       break;
     case 'error':
       console.warn('server error:', msg.message);

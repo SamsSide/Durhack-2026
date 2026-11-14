@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useWorld } from '../../state/world';
+import { onWorldReset, useWorld } from '../../state/world';
 
 export interface CountryLore {
   countryId: number;
@@ -18,6 +18,7 @@ export interface LoreState<T> { lore: T | null; loading: boolean; error: boolean
 
 const countryCache = new Map<number, CountryLore>();
 const regionCache = new Map<number, RegionLore>();
+onWorldReset(() => { countryCache.clear(); regionCache.clear(); });
 
 /** Generic cached fetch: shows the cached value at once, refetches when stale, aborts on change. */
 function useCachedLore<T extends { asOfTick?: number }>(

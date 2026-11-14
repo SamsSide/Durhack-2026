@@ -2,7 +2,7 @@
 // Types come from @terra/shared (row A29). Mount inside the ProvinceMeshContext provider.
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
-import { useWorld } from '../../state/world';
+import { onWorldReset, useWorld } from '../../state/world';
 import { useProvinceMesh } from '../mesh/context';
 import { Anchor } from '../status/Anchor';
 import { capitalPoint } from '../status/geo';
@@ -23,13 +23,15 @@ interface Vis {
 type Action =
   | { k: 'event'; e: CouncilChanged | CouncilStatus }
   | { k: 'sync'; id: number; ruler: CouncilState; general: CouncilState }
-  | { k: 'off'; id: number; stamp: number };
+  | { k: 'off'; id: number; stamp: number }
+  | { k: 'reset' };
 type Table = Record<number, Vis>;
 
 const blank = (): Vis => ({ ruler: 'active', general: 'active', mourn: 'off', pulse: 0, seal: 0, coup: 0, sealRole: 'ruler', sealCause: 'succession', coupRole: 'ruler', mournCause: 'In mourning' });
 const troubled = (v: Vis) => v.ruler === 'vacant' || v.ruler === 'covering' || v.general === 'vacant' || v.general === 'covering';
 
 function reduce(t: Table, a: Action): Table {
+  if (a.k === 'reset') return {};
   if (a.k === 'off') {
     const v = t[a.id];
     if (!v || v.mourn !== 'lowering' || v.seal !== a.stamp) return t;
@@ -206,8 +208,10 @@ export function Council() {
       sig = s;
       for (const [id, r, g] of items) dispatch({ k: 'sync', id, ruler: r, general: g });
     };
+    const offReset = onWorldReset(() => { sig = ''; dispatch({ k: 'reset' }); setTip(null); });
     run();
-    return useWorld.subscribe(run);
+    const off = useWorld.subscribe(run);
+    return () => { off(); offReset(); };
   }, []);
 
   useEffect(() => { demoDispatch = dispatch; return () => { if (demoDispatch === dispatch) demoDispatch = null; }; }, []);
