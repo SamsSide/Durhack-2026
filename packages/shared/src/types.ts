@@ -158,7 +158,8 @@ export interface EconomyState {
   mode: EconomyMode; cluster: string;
   currency: { name: string; symbol: string; mint: string; url: string | null; supply: number; mintAuthority: string | null };
   commons: { address: string; url: string | null; balance: number };
-  nations: { countryId: number; address: string; url: string | null; onChain: number; sim: number; drift?: number; inSync: boolean }[];
+  /** `ledger`: genesis float + confirmed payments in - out (+ Commons advances); `drift` = onChain - ledger; `sim` is the treasury, for information. */
+  nations: { countryId: number; address: string; url: string | null; onChain: number; ledger?: number; sim: number; drift?: number; inSync: boolean }[];
   totals: { payments: number; volume: number; transactions: number; feesSol: number };
   recent: LedgerEntry[];
 }

@@ -1,7 +1,8 @@
 // Row A27: devnet genesis, once per world. A Token-2022 mint with on-chain name and symbol and no
 // mint authority afterwards, one token account per nation and one for the Commons (each requires a
-// memo on incoming transfers), the fixed supply minted to the Commons and the starting treasuries
-// to the nations. Kit 8 plugin client throughout; no web3.js.
+// memo on incoming transfers), the fixed supply minted to the Commons and a float (SOLANA_FLOAT,
+// default 10,000) to each nation. The chain records money moving between nations; income and
+// spending stay in the sim, so the float only has to cover payments. Kit 8; no web3.js.
 import {
   generateKeyPairSigner, nonDivisibleSequentialInstructionPlan, sequentialInstructionPlan,
   type Address, type Instruction, type InstructionPlan, type KeyPairSigner,
@@ -11,7 +12,7 @@ import {
   getMintToCheckedInstruction, getSetAuthorityInstruction,
 } from '@solana-program/token-2022';
 import type { World } from '@terra/shared';
-import { currencyName, DECIMALS, SUPPLY, SYMBOL, type ChainInfo } from './types';
+import { currencyName, DECIMALS, floatSize, SUPPLY, SYMBOL, type ChainInfo } from './types';
 import type { Wallets } from './wallets';
 import type { ChainClient } from './settle';
 
@@ -74,14 +75,14 @@ export async function runGenesis(
   }
   transactions += await send(sequentialInstructionPlan(plans));
 
-  // 3. Mint the whole supply: starting treasuries to the nations, the rest to the Commons.
+  // 3. Mint the whole supply: the float to each living nation, the rest to the Commons.
   const minted = new Map<number, number>();
   let toNations = 0;
   const mints: Instruction[] = [];
+  const coins = floatSize();
   for (const c of world.countries) {
     const w = wallets.walletOf(c.id);
-    if (!w || !c.alive || c.treasury <= 0) continue;
-    const coins = Math.round(c.treasury * 100) / 100;
+    if (!w || !c.alive || coins <= 0 || toNations + coins > SUPPLY) continue;
     minted.set(c.id, coins);
     toNations += coins;
     mints.push(getMintToCheckedInstruction({
