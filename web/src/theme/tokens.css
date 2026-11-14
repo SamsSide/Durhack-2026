@@ -1,0 +1,77 @@
+/* X7 design tokens. Components use these variables only; a redesign is this one file. */
+:root {
+  --color-bg: #12100d;
+  --color-surface: #1d1913;
+  --color-parchment: #e8dcc0;
+  --color-ink: #2b2118;
+  --color-ink-muted: #7a6a52;
+  --color-accent: #c9a24b;
+  --color-danger: #b8432f;
+  --color-ok: #5b8a4a;
+  --color-border: #4a3d2a;
+  --color-text: #efe6d0;
+  --color-text-muted: #a8997d;
+
+  --font-serif: 'Georgia', 'Iowan Old Style', 'Palatino Linotype', serif;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 40px;
+
+  --radius-1: 3px;
+  --radius-2: 6px;
+  --radius-3: 12px;
+
+  --shadow-1: 0 4px 18px rgba(0, 0, 0, 0.55);
+
+  --holo-tint: #6fe3d6;
+  --holo-glow: 0 0 18px rgba(111, 227, 214, 0.55);
+  --holo-scanline: rgba(111, 227, 214, 0.12);
+}
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; height: 100%; }
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-serif);
+  overflow: hidden;
+}
+button, select, input, textarea { font: inherit; }
+
+/* Shared small controls, used by the seed UI. */
+.btn {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+  font-family: var(--font-serif);
+}
+.btn:hover { border-color: var(--color-accent); }
+.btn.active { background: var(--color-accent); color: var(--color-ink); border-color: var(--color-accent); }
+.btn.danger { border-color: var(--color-danger); color: var(--color-danger); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.panel {
+  background: var(--color-parchment);
+  color: var(--color-ink);
+  border: 2px solid var(--color-ink);
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-1);
+  padding: var(--space-4);
+}
+.panel h2, .panel h3 { margin: 0 0 var(--space-2); font-variant: small-caps; letter-spacing: 0.04em; }
+.panel .muted { color: var(--color-ink-muted); }
+.panel .btn { background: var(--color-parchment); color: var(--color-ink); border-color: var(--color-ink); }
+.panel .btn:hover { background: var(--color-accent); }
+.panel .btn.danger { color: var(--color-danger); border-color: var(--color-danger); }
+.panel input, .panel textarea, .panel select {
+  background: transparent; color: var(--color-ink);
+  border: 1px solid var(--color-ink-muted); border-radius: var(--radius-1); padding: var(--space-1) var(--space-2);
+}
