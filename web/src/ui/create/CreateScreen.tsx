@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, DragEvent, FormEvent, KeyboardEvent } from 'react';
 import { useWorld } from '../../state/world';
 import { pickImage } from './imagePick';
+import { expectPreparedWorld } from '../prepare/state';
+import '../prepare/prepare.css';
 import type { PickedImage } from './imagePick';
 import './create.css';
 
@@ -57,6 +59,7 @@ export function CreateScreen() {
   const [era, setEra] = useState('');
   const [seaLevel, setSeaLevel] = useState(0.55);
   const [aggression, setAggression] = useState(0.5);
+  const [prepare, setPrepare] = useState(false);   // X3 `prepare: true`: the world is created paused and pre-made for a demo
   const [busy, setBusy] = useState(false);
   const [founding, setFounding] = useState(false);
   const [stage, setStage] = useState(2);
@@ -142,6 +145,7 @@ export function CreateScreen() {
     const body: Record<string, unknown> = { prompt: prompt.trim(), nations, seaLevel, aggression };
     if (picture) body.imageBase64 = picture.base64;
     if (era) body.era = era.toLowerCase();
+    if (prepare) { body.prepare = true; expectPreparedWorld(); }
     void run(() => postJson('/api/world', body), true);
   };
 
@@ -287,6 +291,14 @@ export function CreateScreen() {
             <span className="tn-create-ends"><span>Peaceful</span><span>Warlike</span></span>
           </div>
         </div>
+
+        <button type="button" role="switch" aria-checked={prepare} className={`tn-create-prep${prepare ? ' on' : ''}`} onClick={() => setPrepare((v) => !v)}>
+          <span>
+            <span className="tn-create-prep-title">Prepare for a demo</span>
+            <span className="tn-create-prep-sub">The world waits paused while lore, voices, chants and anthems are made, about a minute.</span>
+          </span>
+          <span className="tn-create-prep-toggle" aria-hidden="true"><i /></span>
+        </button>
       </fieldset>
 
       {!busy && error && <p className="tn-create-error" role="alert">{error}</p>}

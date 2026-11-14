@@ -14,6 +14,10 @@ export interface LedgerRow {
 /** X2 `economy` message (A27). */
 export interface EconomyStatus { mode: string; online: boolean; pending: number; payments: number; volume: number; feesSol: number }
 
+/** X2 `prepare` message (demo prepare mode): what is being pre-made, per nation. */
+export interface PrepareItem { kind: 'lore' | 'narration' | 'chant' | 'anthem' | 'ruler'; countryId: number; status: 'pending' | 'working' | 'ready' | 'failed' }
+export interface PrepareStatus { worldId: string; done: boolean; ready: number; total: number; items: PrepareItem[] }
+
 export interface WorldStore {
   ledger: LedgerRow[];            // newest last, at most 50
   economy: EconomyStatus | null;
@@ -34,6 +38,7 @@ export interface WorldStore {
   send(message: object): void;
   recentEvents: WorldEvent[];
   clock: { speed: number; target: number; pacing: 'auto' | 'manual'; paused: boolean } | null;   // X2 `clock` (#124); null until the server sends one
+  prepare: PrepareStatus | null;   // X2 `prepare`; null until a prepare run reports progress
 }
 
 let socket: WebSocket | null = null;
@@ -51,6 +56,7 @@ export const useWorld = create<WorldStore>((set, get) => ({
   mapMode: 'political',
   recentEvents: [],
   clock: null,
+  prepare: null,
   ledger: [],
   economy: null,
   setMapMode: (mapMode) => set({ mapMode }),
@@ -74,7 +80,7 @@ function handle(msg: { type: string; [k: string]: unknown }): void {
   switch (msg.type) {
     case 'snapshot': {
       const world = msg.world as World;
-      useWorld.setState({ world, version: s.version + 1, agents: world.agents ?? [], recentEvents: [], ledger: [] });
+      useWorld.setState({ world, version: s.version + 1, agents: world.agents ?? [], recentEvents: [], ledger: [], prepare: s.prepare?.worldId === world.id ? s.prepare : null });
       break;
     }
     case 'events': {
@@ -96,6 +102,9 @@ function handle(msg: { type: string; [k: string]: unknown }): void {
     case 'clock':
       useWorld.setState({ clock: { speed: msg.speed as number, target: msg.target as number, pacing: msg.pacing as 'auto' | 'manual', paused: !!msg.paused } });
       break;
+    case 'prepare':
+      useWorld.setState({ prepare: { worldId: String(msg.worldId ?? ''), done: !!msg.done, ready: Number(msg.ready) || 0, total: Number(msg.total) || 0, items: Array.isArray(msg.items) ? (msg.items as PrepareItem[]) : [] } });
+      break;
     case 'ledger': {
       const rows = (msg.entries as LedgerRow[]) ?? [];
       const next = [...s.ledger];
@@ -115,7 +124,7 @@ function handle(msg: { type: string; [k: string]: unknown }): void {
       useBelief.getState().set(msg.countryId as number, msg.owner as number[]);
       break;
     case 'none':
-      useWorld.setState({ world: null, agents: [], recentEvents: [], ledger: [], economy: null, selectedCountryId: null, selectedTileId: null, selectedRegionId: null });
+      useWorld.setState({ world: null, agents: [], recentEvents: [], ledger: [], economy: null, prepare: null, selectedCountryId: null, selectedTileId: null, selectedRegionId: null });
       break;
     case 'error':
       console.warn('server error:', msg.message);

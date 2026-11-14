@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useWorld } from '../../state/world';
 import { useBelief } from '../../state/belief';
 import { NationRow } from './NationRow';
+import { PrepareSwitch } from '../prepare/PreparePanel';
 import { LedgerPanel } from '../economy/LedgerPanel';
 import { EconomyCounter } from '../economy/EconomyCounter';
 import { useEconomy } from '../economy/useEconomy';
@@ -134,6 +135,8 @@ export function NetworkPanel() {
         </span>
         <span className={`tn-toggle ${beliefOf != null ? 'on' : ''}`}><i /></span>
       </button>
+
+      <PrepareSwitch />
 
       <ul className="tn-net-list">
         {world.countries.map((c) => (
