@@ -39,7 +39,7 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 | A14 | Narration: ElevenLabs speaks the lore in a voice chosen from `voiceStyle`, cached on disk; the real `web/src/audio/` module (X6) | A13 | X3 narration, X6 | CP1.5 | done | MLH ElevenLabs |
 | A15 | Anthem: the music model sings the lyrics from A13 in the nation's style, cached; regenerated only when the lyrics change | A13 | X3 anthem | CP1.5 | testing | Waiting on a person to listen; never say 'national anthem' in music prompts (the filter rejects it) |
 | A16 | War chants: one short chant per nation, cached; played automatically by the audio module when war is declared or a battle is fought | A6, A14 | X3 chant | CP1.5 | testing | Waiting on a person to listen to the delivery |
-| A17 | Multimodal, image in: a picture on the Create screen, read by Gemini (image input) for mood, palette and setting, folded into the world bible | A5 | X3 `imageBase64` | CP1.5 | next | MLH judge tip: make it multimodal |
+| A17 | Multimodal, image in: a picture on the Create screen, read by Gemini (image input) for mood, palette and setting, folded into the world bible | A5 | X3 `imageBase64` | CP1.5 | done | flash-lite reads the image in about 7 s |
 | A18 | Regions and secession: nations name the regions they settle, unrest per region, a region breaking away as a new nation with its own agent and ruler (one at a time, with a cooldown) | A4, A6 | `country_founded`, `region_updated` events | CP1.5 | todo | Cut to names and flags only if unstable |
 | A19 | Flags: a `FlagSpec` for every nation and region from the world bible, `flagSvg` in the shared package, and the painted-flag route (Gemini image model, cached, capped) | A5 | X1 `flagSvg`, X3 flag | CP1 for drawn, CP1.5 for painted | testing | Drawn flags done; painted-flag route built but Gemini image needs billing (429), returns 503 meanwhile |
 | A20 | Multimodal, audio in: spoken decrees. Gemini hears the recording directly and turns it into a decree with an effect (plague, famine, storm, meteor, prophet, gold rush, rebellion) that the engine applies to a nation or region | A6, A7 | X3 `POST /api/decree/voice` | CP2 | next | Lane c adds the mic to DecreeBox |
@@ -70,5 +70,6 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 
 - 15:23 · A7: silence and return entries on cut and restore, neighbours notice the silence, disputes settled on restore (earlier claim wins) with tile flips, deleted nations fall to ruins and are carved up, blackout
 - 15:29 · A21: Terra Nova News: Gemini watches a capture of the globe and the chronicle and writes a bulletin, read by an ElevenLabs newsreader; X6 playBroadcast
+- 15:30 · A17: a picture on the Create screen read by Gemini (image in) for mood, palette, setting and sea level, folded into the world bible in one call
 
 Mocks: `npm run mock` (MockRunner behind the `WorldRunner` interface in `server/src/runner.ts`) stands in for the engine until A3; lore, audio and replays are mocked until A13 to A16 and A9.

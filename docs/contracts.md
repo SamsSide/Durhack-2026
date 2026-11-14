@@ -39,6 +39,7 @@ Real values go in `.env` at the repo root (git-ignored). The owner's keys file i
 | `GEMINI_MODEL_RULER` | lane a | Model id for ruler decisions: `gemini-3.5-flash-lite` |
 | `GEMINI_MODEL_LORE` | lane a | Model id for lore: `gemini-3.5-flash` |
 | `GEMINI_MODEL_BIBLE` | lane a | Model id for the world bible at creation: `gemini-3.5-flash-lite` (about 5 s; flash takes about 28 s) |
+| `GEMINI_MODEL_BIBLE_IMAGE` | lane a | Optional model for the bible when a picture is given; default the bible model (flash-lite reads images in about 7 s, flash takes about 23 s) |
 | `LLM_MAX_CALLS_PER_MIN` | lane a | Default 20. Above it, nations fall to autopilot |
 | `LLM_MAX_TOKENS_PER_RUN` | lane a | Default 400000. Above it, every nation is on autopilot |
 | `GEMINI_MODEL_IMAGE` | lane a | Image model id for painted flags; empty turns painted flags off |
@@ -225,7 +226,7 @@ export function flagSvg(spec: FlagSpec, width?: number, height?: number): string
 | Route | Giver | Request | Response |
 | --- | --- | --- | --- |
 | `GET /api/health` | a | none | `{ "ok": true, "mode": "mock", "world": "w-3f9a" }` |
-| `POST /api/world` | a | `{ "prompt": "a drowned post-apocalyptic world", "nations": 6, "era": "post-apocalyptic", "seaLevel": 0.55, "aggression": 0.5, "seed": 12345, "imageBase64": null }` (only `prompt` is required; `imageBase64` is an optional picture (JPEG or PNG, under about 4 MB) that Gemini reads for mood, palette and setting, row A17) | `{ "worldId": "w-3f9a" }`, then a `snapshot` on the socket. In live mode it answers after about 7 s (Gemini writes the world bible); the Create screen shows a loading state meanwhile |
+| `POST /api/world` | a | `{ "prompt": "a drowned post-apocalyptic world", "nations": 6, "era": "post-apocalyptic", "seaLevel": 0.55, "aggression": 0.5, "seed": 12345, "imageBase64": null }` (only `prompt` is required; `imageBase64` is an optional picture (JPEG, PNG or WebP, raw base64 or a data URL, under 4 MB decoded) that Gemini reads for mood, palette, setting and sea level, row A17; anything else gets `400 { "error": "unsupported image" }`) | `{ "worldId": "w-3f9a" }`, then a `snapshot` on the socket. In live mode it answers after about 7 s (Gemini writes the world bible); the Create screen shows a loading state meanwhile |
 | `GET /api/replays` | a | none | `[ { "id": "demo-1", "name": "The Drowned Age", "events": 5210 } ]` |
 | `POST /api/replays/:id/play` | a | none | `{ "worldId": "w-3f9a" }`, then a `snapshot`; events replay with no API calls |
 | `GET /api/world/log` | a | none | `{ "initial": { "...": "the World at tick 0" }, "events": [ ] }`: the whole run, for the timeline scrubber |
