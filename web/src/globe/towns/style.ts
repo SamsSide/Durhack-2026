@@ -17,6 +17,7 @@ export const ROOFS: Record<BuildingStyle, string[]> = {
   western_modern: ['#c8ccd0', '#8a9098', '#ded9d0'],
   egyptian: ['#e0cc98', '#d0b47a', '#c8a868'],
   highland: ['#5c5c5e', '#6a5a48', '#4a4a50'],
+  arcology: ['#e8eef0', '#9fd8d0', '#c4cfd6'],
 };
 
 /** House walls: the roof colour washed toward this plaster, so pale styles get pale walls. */
@@ -24,7 +25,7 @@ export const PLASTER = '#e0d4bc';
 
 /** Taller blocks for the industrial and modern styles. */
 export const HEIGHT_K: Partial<Record<BuildingStyle, number>> = {
-  soviet_bloc: 1.9, western_modern: 1.7, industrial: 1.35,
+  soviet_bloc: 1.9, western_modern: 1.7, industrial: 1.35, arcology: 2.2,
 };
 
 export const GROUND = '#c8b088';      // pale earth: the streets between the blocks
