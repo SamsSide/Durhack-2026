@@ -1,9 +1,23 @@
 // Loads the X4 model manifest and GLBs once. Any missing key or failed file gets a box fallback for good.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { STYLE_FALLBACK } from '@terra/shared';
+import type { BuildingStyle, Country } from '@terra/shared';
 
 export interface ModelPart { geometry: THREE.BufferGeometry; material: THREE.Material; team: boolean }
-export interface ModelSet { parts: Map<string, ModelPart[]>; footprint: Map<string, number>; fallback: ModelPart[] }
+interface Entry { file: string; footprint: number }
+export interface ModelSet {
+  parts: Map<string, ModelPart[]>;       // shared model per kind (and 'tree')
+  footprint: Map<string, number>;
+  fallback: ModelPart[];
+  styles: Map<string, Map<string, Entry>>; // manifest `styles`: style -> kind -> entry
+  files: Map<string, ModelPart[]>;       // every loaded file, loaded once and shared
+  failed: Set<string>;                   // files that failed to load
+  loading: Map<string, Promise<void>>;   // style loads in flight or done
+  misses: Set<string>;                   // 'style/kind' with no styled model (dev log)
+  loader: GLTFLoader;
+}
+export interface Resolved { key: string; parts: ModelPart[]; footprint: number; real: boolean }
 
 export const STRUCTURE_KINDS = ['camp', 'village', 'town', 'city', 'capital', 'farm', 'port', 'fort', 'temple', 'factory', 'ruin'] as const;
 const DEFAULT_FOOTPRINT = 0.8;
@@ -37,41 +51,131 @@ async function loadOne(loader: GLTFLoader, file: string): Promise<ModelPart[]> {
 
 let cache: Promise<ModelSet> | null = null;
 
+type Manifest = { models?: Record<string, Entry>; styles?: Record<string, Record<string, Entry>> };
+
 export function loadModels(): Promise<ModelSet> {
   if (cache) return cache;
   cache = (async () => {
-    const set: ModelSet = { parts: new Map(), footprint: new Map(), fallback: [fallbackPart()] };
-    let models: Record<string, { file: string; footprint: number }> = {};
+    const loader = new GLTFLoader();
+    const set: ModelSet = {
+      parts: new Map(), footprint: new Map(), fallback: [fallbackPart()],
+      styles: new Map(), files: new Map(), failed: new Set(), loading: new Map(), misses: new Set(), loader,
+    };
+    let manifest: Manifest = {};
     try {
       const res = await fetch(`${BASE}models/manifest.json`);
-      if (res.ok) models = ((await res.json()) as { models?: typeof models }).models ?? {};
+      if (res.ok) manifest = (await res.json()) as Manifest;
     } catch (err) {
       console.warn('structures: manifest failed, using boxes', err);
     }
-    const loader = new GLTFLoader();
+    const models = manifest.models ?? {};
+    for (const [style, kinds] of Object.entries(manifest.styles ?? {})) {
+      const m = new Map<string, Entry>();
+      for (const [kind, e] of Object.entries(kinds ?? {})) if (e?.file) m.set(kind, { file: e.file, footprint: e.footprint || DEFAULT_FOOTPRINT });
+      if (m.size) set.styles.set(style, m);
+    }
     await Promise.all([...STRUCTURE_KINDS, 'tree'].map(async (key) => {
       const entry = models[key];
       if (entry?.footprint) set.footprint.set(key, entry.footprint);
       if (!entry?.file) return;
-      try { set.parts.set(key, await loadOne(loader, entry.file)); }
-      catch (err) { console.warn(`structures: ${key} failed, using a box`, err); }
+      const parts = await loadFile(set, entry.file);
+      if (parts) set.parts.set(key, parts);
     }));
     return set;
   })();
   return cache;
 }
 
+async function loadFile(set: ModelSet, file: string): Promise<ModelPart[] | null> {
+  const have = set.files.get(file);
+  if (have) return have;
+  if (set.failed.has(file)) return null;
+  try {
+    const parts = await loadOne(set.loader, file);
+    set.files.set(file, parts);
+    return parts;
+  } catch (err) {
+    set.failed.add(file);
+    console.warn(`structures: ${file} failed, using the next fallback`, err);
+    return null;
+  }
+}
+
+/** Style chain for one nation: its own style, then the nearest built one. */
+function chain(style: string): string[] {
+  const fb = STYLE_FALLBACK[style as BuildingStyle];
+  return fb && fb !== style ? [style, fb] : [style];
+}
+
+/**
+ * Load the models of the given styles (and their fallbacks, and 'nomadic' when asked). Only files the
+ * manifest lists are fetched, each once, and a style already loaded costs nothing. Resolves when done.
+ */
+export function ensureStyles(set: ModelSet, styles: Iterable<string>, nomadic = false): Promise<void> {
+  const wanted = new Set<string>();
+  for (const s of styles) for (const c of chain(s)) wanted.add(c);
+  if (nomadic) wanted.add('nomadic');
+  const jobs: Promise<void>[] = [];
+  for (const style of wanted) {
+    const kinds = set.styles.get(style);
+    if (!kinds) continue;
+    let job = set.loading.get(style);
+    if (!job) {
+      job = Promise.all([...kinds.values()].map((e) => loadFile(set, e.file))).then(() => undefined);
+      set.loading.set(style, job);
+    }
+    jobs.push(job);
+  }
+  return Promise.all(jobs).then(() => undefined);
+}
+
+/** Styles used by the living nations of a world, and whether any is nomadic. */
+export function stylesInUse(countries: Country[]): { styles: Set<string>; nomadic: boolean } {
+  const styles = new Set<string>(['medieval']);
+  let nomadic = false;
+  for (const c of countries) {
+    if (c.alive === false) continue;
+    styles.add(c.buildingStyle ?? 'medieval');
+    if (c.nomadic) nomadic = true;
+  }
+  return { styles, nomadic };
+}
+
 export function partsFor(set: ModelSet, kind: string): ModelPart[] {
   return set.parts.get(kind) ?? set.fallback;
 }
+const STYLED = new Set(['capital', 'city', 'town', 'temple', 'fort']);
+const NOMAD_KINDS = new Set(['camp', 'village', 'town']);
+
 /**
- * Hook for culture styles: today every nation shares one model per kind. Once the owner adds
- * per-style variants to the manifest this will pick one from the country's style.
+ * The model for a kind in a nation: nomadic entry (camp, village, town), then its style, then the
+ * style's fallback, then the shared model, then the box. `key` names the instanced mesh group.
  */
-export function modelFor(set: ModelSet, kind: string, _country?: number): { parts: ModelPart[]; footprint: number } {
-  return { parts: partsFor(set, kind), footprint: footprintFor(set, kind) };
+export function modelFor(set: ModelSet, kind: string, country?: Country): Resolved {
+  const usable = (style: string): Entry | null => {
+    const e = set.styles.get(style)?.get(kind);
+    return e && set.files.has(e.file) ? e : null;
+  };
+  let hit: Entry | null = null;
+  if (country?.nomadic && NOMAD_KINDS.has(kind)) hit = usable('nomadic');
+  if (!hit && set.styles.size) {
+    const style = country?.buildingStyle ?? 'medieval';
+    for (const s of chain(style)) { hit = usable(s); if (hit) break; }
+    if (!hit && import.meta.env.DEV && STYLED.has(kind)) set.misses.add(`${style}/${kind}`);
+  }
+  if (hit) return { key: hit.file, parts: set.files.get(hit.file)!, footprint: hit.footprint, real: true };
+  const shared = set.parts.get(kind);
+  if (shared) return { key: `${kind}:shared`, parts: shared, footprint: footprintFor(set, kind), real: true };
+  return { key: `${kind}:box`, parts: set.fallback, footprint: footprintFor(set, kind), real: false };
 }
-export function hasModel(set: ModelSet, kind: string): boolean { return set.parts.has(kind); }
+export function hasModel(set: ModelSet, kind: string, country?: Country): boolean { return modelFor(set, kind, country).real; }
 export function footprintFor(set: ModelSet, kind: string): number {
   return set.footprint.get(kind) ?? DEFAULT_FOOTPRINT;
+}
+
+/** Dev only: once, say which style/kind pairs had no model and used a fallback. */
+export function logMisses(set: ModelSet): void {
+  if (!import.meta.env.DEV || !set.styles.size || !set.misses.size) return;
+  console.debug(`structures: no styled model for ${[...set.misses].sort().join(', ')}; using fallbacks`);
+  set.misses.clear();
 }

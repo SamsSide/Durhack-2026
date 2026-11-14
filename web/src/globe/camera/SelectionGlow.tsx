@@ -53,7 +53,11 @@ export function SelectionGlow() {
 
   useFrame(({ clock }) => {
     const m = lineRef.current?.material;
-    if (m) m.opacity = 0.8 + 0.2 * Math.sin(clock.elapsedTime * Math.PI * 2);
+    if (!m) return;
+    const st = useWorld.getState();
+    const cut = st.agents.some((a) => a.countryId === st.selectedCountryId && a.link === 'cut');
+    // a cut nation keeps its dotted cyan ring readable: the selection outline dims
+    m.opacity = (cut ? 0.4 : 0.8) + (cut ? 0.1 : 0.2) * Math.sin(clock.elapsedTime * Math.PI * 2);
   });
 
   const blending = useMemo(() => THREE.AdditiveBlending, []);
@@ -64,7 +68,7 @@ export function SelectionGlow() {
       points={points}
       segments
       color={getPalette().holo}
-      lineWidth={4}
+      lineWidth={3.2}
       transparent
       opacity={0.8}
       blending={blending}

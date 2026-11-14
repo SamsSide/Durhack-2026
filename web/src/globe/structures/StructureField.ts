@@ -1,7 +1,7 @@
 // All structures of a world: one InstancedMesh per (kind, sub-mesh), pop-up animations, dust puffs, LOD.
 import * as THREE from 'three';
 import type { World } from '@terra/shared';
-import { hasModel, modelFor, STRUCTURE_KINDS } from './models';
+import { hasModel, logMisses, modelFor } from './models';
 import type { ModelPart, ModelSet } from './models';
 import { clamp01, easeOutBack, hash01, smoothstep } from './placement';
 import type { TileGeo, TileGeos } from './placement';
@@ -20,13 +20,13 @@ const MAX_SIZE = 0.07;   // absolute cap (times surface radius) so nothing tower
 
 interface Anim { type: 'build' | 'upgrade' | 'destroy'; t0: number }
 interface Rec {
-  id: string; tile: number; owner: number; kind: string; slot: number;
+  id: string; tile: number; owner: number; kind: string; slot: number; pool: Pool;
   g: TileGeo; pos: THREE.Vector3; quat: THREE.Quaternion; size: number; anim: Anim | null;
   hy: number;               // stable height stretch
   parent: Rec | null;       // set for the small buildings around a city or capital
   sats: Rec[];
 }
-interface Pool { kind: string; parts: ModelPart[]; meshes: THREE.InstancedMesh[]; cap: number; list: Rec[]; dirty: boolean }
+interface Pool { key: string; kind: string; parts: ModelPart[]; meshes: THREE.InstancedMesh[]; cap: number; list: Rec[]; dirty: boolean }
 interface Puff { t0: number; pos: THREE.Vector3; g: TileGeo; size: number; seed: number }
 
 export class StructureField {
@@ -49,11 +49,6 @@ export class StructureField {
   private col = new THREE.Color();
 
   constructor(private world: World, private geos: TileGeos, private models: ModelSet) {
-    for (const kind of STRUCTURE_KINDS) {
-      const pool: Pool = { kind, parts: modelFor(models, kind).parts, meshes: [], cap: 0, list: [], dirty: false };
-      this.pools.set(kind, pool);
-      this.alloc(pool, 32);
-    }
     this.trees = new Trees(world, geos, models);
     this.group.add(this.trees.group);
     const puffGeo = new THREE.IcosahedronGeometry(1, 0);
@@ -62,6 +57,28 @@ export class StructureField {
     this.puffMesh.frustumCulled = false;
     this.puffMesh.count = 0;
     this.group.add(this.puffMesh);
+  }
+
+  /** The instanced group for (model file, kind): one per distinct model, made on first use. */
+  private poolFor(kind: string, owner: number): Pool {
+    const m = modelFor(this.models, kind, this.world.countries[owner]);
+    let pool = this.pools.get(m.key);
+    if (!pool) {
+      pool = { key: m.key, kind, parts: m.parts, meshes: [], cap: 0, list: [], dirty: false };
+      this.pools.set(m.key, pool);
+      this.alloc(pool, 32);
+    }
+    return pool;
+  }
+
+  /** Move a record to the group its (kind, owner) now resolves to. */
+  private repool(r: Rec): void {
+    const to = this.poolFor(r.kind, r.owner);
+    if (to === r.pool) return;
+    const i = r.pool.list.indexOf(r);
+    if (i >= 0) r.pool.list.splice(i, 1);
+    r.pool.dirty = true;
+    r.pool = to; to.list.push(r); to.dirty = true;
   }
 
   private alloc(pool: Pool, cap: number): void {
@@ -116,8 +133,8 @@ export class StructureField {
       } else {
         if (r.kind !== s.kind) this.upgrade(r, s.kind, now);
         if (r.owner !== s.owner) {
-          r.owner = s.owner; this.pools.get(r.kind)!.dirty = true;
-          for (const q of r.sats) { q.owner = s.owner; this.pools.get(q.kind)!.dirty = true; }
+          r.owner = s.owner; r.size = this.sizeOf(r.g, r.kind, r.slot, r.id, r.owner); this.repool(r); r.pool.dirty = true;
+          for (const q of r.sats) { q.owner = s.owner; this.repool(q); q.pool.dirty = true; }
         }
       }
     }
@@ -125,12 +142,13 @@ export class StructureField {
       if (!seen.has(r.id) && r.anim?.type !== 'destroy') {
         r.anim = { type: 'destroy', t0: now };
         this.puff(r, now);
-        this.pools.get(r.kind)!.dirty = true;
-        for (const q of r.sats) this.pools.get(q.kind)!.dirty = true;
+        r.pool.dirty = true;
+        for (const q of r.sats) q.pool.dirty = true;
         this.updateTrees(r.tile);
       }
     }
     this.first = false;
+    logMisses(this.models);
   }
 
   private add(id: string, tile: number, owner: number, kind: string, t0: number): void {
@@ -146,16 +164,15 @@ export class StructureField {
       this.geos.point(g, Math.cos(ang) * rad, Math.sin(ang) * rad, 0.0004, pos);
     }
     const yaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), hash01(id, 7) * Math.PI * 2);
+    const pool = this.poolFor(kind, owner);
     const rec: Rec = {
-      id, tile, owner, kind, slot, g, pos, quat: g.align.clone().multiply(yaw),
-      size: this.sizeOf(g, kind, slot, id), anim: { type: 'build', t0 },
+      id, tile, owner, kind, slot, pool, g, pos, quat: g.align.clone().multiply(yaw),
+      size: this.sizeOf(g, kind, slot, id, owner), anim: { type: 'build', t0 },
       hy: 0.9 + 0.2 * hash01(id, 12), parent: null, sats: [],
     };
     here.push(rec);
     this.byTile.set(tile, here);
     this.recs.set(id, rec);
-    const pool = this.pools.get(kind);
-    if (!pool) { this.recs.delete(id); here.pop(); return; }
     pool.list.push(rec);
     pool.dirty = true;
     this.addSats(rec);
@@ -163,9 +180,9 @@ export class StructureField {
     this.updateTrees(tile);
   }
 
-  private sizeOf(g: TileGeo, kind: string, slot: number, id: string): number {
+  private sizeOf(g: TileGeo, kind: string, slot: number, id: string, owner: number): number {
     const jit = 0.88 + 0.24 * hash01(id, 11);
-    const s = g.width * modelFor(this.models, kind).footprint * (REL[kind] ?? REL_OTHER) * (slot > 0 ? 0.8 : 1) * jit;
+    const s = g.width * modelFor(this.models, kind, this.world.countries[owner]).footprint * (REL[kind] ?? REL_OTHER) * (slot > 0 ? 0.8 : 1) * jit;
     return Math.min(s, MAX_SIZE * g.h);
   }
 
@@ -175,11 +192,10 @@ export class StructureField {
     const kinds: string[] = [];
     const n = 2 + Math.floor(hash01(r.id, 13) * 2);
     for (let i = 0; i < n; i++) kinds.push(hash01(r.id, 14 + i) < 0.5 ? 'town' : 'village');
-    if (r.kind === 'capital') for (const k of ['fort', 'temple']) if (hasModel(this.models, k)) kinds.push(k);
+    if (r.kind === 'capital') for (const k of ['fort', 'temple']) if (hasModel(this.models, k, this.world.countries[r.owner])) kinds.push(k);
     const base = hash01(r.tile, 5) * Math.PI * 2 + 2.4 + Math.PI; // opposite the first extra building
     kinds.forEach((kind, i) => {
-      const pool = this.pools.get(kind);
-      if (!pool) return;
+      const pool = this.poolFor(kind, r.owner);
       const id = `${r.id}#${i}`;
       const ang = base + (i - (kinds.length - 1) / 2) * (Math.PI * 1.5 / kinds.length) + (hash01(id, 15) - 0.5) * 0.4;
       const rad = r.g.width * (0.56 + 0.08 * hash01(id, 16));
@@ -187,8 +203,8 @@ export class StructureField {
       this.geos.point(r.g, Math.cos(ang) * rad, Math.sin(ang) * rad, 0.0004, pos);
       const yaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), hash01(id, 7) * Math.PI * 2);
       const sat: Rec = {
-        id, tile: r.tile, owner: r.owner, kind, slot: -1, g: r.g, pos, quat: r.g.align.clone().multiply(yaw),
-        size: this.sizeOf(r.g, kind, 0, id) * 0.62, anim: null, hy: 0.9 + 0.2 * hash01(id, 12), parent: r, sats: [],
+        id, tile: r.tile, owner: r.owner, kind, slot: -1, pool, g: r.g, pos, quat: r.g.align.clone().multiply(yaw),
+        size: this.sizeOf(r.g, kind, 0, id, r.owner) * 0.62, anim: null, hy: 0.9 + 0.2 * hash01(id, 12), parent: r, sats: [],
       };
       r.sats.push(sat);
       pool.list.push(sat);
@@ -198,7 +214,7 @@ export class StructureField {
 
   private dropSats(r: Rec): void {
     for (const s of r.sats) {
-      const pool = this.pools.get(s.kind)!;
+      const pool = s.pool;
       const i = pool.list.indexOf(s);
       if (i >= 0) pool.list.splice(i, 1);
       pool.dirty = true;
@@ -207,15 +223,15 @@ export class StructureField {
   }
 
   private upgrade(r: Rec, kind: string, now: number): void {
-    const from = this.pools.get(r.kind)!;
-    const to = this.pools.get(kind);
-    if (!to) return;
+    const from = r.pool;
+    const to = this.poolFor(kind, r.owner);
     const i = from.list.indexOf(r);
     if (i >= 0) from.list.splice(i, 1);
     from.dirty = true;
     this.dropSats(r);
     r.kind = kind;
-    r.size = this.sizeOf(r.g, kind, r.slot, r.id);
+    r.size = this.sizeOf(r.g, kind, r.slot, r.id, r.owner);
+    r.pool = to;
     r.anim = { type: 'upgrade', t0: now };
     to.list.push(r);
     to.dirty = true;
@@ -226,7 +242,7 @@ export class StructureField {
 
   private remove(r: Rec): void {
     this.dropSats(r);
-    const pool = this.pools.get(r.kind)!;
+    const pool = r.pool;
     const i = pool.list.indexOf(r);
     if (i >= 0) pool.list.splice(i, 1);
     pool.dirty = true;
