@@ -114,6 +114,20 @@ export class Traders {
     this.pending.clear();
   }
 
+  /** Follow the world clock: shift the legs under way by `hold` ms (a pause), or scale what is left
+   *  of them and the queued legs by `k` (a speed change). */
+  retime(now: number, hold: number, k: number, yearMs: number): void {
+    for (const st of this.states.values()) {
+      if (k !== 1) for (const seg of st.queue) seg.ms *= k;
+      if (now >= st.t1 || st.from === st.to) continue;
+      if (hold) { st.t0 += hold; st.t1 += hold; }
+      else if (k !== 1) {
+        const p = (now - st.t0) / (st.t1 - st.t0), total = Math.min(16_000, Math.max(250, Math.min((st.t1 - st.t0) * k, yearMs * 1.12)));
+        st.t0 = now - p * total; st.t1 = st.t0 + total;
+      }
+    }
+  }
+
   private advance(st: TState, now: number): void {
     while (now >= st.t1 && st.queue.length) {
       const seg = st.queue.shift()!;
@@ -124,7 +138,7 @@ export class Traders {
       st.from = st.to;
       st.to = seg.to;
       st.t0 = t0;
-      st.t1 = t0 + Math.min(4000, Math.max(250, seg.ms * k));
+      st.t1 = t0 + Math.min(16_000, Math.max(250, seg.ms * k));
     }
   }
 

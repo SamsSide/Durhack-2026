@@ -139,7 +139,7 @@ export class EngineRunner implements WorldRunner {
 
   stop(): void { this.loop.stop(); }
 
-  /** Row A25: any speed from 0.1 to 64 (clamped); the director may run below it in auto pacing. */
+  /** Row A25: any speed from 1/24 to 64 (clamped); the director may run below it in auto pacing. */
   setSpeed(speed: number): void {
     if (!Number.isFinite(speed)) return;
     if (this.world) this.world.speed = clampSpeed(speed);
