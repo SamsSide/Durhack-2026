@@ -6,6 +6,7 @@ import { formationSlots } from '../globe/units/formation';
 import type { FormationRole } from '../globe/units/unitModels';
 import { useWorld } from './world';
 import { useBattles } from './battleInfo';
+import type { BattleRecord } from './battleInfo';
 
 /** Soldiers one point of unit strength stands for on the cards (strength 48 reads as 12.0k). */
 export const SOLDIERS_PER_STRENGTH = 250;
@@ -129,4 +130,46 @@ export function useArmyInfo(unitId: string | null): ArmyInfo | null {
 export function formatSoldiers(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
   return String(Math.round(n));
+}
+
+/** Tone of a war status line on the globe: drives its accent colour. */
+export type WarTone = 'attack' | 'hold' | 'fall';
+export interface WarLine { text: string; tone: WarTone }
+
+const STRONGHOLDS = new Set(['town', 'city', 'capital', 'fort']);
+
+function atWar(world: World, a: number, b: number): boolean {
+  const lo = Math.min(a, b), hi = Math.max(a, b);
+  return world.relations.some((r) => r.a === lo && r.b === hi && r.stance === 'war');
+}
+
+/**
+ * The short game-style line over an army counter, only for armies at war: "Advancing on X",
+ * "Assaulting X", "Besieging X", "Holding the line", "Retreating", "Routed". Null for any other army.
+ */
+export function warLineOf(world: World, unit: Unit, battles: ReadonlyMap<number, BattleRecord>): WarLine | null {
+  if (unit.kind !== 'army') return null;
+  let b: BattleRecord | null = null;
+  for (const r of battles.values()) {
+    if (world.tick - r.lastTick > FIGHTING_TICKS) continue;
+    if (r.attackerUnits.includes(unit.id) || (r.tile === unit.tile && (r.attacker === unit.owner || r.defender === unit.owner))) { b = r; break; }
+  }
+  if (b) {
+    const tile = b.tile;
+    const attacking = b.attackerUnits.includes(unit.id) || (b.attacker === unit.owner && unit.tile !== tile);
+    const last = b.clashes[b.clashes.length - 1];
+    if (last && last.winner >= 0 && last.winner !== unit.owner) {
+      const began = attacking ? b.start.attacker : b.start.defender;
+      return unit.strength < began * 0.35 ? { text: 'Routed', tone: 'fall' } : { text: 'Retreating', tone: 'fall' };
+    }
+    if (!attacking) return { text: 'Holding the line', tone: 'hold' };
+    const siege = world.structures.some((s) => s.tile === tile && s.owner !== unit.owner && STRONGHOLDS.has(s.kind));
+    return { text: `${siege ? 'Besieging' : 'Assaulting'} ${provinceOf(world, tile)}`, tone: 'attack' };
+  }
+  const to = unit.target;
+  if (to != null && to !== unit.tile) {
+    const o = world.owner[to] ?? -1;
+    if (o >= 0 && o !== unit.owner && atWar(world, unit.owner, o)) return { text: `Advancing on ${provinceOf(world, to)}`, tone: 'attack' };
+  }
+  return null;
 }

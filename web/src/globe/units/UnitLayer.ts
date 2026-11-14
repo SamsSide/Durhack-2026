@@ -4,10 +4,13 @@
 // and trader ships sail the oceans (traders.ts). Lane b (B5, #122).
 import * as THREE from 'three';
 import { ageIndex, flagSvg } from '@terra/shared';
-import type { TechAge, UnitKind, World, WorldEvent } from '@terra/shared';
+import type { TechAge, Unit, UnitKind, World, WorldEvent } from '@terra/shared';
 import type { MeshEdge, ProvinceMesh } from '../mesh/buildProvinceMesh';
 import { getPalette } from '../palette';
-import { COUNTER_H, COUNTER_W, drawAttrition, drawClash, drawCounter, drawLoss, drawScroll, drawSettler, drawShield, toTexture } from './draw';
+import { COUNTER_H, COUNTER_W, drawAttrition, drawClash, drawCounter, drawLoss, drawScroll, drawSettler, drawShield, drawStatus, toTexture } from './draw';
+import { warLineOf } from '../../state/armyInfo';
+import type { WarTone } from '../../state/armyInfo';
+import { useBattles } from '../../state/battleInfo';
 import { terrainEffects } from '../terrain/effects';
 import { unitIcon } from './era';
 import { ModelField, poseMatrix, standMatrix } from './ModelField';
@@ -33,6 +36,8 @@ const ARROW_LINGER = 900;       // ms an arrow stays after its march ends
 const ARROW_FADE = 600;
 const FRONT_EVERY = 500;        // front lines refresh at most 2x a second
 const FRONT_FADE = 1400;
+const STATUS_H = 0.017;         // war status line height, as a share of the view
+const STATUS_EVERY = 400;       // the lines are re-read 2.5 times a second
 const PULSE_MS = 1700;
 const CEDE_MS = 2200;
 const COLUMN_MS = 3000;
@@ -99,6 +104,9 @@ interface Chip {
   lift: number | null;
   /** The merged texture this counter holds (summed strength), '' when it shows its own. */
   mergeKey: string;
+  /** The war status line over the counter (only while at war). */
+  stat: { sprite: THREE.Sprite; mat: THREE.SpriteMaterial; key: string; aspect: number } | null;
+  statText: string; statTone: WarTone;
 }
 
 interface Arrow {
@@ -133,6 +141,8 @@ export class UnitLayer {
   private readonly pendingMoves = new Map<string, Extract<WorldEvent, { type: 'unit_moved' }>>();
   private readonly removedReason = new Map<string, string>();
   private readonly chips = new Map<string, Chip>();
+  private statusAt = -1e9;
+  private readonly unitById = new Map<string, Unit>();
   private readonly dying: Chip[] = [];
   private readonly texCache = new Map<string, { tex: THREE.CanvasTexture; users: number }>();
   private readonly flags = new Map<number, { img: HTMLImageElement; ready: boolean }>();
@@ -479,7 +489,7 @@ export class UnitLayer {
         chip = {
           key, owner: g.owner, kind: g.kind, tile: g.tile, units: g.units, moving: g.moving,
           sprite, mat, texKey: '', aspect: 1, height: CHIP_H, stack: 0, pos: new THREE.Vector3(), dying: null,
-          absorbed: false, lift: null, mergeKey: '',
+          absorbed: false, lift: null, mergeKey: '', stat: null, statText: '', statTone: 'attack',
         };
         this.chips.set(key, chip);
       }
@@ -606,7 +616,72 @@ export class UnitLayer {
     this.declutterAt = now;
   }
 
+  private dropStatus(chip: Chip): void {
+    const st = chip.stat;
+    if (!st) return;
+    this.chipGroup.remove(st.sprite);
+    st.mat.dispose();
+    if (st.key) this.release(st.key);
+    chip.stat = null; chip.statText = '';
+  }
+
+  /** Rereads each army's war line, and keeps its sprite above the counter (fades out as the camera leaves). */
+  private updateStatus(now: number, zoom: number, dist: number): void {
+    const reread = now - this.statusAt > STATUS_EVERY;
+    if (reread) {
+      this.statusAt = now;
+      this.unitById.clear();
+      for (const u of this.world.units) this.unitById.set(u.id, u);
+    }
+    const fade = 1 - smooth(2.3, 3.1, dist);
+    const battles = useBattles.getState().byTile;
+    for (const chip of this.chips.values()) {
+      if (reread) {
+        const lead = chip.units[0];
+        const u = chip.kind === 'army' && lead ? this.unitById.get(lead.id) : undefined;
+        const line = u ? warLineOf(this.world, u, battles) : null;
+        const text = line?.text ?? '';
+        if (text !== chip.statText || (line && line.tone !== chip.statTone)) {
+          chip.statText = text;
+          if (line) chip.statTone = line.tone;
+          if (!line) this.dropStatus(chip);
+          else {
+            const p = this.pal;
+            const accent = line.tone === 'attack' ? '#' + this.col.war.getHexString() : line.tone === 'hold' ? p.accent : '#8a8f98';
+            const key = `st|${text}|${accent}`;
+            const tex = this.acquire(key, () => drawStatus(text, accent, p.night, p.parchment));
+            if (!chip.stat) {
+              const mat = new THREE.SpriteMaterial({ transparent: true, depthWrite: false, depthTest: false, sizeAttenuation: false, toneMapped: false });
+              const sprite = new THREE.Sprite(mat);
+              sprite.renderOrder = 31;
+              this.chipGroup.add(sprite);
+              chip.stat = { sprite, mat, key: '', aspect: 1 };
+            }
+            const img = tex.image as { width: number; height: number };
+            chip.stat.aspect = img.width / img.height;
+            chip.stat.mat.map = tex;
+            chip.stat.mat.needsUpdate = true;
+            if (chip.stat.key) this.release(chip.stat.key);
+            chip.stat.key = key;
+          }
+        }
+      }
+      const st = chip.stat;
+      if (!st) continue;
+      const f = facing(chip.pos, _camDir);
+      const show = f > 0 && !chip.absorbed && chip.sprite.visible && fade > 0.02;
+      st.sprite.visible = show;
+      if (!show) continue;
+      st.sprite.position.copy(chip.pos);
+      const hs = STATUS_H * zoom, h = chip.height * zoom;
+      st.sprite.scale.set(hs * st.aspect, hs, 1);
+      st.sprite.center.set(0.5, -((1 - chip.sprite.center.y) * h + 0.2 * hs) / hs);
+      st.mat.opacity = fade * (chip.mat.opacity > 0 ? 1 : 0) * Math.min(1, f * 3);
+    }
+  }
+
   private dropChip(chip: Chip): void {
+    this.dropStatus(chip);
     this.unmerge(chip);
     this.chipGroup.remove(chip.sprite);
     chip.mat.dispose();
@@ -615,6 +690,7 @@ export class UnitLayer {
   }
 
   private killChip(chip: Chip, now: number, shatter: boolean): void {
+    this.dropStatus(chip);
     chip.dying = { start: now, shatter };
     this.dying.push(chip);
     if (shatter) {
@@ -715,17 +791,19 @@ export class UnitLayer {
     // attack arrow: turn the attacker's march arrow red, or draw one from where it stands
     const st = this.states.get(e.attackerUnit);
     if (st) {
-      let arrow = st.arrow && st.arrow.busy && st.arrow.toTile === e.tile ? st.arrow : null;
+      let arrow = st.arrow && st.arrow.busy && st.arrow.toTile === e.tile && st.arrow.attack ? st.arrow : null;
       if (!arrow) {
         this.statePos(st, now, _v);
         if (_v.lengthSq() > 0 && _v.distanceTo(P) > 0.004) {
+          if (st.arrow) st.arrow.holdUntil = Math.min(st.arrow.holdUntil, now);   // the thin march arrow gives way
           arrow = this.takeArrow(now);
           if (arrow) {
             const a = _w.copy(_v).normalize();
             const om = Math.acos(Math.min(1, Math.max(-1, a.dot(n))));
-            const width = Math.min(0.016, Math.max(0.0065, om * 0.2));
+            const width = Math.min(0.026, Math.max(0.012, om * 0.32));   // bolder than a march arrow
             writeArrow(arrow.geo, a.clone(), _v.length() - CHIP_LIFT + 0.003, n, this.mesh.heights[e.tile]! + 0.003, width);
             arrow.toTile = e.tile;
+            st.arrow = arrow;
           }
         }
       }
@@ -734,7 +812,7 @@ export class UnitLayer {
         arrow.mat.uniforms.uColor!.value.copy(this.col.war);
         arrow.mat.uniforms.uLight!.value.copy(this.col.parchment);
         arrow.mat.uniforms.uSpeed!.value = 5;
-        arrow.holdUntil = Math.max(arrow.holdUntil, now + 1500);
+        arrow.holdUntil = Math.max(arrow.holdUntil, now + 4500);   // each clash renews it: it stays while the battle runs
       }
     }
 
@@ -986,6 +1064,7 @@ export class UnitLayer {
       this.declutter(camera, viewW, viewH, now);
       for (const chip of this.chips.values()) this.placeChip(chip, now, zoom);
     }
+    this.updateStatus(now, zoom, dist);
     for (let i = this.dying.length - 1; i >= 0; i--) {
       const chip = this.dying[i]!;
       const d = chip.dying!;
