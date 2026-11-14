@@ -22,9 +22,11 @@ they cannot talk to each other.**
    named and placed, each with a leader, an ideology and a founding myth. (15 seconds)
 2. Time runs at speed. Borders spread across the hex tiles, camps become villages become cities,
    low-poly buildings pop up. A chronicle ticker tells the story as it happens.
-3. Zoom into a nation and click it. Its border lights up. A panel shows its culture, politics
-   and its history with its neighbours. A voice narrates it; its anthem plays.
-4. A war breaks out. Armies march, volleys fly, tiles change colour.
+3. Zoom into a nation and click it. Its border lights up and a hologram rises from its capital
+   showing its culture, politics and its history with its neighbours. A voice narrates it; its
+   anthem plays, with words written from what has actually happened to it.
+4. A war breaks out. Armies march, volleys fly, tiles change colour, and each side's war chant
+   is heard. Switch the map to diplomacy mode to see who stands with whom.
 5. **The moment:** open the network panel and cut the link to one nation in the middle of the
    war. It carries on building from what it last knew; a "what it believes" view shows its map
    drifting from the truth; its neighbours notice the silence. Delete a second nation outright:
@@ -39,14 +41,14 @@ with no API calls (`row A9`). Narration and anthems for the saved world are cach
 
 | Prize | Why we qualify | What it needs from us | Lane / row | Submission field |
 | --- | --- | --- | --- | --- |
-| Main track (theme: Composition) | A world, its history and its music composed live from parts by several authors | Polish; a "what we learned" section | all / C9 | Main submission |
-| Neptune North: Actors work better together | It is their "teams of AI agents" example: common goal, independent decisions, progress when cut off, merge on return | The cut, silence, delete and restore demo; a section headed with their four criteria | a / A4, A7; b / B6; c / C7 | Tick the challenge; show at their stand |
-| Marshall Wace: New Worlds | Literally a new world nobody has seen | Open the pitch with "New Worlds"; visit their stand early | c / C9 | Tick the challenge |
-| MLH Best Use of ElevenLabs | Narrated histories and a generated anthem per nation | Voice is a core part, not a button | c / C4, C5 | MLH prize tick |
-| MLH Best Use of Gemini API | Gemini rules every nation and writes the lore | Name the models and the token budget | a / A5; c / C3 | MLH prize tick |
+| Main track (theme: Composition) | A world, its history and its music composed live from parts by several authors | Polish; a "what we learned" section | all / C5 | Main submission |
+| Neptune North: Actors work better together | It is their "teams of AI agents" example: common goal, independent decisions, progress when cut off, merge on return | The cut, silence, delete and restore demo; a section headed with their four criteria | a / A4, A7; b / B6; c / C4 | Tick the challenge; show at their stand |
+| Marshall Wace: New Worlds | Literally a new world nobody has seen | Open the pitch with "New Worlds"; visit their stand early | c / C5 | Tick the challenge |
+| MLH Best Use of ElevenLabs | Narrated histories, an anthem written from each nation's history, and war chants when fighting starts | Voice is a core part, not a button | a / A14, A15, A16 | MLH prize tick |
+| MLH Best Use of Gemini API | Gemini rules every nation and writes the lore | Name the models and the token budget | a / A5, A13 | MLH prize tick |
 | MLH Best Use of Entire | Built with agents across three laptops with sessions recorded | Session push on; token numbers on a slide | owner / O2 | MLH prize tick |
 | MLH Best Use of Tiger Data (stretch) | The event log is a time series | Hypertable and one live chart | a / A11 | MLH prize tick |
-| Waterstons (weak fit) | Connects language models, a simulation, voice and music | One honest line | c / C9 | Tick the challenge |
+| Waterstons (weak fit) | Connects language models, a simulation, voice and music | One honest line | c / C5 | Tick the challenge |
 
 Not targeted: Arduino/RS and P&G sensors (hardware), SGX FX, Accenture, P&G receipts, QRT.
 Full research: `prizes/matrix.md`.
@@ -56,9 +58,10 @@ Full research: `prizes/matrix.md`.
 ```mermaid
 flowchart LR
   subgraph WEB["Browser (Vite, React, three.js)"]
-    GEN["Genesis screen (lane c)"]
+    GEN["Create screen (lane c)"]
     GLOBE["3D globe (lane b)"]
-    PANELS["Panels, chronicle, network controls (lane c)"]
+    PANELS["Nation card, chronicle, network controls (lane c)"]
+    AUDIO["Sound: narration, anthem, war chants (lane a)"]
     STORE["World replica store (lane b)"]
   end
   subgraph SRV["Node server"]
@@ -67,7 +70,7 @@ flowchart LR
     AG1["Nation agent 1: own replica, rules, ruler"]
     AG2["Nation agent 2"]
     AGN["Nation agent N"]
-    STORY["Lore, narration, anthem routes (lane c)"]
+    STORY["Lore, narration, anthem, chant routes (lane a)"]
   end
   SHARED["packages/shared: types, hex sphere, applyEvent, rules (lane a)"]
   GEM["Gemini API"]
@@ -77,7 +80,9 @@ flowchart LR
   STORE --> GLOBE
   STORE --> PANELS
   PANELS -->|X2 control messages| API
-  PANELS -->|X3 lore, narration, anthem| STORY
+  PANELS -->|X3 lore| STORY
+  PANELS -->|X6| AUDIO
+  AUDIO -->|X3 narration, anthem, chant| STORY
   API --- BUS
   BUS --- AG1 & AG2 & AGN
   AG1 & AG2 & AGN -->|ruler decisions| GEM
@@ -124,8 +129,21 @@ only when a nation is first clicked, and cached. If the free tier turns out tigh
 (row A5 checks), the owner has agreed to pay a small amount: a flash-lite model at this volume
 is well under five pounds for the weekend.
 
-**Voice budget (ElevenLabs).** Narration and anthems are generated on first click only and
-cached on disk by content hash. The demo world's audio is generated once and kept.
+**Sound (ElevenLabs).** Three kinds, all generated on first need and cached on disk by content
+hash. *Narration:* a voice chosen from the nation's `voiceStyle` reads its lore. *Anthem:*
+Gemini writes four to eight lines of lyrics from the nation's founding myth and its real
+chronicle (its wars, losses and allies), and the music model sings them in the nation's style,
+so no two anthems are alike and each one is tied to that nation's history. *War chants:* one
+short chant per nation, played automatically when it declares war or fights a battle. The demo
+world's audio is generated once and kept.
+
+**Look and feel.** The interface is designed in Figma by the owner (contract X7) and built by
+lane c from that design. Selecting a nation projects a hologram from its capital (a beam, scan
+lines, a flicker) carrying its card. From grand-strategy map games such as Age of History we
+take the genre's conventions, not its art: the planet is a political map first, with map modes
+(political, terrain, diplomacy relative to the selected nation, army strength), army strength
+numbers on the map, wars fought tile by tile, peace treaties that hand over land, and a
+timeline you can drag back through (stretch, row B9).
 
 - **Stack:** TypeScript everywhere. Node 22, npm workspaces. `packages/shared` (types, hex
   sphere via `hexasphere.js`, `applyEvent`, rules), `server` (Express, `ws`, `@google/genai`),
@@ -136,21 +154,25 @@ cached on disk by content hash. The demo world's audio is generated once and kep
   laptops (row A10).
 - **External services:** Gemini (`GEMINI_API_KEY`), ElevenLabs (`ELEVENLABS_API_KEY`), optional
   Tiger Data (`TIGER_DATABASE_URL`).
-- **Assets:** low-poly GLB models made with headless Blender on the owner's laptop (row A8).
+- **Assets and design:** low-poly GLB models made with headless Blender (row A8) and the
+  interface design in Figma (row A12), both on the owner's laptop, which has those tools.
 
 **Inputs.** The Create screen takes: a text prompt (required), preset chips (post-apocalyptic,
 bronze age, floating archipelago, ice world, and so on), number of nations (3 to 10), an era
 dropdown, sea level, and an aggression slider. While the world runs, a "decree" box lets the
 judge drop an event on it (a plague, a meteor, a prophet). Stretch: an image as input, read by
-Gemini for mood and palette (row C8).
+Gemini for mood and palette (row A17).
 
 ## 5. Lanes
 
 | Lane | Person | Owns (paths) | Delivers |
 | --- | --- | --- | --- |
-| a · World engine and agents | @SamsSide | `packages/shared/`, `server/` except `server/src/story/`, `assets/`, `web/public/models/`, root config | Types and contracts, world generation, the simulation, nation agents, Gemini rulers, war, resilience, replay, 3D assets |
-| b · The globe | @CutGrass88 | `web/` except `web/src/ui/` and `web/public/models/` | The 3D planet, camera, borders, buildings, war animation, status visuals, performance |
-| c · Story, sound and interface | @Justin-CODING-PY | `web/src/ui/`, `server/src/story/` | Create screen, nation panel, lore, narration, anthem, chronicle, network controls, submission |
+| a · World, story and sound | @SamsSide | `packages/shared/`, `server/`, `assets/`, `web/public/models/`, `web/src/audio/`, `web/src/theme/`, `docs/design/`, root config | Everything behind the screen: the world, the agents, Gemini, war, resilience, lore, narration, anthems, war chants, replays; plus the Blender models and the Figma design |
+| b · The globe | @CutGrass88 | `web/` except `web/src/ui/`, `web/src/audio/`, `web/src/theme/` and `web/public/models/` | The 3D planet, camera, borders, map modes, buildings, war animation, status visuals, the hologram, performance |
+| c · Interface | @Justin-CODING-PY | `web/src/ui/` | Four screens built from the owner's design against the mock (Create screen, nation card, chronicle, network panel) and the submission |
+
+The split follows each person's agent budget: lane a has by far the most (17 rows), lane b a
+middling amount (9 rows), lane c the least (5 small rows, none of them touching the server).
 
 ## 6. Schedule
 
@@ -158,7 +180,7 @@ Assumes hacking ends Sunday 12:00 (not confirmed; the QRT CTF ends then). Adjust
 
 | Time | Checkpoint | Means |
 | --- | --- | --- |
-| Sat 15:30 | CP0 | Plan merged; scaffold and mock server on `main`; every lane building against the mock |
+| 1 hour after the go | CP0 | Scaffold and mock server on `main`; every lane building against the mock |
 | Sat 21:00 | CP1 | First end-to-end on `main`: a prompt makes a world, nations grow live on the globe, a click opens a panel |
 | Sun 02:00 | CP1.5 | Wars animate; cut, silence, delete and restore work; real lore, narration and anthem |
 | Sun 08:00 | CP2 | Feature freeze: fixes, polish, the saved demo world, docs |
@@ -176,6 +198,7 @@ Assumes hacking ends Sunday 12:00 (not confirmed; the QRT CTF ends then). Adjust
 | An AI world generator looks generic, others build one too | The resilience demo and the live wars are the difference; rehearse step 5 most |
 | Blender assets take too long | Kenney-style CC0 packs or coloured primitive shapes; the manifest (X4) stays the same |
 
-Cut order if behind: image input (C8), Tiger Data (A11), remote agents (A10), beliefs view,
-anthem, decree box, fleets, atmosphere polish. Never cut: prompt to world, live growth, click
-panel with voice, one war, cut and restore.
+Cut order if behind: image input (A17), Tiger Data (A11), remote agents (A10), the timeline
+scrubber (B9), army strength and terrain map modes, beliefs view, war chants, anthem, decree
+box, fleets, atmosphere polish. Never cut: prompt to world, live growth, the click
+hologram with voice, one war, cut and restore.

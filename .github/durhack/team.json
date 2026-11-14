@@ -5,14 +5,17 @@
   "lanes": [
     {
       "id": "a",
-      "name": "Lane A (World engine and agents)",
+      "name": "Lane A (World, story and sound)",
       "github": "SamsSide",
-      "focus": "The event-sourced world, the simulation, nation agents, Gemini rulers, war, resilience, replay, 3D assets",
+      "focus": "Everything behind the screen: world, agents, Gemini, war, resilience, lore, narration, anthems, war chants, replays; plus the Blender models and the Figma design",
       "paths": [
         "packages/shared/",
-        "server/ (except server/src/story/)",
+        "server/",
         "assets/",
         "web/public/models/",
+        "web/src/audio/",
+        "web/src/theme/",
+        "docs/design/",
         "package.json",
         "tsconfig.base.json"
       ]
@@ -21,19 +24,18 @@
       "id": "b",
       "name": "Lane B (The globe)",
       "github": "CutGrass88",
-      "focus": "The 3D planet: tiles, camera, borders, buildings, war animation, status visuals, performance",
+      "focus": "The 3D planet: tiles, camera, borders, map modes, buildings, war animation, status visuals, the hologram, performance",
       "paths": [
-        "web/ (except web/src/ui/ and web/public/models/)"
+        "web/ (except web/src/ui/, web/src/audio/, web/src/theme/ and web/public/models/)"
       ]
     },
     {
       "id": "c",
-      "name": "Lane C (Story, sound and interface)",
+      "name": "Lane C (Interface)",
       "github": "Justin-CODING-PY",
-      "focus": "The Create screen, nation panel, lore, narration, anthem, chronicle, network controls, submission",
+      "focus": "Four screens built from the owner's Figma design against the mock, and the submission",
       "paths": [
-        "web/src/ui/",
-        "server/src/story/"
+        "web/src/ui/"
       ]
     }
   ],

@@ -3,7 +3,7 @@
 *Every interface one lane gives another. Owner-edited (changes go through a `needs-owner`
 issue naming every lane affected). Code against these exactly; mock them until CP1.*
 
-Contracts are numbered X1 to X5 (not C, so they are not confused with lane c's rows).
+Contracts are numbered X1 to X7 (not C, so they are not confused with lane c's rows).
 The TypeScript in `packages/shared/src/` is the source of truth once row A1 is merged; if this
 file and the code disagree, the code wins and the owner fixes this file.
 
@@ -13,8 +13,9 @@ file and the code disagree, the code wins and the owner fixes this file.
 | --- | --- | --- |
 | root `package.json`, `package-lock.json`, `tsconfig.base.json` | a | new dependency: `needs-owner` issue |
 | `packages/shared/**` | a | ask lane a via `agent-request` |
-| `server/package.json`, `server/src/index.ts` (mounts every router) | a | lane c exports a router from `server/src/story/index.ts`; lane a mounts it |
-| `web/package.json`, `web/vite.config.ts`, `web/src/main.tsx`, `web/src/App.tsx` | b | lane c exports components from `web/src/ui/index.ts`; lane b places them in `App.tsx` |
+| `server/**` (engine, agents, and the story routes in `server/src/story/`) | a | ask lane a via `agent-request` |
+| `web/package.json`, `web/vite.config.ts`, `web/src/main.tsx`, `web/src/App.tsx` | b | lane c exports components from `web/src/ui/index.ts`; lane b places them in `App.tsx` and in the hologram (X5) |
+| `web/src/audio/**` (X6), `web/src/theme/**` and `docs/design/**` (X7) | a | lanes b and c read them |
 | `web/src/state/**` (the store, X5) | b | lane c reads it; changes via `agent-request` |
 | `web/public/models/**` (X4) | a | lane b reads it |
 | `.env.example`, `check.sh`, `CLAUDE.md` | owner | `needs-owner` |
@@ -26,11 +27,11 @@ Real values go in `.env` at the repo root (git-ignored). The owner's keys file i
 
 | Name | Used by | What |
 | --- | --- | --- |
-| `GEMINI_API_KEY` | lanes a, c | Gemini API key |
-| `ELEVENLABS_API_KEY` | lane c | ElevenLabs key |
-| `LLM_MODE` | lanes a, c | `mock` (default: canned answers, no API calls) or `live` |
+| `GEMINI_API_KEY` | lane a | Gemini API key |
+| `ELEVENLABS_API_KEY` | lane a | ElevenLabs key |
+| `LLM_MODE` | lane a | `mock` (default: canned answers, no API calls) or `live` |
 | `GEMINI_MODEL_RULER` | lane a | Model id for ruler decisions (a flash-lite model) |
-| `GEMINI_MODEL_LORE` | lanes a, c | Model id for the world bible and lore (a flash model) |
+| `GEMINI_MODEL_LORE` | lane a | Model id for the world bible and lore (a flash model) |
 | `LLM_MAX_CALLS_PER_MIN` | lane a | Default 20. Above it, nations fall to autopilot |
 | `LLM_MAX_TOKENS_PER_RUN` | lane a | Default 400000. Above it, every nation is on autopilot |
 | `PORT` | lane a | Server port, default 8787 |
@@ -179,7 +180,7 @@ export function relationOf(world: World, a: number, b: number): Relation;
 - **Real by:** CP0 mock (A1); CP1 real events (A3); CP1.5 real controls (A7).
 - **Status:** agreed
 
-## X3 · HTTP routes (lanes a and c give to the web app)
+## X3 · HTTP routes (lane a gives to the web app)
 
 - **Kind:** HTTP on port 8787; in dev the web app calls `/api/...` through the Vite proxy.
 
@@ -189,9 +190,11 @@ export function relationOf(world: World, a: number, b: number): Relation;
 | `POST /api/world` | a | `{ "prompt": "a drowned post-apocalyptic world", "nations": 6, "era": "post-apocalyptic", "seaLevel": 0.55, "aggression": 0.5, "seed": 12345, "imageBase64": null }` (only `prompt` is required) | `{ "worldId": "w-3f9a" }`, then a `snapshot` on the socket |
 | `GET /api/replays` | a | none | `[ { "id": "demo-1", "name": "The Drowned Age", "events": 5210 } ]` |
 | `POST /api/replays/:id/play` | a | none | `{ "worldId": "w-3f9a" }`, then a `snapshot`; events replay with no API calls |
-| `GET /api/country/:id/lore` | c | none | see below |
-| `GET /api/country/:id/narration` | c | none | `audio/mpeg`: the lore `summary` and `history` spoken |
-| `GET /api/country/:id/anthem` | c | none | `audio/mpeg`, about 30 seconds |
+| `GET /api/world/log` | a | none | `{ "initial": { "...": "the World at tick 0" }, "events": [ ] }`: the whole run, for the timeline scrubber |
+| `GET /api/country/:id/lore` | a | none | see below |
+| `GET /api/country/:id/narration` | a | none | `audio/mpeg`: the lore `summary` and `history` spoken |
+| `GET /api/country/:id/anthem` | a | none | `audio/mpeg`, about 30 seconds, sung to `anthemLyrics` |
+| `GET /api/country/:id/chant` | a | none | `audio/mpeg`, 5 to 10 seconds: that nation's war chant |
 
   Lore response:
 
@@ -203,20 +206,22 @@ export function relationOf(world: World, a: number, b: number): Relation;
   "culture": "A short paragraph: customs, faith, food, what they are proud of.",
   "politics": "A short paragraph: who rules, the ideology, the factions.",
   "history": "A short paragraph built from this nation's real chronicle entries.",
+  "anthemLyrics": [ "Four to eight short lines", "written from the founding myth and the real chronicle:", "its wars, its losses, its allies." ],
   "relations": [ { "with": 0, "stance": "war", "story": "One or two sentences on what happened between them." } ]
 }
 ```
 
   Lore is cached per nation and refreshed only if more than 60 ticks old and the nation is
-  clicked again. Narration and anthem are cached on disk in `server/.cache/` by content hash.
+  clicked again. Narration, anthem and chant are cached on disk in `server/.cache/` by content
+  hash. The anthem is generated from the lyrics and the nation's `anthemPrompt`, so it is tied
+  to that nation's history; it is regenerated only when the lyrics change. The chant is made
+  once per nation from its culture and `voiceStyle`.
 
 - **Errors:** `404 { "error": "no such country" }`; `503 { "error": "voice unavailable" }` when
   ElevenLabs fails (the panel then shows the text only).
-- **How lane c reads the world on the server:** lane a exports `getWorld(): World | null` from
-  `server/src/engine/index.ts`. Lane c never changes the world.
-- **Mock:** with `LLM_MODE=mock`, lore is built from templates and the chronicle, and the two
+- **Mock:** with `LLM_MODE=mock`, lore is built from templates and the chronicle, and the three
   audio routes return a bundled sample file from `server/src/story/samples/`.
-- **Real by:** CP1 (`POST /api/world` A2, lore C3); CP1.5 (narration C4, anthem C5, replays A9).
+- **Real by:** CP1 (`POST /api/world` A2, lore A13); CP1.5 (narration A14, anthem A15, chant A16); CP2 (replays and log A9).
 - **Status:** agreed
 
 ## X4 · 3D model manifest (lane a gives to lane b)
@@ -272,6 +277,8 @@ export interface WorldStore {
   selectedCountryId: number | null;
   selectedTileId: number | null;
   beliefOf: number | null;                   // when set, the globe draws that nation's beliefs
+  mapMode: 'political' | 'terrain' | 'diplomacy' | 'strength';  // diplomacy colours every nation by its stance to the selected one
+  setMapMode(mode: WorldStore['mapMode']): void;
   select(countryId: number | null, tileId?: number | null): void;
   showBelief(countryId: number | null): void;
   flyTo(countryId: number): void;            // camera moves to that nation's capital
@@ -281,6 +288,50 @@ export interface WorldStore {
 export const useWorld: UseBoundStore<StoreApi<WorldStore>>;
 ```
 
+- **The hologram:** selecting a nation makes lane b project a hologram above its capital (a
+  light beam, scan lines, flicker). Inside it lane b mounts lane c's `NationCard` component
+  (`web/src/ui/index.ts`, props `{ countryId: number }`, plain DOM, 380 px wide, transparent
+  background, colours from X7). On a narrow screen the same card docks to the side instead.
 - **Mock:** lane b ships the store first (row B1), connected to `npm run mock`.
 - **Real by:** CP0 plus one hour (row B1).
+- **Status:** agreed
+
+## X6 · Sound (lane a gives to lanes b and c)
+
+- **Kind:** module `web/src/audio/index.ts`.
+- **Signature:**
+
+```ts
+export type AudioState = 'idle' | 'loading' | 'narration' | 'anthem';
+export const audio: {
+  playNarration(countryId: number): Promise<void>;   // fetches X3 narration, ducks everything else
+  playAnthem(countryId: number): Promise<void>;
+  stop(): void;
+  setMuted(muted: boolean): void;
+  getState(): { state: AudioState; countryId: number | null; muted: boolean };
+  subscribe(listener: () => void): () => void;       // for React's useSyncExternalStore
+};
+```
+
+  War sound is automatic: the module watches `recentEvents` in the store (X5) and, when a war
+  is declared or a battle is fought, plays the chants of the nations involved (X3 chant), louder
+  when one of them is selected. Lanes b and c do not call anything for it.
+
+- **Mock:** in mock mode the server returns bundled samples, so the module behaves the same.
+  Until row A14 merges, lane c codes against a stub with the same signature that only changes
+  state (shipped in A1).
+- **Real by:** CP1.5 (rows A14 to A16).
+- **Status:** agreed
+
+## X7 · Design (lane a gives to lanes b and c)
+
+- **Kind:** files. `web/src/theme/tokens.css` (CSS variables: colours, fonts, spacing, radii,
+  the hologram tint and glow) and `docs/design/` (a screenshot of each designed screen and the
+  Figma link in `docs/design/README.md`).
+- **Screens designed:** the Create screen, the hologram nation card, the chronicle ticker and
+  timeline, the network panel, the top bar with map modes and speed.
+- **Rule:** components use the variables, never hard-coded colours, so a redesign is one file.
+- **Mock:** row A1 ships a first `tokens.css` with a dark default so lane c can start at once;
+  the designed version (row A12) replaces the values without renaming the variables.
+- **Real by:** Sat 18:00 (row A12).
 - **Status:** agreed

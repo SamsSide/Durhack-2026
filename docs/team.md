@@ -8,6 +8,6 @@ Roles were set at kickoff on 14 Nov (`docs/hackathon-plan.md`). Branches are `<l
 
 | Lane | Person | Focus | Owns (paths) | Reach them |
 | --- | --- | --- | --- | --- |
-| a | @SamsSide (owner) | World engine and agents | `packages/shared/`, `server/` except `server/src/story/`, `assets/`, `web/public/models/`, root config | `agent-request` / `needs-owner` issue assigned to SamsSide |
-| b | @CutGrass88 | The globe | `web/` except `web/src/ui/` and `web/public/models/` | `agent-request` issue assigned to CutGrass88 |
-| c | @Justin-CODING-PY | Story, sound and interface | `web/src/ui/`, `server/src/story/` | `agent-request` issue assigned to Justin-CODING-PY |
+| a | @SamsSide (owner) | World, story and sound; Blender models; Figma design | `packages/shared/`, `server/`, `assets/`, `web/public/models/`, `web/src/audio/`, `web/src/theme/`, `docs/design/`, root config | `agent-request` / `needs-owner` issue assigned to SamsSide |
+| b | @CutGrass88 | The globe and the hologram | `web/` except `web/src/ui/`, `web/src/audio/`, `web/src/theme/` and `web/public/models/` | `agent-request` issue assigned to CutGrass88 |
+| c | @Justin-CODING-PY | Interface (four screens) and the submission | `web/src/ui/` | `agent-request` issue assigned to Justin-CODING-PY |
