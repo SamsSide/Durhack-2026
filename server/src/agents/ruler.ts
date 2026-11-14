@@ -2,7 +2,7 @@
 // decision. On any failure it throws RulerFailed and the caller (row A4) runs the nation on autopilot.
 // It never retries. RulerScheduler decides when each nation is next due, spreading calls under the cap.
 import {
-  MOVEMENTS, PRICE_BASE, isCombatant, landDevastation, marketPlan, movementOf, politicsOf, readinessBand, readinessOf, relationOf,
+  MOVEMENTS, PRICE_BASE, isCombatant, landDevastation, marketPlan, memberAge, movementOf, politicsOf, readinessBand, readinessOf, relationOf,
   type Stance, type TechAge, type World, type WorldEvent,
 } from '@terra/shared';
 import { getBudget, llmJson, rulerModel, type Schema } from '../llm';
@@ -23,6 +23,7 @@ export interface RulerDigest {
   treasury: number; population: number; tiles: number; cities: number; armies: number; strength: number;
   techAge: TechAge;                      // its weapons and ships (row A23)
   focus: Focus;
+  rulerAge?: number;                     // the ruler's age in years (missing on old replays)
   neighbours: RulerNeighbour[];          // alive nations that share a border; strength is relative to ours (1 = equal)
   chronicle: string[];                   // the last few lines involving this nation
   events: string[];                      // recent big events anywhere
@@ -82,7 +83,7 @@ export function makeDigest(world: World, countryId: number, focus: Focus = 'expa
     cities: world.structures.filter((s) => s.owner === countryId && (s.kind === 'city' || s.kind === 'capital' || s.kind === 'town')).length,
     armies: world.units.filter((u) => u.owner === countryId && u.kind === 'army').length, strength: Math.round(mine),
     techAge: c.techAge ?? 'ancient',
-    focus, neighbours, ...(terrain ? { terrain } : {}), movement: mv.name, politics,
+    focus, ...(memberAge(c.council?.ruler, world.year) !== undefined ? { rulerAge: memberAge(c.council?.ruler, world.year) } : {}), neighbours, ...(terrain ? { terrain } : {}), movement: mv.name, politics,
     chronicle: lines(world.chronicle.filter((e) => e.countries.includes(countryId)).slice(-5)),
     events: lines(world.chronicle.filter((e) => BIG_KINDS.has(e.kind) && !e.countries.includes(countryId)).slice(-3)),
   };

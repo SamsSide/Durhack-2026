@@ -79,16 +79,72 @@ export function rulerName(c: Namable, salt: string): string {
   return `${title} ${p.given[hashString(`ruler:${salt}`) % p.given.length]!} ${p.family[hashString(`family:${salt}`) % p.family.length]!}`;
 }
 
-const member = (name: string, tick: number, memory = ''): CouncilMember =>
-  ({ name, portraitSeed: hashString(`portrait:${name}:${tick}`), since: tick, memory });
+// ---- ageing (owner, 14 Nov) --------------------------------------------------------------------
 
-/** The council a nation starts with: its leader as ruler and a general from its culture. Deterministic from the seed. */
-export function foundingCouncil(c: Namable, seed: number, tick: number): Council {
+/** The age a new member takes office at: a ruler 18 to 45, a general 25 to 50. */
+export const START_AGE: Record<CouncilRole, [number, number]> = { ruler: [18, 45], general: [25, 50] };
+/** From this age a member can die of natural causes. */
+export const OLD_AGE_FROM = 50;
+/** The yearly chance of a natural death at an age (linear between the points; nothing before 50).
+ *  Certain from 99, so that even a death put off a year never leaves a member past 100. */
+const DEATH_CURVE: [number, number][] = [[50, 0.01], [70, 0.04], [85, 0.15], [95, 0.4], [99, 1]];
+export function oldAgeChance(age: number): number {
+  if (age < OLD_AGE_FROM) return 0;
+  for (let i = 1; i < DEATH_CURVE.length; i++) {
+    const [a0, p0] = DEATH_CURVE[i - 1]!, [a1, p1] = DEATH_CURVE[i]!;
+    if (age <= a1) return p0 + ((p1 - p0) * (age - a0)) / (a1 - a0);
+  }
+  return 1;
+}
+/** A member's age in years, or undefined on old replays (no `born`: never ages). */
+export const memberAge = (m: CouncilMember | null | undefined, year: number): number | undefined =>
+  m && m.born !== undefined ? Math.max(0, Math.floor(year - m.born)) : undefined;
+/** The birth year of a member taking office in `year`, seeded by the world, nation, role and tick. */
+function bornFor(role: CouncilRole, seed: number, countryId: number, tick: number, year: number, extra = ''): number {
+  const [lo, hi] = START_AGE[role];
+  return year - (lo + Math.floor(roll(`born:${seed}:${countryId}:${role}:${tick}${extra}`) * (hi - lo + 1)));
+}
+
+const member = (name: string, tick: number, memory = '', born?: number): CouncilMember =>
+  ({ name, portraitSeed: hashString(`portrait:${name}:${tick}`), since: tick, memory, ...(born !== undefined ? { born } : {}) });
+
+/** The council a nation starts with: its leader as ruler and a general from its culture. Deterministic from the seed.
+ *  `year` is the year it is founded in; with it every member gets a `born`. */
+export function foundingCouncil(c: Namable, seed: number, tick: number, year?: number): Council {
+  const born = (role: CouncilRole): number | undefined => (year === undefined ? undefined : bornFor(role, seed, c.id, tick, year));
   return {
-    ruler: member(c.leader, tick),
-    general: member(generalName(c, `${seed}:${c.id}:${tick}`), tick),
+    ruler: member(c.leader, tick, '', born('ruler')),
+    general: member(generalName(c, `${seed}:${c.id}:${tick}`), tick, '', born('general')),
     state: { ruler: 'active', general: 'active' },
   };
+}
+
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+/** Splits "Queen Ada Quill II" into title, given name, family name and regnal number (1 when none). */
+function parseRuler(name: string): { title: string; given: string; family: string; n: number } | null {
+  const t = TITLE_RE.exec(name);
+  if (!t) return null;
+  const parts = name.slice(t[0].length).trim().split(/\s+/);
+  const last = parts[parts.length - 1] ?? '';
+  const n = ROMAN.indexOf(last);
+  if (n > 0) parts.pop();
+  if (parts.length < 2) return null;
+  return { title: t[1]!, given: parts.slice(0, -1).join(' '), family: parts[parts.length - 1]!, n: n > 0 ? n : 1 };
+}
+
+/** A ruler's successor name. An heir keeps the dynasty (family name), and sometimes the given name with
+ *  the next regnal number ("Queen Ada Quill II"); elections and coups bring a new name. Never the predecessor's. */
+export function successorName(c: Namable, salt: string, predecessor: string | undefined, heir: boolean): string {
+  const prev = predecessor ? parseRuler(predecessor) : null;
+  if (heir && prev) {
+    const p = poolOf(c.buildingStyle);
+    if (roll(`regnal:${salt}`) < 0.4 && prev.n < ROMAN.length - 1) return `${prev.title} ${prev.given} ${prev.family} ${ROMAN[prev.n + 1]}`;
+    const given = p.given.filter((g) => g !== prev.given);
+    return `${prev.title} ${given[hashString(`ruler:${salt}`) % given.length]!} ${prev.family}`;
+  }
+  let name = rulerName(c, salt);
+  for (let i = 1; name === predecessor && i < 5; i++) name = rulerName(c, `${salt}:${i}`);
+  return name;
 }
 
 // ---- what the council changes in the sim -------------------------------------------------------
@@ -209,7 +265,7 @@ export function successionEvents(world: World, countryId: number, role: CouncilR
   const name = mid(c.name);
   const g = council.general;
   if (role === 'ruler' && g && council.state.general !== 'cut' && COUP_RE.test(c.government) && roll(`coup:${salt}`) < COUP_CHANCE) {
-    const ruler = { ...g, since: tick, memory };
+    const ruler = { ...g, since: tick, memory };       // the general keeps his own birth year
     return [
       { type: 'council_changed', countryId, role: 'ruler', member: ruler, cause: 'coup' },
       { type: 'council_changed', countryId, role: 'general', member: null, cause: 'coup' },
@@ -217,7 +273,8 @@ export function successionEvents(world: World, countryId: number, role: CouncilR
       chronicle(line, 'succession', [countryId], `${g.name} marches on the palace and seizes power in ${name}; the army rules now, by ${pred}'s old counsel.`),
     ];
   }
-  const fresh = member(role === 'ruler' ? rulerName(c, salt) : generalName(c, salt, 'Captain'), tick, memory);
+  const born = bornFor(role, world.seed, countryId, tick, line.year);
+  const fresh = member(role === 'ruler' ? successorName(c, salt, predecessor?.name, HEIR_RE.test(c.government)) : generalName(c, salt, 'Captain'), tick, memory, born);
   const members = seats(council, role, fresh);
   const text = role === 'general'
     ? `${fresh.name} takes command of the armies of ${name} with ${pred}'s last orders.`
@@ -246,6 +303,52 @@ export function assassinations(world: World, tick: number): { countryId: number;
     if (roll(`assassin:${world.seed}:${tick}:${c.id}`) >= p) continue;
     out.push({ countryId: c.id, role: present[hashString(`assassin-who:${world.seed}:${tick}:${c.id}`) % present.length]! });
   }
+  return out;
+}
+
+const DEATHS_IN_BED = ['dies in their sleep', 'dies peacefully in bed', 'slips away in the night', 'dies of old age', 'dies of a wasting illness'];
+const DEATHS_IN_CAMP = ['dies of a fever', 'dies of a failing heart', 'dies in camp, worn out by the campaigns', 'dies of old age', 'dies of the lung sickness'];
+const deathPhrase = (m: CouncilMember, role: CouncilRole): string => {
+  const pool = role === 'general' ? DEATHS_IN_CAMP : DEATHS_IN_BED;
+  return pool[hashString(`oldage-how:${m.name}:${m.since}`) % pool.length]!;
+};
+
+/** This year's natural deaths: one seeded roll per member with a `born` (old replays: none), at the
+ *  chance for his age (`oldAgeChance`). Grouped by nation; a nation can lose both members in a year. Pure. */
+export function oldAgeDeaths(world: World, tick: number): { countryId: number; roles: CouncilRole[] }[] {
+  const out: { countryId: number; roles: CouncilRole[] }[] = [];
+  for (const c of world.countries) {
+    const council = c.council;
+    if (!c.alive || !council) continue;
+    const roles = COUNCIL_ROLES.filter((r) => {
+      const age = memberAge(council[r], world.year);
+      return age !== undefined && roll(`oldage:${world.seed}:${tick}:${c.id}:${r}`) < oldAgeChance(age);
+    });
+    if (roles.length) out.push({ countryId: c.id, roles });
+  }
+  return out;
+}
+
+/** Members die of old age: `council_changed` member null cause `old_age`, the statuses and a `death`
+ *  line each ("Queen Ada of the Salt Marches dies in their sleep, aged 78"). Several roles die in one batch. */
+export function oldAgeEvents(world: World, countryId: number, roles: CouncilRole[], line: CouncilLine): CouncilBody[] {
+  const c = world.countries[countryId];
+  const council = c?.council;
+  if (!c || !c.alive || !council) return [];
+  const dying = roles.filter((r) => council[r]);
+  if (!dying.length) return [];
+  const members = { ...seats(council) };
+  for (const r of dying) members[r] = null;
+  const name = mid(c.name);
+  const out: CouncilBody[] = dying.map((r) => ({ type: 'council_changed', countryId, role: r, member: null, cause: 'old_age' }));
+  out.push(...statusBodies(countryId, council, members));
+  dying.forEach((r, i) => {
+    const m = council[r]!;
+    const age = memberAge(m, world.year);
+    const cover = i < dying.length - 1 ? '' : dying.length > 1 ? ` ${name} is left without a head.` : `; ${coverText(council, r, name)}`;
+    out.push(chronicle({ ...line, entryId: `${line.entryId}-${i}` }, 'death', [countryId],
+      `${m.name} of ${name} ${deathPhrase(m, r)}${age !== undefined ? `, aged ${age}` : ''}${cover.startsWith(';') ? cover : cover ? `.${cover}` : '.'}`));
+  });
   return out;
 }
 

@@ -64,7 +64,7 @@ export type Good = 'grain' | 'fish' | 'timber' | 'stone' | 'ore' | 'salt' | 'gol
 
 // Council (row A29, owner decision on #146: ruler and general only).
 export type CouncilRole = 'ruler' | 'general';
-export interface CouncilMember { name: string; portraitSeed: number; since: number; memory: string } // since = tick; memory = rolling 5-line summary handed to a successor
+export interface CouncilMember { name: string; portraitSeed: number; since: number; memory: string; born?: number } // since = tick; memory = rolling 5-line summary handed to a successor; born = birth year (missing on old replays: never ages)
 export type CouncilState = 'active' | 'covering' | 'vacant' | 'cut';
 export interface Council {
   ruler: CouncilMember | null; general: CouncilMember | null;
@@ -132,7 +132,7 @@ export type WorldEvent = Base & (
   | { type: 'wonder_started'; countryId: number; structureId: string; tile: number; wonder: WonderKind; name: string }
   | { type: 'wonder_built'; countryId: number; structureId: string }
   | { type: 'unit_removed'; unitId: string; reason: 'battle' | 'disband' | 'collapse' }
-  | { type: 'council_changed'; countryId: number; role: CouncilRole; member: CouncilMember | null; cause: 'founded' | 'death' | 'assassination' | 'disconnect' | 'succession' | 'coup' | 'restored' }
+  | { type: 'council_changed'; countryId: number; role: CouncilRole; member: CouncilMember | null; cause: 'founded' | 'death' | 'assassination' | 'disconnect' | 'succession' | 'coup' | 'restored' | 'old_age' }
   | { type: 'council_status'; countryId: number; role: CouncilRole; state: CouncilState }
   | { type: 'battle'; tile: number; attacker: number; defender: number; attackerUnit: string; winner: number; losses: { attacker: number; defender: number } }
   | { type: 'relation_changed'; a: number; b: number; stance: Stance; reason: string }

@@ -120,7 +120,7 @@ export function secessionBatch(world: World, plan: SecessionPlan, mk: (body: Bod
     alive: true, population, treasury,
     techAge: parent.techAge ?? 'ancient',
   };
-  country.council = foundingCouncil(country, world.seed, tick);     // row A29: its rebel leader and a general
+  country.council = foundingCouncil(country, world.seed, tick, world.year);     // row A29: its rebel leader and a general
 
   const events: WorldEvent[] = [];
   const add = (b: Body): void => { events.push(mk(b)); };

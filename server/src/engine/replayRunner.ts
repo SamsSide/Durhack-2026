@@ -24,7 +24,7 @@ export class ReplayRunner implements WorldRunner {
 
   constructor(private file: ReplayFile) {
     this.world = cloneWorld(file.initial);
-    this.world.speed = 1;
+    this.world.speed = this.clock.target;   // a replay starts at one month a second until the live clock is handed over
     this.world.paused = false;
     this.clock.onChange = (s) => { for (const l of this.listeners) l.clock?.(s); };
   }

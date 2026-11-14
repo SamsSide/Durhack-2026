@@ -333,7 +333,7 @@ export function generateWorld(bible: WorldBible, opts: WorldGenOptions): World {
       ...cultureFields, id, capitalTile: cap, alive: true, parent: null,
       population: 2000 * take.length + Math.floor(rng() * 4000), treasury: 100 + Math.floor(rng() * 60),
       techAge: startAge(bible.era),
-      council: foundingCouncil({ ...cultureFields, id }, seed, 0),     // row A29: its leader and a general
+      council: foundingCouncil({ ...cultureFields, id }, seed, 0, bible.startYear),     // row A29: its leader and a general
       warReadiness: 0, politics: startPolitics(cultureFields.temperament),   // B11 (#204): at peace, its politics from its temperament
     });
     structures.push({ id: `s-${structures.length}`, tile: cap, owner: id, kind: 'capital', builtTick: 0 });
@@ -347,7 +347,7 @@ export function generateWorld(bible: WorldBible, opts: WorldGenOptions): World {
   return {
     id: `w-${(hashString(`world:${seed}`) & 0xffff).toString(16).padStart(4, '0')}`,
     seed, prompt: '', name: bible.name, era: bible.era,
-    tick: 0, year: bible.startYear, speed: 1, paused: false,
+    tick: 0, year: bible.startYear, speed: 1 / 24, paused: false,
     tiles, regions, owner, countries, structures, units, relations, chronicle,
     agents: countries.map((c) => ({ countryId: c.id, link: 'up', ruler: 'llm', deleted: false, lastHeardTick: 0, pendingEvents: 0 })),
   };
