@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { flagSvg } from '@terra/shared';
 import type { AgentStatus, Country } from '@terra/shared';
 
 interface Props {
@@ -16,7 +15,9 @@ export function NationRow({ country, agent, tick, selected, onSelect, onControl 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
-  const gone = !country.alive || !!agent?.deleted;
+  const deleted = !!agent?.deleted;
+  const fallen = !country.alive && !deleted;
+  const gone = deleted || fallen;
   const cut = !gone && agent?.link === 'cut';
   const auto = !gone && agent?.ruler === 'autopilot';
 
@@ -31,36 +32,34 @@ export function NationRow({ country, agent, tick, selected, onSelect, onControl 
     onControl('delete', country.id);
   };
 
-  let status: string;
-  if (gone) status = agent?.deleted ? 'Deleted' : 'Fallen';
-  else {
-    const parts: string[] = [];
-    if (agent) {
-      if (cut) {
-        const years = Math.max(0, tick - agent.lastHeardTick);
-        parts.push(`Cut off, silent ${years} ${years === 1 ? 'year' : 'years'}`);
-        if (agent.pendingEvents > 0) parts.push(`${agent.pendingEvents} events queued`);
-      } else parts.push('Linked');
-      parts.push(auto ? 'Autopilot' : 'AI ruler');
-    }
-    status = parts.join(' · ');
-  }
-
-  const cls = ['tn-net-row', selected ? 'tn-sel' : '', cut ? 'tn-cut' : '', gone ? 'tn-gone' : ''].join(' ');
+  const years = agent ? Math.max(0, tick - agent.lastHeardTick) : 0;
+  const cls = ['tn-nrow', selected ? 'tn-sel' : '', cut ? 'tn-cut' : '', gone ? 'tn-gone' : ''].filter(Boolean).join(' ');
   return (
     <li className={cls} style={{ ['--tn-nation' as string]: country.color }}>
-      <div className="tn-net-line1">
-        <span className="tn-net-flag" dangerouslySetInnerHTML={{ __html: flagSvg(country.flag, 24, 16) }} />
-        <button className="tn-net-name" onClick={() => { onSelect(country.id); }}>{country.name}</button>
-        {auto && <span className="tn-net-tag">autopilot</span>}
+      <div className="tn-nr-top">
+        <span className="tn-sw" />
+        <button className="tn-nr-name" onClick={() => onSelect(country.id)}>{country.name}</button>
+        {deleted && <span className="tn-state del">Deleted</span>}
+        {fallen && <span className="tn-state del">Fallen</span>}
       </div>
-      <div className="tn-net-status">{status}</div>
+      {deleted && <div className="tn-nr-sub ruin">Its lands lie in ruin; neighbours are carving them up.</div>}
       {agent && !gone && (
-        <div className="tn-net-switches">
-          <button className="tn-net-btn" onClick={() => onControl(cut ? 'restore' : 'cut', country.id)}>{cut ? 'Restore' : 'Cut'}</button>
-          <button className="tn-net-btn" onClick={() => onControl(auto ? 'wake' : 'silence', country.id)}>{auto ? 'Wake' : 'Silence'}</button>
-          <button className={`tn-net-btn tn-danger ${confirming ? 'tn-armed' : ''}`} onClick={del}>{confirming ? 'Confirm delete' : 'Delete'}</button>
-        </div>
+        <>
+          <div className="tn-nr-states">
+            {cut ? <span className="tn-state cut"><i />Cut</span> : <span className="tn-state up"><i />Link up</span>}
+            {auto ? <span className="tn-state auto">Autopilot</span> : <span className="tn-state llm">LLM ruler</span>}
+          </div>
+          {cut && (
+            <div className="tn-nr-sub mono">
+              {agent.pendingEvents} events queued · silent {years} {years === 1 ? 'yr' : 'yrs'}
+            </div>
+          )}
+          <div className="tn-nr-btns">
+            <button className="btn xs" onClick={() => onControl(cut ? 'restore' : 'cut', country.id)}>{cut ? 'Restore' : 'Cut'}</button>
+            <button className="btn xs" onClick={() => onControl(auto ? 'wake' : 'silence', country.id)}>{auto ? 'Wake' : 'Silence'}</button>
+            <button className="btn xs danger" onClick={del}>{confirming ? 'Confirm delete' : 'Delete'}</button>
+          </div>
+        </>
       )}
     </li>
   );

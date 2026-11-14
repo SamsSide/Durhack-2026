@@ -37,4 +37,5 @@ budget, run them one at a time in the order below, on Sonnet.
 
 <!-- One line per merged PR: time · PR # · what. Newest last. -->
 - 14 Nov · #22 · C1 Create screen and C2 nation card (testing: #23, #24)
-- 14 Nov · this PR · C3 chronicle and C4 network panel
+- 14 Nov · #38 · C3 chronicle and C4 network panel (testing: #39, #40)
+- 14 Nov · this PR · C1 to C4 rebuilt to the Figma design (A12); new DecreeBox and TokenMeter exports for lane b
