@@ -53,6 +53,9 @@
 .tn-flag-painted { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 250ms ease; }
 .tn-flag-painted.tn-on { opacity: 1; }
 .tn-name { margin: 0; font-family: var(--font-display); font-size: 21px; font-weight: 700; line-height: 24px; letter-spacing: 0.03em; color: var(--color-ink); }
+/* a 12-letter word (COMMONWEALTH) is wider than the 162px title column at 21px; see nameClass in shared.tsx */
+.tn-name--long { font-size: 17px; line-height: 21px; }
+.tn-name--huge { overflow-wrap: anywhere; }
 .tn-sub { font-style: italic; color: var(--color-ink-muted); font-size: 16px; line-height: 20px; margin-top: 3px; }
 .tn-fallen { font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-rubric); margin-top: 2px; }
 .tn-close { align-self: flex-start; flex: none; }
@@ -149,7 +152,7 @@
 .tn-cm-info:focus-visible { box-shadow: 0 0 0 1.5px var(--color-ink); border-radius: var(--radius-1); }
 .tn-cm-role { display: flex; align-items: center; gap: 6px; font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-ink-muted); line-height: 18px; }
 .tn-cm-name { display: flex; align-items: baseline; gap: 6px; min-width: 0; line-height: 20px; }
-.tn-cm-n { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tn-cm-n { font-size: 16px; font-weight: 600; min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .tn-cm-vac { font-style: italic; color: var(--color-ink-muted); font-size: 16px; }
 .tn-cm-yrs { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-ink-muted); white-space: nowrap; flex: none; }
 /* A compact status chip on the role line (tn-chip tn-chip--caps tn-chip--sm) */
@@ -214,7 +217,8 @@
   background: rgba(42,31,20,.05); box-shadow: var(--well-paper);
 }
 .tn-ruler-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.tn-ruler-name { font-size: 17px; font-weight: 600; line-height: 21px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: var(--engrave-on-paper); }
+/* two lines: a title ("High Solarch") used to push the ruler's own name into the ellipsis */
+.tn-ruler-name { font-size: 17px; font-weight: 600; line-height: 21px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; text-shadow: var(--engrave-on-paper); }
 .tn-ruler-age { flex: none; font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-ink-muted); }
 .tn-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 10px 2px 8px; }
 .tn-pair > div { display: flex; flex-direction: column; min-width: 0; }

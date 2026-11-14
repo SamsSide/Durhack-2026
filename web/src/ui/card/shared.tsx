@@ -47,3 +47,9 @@ export function useShort(): boolean {
   }, []);
   return short;
 }
+
+/** Class for a card title: a word of 12 letters or more gets a smaller size so it stays in its column; 14 or more may break. */
+export function nameClass(name: string): string {
+  const longest = name.split(/[\s-]+/).reduce((m, w) => Math.max(m, w.length), 0);
+  return `tn-name tn-engraved${longest >= 12 ? ' tn-name--long' : ''}${longest >= 14 ? ' tn-name--huge' : ''}`;
+}

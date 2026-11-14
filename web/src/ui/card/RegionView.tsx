@@ -1,7 +1,7 @@
 import { flagSvg, goodOf } from '@terra/shared';
 import { useRef } from 'react';
 import { useWorld } from '../../state/world';
-import { CloseIcon, Lines as Placeholder, Meter, useCardClass } from './shared';
+import { CloseIcon, Lines as Placeholder, Meter, nameClass, useCardClass } from './shared';
 import { useRegionLore } from './useLore';
 
 export function RegionView({ regionId }: { regionId: number }) {
@@ -34,7 +34,7 @@ export function RegionView({ regionId }: { regionId: number }) {
         <header className="tn-head">
           <div className="tn-flag tn-flag-plate"><div className="tn-flag-drawn" dangerouslySetInnerHTML={{ __html: flagSvg(region.flag, 66, 44) }} /></div>
           <div className="tn-head-text">
-            <h2 className="tn-name tn-engraved">{region.name || 'Unnamed lands'}</h2>
+            <h2 className={nameClass(region.name || '')}>{region.name || 'Unnamed lands'}</h2>
             {owner && (
               <div className="tn-sub">
                 <span className="tn-held-flag tn-flag-plate" dangerouslySetInnerHTML={{ __html: flagSvg(owner.flag, 24, 16) }} />
