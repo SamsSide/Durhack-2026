@@ -1,13 +1,14 @@
 // Mock world and scripted event stream (X1). Deterministic; costs no API calls.
 // mockEvents is valid when applied in order to the world mockWorld() returned.
 import type {
-  ChronicleEntry, ChronicleKind, Country, FlagSpec, Region, Stance, Structure, StructureKind,
+  ChronicleEntry, ChronicleKind, Country, CouncilMember, FlagSpec, Region, Stance, Structure, StructureKind,
   Terrain, Tile, Unit, Vec3, World, WorldEvent, BuildingStyle, TechAge,
 } from './types';
 import { generateProvinces } from './sphere';
 import { hashString, mulberry32, pick, type Rng } from './rng';
 import { applyEvent, countryTiles, regionOwner } from './world';
 import { wonderKindFor, wonderName } from './sim/wonders';
+import { deathEvents, foundingCouncil, successionEvents, type CouncilBody } from './sim/council';
 
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
@@ -207,6 +208,8 @@ export function mockWorld(seed = 1337): World {
     techAge: MOCK_AGES[id % MOCK_AGES.length],
     population: 20000 + Math.floor(rng() * 20000), treasury: 100 + Math.floor(rng() * 100),
   }));
+  // Row A29: each nation's ruler and general (hashed from the seed; the world rng is left alone).
+  for (const c of countries) c.council = foundingCouncil(c, seed, 0);
 
   // Each nation: capital plus a few neighbouring land tiles.
   caps.forEach((c, id) => { owner[c] = id; });
@@ -282,6 +285,8 @@ export function* mockEvents(world: World): Generator<WorldEvent> {
   let warA = -1, warB = -1;
   let rebelRegion = -1, rebelParent = -1;
   let wonderId = '';
+  let lastBattle = -1;
+  let fallenGeneral: CouncilMember | undefined;
 
   const mk = (actor: WorldEvent['actor'], body: EventBody): WorldEvent => {
     const ev = { id: `e-${++nEvent}`, tick, actor, lamport: ++lamport, ...body } as WorldEvent;
@@ -403,6 +408,7 @@ export function* mockEvents(world: World): Generator<WorldEvent> {
       const targets = w.owner.flatMap((o, t) => (o === warB && w.tiles[t]!.neighbors.some((n) => w.owner[n] === warA) ? [t] : []));
       if (army && targets.length) {
         const tb = pick(rng, targets);
+        lastBattle = tb;
         // the army must stand on a tile next to the target
         const from = army.tile;
         yield mk(warA, { type: 'unit_moved', unitId: army.id, from, to: tb, arriveTick: tick + 1 });
@@ -414,6 +420,16 @@ export function* mockEvents(world: World): Generator<WorldEvent> {
         yield say('battle', [warA, warB], `${nm(warA)} wins a battle and takes ground from ${nm(warB)}.`);
       }
     }
+    // Row A29: the defender's general falls in the war (the ruler covers), and 8 years later a successor
+    // takes command with his memory.
+    const council = (bodies: CouncilBody[]): WorldEvent[] => bodies.map((b) => mk('world', b as EventBody));
+    const line = () => ({ entryId: `c-g${++nChron}`, tick, year: w.year });
+    if (warB >= 0 && rel === 46 && w.countries[warB]?.council?.general) {
+      fallenGeneral = { ...w.countries[warB]!.council!.general! };
+      const r = lastBattle >= 0 ? w.regions[w.tiles[lastBattle]!.region] : undefined;
+      yield* council(deathEvents(w, warB, 'general', 'death', line(), r?.name || 'the border'));
+    }
+    if (warB >= 0 && rel === 46 + 8) yield* council(successionEvents(w, warB, 'general', fallenGeneral, line()));
     if (warA >= 0 && rel === 52) {
       yield mk(warA, { type: 'relation_changed', a: warA, b: warB, stance: 'neutral', reason: 'exhaustion' });
       yield say('peace', [warA, warB], `${nm(warA)} and ${nm(warB)} sign a weary peace.`);
@@ -458,6 +474,7 @@ export function* mockEvents(world: World): Generator<WorldEvent> {
           anthemPrompt: 'defiant marching song with drums and a fiddle', voiceStyle: 'young, fierce, a revolutionary',
           alive: true, population: 6000, treasury: 20,
         };
+        country.council = foundingCouncil(country, w.seed, tick);
         yield mk(id, { type: 'country_founded', country, regionId: region.id });
         for (const t of claim) yield mk(id, { type: 'tile_claimed', tile: t, owner: id, from: rebelParent, cause: 'dispute' });
         yield mk('world', { type: 'region_updated', regionId: region.id, patch: { unrest: 0.1 } });

@@ -54,6 +54,16 @@ export interface Country {
   alive: boolean;
   population: number;
   treasury: number;
+  council?: Council;                                     // row A29; missing on old replays
+}
+
+// Council (row A29, owner decision on #146: ruler and general only).
+export type CouncilRole = 'ruler' | 'general';
+export interface CouncilMember { name: string; portraitSeed: number; since: number; memory: string } // since = tick; memory = rolling 5-line summary handed to a successor
+export type CouncilState = 'active' | 'covering' | 'vacant' | 'cut';
+export interface Council {
+  ruler: CouncilMember | null; general: CouncilMember | null;
+  state: Record<CouncilRole, CouncilState>;
 }
 
 export type StructureKind = 'camp' | 'village' | 'town' | 'city' | 'capital'
@@ -73,7 +83,8 @@ export type Stance = 'war' | 'hostile' | 'neutral' | 'trade' | 'alliance';
 export interface Relation { a: number; b: number; stance: Stance; since: number; grievance: number } // a < b
 
 export type ChronicleKind = 'founding' | 'proclamation' | 'growth' | 'war' | 'battle' | 'peace'
-  | 'alliance' | 'betrayal' | 'fall' | 'silence' | 'return' | 'dispute' | 'decree' | 'secession' | 'wonder';
+  | 'alliance' | 'betrayal' | 'fall' | 'silence' | 'return' | 'dispute' | 'decree' | 'secession' | 'wonder'
+  | 'death' | 'succession';
 export interface ChronicleEntry { id: string; tick: number; year: number; kind: ChronicleKind; countries: number[]; text: string }
 
 export interface AgentStatus {
@@ -115,6 +126,8 @@ export type WorldEvent = Base & (
   | { type: 'wonder_started'; countryId: number; structureId: string; tile: number; wonder: WonderKind; name: string }
   | { type: 'wonder_built'; countryId: number; structureId: string }
   | { type: 'unit_removed'; unitId: string; reason: 'battle' | 'disband' | 'collapse' }
+  | { type: 'council_changed'; countryId: number; role: CouncilRole; member: CouncilMember | null; cause: 'founded' | 'death' | 'assassination' | 'disconnect' | 'succession' | 'coup' | 'restored' }
+  | { type: 'council_status'; countryId: number; role: CouncilRole; state: CouncilState }
   | { type: 'battle'; tile: number; attacker: number; defender: number; attackerUnit: string; winner: number; losses: { attacker: number; defender: number } }
   | { type: 'relation_changed'; a: number; b: number; stance: Stance; reason: string }
   | { type: 'country_updated'; countryId: number; patch: Partial<Country> }

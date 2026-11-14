@@ -7,6 +7,7 @@ import { generateProvinces, normalize } from '../sphere';
 import { hashString, mulberry32, pick, type Rng } from '../rng';
 import type { WorldBible } from './bible';
 import { startAge } from './ages';
+import { foundingCouncil } from './council';
 
 export interface WorldGenOptions { seed: number; seaLevel?: number; provinces?: number }
 
@@ -327,6 +328,7 @@ export function generateWorld(bible: WorldBible, opts: WorldGenOptions): World {
       ...cultureFields, id, capitalTile: cap, alive: true, parent: null,
       population: 2000 * take.length + Math.floor(rng() * 4000), treasury: 100 + Math.floor(rng() * 60),
       techAge: startAge(bible.era),
+      council: foundingCouncil({ ...cultureFields, id }, seed, 0),     // row A29: its leader and a general
     });
     structures.push({ id: `s-${structures.length}`, tile: cap, owner: id, kind: 'capital', builtTick: 0 });
     units.push({ id: `u-${units.length}`, owner: id, kind: 'settler', tile: cap, strength: 1 });

@@ -4,7 +4,7 @@
 // inside the tick loop; between calls, and whenever the ruler is silenced or fails, the rules run on
 // its last focus or on autopilotPolicy from its temperament.
 import {
-  applyEvent, applyTickBatch, autopilotPolicy, cloneWorld, hashString, mulberry32, nationTurn, newAgeMemory, newUnrestMemory, noteUnrestEvents, noteWarEvents, relationOf,
+  applyEvent, applyTickBatch, autopilotPolicy, cloneWorld, hashString, mulberry32, nationTurn, newAgeMemory, newUnrestMemory, noteUnrestEvents, noteWarEvents, relationOf, rulerPresent,
   type ChronicleKind, type NationPolicy, type WarLedger, type World, type WorldEvent,
 } from '@terra/shared';
 import type { MessageBus, BusEndpoint } from '../engine/bus';
@@ -60,7 +60,8 @@ export class NationAgent implements BusEndpoint {
 
   /** The policy this turn: the ruler's, or autopilot from its temperament. */
   currentPolicy(): NationPolicy {
-    if (this.policy && !this.silenced && this.ruler === 'llm') {
+    // Row A29: while the ruler's seat is empty or cut off, the general runs the nation on autopilot.
+    if (this.policy && !this.silenced && this.ruler === 'llm' && rulerPresent(this.replica, this.id)) {
       // An attack with no named target goes for the neighbour autopilot would pick (row A6).
       if (this.policy.focus === 'attack' && !this.policy.targets?.length) return { ...this.policy, targets: autopilotPolicy(this.replica, this.id).targets };
       return this.policy;
@@ -225,10 +226,11 @@ export class NationAgent implements BusEndpoint {
    *  nation can still think: its ruler reads its own, possibly stale, replica. */
   async think(): Promise<void> {
     if (this.thinking || this.deleted || this.silenced) return;
+    if (!rulerPresent(this.replica, this.id)) return;          // row A29: no ruler, no council of state
     this.thinking = true;
     try {
       const decision = await decide(makeDigest(this.replica, this.id, this.focus));
-      if (this.retired || this.deleted || this.silenced) return;
+      if (this.retired || this.deleted || this.silenced || !rulerPresent(this.replica, this.id)) return;
       this.adopt(decision);
     } catch {
       // RulerFailed (mock mode, cap, network, bad output): autopilot until the next good answer.

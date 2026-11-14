@@ -1,5 +1,7 @@
 // Mock WorldRunner: plays mockEvents() into a server-side World on the shared clock (row A25).
-import { applyEvent, mockEvents, mockWorld, type AgentStatus, type World, type WorldEvent } from '@terra/shared';
+import {
+  applyEvent, cutEvents, deathEvents, mockEvents, mockWorld, restoreEvents, type AgentStatus, type World, type WorldEvent,
+} from '@terra/shared';
 import type { ControlMessage, NewWorldOptions, RunnerListener, WorldRunner } from '../runner';
 import { Clock, TickLoop, clampSpeed, type ClockState } from '../engine/clock';
 import { anyBigMoment } from '../engine/bigMoments';
@@ -15,6 +17,7 @@ export class MockRunner implements WorldRunner {
   private loop = new TickLoop(this.clock, (n) => this.step(n));
   private lamport = 0;
   private decrees = 0;
+  private councilN = 0;
   private lastAgents = '';
   private lastAgentsPush = 0;
 
@@ -142,6 +145,19 @@ export class MockRunner implements WorldRunner {
       case 'speed': this.setSpeed(msg.value); break;
       case 'pacing': this.clock.setPacing(msg.value); break;
       case 'pause': this.setPaused(msg.value); break;
+      case 'kill':
+      case 'cut_member':
+      case 'restore_member': {
+        // Row A29: the same council events the engine makes, applied to the mock world.
+        const n = ++this.councilN;
+        const line = { entryId: `c-council-${n}`, tick: w.tick, year: w.year };
+        const bodies = msg.action === 'kill' ? deathEvents(w, msg.countryId, msg.role, 'assassination', line)
+          : msg.action === 'cut_member' ? cutEvents(w, msg.countryId, msg.role, line) : restoreEvents(w, msg.countryId, msg.role, line);
+        if (bodies.length) {
+          this.emit(bodies.map((b, i) => ({ id: `e-council-${n}-${i}`, tick: w.tick, actor: 'world', lamport: this.lamport + 1 + i, ...b }) as WorldEvent));
+        }
+        return;
+      }
       case 'decree': {
         const n = ++this.decrees;
         this.emit([{
