@@ -17,3 +17,22 @@
   position: absolute; left: 12px; bottom: calc(100% + 4px); font-family: var(--font-serif); font-style: italic; font-size: var(--text-sm);
   color: var(--color-text); text-shadow: 0 1px 2px var(--color-bg);
 }
+
+/* Hold-to-speak mic (row C7). */
+.tn-decree .btn.tn-decree-mic {
+  position: relative; width: 28px; height: 28px; padding: 0; flex: none; display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; color: var(--color-ink); border: var(--border-ink); touch-action: none; user-select: none;
+}
+.tn-decree .btn.tn-decree-mic:hover { background: var(--color-parchment-dark); color: var(--color-ink); border-color: var(--color-ink); }
+.tn-decree .btn.tn-decree-mic.recording { background: var(--color-danger); color: var(--color-parchment-light); border-color: var(--color-danger); }
+.tn-decree .btn.tn-decree-mic.recording::after {
+  content: ''; position: absolute; inset: -4px; border: 2px solid var(--color-danger); border-radius: var(--radius-2);
+  pointer-events: none; animation: tn-decree-pulse 1s ease-out infinite;
+}
+@keyframes tn-decree-pulse { from { opacity: 0.9; transform: scale(0.9); } to { opacity: 0; transform: scale(1.35); } }
+@media (prefers-reduced-motion: reduce) { .tn-decree .btn.tn-decree-mic.recording::after { animation: none; opacity: 0.7; } }
+.tn-decree-count {
+  flex: 1; min-width: 0; font-family: var(--font-mono); font-size: var(--text-sm); color: var(--color-danger);
+  border-bottom: 1px solid var(--color-danger); line-height: 22px;
+}
+.tn-decree-proclaimed { font-style: normal; font-weight: 500; }
