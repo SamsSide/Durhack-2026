@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { onPipPass } from '../pip/pipLod';
 import { useWorld } from '../../state/world';
 import { tileHeight } from '../mesh/buildProvinceMesh';
+import { TerrainLookup, propTops } from '../camera/groundView';
 import { SUN_DIST, advanceSun, holdSun, setSunAngle, radialTexture, reducedMotion, rimFade, smooth, sunDir } from './sun';
 
 const KEY = '#ffcf9a'; // warm orange key (the gallery's dusk look, softened so the map colours stay true)
@@ -65,7 +66,9 @@ function Sun() {
     for (const s of [parts.disc, parts.corona, parts.flare, ...parts.ghosts]) { s.material.map?.dispose(); s.material.dispose(); }
   }, [parts]);
 
-  const tmp = useMemo(() => ({ ndc: new THREE.Vector3(), toSun: new THREE.Vector3(), toCentre: new THREE.Vector3(), v: new THREE.Vector3(), axis: new THREE.Vector3(), edge: new THREE.Vector3() }), []);
+  const world = useWorld((s) => s.world);
+  const lookup = useMemo(() => (world ? new TerrainLookup(world) : null), [world?.id, world?.tiles]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tmp = useMemo(() => ({ ndc: new THREE.Vector3(), toSun: new THREE.Vector3(), toCentre: new THREE.Vector3(), v: new THREE.Vector3(), axis: new THREE.Vector3(), edge: new THREE.Vector3(), q: new THREE.Vector3() }), []);
   useFrame(({ camera }) => {
     const { disc, corona, flare, ghosts } = parts;
     const { ndc, toSun, toCentre, v, axis, edge } = tmp;
@@ -77,10 +80,12 @@ function Sun() {
     toSun.copy(disc.position).sub(camera.position).normalize();
     toCentre.copy(camera.position).negate().normalize();
     const theta = Math.acos(THREE.MathUtils.clamp(toSun.dot(toCentre), -1, 1));
-    const visible = smooth(limb - 0.004, limb + 0.03, theta); // 0 behind the planet, 1 in clear sky
+    // Land, mountains and props stand above the 1.02 sphere: when they hide the sun, so does its glare.
+    const clear = lookup ? terrainClear(lookup, camera.position, toSun, tmp.q) : 1;
+    const visible = smooth(limb - 0.004, limb + 0.03, theta) * clear; // 0 behind the planet, 1 in clear sky
     // Peaks as the sun peeks past the limb. One-sided (#317 item 9): it drops fast once the sun is behind
     // the planet, so a hidden sun never flares over the disc.
-    const onLimb = Math.exp(-(((theta - limb) / (theta < limb ? 0.012 : 0.035)) ** 2));
+    const onLimb = Math.exp(-(((theta - limb) / (theta < limb ? 0.012 : 0.035)) ** 2)) * clear;
     (corona.material as THREE.SpriteMaterial).opacity = Math.max(visible * 0.9, onLimb * 0.8);
     // Screen-space flare and ghosts, kept just in front of the camera.
     ndc.copy(disc.position).project(camera);
@@ -123,6 +128,32 @@ function Sun() {
       {parts.ghosts.map((g, i) => <primitive key={i} object={g} />)}
     </>
   );
+}
+
+/**
+ * How clear the line from the camera to the sun is of land and props: 1 clear, 0 hidden, soft over about
+ * a degree so a sun rising over a ridge still flares. Marches only the part of the line that dips below
+ * the highest land, so from orbit it costs nothing unless the sun sits near the limb.
+ */
+function terrainClear(lookup: TerrainLookup, eye: THREE.Vector3, dir: THREE.Vector3, q: THREE.Vector3): number {
+  let top = lookup.maxRadius;
+  for (const r of propTops.values()) if (r > top) top = r;
+  const b = eye.dot(dir);
+  const disc = b * b - (eye.lengthSq() - top * top);
+  if (disc <= 0) return 1;
+  const root = Math.sqrt(disc);
+  const t1 = -b + root;
+  if (t1 <= 0) return 1;
+  const t0 = Math.max(-b - root, 1e-3);
+  const STEPS = 48;
+  let minAngle = Infinity;
+  for (let i = 0; i <= STEPS; i++) {
+    const t = t0 + ((t1 - t0) * i) / STEPS;
+    q.copy(eye).addScaledVector(dir, t);
+    const angle = (q.length() - lookup.solidAt(q.x, q.y, q.z)) / t;
+    if (angle < minAngle) minAngle = angle;
+  }
+  return smooth(-0.006, 0.012, minAngle);
 }
 
 /** A four-ray starburst with a hot centre, for the limb flare. */

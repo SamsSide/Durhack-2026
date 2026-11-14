@@ -31,11 +31,22 @@ export const groundView = {
   height: 1,
 };
 
+/**
+ * Top radius of the props (trees, towns, buildings, wonders) standing on each tile near the camera,
+ * refreshed by CameraRig a few times a second in ground view. The camera floor and the sun's occlusion
+ * test both read it, so neither the lens nor the sun's glare passes through a tree or a tower.
+ */
+export const propTops = new Map<number, number>();
+/** Extra height the camera keeps above the top of a prop (props are thin, walls need GROUND_CLEARANCE). */
+export const PROP_CLEARANCE = 0.012;
+
 /** Nearest-tile lookup by walking neighbours from the last answer (the camera moves a little per frame). */
 export class TerrainLookup {
   private dirs: Float32Array;
   private heights: Float32Array;
   private last = 0;
+  /** Highest tile surface on the planet (nothing but props stands above it). */
+  readonly maxRadius: number;
 
   constructor(private world: World) {
     const n = world.tiles.length;
@@ -50,6 +61,9 @@ export class TerrainLookup {
       this.dirs[i * 3 + 2] = c[2] / l;
       this.heights[i] = tileHeight(t);
     }
+    let m = 1;
+    for (let i = 0; i < n; i++) m = Math.max(m, this.heights[i]!);
+    this.maxRadius = m;
   }
 
   private dot(i: number, x: number, y: number, z: number): number {
@@ -85,5 +99,20 @@ export class TerrainLookup {
     let h = this.heights[t] ?? 1;
     for (const nb of this.world.tiles[t]!.neighbors) h = Math.max(h, this.heights[nb] ?? 1);
     return h;
+  }
+
+  /** Highest prop top (see propTops) on the tile under the direction and its neighbours; 0 if none. */
+  propRidgeAt(x: number, y: number, z: number): number {
+    if (propTops.size === 0) return 0;
+    const t = this.tileAt(x, y, z);
+    let h = propTops.get(t) ?? 0;
+    for (const nb of this.world.tiles[t]!.neighbors) h = Math.max(h, propTops.get(nb) ?? 0);
+    return h;
+  }
+
+  /** What blocks a line of sight at this point: the tile surface, or a prop standing on it. */
+  solidAt(x: number, y: number, z: number): number {
+    const t = this.tileAt(x, y, z);
+    return Math.max(this.heights[t] ?? 1, propTops.get(t) ?? 0);
   }
 }

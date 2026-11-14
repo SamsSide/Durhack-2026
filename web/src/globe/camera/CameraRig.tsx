@@ -13,8 +13,9 @@ import { FOCUS_DISTANCE, onFocusTile } from '../events/focus';
 import { SETTLE, SHIFT_SMOOTH, SMOOTH, flySmoothTime, orbitAngle, prefersReducedMotion, smoothDamp } from './motion';
 import { GroundSky } from './GroundSky';
 import {
-  GROUND_CLEARANCE, GROUND_MIN, GROUND_PITCH, GROUND_START, TerrainLookup, groundTilt, groundView,
+  GROUND_CLEARANCE, GROUND_MIN, GROUND_PITCH, GROUND_START, PROP_CLEARANCE, TerrainLookup, groundTilt, groundView, propTops,
 } from './groundView';
+import { scanPropTops } from './propScan';
 
 const NONE = 0, ROTATE = 1, TOUCH_ROTATE = 64; // camera-controls ACTION values
 const LEFT_PANEL_PX = 340 + 16 + 12; // the left panel, its margin and a gap: the globe centres in the rest
@@ -41,10 +42,12 @@ export function CameraRig() {
   panelOpen.current = panel !== 'none';
   const flyingUntil = useRef(0);
   const dom = useThree((s) => s.gl.domElement);
+  const scene = useThree((s) => s.scene);
+  const propScanAt = useRef(0);
   const world = useWorld((s) => s.world);
   // Two lookups so the ground point and the camera each keep their own "last tile" hint.
   const terrain = useMemo(
-    () => (world ? { ground: new TerrainLookup(world), eye: new TerrainLookup(world) } : null),
+    () => (world ? { ground: new TerrainLookup(world), eye: new TerrainLookup(world), props: new TerrainLookup(world) } : null),
     [world?.id, world?.tiles], // eslint-disable-line react-hooks/exhaustive-deps
   );
   // Ground-view state: smoothed ground radius under the look point and under the camera, the
@@ -198,15 +201,27 @@ export function CameraRig() {
         .multiply(r.setFromAxisAngle(AXIS_X, tilt * GROUND_PITCH));
       p.copy(AXIS_Z).applyQuaternion(q).multiplyScalar(slant).add(g);
       // Never under the terrain: lift the camera over the land (and its neighbours' cliffs) below it.
-      const reGoal = terrain ? terrain.eye.ridgeAt(p.x, p.y, p.z) : 1;
-      s.re += (reGoal - s.re) * ease;
+      // Props (trees, towns, towers) count too: a few times a second, note how tall the ones nearby are.
+      const now = state.clock.elapsedTime;
+      if (terrain && now - propScanAt.current > 0.25) {
+        propScanAt.current = now;
+        scanPropTops(scene, p, terrain.props);
+      }
+      const reGoal = terrain
+        ? Math.max(terrain.eye.ridgeAt(p.x, p.y, p.z), terrain.eye.propRidgeAt(p.x, p.y, p.z) + PROP_CLEARANCE - GROUND_CLEARANCE)
+        : 1;
+      // Rise fast (never sink into a hill or a tree while panning), settle back down gently.
+      s.re += (reGoal - s.re) * (reGoal > s.re ? 1 - Math.exp(-Math.min(dt, 0.1) * 30) : ease);
       const floor = s.re + GROUND_CLEARANCE;
       if (p.length() < floor) p.setLength(floor);
       height = p.length() - s.re;
       cam.position.copy(p);
       cam.quaternion.copy(q);
       cam.updateMatrixWorld();
-    } else s.re = s.rg;
+    } else {
+      s.re = s.rg;
+      if (propTops.size) propTops.clear();
+    }
 
     // Near plane follows the height so close walls stay crisp and nothing clips into the lens.
     const near = Math.min(NEAR_FAR, Math.max(NEAR_MIN, height * 0.25));
