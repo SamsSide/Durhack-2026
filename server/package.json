@@ -10,6 +10,11 @@
   },
   "dependencies": {
     "@google/genai": "^3.3.0",
+    "@solana-program/memo": "^0.16.0",
+    "@solana-program/token-2022": "^0.20.1",
+    "@solana/kit": "^8.6.0",
+    "@solana/kit-plugin-rpc": "^0.23.0",
+    "@solana/kit-plugin-signer": "^0.23.0",
     "@terra/shared": "*",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",

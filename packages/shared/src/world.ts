@@ -104,6 +104,16 @@ export function applyEvent(world: World, event: WorldEvent): void {
     case 'chronicle':
       world.chronicle.push(event.entry);
       break;
+    case 'payment': {
+      // Row A27: money moves from the payer's treasury to the payee's, never more than the payer has.
+      const payer = world.countries[event.from];
+      const payee = world.countries[event.to];
+      if (!payer || !payee || event.from === event.to) break;
+      const amount = Math.min(Math.max(0, event.amount), Math.max(0, payer.treasury));
+      payer.treasury = Math.round((payer.treasury - amount) * 100) / 100;
+      payee.treasury = Math.round((payee.treasury + amount) * 100) / 100;
+      break;
+    }
   }
 }
 

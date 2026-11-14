@@ -2,6 +2,7 @@
 import type { Server } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { getBudget } from '../llm';
+import { chainHello, onChainMessage } from '../chain';
 import type { ControlMessage, LlmMode, WorldRunner } from '../runner';
 
 const ACTIONS_WITH_COUNTRY = ['cut', 'restore', 'silence', 'wake', 'delete'];
@@ -22,6 +23,7 @@ export function attachWs(server: Server, runner: WorldRunner, mode: LlmMode): We
     clock: (state) => broadcast({ type: 'clock', ...state }),
   });
   setInterval(() => broadcast(budget()), 2000).unref();
+  onChainMessage((m) => broadcast(m)); // row A27: ledger rows and the economy counters
 
   wss.on('connection', (ws) => {
     const world = runner.getWorld();
@@ -30,6 +32,7 @@ export function attachWs(server: Server, runner: WorldRunner, mode: LlmMode): We
     const clock = runner.clockState?.();
     if (world && clock) send(ws, { type: 'clock', ...clock });
     send(ws, budget());
+    for (const m of chainHello()) send(ws, m);
 
     ws.on('message', (raw) => {
       let msg: any;

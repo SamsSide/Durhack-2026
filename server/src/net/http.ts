@@ -5,6 +5,7 @@ import express from 'express';
 import type { LlmMode, WorldRunner } from '../runner';
 import { storyRoutes } from '../story/routes';
 import { tigerRoutes } from '../tiger/routes';
+import { chainRoutes } from '../chain/routes';
 
 export function createApp(runner: WorldRunner, mode: LlmMode) {
   const app = express();
@@ -70,5 +71,6 @@ export function createApp(runner: WorldRunner, mode: LlmMode) {
 
   app.use('/api', storyRoutes(runner));
   app.use('/api', tigerRoutes(runner));
+  app.use('/api', chainRoutes(runner));
   return app;
 }

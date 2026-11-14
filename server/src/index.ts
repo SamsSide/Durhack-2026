@@ -12,6 +12,7 @@ import type { LlmMode, WorldRunner } from './runner';
 import { forceMockMode, resetRun } from './llm';
 import { bindLore } from './story/loreAi';
 import { bindTiger } from './tiger';
+import { bindChain } from './chain';
 
 // .env lives at the repo root (may be missing).
 dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.env') });
@@ -28,6 +29,7 @@ bindRecorder(live);
 const runner: WorldRunner = new RunnerHub(live);
 bindLore(runner);
 bindTiger(runner);
+bindChain(runner);
 // The engine resets the meter itself before it writes a world's bible (so the bible counts).
 if (mockFlag) runner.subscribe({ snapshot: () => resetRun() });
 if (mockFlag) void runner.newWorld({ prompt: 'a patchwork world of five young nations', seed: 1337 });
