@@ -1,8 +1,7 @@
 // The rules of the world (row A3). Everything here is a pure function of a world view: a nation
-// looks at the world as IT believes it and returns only its OWN events for this tick. Row A4 runs
-// one of these per nation agent against its own replica; the server (EngineRunner) runs them all
-// against the true world for now. The LLM ruler (row A5) only chooses a NationPolicy; these rules
-// do the moving.
+// looks at the world as IT believes it and returns only its OWN events for this tick. Each nation
+// agent (row A4, server/src/agents/nation.ts) runs this against its own replica. The LLM ruler
+// (row A5) only chooses a NationPolicy; these rules do the moving.
 import type {
   ChronicleKind, Country, Structure, StructureKind, Terrain, Unit, World, WorldEvent,
 } from '../types';
@@ -169,6 +168,10 @@ export function nationTurn(
       const s: Structure = { id: uid('s'), tile: u.tile, owner: countryId, kind: 'camp', builtTick: tick };
       emit({ type: 'structure_built', structure: s });
       structAt.set(u.tile, s); myStructs.push(s);
+      emit({ type: 'unit_removed', unitId: u.id, reason: 'disband' });
+      settlersLeft--;
+    } else if (own[u.tile] !== countryId) {
+      // Its tile went to someone else (a lost claim, or news that arrived late): it goes home.
       emit({ type: 'unit_removed', unitId: u.id, reason: 'disband' });
       settlersLeft--;
     } else if (structAt.has(u.tile)) {

@@ -207,6 +207,75 @@ function buildRegions(land: boolean[], neighbors: number[][], centers: Vec3[], r
 
 const PREF: Partial<Record<Terrain, number>> = { plains: 1, coast: 1, hills: 0.9, forest: 0.85, desert: 0.55 };
 
+/** How many nations each landmass gets: the big ones only, at least two per landmass used so that
+ *  every nation has a neighbour to meet (and fight) early, the rest by size. Landmasses too small for
+ *  two (share under 1.2 nations) are left empty rather than given a lonely nation. */
+function allocate(n: number, sizes: number[]): number[] {
+  const order = sizes.map((s, i) => i).sort((a, b) => sizes[b]! - sizes[a]!);
+  let used = order.filter((i) => sizes[i]! >= 20);
+  if (!used.length) used = order.slice(0, 1);
+  used = used.slice(0, Math.max(1, Math.floor(n / 2)));
+  while (used.length > 1) {
+    const total = used.reduce((a, i) => a + sizes[i]!, 0);
+    if (n * sizes[used[used.length - 1]!]! / total >= 1.2) break;
+    used = used.slice(0, -1);
+  }
+  const alloc = sizes.map(() => 0);
+  for (const i of used) alloc[i] = Math.min(2, n);
+  let left = n - used.reduce((a, i) => a + alloc[i]!, 0);
+  while (left > 0) {
+    let best = used[0]!;
+    for (const i of used) if (sizes[i]! / (alloc[i]! + 1) > sizes[best]! / (alloc[best]! + 1)) best = i;
+    alloc[best]!++; left--;
+  }
+  return alloc;
+}
+
+/** Capitals: nations go to the larger landmasses (allocate), and within each landmass capitals are
+ *  spread by farthest-point sampling over the regions' central tiles. Deterministic from the rng. */
+function placeCapitals(
+  n: number, regions: Region[], land: boolean[], neighbors: number[][], centers: Vec3[], terrain: Terrain[], rng: Rng,
+): Region[] {
+  const comps = components(land, neighbors);
+  const compOf = new Array<number>(land.length).fill(-1);
+  comps.forEach((c, ci) => { for (const t of c) compOf[t] = ci; });
+  const regionsIn = comps.map(() => [] as Region[]);
+  for (const r of regions) if (compOf[r.capitalTile]! >= 0) regionsIn[compOf[r.capitalTile]!]!.push(r);
+  const alloc = allocate(n, comps.map((c) => c.length));
+  // A landmass cannot hold more capitals than it has regions; the overflow goes to the largest with room.
+  let spill = 0;
+  alloc.forEach((a, ci) => { const room = regionsIn[ci]!.length; if (a > room) { spill += a - room; alloc[ci] = room; } });
+  while (spill > 0) {
+    let best = -1;
+    for (let ci = 0; ci < comps.length; ci++) if (alloc[ci]! < regionsIn[ci]!.length && (best < 0 || comps[ci]!.length > comps[best]!.length)) best = ci;
+    if (best < 0) break;
+    alloc[best]!++; spill--;
+  }
+  const score = (r: Region) => (PREF[terrain[r.capitalTile]!] ?? 0.3) * Math.min(1, r.tiles.length / 8);
+  const chosen: Region[] = [];
+  for (let ci = 0; ci < comps.length; ci++) {
+    const pool = regionsIn[ci]!;
+    const mine: Region[] = [];
+    while (mine.length < alloc[ci]! && mine.length < pool.length) {
+      let best: Region | null = null, bs = -1;
+      for (const r of pool) {
+        if (mine.includes(r)) continue;
+        const d = mine.length ? Math.min(...mine.map((c) => angle(centers[c.capitalTile]!, centers[r.capitalTile]!))) : 1 + rng();
+        const s = d * (0.4 + 0.6 * score(r));
+        if (s > bs) { bs = s; best = r; }
+      }
+      mine.push(best!);
+    }
+    chosen.push(...mine);
+  }
+  // Shuffle which nation gets which capital, so temperaments are not grouped by landmass.
+  for (let i = chosen.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [chosen[i], chosen[j]] = [chosen[j]!, chosen[i]!];
+  }
+  return chosen;
+}
+
 export function generateWorld(bible: WorldBible, opts: WorldGenOptions): World {
   const seed = opts.seed >>> 0;
   const seaLevel = Math.max(0.2, Math.min(0.85, opts.seaLevel ?? 0.55));
@@ -230,22 +299,8 @@ export function generateWorld(bible: WorldBible, opts: WorldGenOptions): World {
     terrain: terrain[id]!, elevation: Math.round(elevation[id]! * 1000) / 1000,
   }));
 
-  // Capitals: farthest-point sampling over the capital tile of each region.
   const nNations = bible.nations.length;
-  const cand = regions.filter((r) => PREF[terrain[r.capitalTile]!] !== undefined);
-  const pool = cand.length >= nNations ? cand : regions.filter((r) => terrain[r.capitalTile] !== 'ocean');
-  const score = (r: Region) => (PREF[terrain[r.capitalTile]!] ?? 0.3) * Math.min(1, r.tiles.length / 8);
-  const chosen: Region[] = [];
-  while (chosen.length < nNations && chosen.length < pool.length) {
-    let best: Region | null = null, bs = -1;
-    for (const r of pool) {
-      if (chosen.includes(r)) continue;
-      const d = chosen.length ? Math.min(...chosen.map((c) => angle(centers[c.capitalTile]!, centers[r.capitalTile]!))) : 1 + rng();
-      const s = d * (0.4 + 0.6 * score(r));
-      if (s > bs) { bs = s; best = r; }
-    }
-    chosen.push(best!);
-  }
+  const chosen = placeCapitals(nNations, regions, land, neighbors, centers, terrain, rng);
 
   const owner: number[] = new Array(count).fill(-1);
   const countries: Country[] = [];
