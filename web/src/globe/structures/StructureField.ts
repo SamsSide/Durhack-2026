@@ -13,6 +13,7 @@ import { bannerColor, eraLook, wallTint } from '../identity/look';
 import type { EraLook } from '../identity/look';
 import { disposePropSet, makePropSet, propsFor } from '../identity/props';
 import type { PropKind, PropSet, Smoke } from '../identity/props';
+import { shownKind, updateRuins } from '../war/ruins';
 
 const BIG = new Set<string>(['capital', 'city', 'town']);
 const SETTLEMENT = new Set<string>(['camp', 'village', 'town', 'city', 'capital']);
@@ -299,6 +300,7 @@ export class StructureField {
   /** Compare world.structures with what is drawn; animate what is new, changed or gone. */
   sync(now: number): void {
     this.refreshLooks();
+    updateRuins(this.world); // B14: devastated or sacked provinces draw their buildings as ruins
     const seen = new Set<string>();
     let fresh = 0;
     for (const s of this.world.structures) {
@@ -309,11 +311,12 @@ export class StructureField {
       if (!r) {
         const delay = this.first ? hash01(s.id, 3) * 1.0 : Math.min(fresh * 0.08, 0.8);
         fresh++;
-        this.add(s.id, s.tile, s.owner, s.kind, now + delay);
+        this.add(s.id, s.tile, s.owner, shownKind(s), now + delay);
       } else if (r.anim?.type === 'destroy') {
         continue;
       } else {
-        if (r.kind !== s.kind) this.upgrade(r, s.kind, now);
+        const kind = shownKind(s);
+        if (r.kind !== kind) this.upgrade(r, kind, now);
         if (r.owner !== s.owner) {
           r.owner = s.owner;
           this.rebuild(r);
@@ -532,6 +535,7 @@ export class StructureField {
       const look = this.lookOf(r.owner);
       let tint = look.tint;
       if (r.terr === 'ice') tint = this.tmpC.copy(tint).lerp(WHITE, 0.25);
+      if (r.kind === 'ruin') tint = this.tmpC.copy(tint).multiplyScalar(0.42); // B14: burnt and grey
       pool.meshes.forEach((mesh, k) => mesh.setColorAt(i, pool.parts[k]!.team ? look.team : tint));
     });
     pool.meshes.forEach((mesh) => {
