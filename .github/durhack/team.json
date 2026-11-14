@@ -31,7 +31,8 @@
         "packages/shared/src/sim/payments.ts",
         "packages/shared/src/sim/trade.ts",
         "scripts/solana-keys.ts",
-        "server/scripts/check-money.ts"
+        "server/scripts/check-money.ts",
+        "packages/shared/src/sim/economy.ts"
       ]
     },
     {
