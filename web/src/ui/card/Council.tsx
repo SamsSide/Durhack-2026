@@ -77,7 +77,10 @@ function MemberRow({ countryId, role, label, other, member, state, color, tick, 
     <div className={`tn-cm tn-cm-${state}${flash ? ' tn-flash' : ''}`}>
       <Portrait seed={member ? member.portraitSeed : null} role={role} color={color} size={short ? 28 : 36} />
       <div className="tn-cm-info" tabIndex={member ? 0 : -1} aria-label={member ? `${label} ${member.name}` : `${label} vacant`}>
-        <div className="tn-cm-role">{label}</div>
+        <div className="tn-cm-role">
+          {label}
+          <span className={`tn-cm-chip tn-cm-chip-${state}`} title={title}>{CHIP_LABEL[state]}</span>
+        </div>
         <div className="tn-cm-name">
           {member ? <span className="tn-cm-n">{member.name}</span> : <span className="tn-cm-vac">Vacant</span>}
           {member && <span className="tn-cm-yrs">{years} {years === 1 ? 'yr' : 'yrs'}</span>}
@@ -89,7 +92,6 @@ function MemberRow({ countryId, role, label, other, member, state, color, tick, 
           </div>
         )}
       </div>
-      <span className={`tn-cm-chip tn-cm-chip-${state}`} title={title}>{CHIP_LABEL[state]}</span>
       {canAct && (
         <div className="tn-cm-btns">
           {member && state !== 'cut' && <button type="button" className="btn xs" onClick={() => send('cut_member')}>Cut</button>}

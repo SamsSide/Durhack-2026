@@ -153,14 +153,14 @@
 .tn-por { flex: none; display: block; }
 .tn-cm-info { flex: 1; min-width: 0; outline: none; }
 .tn-cm-info:focus-visible { box-shadow: 0 0 0 1.5px var(--color-accent); border-radius: var(--radius-1); }
-.tn-cm-role { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-ink-muted); line-height: 13px; }
+.tn-cm-role { display: flex; align-items: center; gap: 6px; font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-ink-muted); line-height: 15px; }
 .tn-cm-name { display: flex; align-items: baseline; gap: 6px; min-width: 0; line-height: 19px; }
 .tn-cm-n { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tn-cm-vac { font-style: italic; color: var(--color-ink-muted); font-size: 16px; }
 .tn-cm-yrs { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-ink-muted); white-space: nowrap; flex: none; }
 .tn-cm-chip {
   flex: none; font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-  line-height: 17px; padding: 0 6px; border-radius: var(--radius-1); border: 1px solid transparent; white-space: nowrap;
+  line-height: 13px; padding: 0 5px; border-radius: var(--radius-1); border: 1px solid transparent; white-space: nowrap;
 }
 .tn-cm-chip-active { color: var(--link-up); border-color: var(--link-up); }
 .tn-cm-chip-covering { color: var(--color-ink); background: var(--color-accent); border-color: var(--color-accent); }
@@ -189,7 +189,7 @@
 /* Short viewports: one line per row, a smaller portrait, no years */
 .tn-short .tn-council { padding: 5px 0 3px; }
 .tn-short .tn-cm { padding: 2px 4px; gap: 8px; }
-.tn-short .tn-cm-info { display: flex; align-items: baseline; gap: 6px; }
-.tn-short .tn-cm-role { flex: none; line-height: 19px; }
-.tn-short .tn-cm-name { flex: 1; min-width: 0; }
+/* The role and its status chip sit on a small line above the name, so the name gets the row's width. */
+.tn-short .tn-cm-n, .tn-short .tn-cm-vac { font-size: 15px; }
+.tn-short .tn-cm-name { line-height: 17px; }
 .tn-short .tn-cm-yrs { display: none; }

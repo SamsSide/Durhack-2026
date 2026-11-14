@@ -33,6 +33,7 @@ budget, run them one at a time in the order below, on Sonnet.
 | C8 | `NewsBroadcast`: the "Terra Nova News" lower-third, every 2 minutes and on lane b's button: capture, `POST /api/broadcast`, play, scroll the script | A21 (mocked); lane b `captureGlobe` (real, #74) | `NewsBroadcast` to b | CP1.5 | testing | #73 |
 | C9 | Solana: `LedgerPanel` and `EconomyCounter` (exported, and shown as a "Treasury" tab in the network panel), and "Treasury on Solana" on `NationCard`; polls `GET /api/economy` | A27 (mocked) | | CP2 | testing | Owner request #144, MLH Best Use of Solana |
 | C10 | Visual event feed: picture cards with globe thumbnails for big moments | lane b `captureGlobe` | | CP2 | testing | Lane b's #148; owner asked in #151 |
+| C11 | Council on `NationCard`: ruler and general with generated portraits, years in office, a status chip, memory on hover, and Kill (two-click), Cut and Restore buttons per member | A29 | | CP2 | testing | Owner request #170 (Neptune North: resilience inside a nation) |
 
 ## Waiting on
 
@@ -53,4 +54,5 @@ budget, run them one at a time in the order below, on Sonnet.
 - 14 Nov · #119 · News lower-third names its anchor (#111); secession is a real kind (A18)
 - 14 Nov · #150 · Browser QA at 1280 x 709: Create fits under the top bar, all timeline lanes fit, herald publishes --tn-herald-bottom, news clears the network panel, herald queue capped, war bands end at a fall
 - 14 Nov · #155 · C9 Solana: Treasury tab with the ledger and counter, treasury link on the card
-- 14 Nov · this PR · C10 visual event feed (EventFeed) for lane b to place
+- 14 Nov · #159 · C10 visual event feed (EventFeed) for lane b to place
+- 14 Nov · this PR · C11 council on the card: cameo portraits, status chips, memory, Kill / Cut / Restore
