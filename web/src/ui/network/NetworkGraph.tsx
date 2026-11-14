@@ -23,7 +23,7 @@ interface Props {
 
 /**
  * The network as a picture (#245): every nation is a node in its own colour with its flag, the
- * links between live nations are lines (a cut nation's links are dashed red), a cut node carries
+ * links between live nations are lines (a cut nation's links are dashed rubric), a cut node carries
  * the count of its queued events and an autopilot node carries a cog.
  */
 export function NetworkGraph({ countries, agents, picked, compact, onPick }: Props) {
@@ -67,14 +67,16 @@ export function NetworkGraph({ countries, agents, picked, compact, onPick }: Pro
       {nodes.map((d) => {
         const state = d.deleted ? 'deleted' : d.gone ? 'fallen' : d.cut ? `link cut, ${d.agent!.pendingEvents} events queued` : 'link up';
         const tip = `${d.c.name}: ${state}${d.auto ? ', on autopilot' : ''}`;
-        const cls = ['tn-node', picked === d.c.id ? 'tn-picked' : '', d.cut ? 'tn-cut' : '', d.gone ? 'tn-gone' : ''].filter(Boolean).join(' ');
+        const cls = ['tn-node tn-roundel', picked === d.c.id ? 'tn-picked' : '', d.cut ? 'tn-cut' : '', d.gone ? 'tn-gone' : ''].filter(Boolean).join(' ');
         return (
           <button
             key={d.c.id} type="button" className={cls} title={tip} aria-label={tip} aria-pressed={picked === d.c.id}
-            style={{ left: d.x - r, top: d.y - r, width: r * 2, height: r * 2, ['--tn-nation' as string]: d.c.color }}
+            style={{ left: d.x - r, top: d.y - r, width: r * 2, height: r * 2, ['--size' as string]: `${r * 2}px`, ['--tn-nation' as string]: d.c.color }}
             onClick={() => onPick(d.c.id)}
           >
-            <span className="tn-node-flag" dangerouslySetInnerHTML={{ __html: flagSvg(d.c.flag, fw, fh) }} />
+            <span className="tn-roundel__face tn-node-face">
+              <span className="tn-node-flag" dangerouslySetInnerHTML={{ __html: flagSvg(d.c.flag, fw, fh) }} />
+            </span>
             {d.cut && <span className="tn-node-count">{d.agent!.pendingEvents > 99 ? '99+' : d.agent!.pendingEvents}</span>}
             {d.auto && <span className="tn-node-auto"><AutoIcon size={r > 15 ? 12 : 10} /></span>}
             {d.gone && (

@@ -5,7 +5,7 @@ import { useWorld } from '../../state/world';
 import { AutoIcon } from './NetworkGraph';
 
 /** A button that needs a second click within three seconds (Delete, Kill). */
-function TwoClick({ label, tip, onConfirm }: { label: string; tip: string; onConfirm(): void }) {
+function TwoClick({ label, tip, className = '', onConfirm }: { label: string; tip: string; className?: string; onConfirm(): void }) {
   const [confirming, setConfirming] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
@@ -20,7 +20,7 @@ function TwoClick({ label, tip, onConfirm }: { label: string; tip: string; onCon
     onConfirm();
   };
   const t = confirming ? `Click again to ${label.toLowerCase()}` : tip;
-  return <button type="button" className="btn xs danger" title={t} aria-label={t} onClick={click}>{confirming ? 'Confirm' : label}</button>;
+  return <button type="button" className={`tn-button tn-button--sm tn-button--danger${confirming ? ' is-active' : ''} ${className}`} title={t} aria-label={t} onClick={click}>{confirming ? 'Confirm' : label}</button>;
 }
 
 const ROLES: { role: CouncilRole; label: string }[] = [{ role: 'ruler', label: 'Ruler' }, { role: 'general', label: 'General' }];
@@ -54,10 +54,13 @@ export function NodeTray({ country, agent, tick, year, onControl, onOpenCard }: 
   const member = (role: CouncilRole, action: 'kill' | 'cut_member' | 'restore_member') =>
     send({ type: 'control', action, countryId: country.id, role });
 
+  // On the cut (night) tray the plates turn to lacquer: paper buttons only belong on parchment.
+  const btn = `tn-button tn-button--sm${cut ? ' tn-button--lacquer' : ''}`;
+
   return (
     <div className={`tn-tray${cut ? ' tn-is-cut' : ''}${gone ? ' tn-gone' : ''}`} style={{ ['--tn-nation' as string]: country.color }}>
       <div className="tn-tray-top">
-        <span className="tn-tray-flag" dangerouslySetInnerHTML={{ __html: flagSvg(country.flag, 30, 20) }} />
+        <span className="tn-tray-flag tn-flag-plate" dangerouslySetInnerHTML={{ __html: flagSvg(country.flag, 30, 20) }} />
         <button type="button" className="tn-tray-name" title="Open its card (this folds the Network)" onClick={() => onOpenCard(country.id)}>{country.name}</button>
         {gone && <span className="tn-state del">{deleted ? `Deleted Y${deletedYear}` : 'Fallen'}</span>}
       </div>
@@ -66,11 +69,11 @@ export function NodeTray({ country, agent, tick, year, onControl, onOpenCard }: 
         <>
           <div className="tn-tray-states">
             {cut
-              ? <span className="tn-state cut" title="Nothing gets in or out" aria-label="Cut: nothing gets in or out"><i className="tn-pulse" />Cut</span>
-              : <span className="tn-state up" title="Its messages reach the others" aria-label="Link up: its messages reach the others"><i />Link up</span>}
+              ? <span className="tn-state cut tn-chip tn-chip--caps tn-chip--war" title="Nothing gets in or out" aria-label="Cut: nothing gets in or out"><i className="tn-pulse" />Cut</span>
+              : <span className="tn-state up tn-chip tn-chip--caps" title="Its messages reach the others" aria-label="Link up: its messages reach the others"><i />Link up</span>}
             {auto
-              ? <span className="tn-state auto" title="Rules decide its moves" aria-label="Autopilot: rules decide its moves"><AutoIcon />Autopilot</span>
-              : <span className="tn-state llm" title="Gemini decides its moves" aria-label="LLM ruler: Gemini decides its moves">LLM ruler</span>}
+              ? <span className={`tn-state auto tn-chip tn-chip--caps${cut ? ' tn-chip--lacquer' : ''}`} title="Rules decide its moves" aria-label="Autopilot: rules decide its moves"><AutoIcon />Autopilot</span>
+              : <span className={`tn-state llm tn-chip tn-chip--caps${cut ? ' tn-chip--lacquer' : ''}`} title="Gemini decides its moves" aria-label="LLM ruler: Gemini decides its moves">LLM ruler</span>}
             {cut && (
               <span className="tn-tray-sub mono" title={silentTip} aria-label={silentTip}>
                 silent {years} {years === 1 ? 'yr' : 'yrs'} · {agent.pendingEvents} queued
@@ -78,9 +81,9 @@ export function NodeTray({ country, agent, tick, year, onControl, onOpenCard }: 
             )}
           </div>
           <div className="tn-tray-btns">
-            <button type="button" className={`btn xs ${cut ? 'restore' : ''}`} title={cut ? restoreTip : cutTip} aria-label={cut ? restoreTip : cutTip} onClick={() => onControl(cut ? 'restore' : 'cut', country.id)}>{cut ? 'Restore' : 'Cut'}</button>
-            <button type="button" className="btn xs" title={auto ? wakeTip : silenceTip} aria-label={auto ? wakeTip : silenceTip} onClick={() => onControl(auto ? 'wake' : 'silence', country.id)}>{auto ? 'Wake' : 'Silence'}</button>
-            <TwoClick label="Delete" tip="Remove it: its neighbours carve up its land" onConfirm={() => onControl('delete', country.id)} />
+            <button type="button" className={`${btn}${cut ? ' tn-net-restore' : ''}`} title={cut ? restoreTip : cutTip} aria-label={cut ? restoreTip : cutTip} onClick={() => onControl(cut ? 'restore' : 'cut', country.id)}>{cut ? 'Restore' : 'Cut'}</button>
+            <button type="button" className={btn} title={auto ? wakeTip : silenceTip} aria-label={auto ? wakeTip : silenceTip} onClick={() => onControl(auto ? 'wake' : 'silence', country.id)}>{auto ? 'Wake' : 'Silence'}</button>
+            <TwoClick label="Delete" className={cut ? 'tn-button--lacquer' : ''} tip="Remove it: its neighbours carve up its land" onConfirm={() => onControl('delete', country.id)} />
           </div>
           {council && (
             <div className="tn-tray-council">
@@ -91,9 +94,9 @@ export function NodeTray({ country, agent, tick, year, onControl, onOpenCard }: 
                   <div key={role} className="tn-tray-cm">
                     <span className="tn-tray-role">{label}</span>
                     <span className="tn-tray-who" title={m ? `${m.name} (${st})` : 'Vacant'}>{m ? m.name : 'Vacant'}</span>
-                    {m && st !== 'cut' && <button type="button" className="btn xs" title={`Cut the ${role} off from the council`} onClick={() => member(role, 'cut_member')}>Cut</button>}
-                    {st === 'cut' && <button type="button" className="btn xs restore" title={`Reconnect the ${role}`} onClick={() => member(role, 'restore_member')}>Restore</button>}
-                    {m && <TwoClick label="Kill" tip={`Kill the ${role}: a successor takes over`} onConfirm={() => member(role, 'kill')} />}
+                    {m && st !== 'cut' && <button type="button" className={btn} title={`Cut the ${role} off from the council`} onClick={() => member(role, 'cut_member')}>Cut</button>}
+                    {st === 'cut' && <button type="button" className={`${btn} tn-net-restore`} title={`Reconnect the ${role}`} onClick={() => member(role, 'restore_member')}>Restore</button>}
+                    {m && <TwoClick label="Kill" className={cut ? 'tn-button--lacquer' : ''} tip={`Kill the ${role}: a successor takes over`} onConfirm={() => member(role, 'kill')} />}
                   </div>
                 );
               })}
