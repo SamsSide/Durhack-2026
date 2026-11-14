@@ -54,3 +54,5 @@
 
 - 2026-11-14 18:10 · Owner: yes to lane b's #187: a `wealth` map mode (X5) and `loan` / `repayment` payment reasons (X1); lane b adds the small loan-memory hook in `rules.ts` and names it in its PR. Loans are cut first if behind.
 - 2026-11-14 18:00 · Owner: lane a may take work that is blocked or untouched in another lane to finish sooner, after telling that lane in an issue. First: a C5 submission draft and README (lane c keeps the final edit and submits), and B9 the timeline scrubber.
+
+- 2026-11-14 18:30 · Owner: time gears from 1 month a second (speed 1/24, the slowest, for live demo interaction) through 1 season, 1, 2, 3, 4, 8, 16, 32, 64 and 128 years a second; the client shows month and day between yearly ticks and units glide. A prepare mode for demos (`prepare: true` or the `prepare` control): the world waits paused while lore, narration, chants, anthems and first ruler decisions are made, with a readiness panel. A close-zoom tilted camera that looks along the ground at walls and buildings. Lane a builds these, plus a smooth rewrite of the chronicle ticker (lane c's file), and tells the lanes.
