@@ -20,7 +20,7 @@
 /* The picture-card feed shares the left column: it steps aside while a panel is open. */
 .event-feed-slot { transition: opacity var(--dur-fast) var(--ease-out); }
 body:has(.left-dock:not(.out)) .event-feed-slot,
-body:has(.tn-net.panel) .event-feed-slot { opacity: 0; visibility: hidden; }
+body:has(.tn-net) .event-feed-slot { opacity: 0; visibility: hidden; }
 @media (prefers-reduced-motion: reduce) { .left-dock, .left-dock.out { animation: none; } }
 /* While the card is open the folded Network tab is only a way back: it drops its counters and fits the column. */
 body:has(.left-dock:not(.out)) .tn-net-tab > :not(.tn-nt-title):not(.tn-state):not(svg) { display: none; }

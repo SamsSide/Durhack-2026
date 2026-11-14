@@ -58,10 +58,10 @@ export function NetworkPanel() {
 
   if (folded) {
     return (
-      <button className="tn-net-tab" onClick={() => setFold(false)} aria-label="Open the network panel">
+      <button className="tn-net-tab tn-lacquer tn-frame tn-frame--slim" onClick={() => setFold(false)} aria-label="Open the network panel">
         <span className="tn-nt-title">The Network</span>
-        <span className="tn-state up"><i />{upCount} up</span>
-        {cutCount > 0 && <span className="tn-state cut"><i />{cutCount} cut</span>}
+        <span className="tn-state up tn-chip tn-chip--caps tn-chip--lacquer"><i />{upCount} up</span>
+        {cutCount > 0 && <span className="tn-state cut tn-chip tn-chip--caps tn-chip--war"><i />{cutCount} cut</span>}
         <EconomyCounter />
         <svg width="6" height="10" viewBox="0 0 6 10" aria-hidden="true"><path d="M1 1L5 5L1 9" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg>
       </button>
@@ -92,20 +92,20 @@ export function NetworkPanel() {
   const showTab: NetTab = (tab === 'treasury' && economyOn) || (tab === 'stats' && statsOn) ? tab : 'network';
 
   return (
-    <aside className={`tn-net panel${isShort ? ' tn-net-short' : ''}`}>
+    // The frame sits on the aside and must not scroll (it would clip the cartouche and corners), so the body scrolls inside it.
+    <aside className={`tn-net tn-sheet tn-frame tn-frame--corners${isShort ? ' tn-net-short' : ''}`}>
+      <h2 className="tn-net-title tn-cartouche" title="Cut a nation off, silence its AI or delete it, and watch the rest carry on.">The Network</h2>
+      <div className="tn-net-body">
       <header className="tn-net-head">
-        <div>
-          <h2 className="tn-net-title" title="Cut a nation off, silence its AI or delete it, and watch the rest carry on.">The Network</h2>
-          <p className="tn-net-sub">Cut a nation off, silence its AI or delete it, and watch the rest carry on.</p>
-        </div>
-        <button className="tn-net-fold" onClick={() => setFold(true)} aria-label="Fold the network panel"><svg width="6" height="10" viewBox="0 0 6 10" aria-hidden="true"><path d="M5 1L1 5L5 9" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg></button>
+        <p className="tn-net-sub">Cut a nation off, silence its AI or delete it, and watch the rest carry on.</p>
+        <button className="tn-net-fold tn-button tn-button--round" onClick={() => setFold(true)} aria-label="Fold the network panel"><svg width="7" height="12" viewBox="0 0 6 10" aria-hidden="true"><path d="M5 1L1 5L5 9" stroke="currentColor" strokeWidth="1.6" fill="none" /></svg></button>
       </header>
 
       {(economyOn || statsOn) && (
-        <div className="tn-net-tabs" role="tablist">
-          <button type="button" role="tab" aria-selected={showTab === 'network'} className={`tn-net-tabbtn${showTab === 'network' ? ' tn-on' : ''}`} onClick={() => setTab('network')}>Network</button>
-          {economyOn && <button type="button" role="tab" aria-selected={showTab === 'treasury'} className={`tn-net-tabbtn${showTab === 'treasury' ? ' tn-on' : ''}`} onClick={() => setTab('treasury')}>Treasury</button>}
-          {statsOn && <button type="button" role="tab" aria-selected={showTab === 'stats'} className={`tn-net-tabbtn${showTab === 'stats' ? ' tn-on' : ''}`} onClick={() => setTab('stats')}>Stats</button>}
+        <div className="tn-net-tabs tn-booktabs" role="tablist">
+          <button type="button" role="tab" aria-selected={showTab === 'network'} className={`tn-booktab${showTab === 'network' ? ' tn-booktab--active' : ''}`} onClick={() => setTab('network')}>Network</button>
+          {economyOn && <button type="button" role="tab" aria-selected={showTab === 'treasury'} className={`tn-booktab${showTab === 'treasury' ? ' tn-booktab--active' : ''}`} onClick={() => setTab('treasury')}>Treasury</button>}
+          {statsOn && <button type="button" role="tab" aria-selected={showTab === 'stats'} className={`tn-booktab${showTab === 'stats' ? ' tn-booktab--active' : ''}`} onClick={() => setTab('stats')}>Stats</button>}
         </div>
       )}
 
@@ -128,7 +128,7 @@ export function NetworkPanel() {
           onOpenCard={(id) => { select(id); flyTo(id); }}
         />
       ) : (
-        <p className="tn-tray-empty">Pick a nation on the graph to cut it off, silence it, delete it or reach its council.</p>
+        <p className="tn-tray-empty tn-well--paper">Pick a nation on the graph to cut it off, silence it, delete it or reach its council.</p>
       )}
 
       <div className="tn-net-world">
@@ -167,6 +167,7 @@ export function NetworkPanel() {
 
       <PrepareSwitch />
       </>)}
+      </div>
     </aside>
   );
 }

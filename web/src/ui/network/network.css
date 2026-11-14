@@ -1,196 +1,249 @@
-/* Network panel, from the reference .net rules. Variables from tokens.css only.
-   tokens.css does not yet ship .nrow / .net-tab / .state / .btn.restore, so the equivalents live here as tn- classes. */
+/* Network panel. Material from theme/materials.css (tn-sheet, tn-frame, tn-cartouche, tn-booktabs, tn-roundel,
+   tn-button, tn-chip, tn-flag-plate); the recipes composed here use the same tokens from theme/tokens.css.
+   materials.css loads first, so nothing here may set background, border or box-shadow on a framed element. */
+
+/* ---- The open panel: a framed parchment sheet. The frame does not scroll; .tn-net-body does. ---- */
 .tn-net {
-  width: var(--net-width); max-height: 100%; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden;
-  position: relative; padding: 14px 16px 10px;
+  width: var(--net-width); max-height: 100%; display: flex; flex-direction: column;
+  padding: 26px 0 6px;   /* room for the cartouche on the top edge */
   font-family: var(--font-serif); font-size: var(--text-md); line-height: 1.35;
 }
+.tn-net-body {
+  flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;
+  overflow-y: auto; overflow-x: hidden; contain: paint;
+  padding: 0 14px 6px;   /* 340 - 2 x 3px band - 2 x 14px = the 306px graph */
+  scrollbar-width: thin; scrollbar-color: var(--color-ink-muted) transparent;
+}
+.tn-net-title.tn-cartouche { margin: 0; font-size: var(--text-xs); padding: 5px 24px 4px; }
 .tn-net-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
-.tn-net-title { margin: 0; font-family: var(--font-display); font-size: var(--text-xl); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; white-space: nowrap; }
-.tn-net-sub { margin: 2px 0 0; font-size: var(--text-sm); line-height: 17px; color: var(--color-ink-muted); font-style: italic; }
-.tn-net-fold {
-  flex: none; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-top: 4px; padding: 0; cursor: pointer;
-  border: 1px solid var(--color-ink-muted); border-radius: var(--radius-1); background: transparent; color: var(--color-ink);
-}
-.tn-net-fold:hover { background: var(--color-parchment-dark); }
+.tn-net-sub { margin: 4px 0 0; font-size: var(--text-sm); line-height: 17px; color: var(--color-ink-muted); font-style: italic; text-shadow: var(--engrave-on-paper); }
+.tn-net-fold { flex: none; margin-top: 2px; color: var(--color-ink); }
+.tn-net-fold svg { display: block; }
 
-.tn-switch {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-top: 8px; padding: 6px 10px; text-align: left;
-  border: 1px solid var(--color-ink-faint); border-radius: var(--radius-1);
-  background: color-mix(in srgb, var(--color-parchment-light) 50%, transparent);
-  color: var(--color-ink); font-family: inherit; cursor: pointer;
-}
-.tn-switch:disabled { opacity: 0.45; cursor: default; }
-.tn-switch.on { border-color: var(--color-ink-muted); }
-.tn-switch.tn-blackout.on { background: var(--color-danger); border-color: var(--color-danger); color: var(--color-parchment-light); }
-.tn-switch.tn-blackout.on .tn-sw-sub { color: var(--color-parchment-light); }
-.tn-sw-title { display: block; font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; line-height: 15px; }
-.tn-sw-sub { display: block; font-size: 13.5px; line-height: 16px; color: var(--color-ink-muted); font-style: italic; }
-.tn-toggle { width: 34px; height: 18px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--color-ink) 30%, transparent); position: relative; flex: none; display: block; }
-.tn-toggle i { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--color-parchment-light); box-shadow: 0 1px 2px var(--color-ink-muted); transition: left 150ms ease; }
-.tn-toggle.on { background: var(--color-ink); }
-.tn-toggle.on i { left: 18px; }
-.tn-toggle.danger.on { background: color-mix(in srgb, var(--color-night-inset) 45%, transparent); }
+/* Book tabs under the header */
+.tn-net-tabs.tn-booktabs { flex: none; margin-top: 8px; }
 
-.tn-net-list { list-style: none; margin: 8px 0 0; padding: 0; }
-.tn-nrow { padding: 7px 8px 8px 7px; border-top: 1px solid var(--color-ink-faint); border-left: 3px solid transparent; }
-.tn-nrow.tn-sel { background: color-mix(in srgb, var(--color-accent) 22%, transparent); border-left-color: var(--color-accent); }
-.tn-nrow.tn-is-cut { background: var(--color-night-inset); color: var(--color-text); border-left-color: var(--holo-tint); border-top-color: var(--color-night-inset); }
-.tn-nrow.tn-is-cut.tn-sel { border-left-color: var(--color-accent); }
-.tn-nr-top { display: flex; align-items: center; gap: 8px; }
-.tn-sw { display: inline-block; width: 12px; height: 12px; border: 1px solid var(--color-ink); flex: none; background: var(--tn-nation); }
-.tn-nr-name {
-  flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; color: inherit;
-  font-family: var(--font-serif); font-size: var(--text-md); font-weight: 600; line-height: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.tn-nr-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; margin-top: 5px; min-width: 0; }
-.tn-state {
-  display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.1em;
-  text-transform: uppercase; padding: 0 7px; line-height: 18px; border-radius: var(--radius-1); border: 1px solid transparent; white-space: nowrap; flex: none;
-}
-.tn-state i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-.tn-state.up { color: var(--link-up); padding: 0; }
-.tn-state.up i { background: var(--link-up); }
-.tn-state.cut { color: var(--color-parchment-light); background: var(--link-cut); border-color: var(--link-cut); }
-.tn-state.cut i { background: var(--color-parchment-light); }
-.tn-state i.tn-pulse { animation: cut-pulse 1.4s ease-in-out infinite; }
-.tn-state.llm { color: var(--color-ink-muted); padding: 0; }
-.tn-state.auto { color: var(--ruler-autopilot); padding: 0; }
-.tn-is-cut .tn-state.llm { color: var(--color-accent); }
-.tn-is-cut .tn-state.auto { color: var(--color-text); }
-.tn-state.del { color: var(--color-rubric); border: 1.5px solid var(--color-rubric); transform: rotate(-3deg); letter-spacing: 0.14em; }
-.tn-nr-sub { margin: 3px 0 0 20px; font-size: var(--text-xs); color: var(--color-ink-muted); }
-.tn-nr-sub.mono { font-family: var(--font-mono); color: var(--holo-tint); }
-.tn-nr-sub.ruin { font-style: italic; font-size: var(--text-sm); }
-.tn-nr-btns { display: flex; gap: 5px; margin-left: auto; flex-wrap: nowrap; }
-.tn-nr-btns .btn { font-size: var(--text-cap); padding: 0 8px; line-height: 20px; }
-.tn-nr-btns .btn.danger { border-color: transparent; padding: 0 3px; }
-.tn-is-cut .tn-nr-btns .btn { color: var(--color-text); border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
-.tn-is-cut .tn-nr-btns .btn:hover { background: transparent; border-color: var(--color-accent); color: var(--color-accent); }
-.tn-is-cut .tn-nr-btns .btn.restore { background: var(--holo-tint); color: var(--color-night-inset); border-color: var(--holo-tint); }
-.tn-is-cut .tn-nr-btns .btn.danger { color: var(--color-danger); border-color: transparent; }
-.tn-nrow.tn-gone .tn-nr-name { text-decoration: line-through; color: var(--color-ink-muted); font-weight: 400; }
-.tn-nrow.tn-gone .tn-nr-name { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
-.tn-nrow.tn-gone .tn-sw { opacity: 0.4; }
-
-/* Folded tab */
+/* ---- The folded strip: a slim framed lacquer plate ---- */
 .tn-net-tab {
-  display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px 0 14px; cursor: pointer;
-  background: var(--parchment-fill); color: var(--color-ink); border: 1.5px solid var(--color-ink); border-radius: var(--radius-1); box-shadow: var(--shadow-1);
+  display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px 0 14px; cursor: pointer;
+  font-family: var(--font-serif); color: var(--color-text);
+  transition: transform var(--dur-fast) var(--ease-out);
 }
-.tn-nt-title { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-right: 4px; white-space: nowrap; }
-
-/* #108: never wider than the panel. The row may wrap its ruler tag and buttons onto two lines. */
-.tn-nrow { min-width: 0; max-width: 100%; }
-.tn-nr-top { min-width: 0; }
-.tn-state { flex: none; white-space: nowrap; }
-
-/* Tabs under the title (same look as the card's tabs) */
-.tn-net-tabs { display: flex; margin-top: 8px; border-bottom: 1px solid var(--color-ink-faint); }
-.tn-net-tabbtn {
-  background: transparent; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;
-  font-family: var(--font-display); font-size: var(--text-cap); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
-  padding: 4px 10px 5px; color: var(--color-ink-muted);
+.tn-net-tab:hover .tn-nt-title, .tn-net-tab:hover > svg { color: #fff1c2; }
+.tn-net-tab:active { transform: translateY(1px); }
+.tn-net-tab:focus-visible { outline: 2px solid var(--gilt-hi); outline-offset: 2px; }
+.tn-net-tab > svg { flex: none; color: var(--gilt); }
+.tn-nt-title {
+  font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  margin-right: 4px; white-space: nowrap; color: var(--gilt-hi); text-shadow: var(--engrave-on-dark);
 }
-.tn-net-tabbtn:hover { color: var(--color-ink); }
-.tn-net-tabbtn.tn-on { color: var(--color-ink); border-bottom-color: var(--color-rubric); }
+/* The Treasury counter in the strip, as lacquer chips (its markup lives in economy/EconomyCounter.tsx). */
+.tn-net-tab.tn-lacquer .tn-eco-counter {
+  flex-wrap: nowrap; gap: 5px; min-height: 22px; padding: 1px 8px; border-radius: var(--radius-pill);
+  color: var(--color-text); background: #07090f; box-shadow: var(--well-dark); text-shadow: var(--engrave-on-dark);
+}
+.tn-net-tab.tn-lacquer .tn-eco-sym { color: var(--gilt-hi); }
+.tn-net-tab.tn-lacquer .tn-eco-dim { color: var(--color-text-muted); }
+.tn-net-tab.tn-lacquer .tn-eco-mode.mock { color: var(--color-text-muted); border-color: rgba(201, 162, 75, 0.45); }
+.tn-net-tab.tn-lacquer .tn-eco-dot { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7); }
 
-/* ---- Calm UI (#245): the node graph, the picked-node tray and the compact world switches ---- */
+/* ---- State chips (sizes from tn-chip; .tn-state keeps only the dot) ---- */
+.tn-state { flex: none; white-space: nowrap; gap: 5px; }
+.tn-state i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex: none; }
+.tn-state.up { color: var(--link-up); }
+.tn-state.up i { background: var(--link-up); box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.35); }
+.tn-chip--lacquer.tn-state.up { color: var(--color-text); }
+.tn-chip--lacquer.tn-state.up i { background: #7bc46a; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7); }
+.tn-state.cut i { background: #fbf3e2; }
+.tn-state i.tn-pulse { animation: cut-pulse 1.4s ease-in-out infinite; }
+.tn-state.llm { color: var(--color-ink-muted); }
+.tn-state.auto { color: var(--ruler-autopilot); gap: 4px; }
+.tn-chip--lacquer.tn-state.llm { color: var(--gilt-hi); }
+.tn-chip--lacquer.tn-state.auto { color: var(--color-text); }
+/* The deleted stamp: rubric ink pressed into the paper, a little askew. */
+.tn-state.del {
+  display: inline-flex; align-items: center; padding: 0 7px; line-height: 18px;
+  font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--color-rubric); border: 1.5px solid var(--color-rubric); border-radius: var(--radius-1); transform: rotate(-3deg);
+  box-shadow: inset 0 0 0 1px rgba(156, 47, 34, 0.2);
+}
+
+/* The swatch also used by the Treasury ledger and the Timeline */
+.tn-sw { display: inline-block; width: 12px; height: 12px; border: 1px solid var(--color-ink); flex: none; background: var(--tn-nation); }
+
+/* ---- World switches: raised paper plates that press in, with a sunk toggle track ---- */
+.tn-switch {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-top: 8px; padding: 7px 10px; text-align: left;
+  color: var(--color-ink); font-family: inherit; cursor: pointer;
+  border: 1px solid var(--color-ink-muted); border-radius: var(--radius-1);
+  background: linear-gradient(180deg, #f8f0dc 0%, #e6d5ad 100%);
+  box-shadow: var(--bevel-paper), 0 1px 2px rgba(42, 31, 20, 0.35);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.tn-switch:hover:not(:disabled) { border-color: var(--gilt-lo); background: linear-gradient(180deg, #fbf5e6 0%, #ead9b2 100%); }
+.tn-switch:active:not(:disabled) { transform: translateY(1px); }
+.tn-switch:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+.tn-switch:disabled { opacity: 0.5; cursor: default; box-shadow: var(--bevel-paper); }
+/* On: the plate is pressed into the page. */
+.tn-switch.on, .tn-switch.on:hover:not(:disabled) {
+  border-color: var(--color-ink);
+  background: linear-gradient(180deg, #d9c495 0%, #e8d6af 100%);
+  box-shadow: inset 0 2px 3px rgba(42, 31, 20, 0.38), 0 1px 0 rgba(255, 250, 235, 0.6);
+}
+/* Blackout on: a claret lacquer plate. */
+.tn-switch.tn-blackout.on, .tn-switch.tn-blackout.on:hover:not(:disabled) {
+  color: #f6e7c4; border-color: #3a0f0b;
+  background: var(--lacquer-sheen), linear-gradient(180deg, var(--lacquer-claret-hi), var(--lacquer-claret));
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(201, 162, 75, 0.45);
+  text-shadow: var(--engrave-on-dark);
+}
+.tn-switch.tn-blackout.on .tn-sw-sub { color: #ead6b0; }
+.tn-sw-title { display: block; font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; line-height: 15px; text-shadow: var(--engrave-on-paper); }
+.tn-switch.tn-blackout.on .tn-sw-title { text-shadow: var(--engrave-on-dark); }
+.tn-sw-sub { display: block; font-size: 13.5px; line-height: 16px; color: var(--color-ink-muted); font-style: italic; }
+.tn-toggle {
+  width: 34px; height: 18px; border-radius: var(--radius-pill); position: relative; flex: none; display: block;
+  background: rgba(42, 31, 20, 0.16); box-shadow: var(--well-paper), inset 0 0 0 1px rgba(42, 31, 20, 0.3);
+}
+.tn-toggle i {
+  position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 30%, #fffaf0, #e2cf9f); box-shadow: 0 0 0 1px rgba(42, 31, 20, 0.55), 0 1px 2px rgba(42, 31, 20, 0.5);
+  transition: transform 150ms ease;
+}
+.tn-toggle.on { background: var(--color-ink); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), inset 0 0 0 1px #000; }
+.tn-toggle.on i { transform: translateX(16px); background: var(--gilt-plate); box-shadow: 0 0 0 1px #3a2a0c, 0 1px 2px rgba(0, 0, 0, 0.5); }
+.tn-toggle.danger.on { background: #07090f; }
+/* The Prepare label inside its plate: a small sunk well (its markup lives in prepare/PreparePanel.tsx). */
+.tn-net .tn-prep-switch-go {
+  border: 1px solid rgba(42, 31, 20, 0.45); background: rgba(42, 31, 20, 0.07); box-shadow: var(--well-paper);
+  color: var(--color-rubric); text-shadow: var(--engrave-on-paper);
+}
+.tn-net .tn-prep-switch:hover .tn-prep-switch-go { background: rgba(42, 31, 20, 0.12); color: var(--color-rubric); }
+.tn-net .tn-prep-switch.on .tn-prep-switch-go { border-color: var(--color-ink); background: var(--color-ink); color: #f6e7c4; text-shadow: var(--engrave-on-dark); }
+
+/* ---- The node graph: a sunk paper well, nations as gilt-bezelled roundels ---- */
 .tn-graph {
-  position: relative; flex: none; margin-top: 8px;
-  border: 1px solid var(--color-ink-faint); border-radius: var(--radius-1);
-  background: color-mix(in srgb, var(--color-parchment-light) 55%, transparent);
+  position: relative; flex: none; margin-top: 10px; border-radius: 3px;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(255, 250, 235, 0.35), rgba(255, 250, 235, 0) 70%),
+    rgba(42, 31, 20, 0.07);
+  box-shadow: var(--well-paper), inset 0 0 0 1px rgba(42, 31, 20, 0.28), inset 0 0 18px rgba(42, 31, 20, 0.12);
 }
 .tn-graph-links { position: absolute; inset: 0; display: block; }
 .tn-gl { stroke-linecap: round; }
-.tn-gl.up { stroke: var(--link-up); stroke-width: 1.1; opacity: 0.42; }
-.tn-gl.cut { stroke: var(--link-cut); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.9; }
+.tn-gl.up { stroke: var(--color-ink); stroke-width: 1.1; opacity: 0.38; }
+.tn-gl.cut { stroke: var(--color-rubric); stroke-width: 1.6; stroke-dasharray: 5 4; opacity: 0.9; }
 .tn-graph-hub { fill: var(--color-ink); }
 .tn-node {
-  position: absolute; padding: 0; cursor: pointer; border-radius: 50%;
-  display: grid; place-items: center;
-  background: var(--tn-nation); border: 1.5px solid var(--color-ink);
-  box-shadow: 0 1px 3px rgba(42, 31, 20, 0.45);
-  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  position: absolute; cursor: pointer; border: 0;
+  display: block; padding: 2px;   /* the gilt bezel (tn-roundel) */
+  transition: transform var(--dur-fast) var(--ease-out);
 }
 .tn-node:hover { transform: scale(1.08); }
-.tn-node:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
-.tn-node.tn-picked { box-shadow: 0 0 0 3px var(--color-accent), 0 1px 3px rgba(42, 31, 20, 0.45); }
-.tn-node.tn-cut { border-color: var(--link-cut); border-style: dashed; }
-.tn-node.tn-gone { background: var(--color-parchment-dark); border-color: var(--color-ink-muted); }
+.tn-node:active { transform: scale(1.02) translateY(1px); }
+.tn-node:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }
+.tn-node .tn-node-face {
+  background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 60%), var(--tn-nation);
+}
+/* The picked node: a heavier gilt ring with a dark keeper line, lifted a little. */
+.tn-node.tn-picked {
+  padding: 3px; z-index: 2;
+  box-shadow: 0 0 0 1px var(--frame-line), 0 0 0 4px var(--gilt), 0 0 0 5px var(--frame-line), 0 3px 6px rgba(0, 0, 0, 0.5);
+}
+.tn-node.tn-picked::after { inset: 3px; }
+/* A cut node: a dashed rubric ring outside the bezel, like its links. */
+.tn-node.tn-cut { outline: 1.5px dashed var(--color-rubric); outline-offset: 2px; }
+.tn-node.tn-cut.tn-picked { outline-offset: 6px; }
+.tn-node.tn-gone { background: linear-gradient(180deg, #b9ad95, #8a7f6a); }
+.tn-node.tn-gone .tn-node-face { background: var(--color-parchment-dark); }
 .tn-node.tn-gone .tn-node-flag { opacity: 0.35; filter: grayscale(1); }
-.tn-node-flag { display: block; line-height: 0; border: 1px solid var(--color-ink); }
+.tn-node-flag { display: block; line-height: 0; box-shadow: 0 0 0 1px rgba(42, 31, 20, 0.85), 0 1px 1px rgba(0, 0, 0, 0.35); }
 .tn-node-flag svg { display: block; }
 .tn-node-count {
-  position: absolute; top: -7px; right: -9px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: var(--radius-pill);
-  background: var(--link-cut); color: var(--color-parchment-light); border: 1px solid var(--color-parchment-light);
+  position: absolute; z-index: 2; top: -7px; right: -9px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: var(--radius-pill);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.18)), var(--link-cut);
+  color: #fbf3e2; border: 1px solid #fbf3e2; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.4);
   font-family: var(--font-mono); font-size: 11px; font-weight: 600; line-height: 16px; text-align: center;
   animation: cut-pulse 1.4s ease-in-out infinite;
 }
 .tn-node-auto {
-  position: absolute; bottom: -6px; right: -8px; width: 18px; height: 18px; border-radius: 50%;
+  position: absolute; z-index: 2; bottom: -6px; right: -8px; width: 18px; height: 18px; border-radius: 50%;
   display: grid; place-items: center; line-height: 0;
-  background: var(--color-parchment-light); color: var(--ruler-autopilot); border: 1px solid var(--ruler-autopilot);
+  background: radial-gradient(circle at 50% 35%, var(--color-parchment-light), var(--color-parchment-dark));
+  color: var(--ruler-autopilot); border: 1px solid var(--ruler-autopilot); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
-.tn-node-x { position: absolute; inset: 22%; width: 56%; height: 56%; stroke: var(--color-rubric); stroke-width: 1.4; stroke-linecap: round; fill: none; }
+.tn-node-x { position: absolute; z-index: 2; inset: 22%; width: 56%; height: 56%; stroke: var(--color-rubric); stroke-width: 1.6; stroke-linecap: round; fill: none; }
 
-.tn-graph-key { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 4px; font-size: var(--text-xs); font-style: italic; color: var(--color-ink-muted); }
+.tn-graph-key { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 5px; font-size: var(--text-xs); font-style: italic; color: var(--color-ink-muted); }
 .tn-graph-key span { display: inline-flex; align-items: center; gap: 5px; }
-.tn-key.up, .tn-key.cut { width: 16px; height: 0; border-top: 1.5px solid var(--link-up); }
-.tn-key.cut { border-top: 1.5px dashed var(--link-cut); }
+.tn-key.up, .tn-key.cut { width: 16px; height: 0; border-top: 1.5px solid rgba(42, 31, 20, 0.55); }
+.tn-key.cut { border-top: 1.5px dashed var(--color-rubric); }
 .tn-key.count {
   min-width: 14px; height: 14px; border-radius: var(--radius-pill); background: var(--link-cut); color: var(--color-parchment-light);
-  font-family: var(--font-mono); font-size: 10px; font-style: normal; font-weight: 600; line-height: 14px; text-align: center;
+  font-family: var(--font-mono); font-size: 11px; font-style: normal; font-weight: 600; line-height: 14px; text-align: center;
 }
 .tn-key-auto { color: var(--ruler-autopilot); }
 
-.tn-tray-empty { margin: 8px 0 0; padding: 8px 10px; border: 1px dashed var(--color-ink-faint); border-radius: var(--radius-1); font-size: var(--text-sm); line-height: 18px; font-style: italic; color: var(--color-ink-muted); }
-.tn-tray {
-  margin-top: 8px; padding: 8px 10px 9px; border-radius: var(--radius-1);
-  border: 1px solid var(--color-ink-faint); border-left: 3px solid var(--tn-nation);
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+/* ---- The picked-node tray: a framed well sunk into the page ---- */
+.tn-tray-empty {
+  margin: 10px 0 0; padding: 9px 11px; border-radius: 3px; font-size: var(--text-sm); line-height: 18px; font-style: italic; color: var(--color-ink-muted);
+  text-shadow: var(--engrave-on-paper);
 }
-.tn-tray.tn-is-cut { background: var(--color-night-inset); color: var(--color-text); border-color: var(--color-night-inset); border-left-color: var(--holo-tint); }
-.tn-tray-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.tn-tray-flag { flex: none; line-height: 0; border: 1px solid var(--color-ink); }
-.tn-tray-flag svg { display: block; }
+.tn-tray {
+  margin-top: 10px; padding: 9px 10px 10px 12px; border-radius: 3px; position: relative;
+  border: 1px solid rgba(42, 31, 20, 0.45);
+  background: linear-gradient(180deg, rgba(42, 31, 20, 0.09), rgba(42, 31, 20, 0.04));
+  box-shadow: var(--well-paper), inset 3px 0 0 var(--tn-nation), inset 4px 0 0 rgba(42, 31, 20, 0.35);
+}
+.tn-tray.tn-is-cut {
+  color: var(--color-text); border-color: #000;
+  background: var(--lacquer-sheen), linear-gradient(180deg, #07090f, var(--color-night-inset));
+  box-shadow: var(--well-dark), inset 3px 0 0 var(--color-rubric), 0 0 0 1px rgba(201, 162, 75, 0.35);
+}
+.tn-tray-top { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.tn-tray-flag.tn-flag-plate { width: 34px; height: 24px; line-height: 0; }
 .tn-tray-name {
   flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; color: inherit;
   font-family: var(--font-serif); font-size: var(--text-md); font-weight: 600; line-height: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: var(--engrave-on-paper);
 }
+.tn-tray.tn-is-cut .tn-tray-name { text-shadow: var(--engrave-on-dark); }
 .tn-tray-name:hover { text-decoration: underline; }
 .tn-tray.tn-gone .tn-tray-name { text-decoration: line-through; color: var(--color-ink-muted); font-weight: 400; }
-.tn-tray.tn-gone .tn-tray-flag { opacity: 0.4; }
-.tn-tray-states { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; margin-top: 5px; }
+.tn-tray.tn-gone .tn-tray-flag { opacity: 0.45; }
+.tn-tray-states { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 7px; }
 .tn-tray-sub { font-size: var(--text-xs); color: var(--color-ink-muted); }
 .tn-tray-sub.mono { font-family: var(--font-mono); color: var(--holo-tint); }
-.tn-tray-sub.ruin { margin-top: 3px; font-style: italic; font-size: var(--text-sm); }
-.tn-tray-btns { display: flex; gap: 6px; margin-top: 7px; }
-.tn-tray .btn.xs { font-size: var(--text-cap); padding: 0 9px; line-height: 22px; }
-.tn-tray-btns .btn.xs { flex: 1; }
-.tn-tray.tn-is-cut .btn { color: var(--color-text); border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
-.tn-tray.tn-is-cut .btn:hover { background: transparent; border-color: var(--color-accent); color: var(--color-accent); }
-.tn-tray.tn-is-cut .btn.restore, .tn-tray .tn-tray-cm .btn.restore { background: var(--holo-tint); color: var(--color-night-inset); border-color: var(--holo-tint); }
-.tn-tray.tn-is-cut .btn.danger { color: #e4705f; border-color: var(--color-danger); }
-.tn-tray.tn-is-cut .tn-state.llm { color: var(--color-accent); }
-.tn-tray.tn-is-cut .tn-state.auto { color: var(--color-text); }
-.tn-tray-council { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--color-ink-faint); display: grid; gap: 4px; }
-.tn-tray.tn-is-cut .tn-tray-council { border-top-color: color-mix(in srgb, var(--color-text) 25%, transparent); }
+.tn-tray-sub.ruin { margin-top: 4px; font-style: italic; font-size: var(--text-sm); }
+.tn-tray-btns { display: flex; gap: 6px; margin-top: 8px; }
+.tn-tray-btns .tn-button { flex: 1; min-height: 26px; }
+/* Restore on the night tray: the beam colour, so reconnecting reads as the way back. */
+.tn-tray .tn-net-restore, .tn-tray .tn-net-restore:hover {
+  color: var(--color-night-inset); border-color: #0b3a35; text-shadow: none;
+  background: linear-gradient(180deg, #b6f3ea, var(--holo-tint));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.5), 0 2px 3px rgba(0, 0, 0, 0.45);
+}
+.tn-tray-council { margin-top: 9px; padding-top: 7px; border-top: 1px solid rgba(42, 31, 20, 0.3); box-shadow: inset 0 1px 0 rgba(255, 250, 235, 0.5); display: grid; gap: 5px; }
+.tn-tray.tn-is-cut .tn-tray-council { border-top-color: rgba(201, 162, 75, 0.3); box-shadow: none; }
 .tn-tray-cm { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.tn-tray-role { flex: none; width: 54px; font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.75; }
+.tn-tray-role { flex: none; width: 66px; font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-rubric); }
+.tn-tray.tn-is-cut .tn-tray-role { color: var(--gilt-hi); }
 .tn-tray-who { flex: 1; min-width: 0; font-size: var(--text-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Blackout and beliefs side by side; each keeps its help line */
-.tn-net-world { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.tn-net-world .tn-switch { align-items: flex-start; padding: 6px 8px; gap: 6px; }
+.tn-net-world { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px; }
+.tn-net-world .tn-switch { align-items: flex-start; padding: 7px 8px; gap: 6px; }
 .tn-net-world .tn-sw-sub { font-size: 12.5px; line-height: 15px; }
 .tn-net-world .tn-toggle { margin-top: 1px; }
-.tn-state.auto { gap: 4px; }
-@media (prefers-reduced-motion: reduce) { .tn-node, .tn-node-count { animation: none; transition: none; } }
 
-.tn-net { scrollbar-width: thin; scrollbar-color: var(--color-ink-muted) transparent; }
+@media (prefers-reduced-motion: reduce) {
+  .tn-node, .tn-node-count, .tn-net-tab, .tn-switch, .tn-toggle i, .tn-state i.tn-pulse { animation: none; transition: none; }
+  .tn-node:hover, .tn-node:active, .tn-net-tab:active, .tn-switch:active:not(:disabled) { transform: none; }
+}
+
 /* Under 800 px tall (the projector) the help lines move into tooltips so nothing scrolls. */
 .tn-net-short .tn-net-sub, .tn-net-short .tn-net-world .tn-switch:not(.on) .tn-sw-sub, .tn-net-short .tn-prep-switch:not(.on) .tn-sw-sub { display: none; }   /* the drift count and the prepare progress stay */
+.tn-net-short .tn-net-head { justify-content: flex-end; margin-bottom: -4px; }
 .tn-net-short .tn-net-world .tn-switch { align-items: center; }
-.tn-net-short .tn-tray { padding: 6px 10px 7px; }
+.tn-net-short .tn-tray { padding: 6px 10px 7px 12px; }
 .tn-net-short .tn-tray-council { margin-top: 6px; padding-top: 4px; gap: 3px; }
