@@ -1,18 +1,20 @@
 // The 3D globe: one province mesh, live colours, click-to-select, fly-to. Lane b.
 import { useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import type { ThreeEvent } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import type { World } from '@terra/shared';
 import { useWorld } from '../state/world';
 import { useBelief } from '../state/belief';
-import { useCamera } from '../state/camera';
-import { CAM_MAX, CAM_MIN } from './constants';
 import { buildProvinceMesh } from './mesh/buildProvinceMesh';
 import type { ProvinceMesh } from './mesh/buildProvinceMesh';
 import { writeColors } from './mesh/colors';
 import { ProvinceMeshContext } from './mesh/context';
+import { ColorFx } from './colorFx';
+import { CameraRig } from './camera/CameraRig';
+import { Picking } from './camera/usePicking';
+import { HoverHighlight } from './camera/HoverHighlight';
+import { SelectionGlow } from './camera/SelectionGlow';
+import { Political } from './political/Political';
 
 const SPACE = '#0b0f14';
 
@@ -43,25 +45,27 @@ function Planet({ world, mesh }: { world: World; mesh: ProvinceMesh }) {
     let lastMode = useWorld.getState().mapMode;
     let lastSel = useWorld.getState().selectedCountryId;
 
-    const paintAll = () => {
+    const fx = new ColorFx(mesh, world.tiles.length);
+
+    const paintAll = (animate = false) => {
       const s = useWorld.getState();
-      writeColors(mesh, world, ownerFn(), s.mapMode, s.selectedCountryId);
+      fx.repaint(() => writeColors(mesh, world, ownerFn(), s.mapMode, s.selectedCountryId), null, animate);
       lastPaint.current = performance.now();
     };
 
     // Work out which tiles changed since the last paint; null means repaint everything.
-    const diff = (events: ReadonlyArray<{ id: string; type: string; tile?: number }>): Set<number> | null => {
+    const diff = (events: ReadonlyArray<{ id: string; type: string; tile?: number; cause?: string }>): Map<number, string> | null => {
       let start = 0;
       if (lastEventId != null) {
         const idx = events.findIndex((e) => e.id === lastEventId);
-        if (idx < 0) return events.length === 0 ? new Set() : null;
+        if (idx < 0) return events.length === 0 ? new Map() : null;
         start = idx + 1;
       }
-      const tiles = new Set<number>();
+      const tiles = new Map<number, string>();
       for (let i = start; i < events.length; i++) {
         const e = events[i]!;
         if (e.type === 'country_founded' || e.type === 'country_fell') return null;
-        if (e.type === 'tile_claimed' && e.tile != null) tiles.add(e.tile);
+        if (e.type === 'tile_claimed' && e.tile != null) tiles.set(e.tile, e.cause ?? 'expand');
       }
       return tiles;
     };
@@ -73,12 +77,13 @@ function Planet({ world, mesh }: { world: World; mesh: ProvinceMesh }) {
       const modeChanged = s.mapMode !== lastMode || s.selectedCountryId !== lastSel;
       lastMode = s.mapMode;
       lastSel = s.selectedCountryId;
-      const changed = s.version !== seenVersion ? diff(events) : new Set<number>();
+      const changed = s.version !== seenVersion ? diff(events) : new Map<number, string>();
       seenVersion = s.version;
       lastEventId = events.length ? events[events.length - 1]!.id : lastEventId;
-      if (modeChanged || changed === null || seenVersion < 0) paintAll();
+      if (modeChanged || changed === null || seenVersion < 0) paintAll(modeChanged);
       else if (changed.size > 0) {
-        writeColors(mesh, world, ownerFn(), s.mapMode, s.selectedCountryId, changed);
+        fx.repaint(() => writeColors(mesh, world, ownerFn(), s.mapMode, s.selectedCountryId, changed.keys()), changed.keys(), false);
+        if (s.beliefOf == null) for (const [tile, cause] of changed) fx.pulse(tile, cause);
         lastPaint.current = performance.now();
       }
     };
@@ -98,37 +103,14 @@ function Planet({ world, mesh }: { world: World; mesh: ProvinceMesh }) {
       timer = setTimeout(() => { timer = null; paint(); }, wait);
     });
     const unsubBelief = useBelief.subscribe(() => paintAll());
-    return () => { unsub(); unsubBelief(); if (timer) clearTimeout(timer); };
+    return () => { unsub(); unsubBelief(); fx.dispose(); if (timer) clearTimeout(timer); };
   }, [mesh, world]);
 
-  const onClick = (e: ThreeEvent<MouseEvent>) => {
-    if (e.faceIndex == null) return;
-    e.stopPropagation();
-    const tile = mesh.triangleToTile[e.faceIndex];
-    if (tile == null || tile < 0) return;
-    const owner = world.owner[tile] ?? -1;
-    useWorld.getState().select(owner >= 0 ? owner : null, tile);
-  };
-
   return (
-    <mesh geometry={mesh.geometry} onClick={onClick}>
+    <mesh name="provinces" geometry={mesh.geometry}>
       <meshStandardMaterial vertexColors flatShading roughness={0.95} metalness={0} />
     </mesh>
   );
-}
-
-function FlyTo() {
-  const camera = useThree((s) => s.camera);
-  const nonce = useCamera((s) => s.nonce);
-  useEffect(() => {
-    const { target } = useCamera.getState();
-    const w = useWorld.getState().world;
-    const country = target != null ? w?.countries[target] : undefined;
-    if (!w || !country) return;
-    const c = w.tiles[country.capitalTile]?.center;
-    if (c) camera.position.set(c[0], c[1], c[2]).multiplyScalar(1.6);
-  }, [nonce, camera]);
-  return null;
 }
 
 function Scene({ world }: { world: World }) {
@@ -138,7 +120,10 @@ function Scene({ world }: { world: World }) {
   return (
     <ProvinceMeshContext.Provider value={mesh}>
       <Planet world={world} mesh={mesh} />
-      {/* lane b overlays: CameraRig, SelectionGlow, Political */}
+      <Picking />
+      <HoverHighlight />
+      <SelectionGlow />
+      <Political />
     </ProvinceMeshContext.Provider>
   );
 }
@@ -149,13 +134,12 @@ export function Globe() {
     ? getComputedStyle(document.documentElement).getPropertyValue('--globe-space').trim() || SPACE
     : SPACE;
   return (
-    <Canvas dpr={[1, 2]} camera={{ position: [0, 0.8, 2.48], fov: 45 }} onPointerMissed={() => useWorld.getState().select(null)}>
+    <Canvas dpr={[1, 2]} camera={{ position: [0, 0.8, 2.48], fov: 45 }}>
       <color attach="background" args={[space]} />
       <hemisphereLight args={['#fff6e0', '#33414a', 0.6]} />
       <CameraLight />
       {world && <Scene world={world} />}
-      <FlyTo />
-      <OrbitControls makeDefault enablePan={false} minDistance={CAM_MIN} maxDistance={CAM_MAX} />
+      <CameraRig />
     </Canvas>
   );
 }
