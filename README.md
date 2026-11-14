@@ -47,7 +47,8 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 - **Towns modernise through the ages:** a nation keeps its own building style up to the
   gunpowder age, moves to concrete blocks (eastern or authoritarian nations) or glass towers
   (everyone else) at the industrial age, and builds shielded arcologies in the future and stellar
-  ages. Each age step sweeps out from the capital, town by town, over about three seconds.
+  ages. Industrial and modern towns pull down their old stone walls for a ring road. Each age step
+  sweeps out from the capital, town by town, over about three seconds.
 - **Wonders** from the Great Wall to a space elevator.
 
 | | | |

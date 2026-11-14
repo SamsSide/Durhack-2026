@@ -209,7 +209,12 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
   const big = kind === 'city' || kind === 'capital';
   const wallF = Math.min(1.07, (0.74 * w) / (Math.max(Rx, Ry) * 1.08));
   const coreF = Math.min(wallF - 0.2, Math.max(0.62, (plazaR + 3 * pitch) / Math.min(Rx, Ry)));
-  const hasCore = big && tier >= 3;
+  // Industrial and modern towns have outgrown their medieval walls (#345): no curtain walls or
+  // gatehouses, a ring road round the town instead. Future and stellar towns get energy shields.
+  const ageNow = world.countries[s.owner]?.techAge;
+  const pastWalls = !wantsShield(world, s.owner) && (ageNow === 'industrial' || ageNow === 'modern');
+  const wallTier: CityTier = pastWalls ? 0 : tier;
+  const hasCore = big && wallTier >= 3;
   const dim = S.WALL_DIM;
   const coreDim = tier >= 4 ? dim.keep : dim.stone;
   const coreBand = (0.5 * pitch + 0.7 * coreDim.t * w) / Math.min(Rx, Ry);
@@ -459,7 +464,7 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
     }
   };
 
-  if (tier > 0) {
+  if (wallTier > 0) {
     const outerMode: Mode = shield ? 'shield' : tier === 1 ? 'palisade' : 'stone';
     const coreMode: Mode = shield ? 'shield' : 'stone';
     const od = shield ? dim.shield : tier === 1 ? dim.palisade : dim.stone;
@@ -470,8 +475,8 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
       const kk = shield && tier >= 4 ? 1.35 : 1;
       ring({ f: coreF, mode: coreMode, h: cd.h * kk, t: cd.t, towR: cd.towR, towH: cd.towH * kk, gates: 4, gateW: cd.gate, fort: false });
     }
-  } else if (big) {
-    // No walls yet: a ring road around the town instead.
+  } else if (big || pastWalls) {
+    // No walls yet (or no longer): a ring road around the town instead.
     const perim = Math.PI * (Rx + Ry) * wallF;
     const M = Math.max(24, Math.round(perim / (0.06 * w)));
     const road = new THREE.Color(S.RING_ROAD);
