@@ -24,7 +24,10 @@ export const AGE_EDGE = 1.15;
 /** The age a world's era starts its nations in. Unknown, generic and ancient eras start at the beginning. */
 export function startAge(eraText: string | undefined): TechAge {
   const t = (eraText ?? '').toLowerCase();
-  if (/modern|cold war|cyber|sci-?fi|science fiction|space|post-?apoc|apocalyp|atomic|nuclear|future/.test(t)) return 'modern';
+  // Owner ruling: after the fall, survivors rebuild from salvage with spears and rafts, so ruined,
+  // drowned and post-apocalyptic worlds start at the beginning and climb the whole arc again.
+  if (/post-?apoc|apocalyp|ruin|drown|wasteland|fallout|aftermath|collapse/.test(t)) return 'ancient';
+  if (/modern|cold war|cyber|sci-?fi|science fiction|space|atomic|nuclear|future/.test(t)) return 'modern';
   if (/industrial|steam|victorian|wild west/.test(t)) return 'industrial';
   if (/renaissance|age of sail|pirate|colonial|gunpowder/.test(t)) return 'gunpowder';
   if (/medieval|feudal|dark age|viking/.test(t)) return 'medieval';
