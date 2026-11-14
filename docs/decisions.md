@@ -26,3 +26,4 @@
 2026-11-14 15:05 · owner · The world bible is written by gemini-3.5-flash-lite (GEMINI_MODEL_BIBLE), about 5 s instead of 28 s on flash · world creation must fit the 15 s demo step
 2026-11-14 15:04 · owner · ElevenLabs Starter plan bought (music API for anthems, about 40k characters a month); Gemini image billing not enabled, drawn flags only · anthems are a demo highlight, painted flags are not
 2026-11-14 15:50 · owner · X5 gains DecreeBox and TokenMeter (no props), placed in the top-bar area per the design (#61) · additive, matches the merged code
+2026-11-14 16:05 · owner · Make the LLM side multimodal (MLH judge's tip): image prompt (A17, no longer a stretch), spoken decrees heard by Gemini (A20), and Terra Nova News, Gemini watching the map as a live news broadcast read by ElevenLabs (A21) · judge's advice for the Gemini prize

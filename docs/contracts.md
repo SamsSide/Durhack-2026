@@ -224,7 +224,7 @@ export function flagSvg(spec: FlagSpec, width?: number, height?: number): string
 | Route | Giver | Request | Response |
 | --- | --- | --- | --- |
 | `GET /api/health` | a | none | `{ "ok": true, "mode": "mock", "world": "w-3f9a" }` |
-| `POST /api/world` | a | `{ "prompt": "a drowned post-apocalyptic world", "nations": 6, "era": "post-apocalyptic", "seaLevel": 0.55, "aggression": 0.5, "seed": 12345, "imageBase64": null }` (only `prompt` is required) | `{ "worldId": "w-3f9a" }`, then a `snapshot` on the socket. In live mode it answers after about 7 s (Gemini writes the world bible); the Create screen shows a loading state meanwhile |
+| `POST /api/world` | a | `{ "prompt": "a drowned post-apocalyptic world", "nations": 6, "era": "post-apocalyptic", "seaLevel": 0.55, "aggression": 0.5, "seed": 12345, "imageBase64": null }` (only `prompt` is required; `imageBase64` is an optional picture (JPEG or PNG, under about 4 MB) that Gemini reads for mood, palette and setting, row A17) | `{ "worldId": "w-3f9a" }`, then a `snapshot` on the socket. In live mode it answers after about 7 s (Gemini writes the world bible); the Create screen shows a loading state meanwhile |
 | `GET /api/replays` | a | none | `[ { "id": "demo-1", "name": "The Drowned Age", "events": 5210 } ]` |
 | `POST /api/replays/:id/play` | a | none | `{ "worldId": "w-3f9a" }`, then a `snapshot`; events replay with no API calls |
 | `GET /api/world/log` | a | none | `{ "initial": { "...": "the World at tick 0" }, "events": [ ] }`: the whole run, for the timeline scrubber |
@@ -236,6 +236,9 @@ export function flagSvg(spec: FlagSpec, width?: number, height?: number): string
 | `GET /api/region/:id/lore` | a | none | `{ "regionId": 4, "name": "The Salt Marches", "owner": 2, "summary": "...", "history": "..." }` |
 | `GET /api/stats/territory?worldId=` | a | none (`worldId` optional, default current world) | `{ "worldId": "w-3f9a", "series": [ { "countryId": 0, "name": "...", "color": "#c8553d", "points": [ { "tick": 10, "year": 1010, "tiles": 12 } ] } ] }` from Tiger Data (row A11); `503 { "error": "stats unavailable" }` without a database |
 | `GET /api/stats/summary` | a | none | `{ "events": 5210, "worlds": 3, "eventsPerType": { "tile_claimed": 900 } }`; `503` without a database |
+| `POST /api/decree/voice` | a | `{ "audioBase64": "...", "mimeType": "audio/webm" }` (a spoken decree, up to about 15 s) | `{ "transcript": "a plague sweeps the southern coast", "decree": { "text": "A plague sweeps the southern coast", "effect": "plague", "target": { "countryId": 2 } } }`; the decree is applied at once (a `decree` chronicle entry, plus its effect from row A20). Gemini hears the audio directly. `503 { "error": "voice unavailable" }` when Gemini fails; mock mode returns a canned decree |
+| `POST /api/broadcast` | a | `{ "imageBase64": "...", "mimeType": "image/jpeg" }` (a capture of the globe, about 1280 x 720) | `{ "id": "b-7", "tick": 210, "year": 1210, "headline": "War on the Salt Marches", "script": "Good evening. ...", "audio": "/api/broadcast/b-7/audio" }`: Gemini looks at the image and the recent chronicle and writes a 20 to 30 s news bulletin. Mock mode: a template bulletin from the chronicle. `503` when capped |
+| `GET /api/broadcast/:id/audio` | a | none | `audio/mpeg`: the bulletin read by a newsreader voice (ElevenLabs), cached; mock: a bundled sample |
 
   Lore response:
 
@@ -337,7 +340,10 @@ export const useWorld: UseBoundStore<StoreApi<WorldStore>>;
   background, colours from X7). On a narrow screen the same card docks to the side instead.
 - **Interface components (lane c gives to lane b):** `web/src/ui/index.ts` exports
   `CreateScreen` (no props), `NationCard` (`{ countryId: number; regionId?: number | null }`),
-  `Chronicle` (no props), `NetworkPanel` (no props), `DecreeBox` (no props) and `TokenMeter` (no props). The decree box and token meter sit in the top-bar area per the design (lane b places them). The seed ships a working placeholder for
+  `Chronicle` (no props), `NetworkPanel` (no props), `DecreeBox` (no props) and `TokenMeter` (no props). The decree box and token meter sit in the top-bar area per the design (lane b places them).
+- **News broadcast (row A21):** lane c exports `NewsBroadcast` (no props) from `web/src/ui/index.ts`: a "Terra Nova News" lower-third (headline, scrolling script, an on-air light) that, every 2 minutes while the world runs and on a button in the top bar, calls `captureGlobe()`, posts the image to `POST /api/broadcast`, and plays the result with `audio.playBroadcast`. Lane b exports `captureGlobe(): Promise<{ imageBase64: string; mimeType: 'image/jpeg' }>` from `web/src/globe/capture.ts` (the canvas needs `preserveDrawingBuffer`, or capture right after a render) and places `NewsBroadcast`.
+- **Spoken decrees (row A20):** lane c adds a hold-to-speak mic button to `DecreeBox` (MediaRecorder, webm/opus, up to 15 s) that posts to `POST /api/decree/voice` and shows the transcript.
+- **Image prompt (row A17):** lane c adds an optional picture drop zone to `CreateScreen`, sent as `imageBase64` in `POST /api/world`. The seed ships a working placeholder for
   each, already placed in `App.tsx`, so the names and props never change.
 - **Mock:** none needed: the seed (row A1) ships the real store, working against
   `npm run mock`. Lane a writes it; lane b owns it from then on.
@@ -350,10 +356,11 @@ export const useWorld: UseBoundStore<StoreApi<WorldStore>>;
 - **Signature:**
 
 ```ts
-export type AudioState = 'idle' | 'loading' | 'narration' | 'anthem';
+export type AudioState = 'idle' | 'loading' | 'narration' | 'anthem' | 'broadcast';
 export const audio: {
   playNarration(countryId: number): Promise<void>;   // fetches X3 narration, ducks everything else
   playAnthem(countryId: number): Promise<void>;
+  playBroadcast(audioUrl: string): Promise<void>;     // a news bulletin (row A21); ducks chants, stops narration and anthem
   stop(): void;
   setMuted(muted: boolean): void;
   getState(): { state: AudioState; countryId: number | null; muted: boolean };
