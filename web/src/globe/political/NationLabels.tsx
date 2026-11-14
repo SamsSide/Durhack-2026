@@ -9,6 +9,7 @@ import { flagSvg, regionOwner } from '@terra/shared';
 import type { FlagSpec } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import { CLOSE, LAND_BASE, MOUNTAIN_BONUS, RELIEF } from '../constants';
+import { groundView } from '../camera/groundView';
 import { getPalette } from '../palette';
 import { useProvinceMesh } from '../mesh/context';
 import { statusOf } from '../status/statusTint';
@@ -141,6 +142,8 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
     alpha *= clamp01((facing - 0.25) / 0.15);
     // Only a sliver of the land in view: let the name go (it would sit on a few tiles at the limb).
     alpha *= clamp01((an.share - 0.08) / 0.1);
+    // Ground view: names laid flat on the land would cut across the buildings; let them go.
+    alpha *= 1 - groundView.tilt;
     const deleted = statusOf(data.owner) === 'deleted';
     if (deleted) alpha *= 0.5;
     g.visible = alpha > 0.01;
