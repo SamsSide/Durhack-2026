@@ -5,6 +5,7 @@ import {
 import type { ControlMessage, NewWorldOptions, RunnerListener, WorldRunner } from '../runner';
 import { Clock, TickLoop, clampSpeed, type ClockState } from '../engine/clock';
 import { anyBigMoment } from '../engine/bigMoments';
+import { loadReplay } from '../engine/replays';
 
 export class MockRunner implements WorldRunner {
   private world: World | null = null;
@@ -53,7 +54,7 @@ export class MockRunner implements WorldRunner {
     return this.load(w);
   }
 
-  listReplays() { return [{ id: 'demo-1', name: 'The Drowned Age', events: 5210 }]; }
+  listReplays() { return [{ id: 'demo-1', name: 'The Drowned Age', events: loadReplay('demo-1')?.events.length ?? 0 }]; }
 
   replay(id: string): World | null {
     if (!this.listReplays().some((r) => r.id === id)) return null;
