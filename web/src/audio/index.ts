@@ -2,7 +2,7 @@
 import { useWorld } from '../state/world';
 import type { WorldEvent } from '@terra/shared';
 
-export type AudioState = 'idle' | 'loading' | 'narration' | 'anthem';
+export type AudioState = 'idle' | 'loading' | 'narration' | 'anthem' | 'broadcast';
 
 let state = 'idle' as AudioState;
 let countryId = null as number | null;
@@ -26,21 +26,24 @@ const DUCK = 0.15;
 let warned = false;
 /** Duck the chant while narration speaks, restore it afterwards. */
 function applyDuck(): void {
-  const ducked = state === 'narration' || (state === 'loading' && kindNow === 'narration');
+  const ducked = state === 'narration' || state === 'broadcast' || (state === 'loading' && (kindNow === 'narration' || kindNow === 'broadcast'));
   for (const c of chants) c.el.volume = ducked ? c.base * DUCK : c.base;
 }
-let kindNow = null as 'narration' | 'anthem' | null;
+let kindNow = null as 'narration' | 'anthem' | 'broadcast' | null;
+let urlNow = null as string | null;
 
-async function play(kind: 'narration' | 'anthem', id: number): Promise<void> {
+async function play(kind: 'narration' | 'anthem' | 'broadcast', id: number | null, url?: string): Promise<void> {
+  // The same bulletin already loading or playing: nothing to do.
+  if (kind === 'broadcast' && kindNow === 'broadcast' && urlNow === url && (state === 'loading' || state === 'broadcast')) return;
   // The same narration already loading or playing: nothing to do.
   if (kind === 'narration' && kindNow === 'narration' && countryId === id && (state === 'loading' || state === 'narration')) return;
   // An anthem is slow to generate the first time: a second press while it loads is a no-op.
   if (kind === 'anthem' && kindNow === 'anthem' && countryId === id && state === 'loading') return;
   halt();
-  kindNow = kind;
+  kindNow = kind; urlNow = kind === 'broadcast' ? url ?? null : null;
   const mine = token;
   state = 'loading'; countryId = id; applyDuck(); emit();
-  const a = new Audio(`/api/country/${id}/${kind}`);
+  const a = new Audio(url ?? `/api/country/${id}/${kind}`);
   a.muted = muted;
   el = a;
   a.onended = () => { if (mine === token) { state = 'idle'; countryId = null; el = null; kindNow = null; applyDuck(); emit(); } };
@@ -59,6 +62,7 @@ async function play(kind: 'narration' | 'anthem', id: number): Promise<void> {
 export const audio = {
   playNarration: (id: number) => play('narration', id),
   playAnthem: (id: number) => play('anthem', id),
+  playBroadcast: (audioUrl: string) => play('broadcast', null, audioUrl),
   stop(): void { halt(); state = 'idle'; countryId = null; kindNow = null; applyDuck(); emit(); },
   setMuted(m: boolean): void {
     muted = m; if (el) el.muted = m;

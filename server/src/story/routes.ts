@@ -11,6 +11,7 @@ import { chooseVoice, speak } from './eleven';
 import { imageLive, paintFlag } from './paintedFlag';
 import { ensureChant } from './chant';
 import { anthemFile, anthemLive } from './anthem';
+import { ensureAudio, getBulletin, makeBroadcast } from './broadcast';
 
 const CACHE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.cache');
 const sha = (s: string) => crypto.createHash('sha256').update(s).digest('hex');
@@ -109,6 +110,36 @@ export function storyRoutes(runner: WorldRunner): Router {
     } catch (e) {
       console.warn('painted flag failed:', e instanceof Error ? e.message.slice(0, 200) : e);
       res.status(503).json({ error: 'image generation off' });
+    }
+  });
+
+  // A21: Terra Nova News. The globe picture comes from the browser (about 1280 x 720 JPEG, under 3 MB).
+  r.post('/broadcast', async (req, res) => {
+    const w = runner.getWorld();
+    const { imageBase64, mimeType } = (req.body ?? {}) as { imageBase64?: unknown; mimeType?: unknown };
+    if (!w) return void res.status(404).json({ error: 'no world' });
+    if (typeof imageBase64 !== 'string' || !imageBase64 || imageBase64.length > 4_200_000) {
+      return void res.status(400).json({ error: 'imageBase64 missing or over 3 MB' });
+    }
+    const mime = typeof mimeType === 'string' && /^image\/(jpeg|png|webp)$/.test(mimeType) ? mimeType : 'image/jpeg';
+    try {
+      const r = await makeBroadcast(w, imageBase64.replace(/^data:[^,]*,/, ''), mime);
+      console.log(`broadcast ${r.bulletin.id} via ${r.source} in ${r.ms} ms (${r.tokensIn} in, ${r.tokensOut} out)`);
+      res.json(r.bulletin);
+    } catch (e) {
+      console.warn('broadcast failed:', e instanceof Error ? e.message.slice(0, 200) : e);
+      res.status(500).json({ error: 'broadcast failed' });
+    }
+  });
+
+  r.get('/broadcast/:id/audio', async (req, res) => {
+    const b = getBulletin(req.params.id ?? '');
+    if (!b) return void res.status(404).json({ error: 'no such bulletin' });
+    if (currentMode() !== 'live') return void res.type('audio/mpeg').sendFile(path.join(SAMPLES, 'narration.mp3'));
+    try {
+      res.type('audio/mpeg').sendFile(await ensureAudio(b));
+    } catch {
+      res.status(503).json({ error: 'voice unavailable' });
     }
   });
 
