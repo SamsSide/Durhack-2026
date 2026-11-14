@@ -23,6 +23,7 @@ export interface RulerDigest {
   neighbours: RulerNeighbour[];          // alive nations that share a border; strength is relative to ours (1 = equal)
   chronicle: string[];                   // the last few lines involving this nation
   events: string[];                      // recent big events anywhere
+  terrain?: string;                      // one line when its armies stand on rough ground (row A28)
 }
 export interface RulerDecision {
   focus: Focus;
@@ -55,6 +56,9 @@ export function makeDigest(world: World, countryId: number, focus: Focus = 'expa
     const rel = relationOf(world, countryId, id);
     return { id, name: world.countries[id]!.name, stance: rel.stance, strength: r2(strengthOf(id) / Math.max(1, mine)), grievance: r2(rel.grievance) };
   });
+  const rough = (['ice', 'desert', 'mountain', 'hills'] as const).find((k) => world.units.some((u) => u.owner === countryId && u.kind === 'army' && u.tile >= 0 && world.tiles[u.tile]!.terrain === k));
+  const terrain = rough && (rough === 'ice' ? 'Our armies freeze in the ice fields.' : rough === 'desert' ? 'Our armies wither in the desert.'
+    : rough === 'mountain' ? 'The mountain passes hold, and cost dearly to cross.' : 'The hill country slows every march and shelters its defenders.');
   const lines = (es: typeof world.chronicle) => es.map((e) => `y${e.year}: ${e.text.slice(0, 120)}`);
   return {
     id: countryId, name: c.name, government: c.government, ideology: c.ideology.slice(0, 100), year: world.year,
@@ -63,7 +67,7 @@ export function makeDigest(world: World, countryId: number, focus: Focus = 'expa
     cities: world.structures.filter((s) => s.owner === countryId && (s.kind === 'city' || s.kind === 'capital' || s.kind === 'town')).length,
     armies: world.units.filter((u) => u.owner === countryId && u.kind === 'army').length, strength: Math.round(mine),
     techAge: c.techAge ?? 'ancient',
-    focus, neighbours,
+    focus, neighbours, ...(terrain ? { terrain } : {}),
     chronicle: lines(world.chronicle.filter((e) => e.countries.includes(countryId)).slice(-5)),
     events: lines(world.chronicle.filter((e) => BIG_KINDS.has(e.kind) && !e.countries.includes(countryId)).slice(-3)),
   };

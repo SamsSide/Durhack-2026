@@ -39,6 +39,11 @@ export function applyEvent(world: World, event: WorldEvent): void {
       if (u) u.tile = event.to;
       break;
     }
+    case 'unit_attrition': {
+      const u = world.units.find((x) => x.id === event.unitId);
+      if (u) u.strength = Math.max(1, u.strength - event.loss);
+      break;
+    }
     case 'unit_removed':
       world.units = world.units.filter((x) => x.id !== event.unitId);
       break;
