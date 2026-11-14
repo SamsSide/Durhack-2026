@@ -21,6 +21,9 @@ PALETTES["ages"] = dict(
     red="#9C3B2B", terracotta="#B8643C", skin="#D9A47A", horse="#6B4A32", horse2="#A59C8E",
     khaki="#9A8C5B", khaki_dark="#6E6A47", olive="#66733F", olive_dark="#414C2C", smoke="#99948C",
     ochre="#C79A45", blue="#2F5F8A", green="#3F7F5A", orange="#D08A2E", glass="#9FB4BF",
+    # the future and stellar ages (row A26): stealth greys, a white shell, teal, a luminous aqua
+    stealth="#4D555E", stealth_dark="#30363D", stealth_light="#75808B", hull="#E8ECEA", teal="#3FA7A3",
+    teal_dark="#2A7478", glow="#8FF0E4", solar="#2B4C86", wash="#D6ECF0",
 )
 
 

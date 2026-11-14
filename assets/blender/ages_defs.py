@@ -1,5 +1,5 @@
-"""The 15 technology-age unit models: army, fleet (war ship) and trader (merchant ship) for the
-ancient, medieval, gunpowder, industrial and modern ages.
+"""The 21 technology-age unit models: army, fleet (war ship) and trader (merchant ship) for the
+ancient, medieval, gunpowder, industrial, modern, future and stellar ages (and the `satellite`).
 
 Reading rule: war ships carry `team` sails or a `team` hull stripe; merchants carry plain canvas
 with one `team` stripe, cargo on deck and a `team` flag.
@@ -9,7 +9,7 @@ import math
 from ages_kit import Hull, flag, funnel, horse, lateen, man, mast, sail, smoke
 
 PI = math.pi
-AGES = ["ancient", "medieval", "gunpowder", "industrial", "modern"]
+AGES = ["ancient", "medieval", "gunpowder", "industrial", "modern", "future", "stellar"]
 KINDS = ["army", "fleet", "trader"]
 
 
@@ -490,10 +490,204 @@ def trader_modern(b):
     flag(b, -0.47, 0, 0.3, 0.13, w=0.1, fh=0.06)
 
 
+# ================================================================ future and stellar (row A26)
+# The future age is stealth grey with a glowing rail; the stellar age is a white shell with teal,
+# like the arcology buildings. Things that fly keep something on y = 0 (a lift field, a wash on the
+# water) so the model still stands on the ground or the waterline.
+def _limb(b, p0, p1, w, d, mat):
+    """A box from p0 to p1 (same y), w thick in the x-z plane and d across."""
+    (x0, y, z0), (x1, _, z1) = p0, p1
+    L = math.hypot(x1 - x0, z1 - z0)
+    b.box((x0 + x1) / 2, y, (z0 + z1) / 2 - L / 2, w, d, L, mat, rot=(0, math.atan2(x1 - x0, z1 - z0), 0))
+
+
+def _bell(b, x, y, z, r=0.05, L=0.09, mat="iron"):
+    """An engine bell opening towards -x, with a lit throat."""
+    b.rod((x, y, z), (x - L, y, z), r * 0.5, mat, seg=8, r2=r)
+    b.rod((x - L + 0.004, y, z), (x - L - 0.006, y, z), r * 0.8, "glow", seg=8)
+
+
+def _wash(b, half_len, half_w, mat="wash"):
+    """The flat disturbed patch a hovering ship leaves on the water (keeps y = 0 at the waterline)."""
+    b.loft([(-half_len, half_w * 0.3, half_w * 0.3, 0.0, 0.005), (-half_len * 0.55, half_w, half_w, 0.0, 0.005),
+            (half_len * 0.55, half_w, half_w, 0.0, 0.005), (half_len, half_w * 0.3, half_w * 0.3, 0.0, 0.005)], mat)
+
+
+def _drone(b, x, y, z, s=1.0):
+    b.box(x, y, z, 0.075 * s, 0.075 * s, 0.024 * s, "stealth_dark", rot=(0, 0, PI / 4))
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            b.cyl(x + sx * 0.05 * s, y + sy * 0.05 * s, z + 0.014 * s, 0.03 * s, 0.008 * s, "glow", seg=6)
+    b.box(x, y, z + 0.024 * s, 0.04 * s, 0.04 * s, 0.008 * s, "team")
+
+
+def army_future(b):
+    """A hover tank on its lift field, a rail gun in a faceted turret, a drone swarm above."""
+    for x in (-0.2, 0.18):                                                # the lift field on the ground
+        for y in (-0.16, 0.16):
+            b.cyl(x, y, 0.0, 0.085, 0.006, "glow", seg=8)
+    z = 0.075
+    b.loft([(-0.38, 0.16, 0.12, z + 0.01, z + 0.1), (-0.26, 0.22, 0.16, z, z + 0.13), (0.2, 0.22, 0.16, z, z + 0.13),
+            (0.42, 0.13, 0.05, z + 0.03, z + 0.075)], "stealth_light")
+    for s in (-1, 1):                                                     # the lift pods
+        with b.at(0, s * 0.235):
+            b.loft([(-0.34, 0.03, 0.05, 0.045, 0.125), (0.24, 0.03, 0.05, 0.045, 0.125), (0.35, 0.015, 0.025, 0.07, 0.11)], "stealth")
+        b.box(-0.05, s * 0.235, 0.033, 0.5, 0.04, 0.012, "glow")
+        b.box(-0.06, s * 0.287, 0.07, 0.24, 0.008, 0.035, "team")
+    zt = z + 0.13
+    b.loft([(-0.17, 0.125, 0.09, zt, zt + 0.085), (0.08, 0.125, 0.09, zt, zt + 0.085), (0.2, 0.06, 0.035, zt, zt + 0.06)], "stealth")
+    b.box(-0.045, 0, zt + 0.085, 0.2, 0.15, 0.008, "team")                 # turret roof
+    for s in (-1, 1):                                                     # the rails
+        b.box(0.37, s * 0.02, zt + 0.02, 0.42, 0.016, 0.034, "stealth_dark")
+    b.box(0.36, 0, zt + 0.03, 0.38, 0.026, 0.012, "glow")
+    b.rod((-0.14, 0.07, zt + 0.085), (-0.14, 0.07, zt + 0.19), 0.006, "stealth_dark", seg=3)
+    b.ball(-0.14, 0.07, zt + 0.2, 0.014, "glow", seg=4)
+    for x, y, zz in ((0.24, 0.0, 0.6), (0.0, 0.22, 0.63), (-0.26, 0.05, 0.7), (0.34, 0.2, 0.72), (-0.08, -0.12, 0.67)):
+        _drone(b, x, y, zz, 1.15)
+
+
+def fleet_future(b):
+    """A railgun stealth cruiser: flat facets, a hull that narrows upward, one long rail barrel forward."""
+    h = Hull(b, [(-0.5, 0.085, 0.05, 0.085), (-0.3, 0.12, 0.075, 0.09), (0.15, 0.115, 0.07, 0.09),
+                 (0.38, 0.06, 0.03, 0.09), (0.52, 0.0, 0.004, 0.085)], "stealth", deck="stealth_dark", inset=0.86)
+    h.band(0.0, 0.02, "stealth_dark")
+    h.band(0.04, 0.012, "team", top=True)
+    b.loft([(-0.24, 0.07, 0.04, 0.09, 0.2), (-0.03, 0.07, 0.035, 0.09, 0.235), (0.09, 0.055, 0.02, 0.09, 0.15)], "stealth_light")
+    b.loft([(-0.2, 0.046, 0.046, 0.203, 0.211), (-0.07, 0.042, 0.042, 0.225, 0.233)], "team")     # deckhouse roof
+    b.loft([(-0.012, 0.045, 0.03, 0.17, 0.2), (0.012, 0.042, 0.027, 0.166, 0.196)], "glow")       # bridge windows
+    b.loft([(-0.17, 0.02, 0.008, 0.2, 0.33), (-0.11, 0.02, 0.008, 0.21, 0.33)], "stealth")       # sensor mast
+    b.cyl(-0.38, 0, 0.088, 0.05, 0.005, "team", seg=8)                    # flight deck mark
+    b.box(0.1, 0, 0.09, 0.05, 0.07, 0.012, "stealth_dark")                # missile cells
+    b.loft([(0.15, 0.045, 0.028, 0.09, 0.135), (0.25, 0.045, 0.028, 0.09, 0.135), (0.3, 0.02, 0.012, 0.09, 0.12)], "stealth_light")
+    for s in (-1, 1):                                                     # the rail gun
+        b.box(0.42, s * 0.014, 0.103, 0.3, 0.01, 0.026, "stealth_dark")
+    b.box(0.42, 0, 0.11, 0.28, 0.02, 0.01, "glow")
+
+
+def trader_future(b):
+    """An autonomous hydrofoil freighter: a white hull riding on foils, cargo pods, no bridge."""
+    z = 0.08
+    b.loft([(-0.47, 0.07, 0.085, z, z + 0.07), (-0.3, 0.085, 0.1, z, z + 0.07), (0.25, 0.085, 0.1, z, z + 0.07),
+            (0.42, 0.03, 0.05, z + 0.015, z + 0.075), (0.52, 0.0, 0.004, z + 0.04, z + 0.08)], "hull")
+    b.loft([(-0.472, 0.083, 0.087, z + 0.04, z + 0.06), (-0.3, 0.098, 0.102, z + 0.04, z + 0.06),
+            (0.25, 0.098, 0.102, z + 0.04, z + 0.06)], "team")
+    b.loft([(-0.45, 0.07, 0.07, z + 0.066, z + 0.075), (-0.3, 0.086, 0.086, z + 0.066, z + 0.075),
+            (0.25, 0.086, 0.086, z + 0.066, z + 0.075), (0.4, 0.04, 0.04, z + 0.07, z + 0.08)], "teal_dark")
+    for x in (0.29, -0.33):                                               # foils
+        b.box(x, 0, 0.0, 0.07, 0.34, 0.012, "steel")
+        for s in (-1, 1):
+            b.box(x, s * 0.085, 0.01, 0.04, 0.014, z, "steel")
+    cols = ["teal", "white", "orange", "navy_light"]
+    zc = z + 0.075 + 0.036
+    for i in range(4):                                                    # cargo pods
+        x = -0.3 + i * 0.15
+        for j, y in enumerate((-0.047, 0.047)):
+            c = "team" if (i, j) in ((0, 1), (3, 0)) else cols[(i * 2 + j) % 4]
+            b.rod((x - 0.065, y, zc), (x + 0.065, y, zc), 0.04, c, seg=6)
+    for i in range(3):
+        x = -0.225 + i * 0.15
+        b.rod((x - 0.065, 0, zc + 0.066), (x + 0.065, 0, zc + 0.066), 0.04, "team" if i == 1 else cols[i], seg=6)
+    b.ball(0.36, 0, z + 0.078, 0.028, "glow")                             # the sensor eye
+    b.rod((-0.42, 0, z + 0.07), (-0.42, 0, z + 0.2), 0.008, "steel", seg=3)
+    b.ball(-0.42, 0, z + 0.2, 0.016, "glow", seg=4)
+    flag(b, -0.455, 0, z + 0.07, 0.19, w=0.1, fh=0.06)
+
+
+def army_stellar(b):
+    """A walker mech: two reverse-knee legs, a chunky body, a gun pod on each shoulder."""
+    for s in (-1, 1):
+        y = s * 0.17
+        b.box(0.03, y, 0, 0.22, 0.13, 0.045, "iron")                      # foot
+        _limb(b, (0.01, y, 0.03), (-0.09, y, 0.27), 0.075, 0.085, "hull")  # shin
+        _limb(b, (-0.09, y, 0.27), (0.04, y, 0.47), 0.1, 0.105, "hull")    # thigh
+        b.disc(-0.09, y, 0.27, 0.06, 0.115, "teal_dark", axis="y", seg=6)  # knee
+        b.disc(0.04, s * 0.15, 0.47, 0.065, 0.12, "teal_dark", axis="y", seg=6)
+        b.box(0.0, s * 0.215, 0.56, 0.22, 0.11, 0.12, "hull")             # shoulder pod
+        b.box(0.0, s * 0.215, 0.68, 0.23, 0.12, 0.014, "team")
+        for dy in (-0.025, 0.025):                                        # shoulder guns
+            b.rod((0.1, s * 0.215 + dy, 0.62), (0.36, s * 0.215 + dy, 0.62), 0.016, "iron", seg=5)
+        b.box(0.115, s * 0.215, 0.585, 0.012, 0.09, 0.07, "teal_dark")
+    b.box(0.03, 0, 0.42, 0.14, 0.24, 0.07, "iron")                        # pelvis
+    b.box(0.0, 0, 0.47, 0.3, 0.3, 0.21, "hull")                           # body
+    b.loft([(0.15, 0.11, 0.1, 0.5, 0.66), (0.27, 0.08, 0.06, 0.53, 0.61)], "hull")   # nose
+    b.loft([(0.155, 0.085, 0.07, 0.6, 0.675), (0.262, 0.062, 0.05, 0.575, 0.622)], "glow")   # canopy
+    b.box(-0.03, 0, 0.68, 0.17, 0.13, 0.012, "team")                      # roof patch
+    b.box(-0.15, 0, 0.5, 0.06, 0.2, 0.2, "teal")                          # reactor pack
+    for y in (-0.06, 0.06):
+        b.box(-0.185, y, 0.56, 0.01, 0.05, 0.1, "glow")
+    b.rod((-0.12, 0.1, 0.68), (-0.14, 0.1, 0.86), 0.007, "iron", seg=3)
+    b.ball(-0.14, 0.1, 0.865, 0.016, "glow", seg=4)
+
+
+def fleet_stellar(b):
+    """A starship holding station above the water: a faceted hull, a delta wing, a tail fin, engine bells."""
+    _wash(b, 0.4, 0.13)
+    b.loft([(-0.42, 0.08, 0.055, 0.245, 0.37), (-0.2, 0.105, 0.07, 0.22, 0.39), (0.15, 0.085, 0.05, 0.235, 0.365),
+            (0.38, 0.035, 0.02, 0.265, 0.325), (0.52, 0.0, 0.003, 0.287, 0.297)], "hull")
+    b.loft([(-0.45, 0.3, 0.3, 0.285, 0.302), (-0.3, 0.3, 0.3, 0.285, 0.302), (0.0, 0.085, 0.085, 0.285, 0.302)], "teal")   # delta wing
+    for s in (-1, 1):                                                     # wing-tip fins
+        b.prism([(-0.46, 0.25), (-0.28, 0.27), (-0.36, 0.38), (-0.47, 0.38)], s * 0.3 - 0.008, s * 0.3 + 0.008, "team")
+    b.prism([(-0.43, 0.365), (-0.22, 0.385), (-0.36, 0.56), (-0.47, 0.56)], -0.009, 0.009, "team")   # tail fin
+    b.loft([(-0.33, 0.045, 0.045, 0.375, 0.386), (-0.1, 0.05, 0.05, 0.383, 0.394)], "team")       # dorsal stripe
+    b.loft([(-0.06, 0.045, 0.028, 0.37, 0.44), (0.08, 0.045, 0.024, 0.365, 0.42), (0.16, 0.02, 0.01, 0.36, 0.385)], "hull")
+    b.loft([(0.07, 0.036, 0.022, 0.39, 0.425), (0.13, 0.026, 0.014, 0.378, 0.402)], "glow")       # bridge windows
+    for y in (-0.055, 0.055):
+        _bell(b, -0.42, y, 0.305, r=0.055, L=0.1)
+    for x in (-0.18, 0.14):                                               # lift emitters under the hull
+        b.cyl(x, 0, 0.2, 0.05, 0.03, "glow", seg=6)
+    b.cyl(0.27, 0, 0.335, 0.03, 0.022, "teal_dark", seg=6)                # the gun
+    b.rod((0.28, 0, 0.35), (0.42, 0, 0.36), 0.008, "iron", seg=4)
+    b.box(0.2, 0, 0.255, 0.3, 0.02, 0.02, "teal_dark")                    # keel
+
+
+def trader_stellar(b):
+    """An orbital freighter: a spine through a ring of cargo pods, radiator panels, two engine bells."""
+    _wash(b, 0.34, 0.12)
+    zc = 0.4
+    b.box(-0.02, 0, zc - 0.035, 0.74, 0.07, 0.07, "steel")                # the spine
+    b.loft([(0.3, 0.065, 0.055, zc - 0.065, zc + 0.065), (0.42, 0.055, 0.04, zc - 0.055, zc + 0.055),
+            (0.52, 0.015, 0.01, zc - 0.02, zc + 0.025)], "hull")          # command module
+    b.loft([(0.4, 0.05, 0.04, zc + 0.02, zc + 0.06), (0.47, 0.03, 0.022, zc + 0.008, zc + 0.045)], "glow")
+    rx = 0.02
+    b.hoop(rx, 0, zc, 0.25, 0.2, 0.06, "hull", seg=12, rot=(0, PI / 2, 0))    # the cargo ring
+    b.box(rx, 0, zc - 0.21, 0.03, 0.03, 0.42, "steel")
+    b.box(rx, 0, zc - 0.015, 0.03, 0.42, 0.03, "steel")
+    cols = ["team", "teal", "orange", "white", "teal", "team", "orange", "white"]
+    for k in range(8):                                                    # cargo pods round the ring
+        a = PI / 2 + 2 * PI * k / 8
+        b.box(rx, 0.27 * math.cos(a), zc + 0.27 * math.sin(a) - 0.045, 0.17, 0.09, 0.09, cols[k], rot=(a, 0, 0))
+    b.box(-0.2, 0, zc - 0.005, 0.1, 0.56, 0.01, "solar")                  # radiator panels
+    b.box(-0.2, 0, zc + 0.005, 0.012, 0.56, 0.006, "white")
+    b.box(-0.37, 0, zc - 0.07, 0.11, 0.17, 0.14, "iron")                  # engine block
+    b.box(-0.37, 0, zc + 0.07, 0.09, 0.13, 0.01, "team")
+    for y in (-0.05, 0.05):
+        _bell(b, -0.42, y, zc, r=0.05, L=0.09)
+    for x in (-0.3, 0.3):                                                 # lift emitters
+        b.cyl(x, 0, zc - 0.075, 0.035, 0.04, "glow", seg=6)
+
+
+def satellite(b):
+    """The `satellite` key of `models` (not an age unit): a foil-wrapped body, two solar panels, a dish."""
+    b.cyl(0, 0, 0.0, 0.05, 0.05, "iron", seg=6, r2=0.03)                  # thruster
+    b.box(0, 0, 0.05, 0.2, 0.2, 0.26, "buff")
+    b.box(0, 0, 0.14, 0.212, 0.212, 0.06, "team")
+    b.box(0, 0, 0.31, 0.14, 0.14, 0.012, "team")
+    for s in (-1, 1):                                                     # the solar panels
+        b.rod((0, s * 0.1, 0.18), (0, s * 0.19, 0.18), 0.012, "steel", seg=4)
+        b.box(0, s * 0.35, 0.174, 0.2, 0.32, 0.012, "solar", rot=(0, 0.45, 0))
+        for k in (-1, 0, 1):
+            b.box(0, s * (0.35 + k * 0.105), 0.176, 0.204, 0.012, 0.014, "white", rot=(0, 0.45, 0))
+    b.dish(0.03, 0.0, 0.335, 0.09, tilt=0.55, mat="white", rz=PI / 2)
+    b.rod((-0.06, -0.06, 0.31), (-0.08, -0.08, 0.5), 0.006, "steel", seg=3)
+    b.ball(-0.08, -0.08, 0.5, 0.014, "glow", seg=4)
+
+
 MODELS = {
     ("ancient", "army"): army_ancient, ("ancient", "fleet"): fleet_ancient, ("ancient", "trader"): trader_ancient,
     ("medieval", "army"): army_medieval, ("medieval", "fleet"): fleet_medieval, ("medieval", "trader"): trader_medieval,
     ("gunpowder", "army"): army_gunpowder, ("gunpowder", "fleet"): fleet_gunpowder, ("gunpowder", "trader"): trader_gunpowder,
     ("industrial", "army"): army_industrial, ("industrial", "fleet"): fleet_industrial, ("industrial", "trader"): trader_industrial,
     ("modern", "army"): army_modern, ("modern", "fleet"): fleet_modern, ("modern", "trader"): trader_modern,
+    ("future", "army"): army_future, ("future", "fleet"): fleet_future, ("future", "trader"): trader_future,
+    ("stellar", "army"): army_stellar, ("stellar", "fleet"): fleet_stellar, ("stellar", "trader"): trader_stellar,
 }

@@ -90,3 +90,28 @@ and the shared `trader` fallback to `manifest.json`, keeping everything else, an
   deck cloth, turret roof, helipad, containers) so its owner shows from straight above.
 - Preview a subset, with nothing exported: `PREVIEW_ONLY=1 PREVIEW_AGES=modern PREVIEW_OUT=/tmp/p.png`
   before the blender command (more knobs in the docstring of `build_ages.py`).
+
+## Future and stellar ages (row A26, contract X4 `ages`, `styles.arcology`, `models.satellite`)
+
+12 models, built on their own so no other GLB is touched (also adds their manifest entries, keeping
+everything else, and renders `assets/preview-future.png`):
+
+    blender --background --factory-startup --python assets/blender/build_future.py
+    python3 assets/blender/verify_ages.py       # the six units and the satellite
+    python3 assets/blender/verify_styles.py     # the five arcology buildings
+
+- Units, in `ages_defs.py` (so `build_ages.py` builds them too): `future` is stealth grey with a glowing
+  rail (a hover tank under a drone swarm; a railgun stealth cruiser; an autonomous hydrofoil freighter
+  with cargo pods), `stellar` is a white shell with teal (a walker mech; a starship; an orbital freighter
+  with a ring of cargo pods). Things that fly keep a flat piece on y = 0 (the tank's lift field, the
+  ships' wash on the water), so the origin is still the ground or the waterline.
+- `arcology`, in `styles_arcology.py` (so `build_styles.py` builds it too): white towers that taper, with
+  teal glass bands and a `team` crown, glass domes, sky bridges. The `capital` has the space elevator
+  (a tether from the anchor dome to the top of the box, a `team` climber, the counterweight station);
+  the `temple` is a luminous needle through a standing ring; the `fort` is an eight-sided bunker under a
+  shield dome with four turrets. Keep capital and city near 1,000 triangles (the 60 KB limit).
+- `satellite` (`web/public/models/satellite.glb`, `models.satellite`): `satellite()` in `ages_defs.py`,
+  panels along z in the GLB. `build_models.py` writes a fresh manifest, so run `build_styles.py`,
+  `build_ages.py` and `build_future.py` after it.
+- A quick look, nothing exported: `PREVIEW_ONLY=1 PREVIEW_OUT=/tmp/p.png` before the command;
+  `PREVIEW_PX=40` renders at globe scale.

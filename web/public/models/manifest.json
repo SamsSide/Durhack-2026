@@ -64,6 +64,10 @@
     "trader": {
       "file": "ages/medieval/trader.glb",
       "footprint": 0.45
+    },
+    "satellite": {
+      "file": "satellite.glb",
+      "footprint": 0.3
     }
   },
   "styles": {
@@ -286,6 +290,28 @@
         "file": "highland/fort.glb",
         "footprint": 0.7
       }
+    },
+    "arcology": {
+      "capital": {
+        "file": "arcology/capital.glb",
+        "footprint": 1.0
+      },
+      "city": {
+        "file": "arcology/city.glb",
+        "footprint": 1.0
+      },
+      "town": {
+        "file": "arcology/town.glb",
+        "footprint": 0.9
+      },
+      "temple": {
+        "file": "arcology/temple.glb",
+        "footprint": 0.7
+      },
+      "fort": {
+        "file": "arcology/fort.glb",
+        "footprint": 0.7
+      }
     }
   },
   "ages": {
@@ -356,6 +382,34 @@
       },
       "trader": {
         "file": "ages/modern/trader.glb",
+        "footprint": 0.45
+      }
+    },
+    "future": {
+      "army": {
+        "file": "ages/future/army.glb",
+        "footprint": 0.5
+      },
+      "fleet": {
+        "file": "ages/future/fleet.glb",
+        "footprint": 0.5
+      },
+      "trader": {
+        "file": "ages/future/trader.glb",
+        "footprint": 0.45
+      }
+    },
+    "stellar": {
+      "army": {
+        "file": "ages/stellar/army.glb",
+        "footprint": 0.5
+      },
+      "fleet": {
+        "file": "ages/stellar/fleet.glb",
+        "footprint": 0.5
+      },
+      "trader": {
+        "file": "ages/stellar/trader.glb",
         "footprint": 0.45
       }
     }

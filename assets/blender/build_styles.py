@@ -1,10 +1,10 @@
-"""Build the 50 building-style models (10 styles x 5 kinds), update the manifest, render the preview.
+"""Build the 55 building-style models (11 styles x 5 kinds), update the manifest, render the preview.
 
 Run (from the repo root):
   blender --background --factory-startup --python assets/blender/build_styles.py
 
 Output: web/public/models/<style>/<kind>.glb, the `styles` section of manifest.json (the existing
-`version` and `models` stay as they are), assets/preview-styles.png (all ten styles),
+`version` and `models` stay as they are), assets/preview-styles.png (all eleven styles),
 assets/preview-identity.png (the four nation-identity styles of row A24, larger) and
 assets/preview-identity-40px.png (the same four at globe scale: one model unit = 40 px).
 """
@@ -19,6 +19,7 @@ from mathutils import Euler, Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from styles_defs import STYLES  # noqa: E402
+from styles_arcology import ARCOLOGY_STYLES  # noqa: E402
 from styles_identity import IDENTITY_STYLES  # noqa: E402
 from styles_kit import Builder  # noqa: E402
 
@@ -31,8 +32,9 @@ PREVIEW_IDENTITY = os.path.join(ROOT, "assets", "preview-identity.png")
 PREVIEW_IDENTITY_40 = os.path.join(ROOT, "assets", "preview-identity-40px.png")
 # Sample nation colours for the identity previews only (the GLBs keep the neutral `team`).
 TEAM_SAMPLE = {"soviet_bloc": (0.72, 0.1, 0.08), "western_modern": (0.13, 0.25, 0.62),
-               "egyptian": (0.75, 0.2, 0.12), "highland": (0.16, 0.36, 0.72)}
+               "egyptian": (0.75, 0.2, 0.12), "highland": (0.16, 0.36, 0.72), "arcology": (0.5, 0.13, 0.5)}
 STYLES.update(IDENTITY_STYLES)
+STYLES.update(ARCOLOGY_STYLES)  # the future and stellar ages (row A26); its own sheet is build_future.py
 
 KINDS = ["capital", "city", "town", "temple", "fort"]
 FOOTPRINT = {"capital": 1.0, "city": 1.0, "town": 0.9, "temple": 0.7, "fort": 0.7}
