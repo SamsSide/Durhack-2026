@@ -7,6 +7,7 @@ import { TileGeos } from '../structures/placement';
 import { TownLayer } from './TownLayer';
 import { lodCamera, pipDetail } from '../pip/pipLod';
 import { WORLD_SYNC_S } from '../constants';
+import { onOccupancy } from '../structures/occupancy';
 import type { TechAge } from '@terra/shared';
 
 export function Towns() {
@@ -31,7 +32,8 @@ export function Towns() {
     setGroup(l.group);
     const unsub = useWorld.subscribe((s, prev) => { if (s.version !== prev.version || s.world !== prev.world) stale.current = true; });
     const offPip = pipDetail(l.group); // the news PiP may show the towns while the main view is in orbit
-    return () => { offPip(); unsub(); l.dispose(); layer.current = null; setGroup(null); };
+    const offOcc = onOccupancy(() => { stale.current = true; }); // a landmark moved in or out: clear its squares
+    return () => { offOcc(); offPip(); unsub(); l.dispose(); layer.current = null; setGroup(null); };
   }, [mesh, worldKey]);
 
   // Dev only: window.__townAge(countryId, age) sets a nation's tech age locally, to watch its towns modernise.

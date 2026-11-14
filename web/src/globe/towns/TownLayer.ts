@@ -23,6 +23,7 @@ const BUILD_S = 0.7, DESTROY_S = 0.6, WALL_S = 0.9;
 
 interface Town {
   id: string;
+  tile: number;
   key: string;
   parts: TownParts;
   anim: { type: 'build' | 'restyle' | 'destroy'; t0: number } | null; // restyle: an age step, the ground stays
@@ -198,7 +199,10 @@ export class TownLayer {
       }
       const parts = buildTown(world, s, this.tileGeos.get(s.tile), tier);
       if (!have) {
-        this.towns.set(s.id, { id: s.id, key, parts, anim: initial ? null : { type: 'build', t0: now }, wallT0: null, next: null });
+        // A town still sinking on this tile goes first: the new one rises once it is gone, never inside it.
+        let t0 = now;
+        for (const o of this.towns.values()) if (o.tile === s.tile && o.anim?.type === 'destroy') t0 = Math.max(t0, o.anim.t0 + DESTROY_S);
+        this.towns.set(s.id, { id: s.id, tile: s.tile, key, parts, anim: initial ? null : { type: 'build', t0 }, wallT0: null, next: null });
       } else {
         const wallsNew = parts.tier > have.parts.tier; // the new works rise; a lower tier just swaps
         have.next = null;
