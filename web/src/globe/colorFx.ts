@@ -3,6 +3,9 @@
 import * as THREE from 'three';
 import type { ProvinceMesh } from './mesh/buildProvinceMesh';
 import { setTileColor } from './mesh/colors';
+import { useWorld } from '../state/world';
+import { nationIdentity } from './identity/identity';
+import { applyGrade, gradeOf, OTHERS_SATURATION } from './identity/look';
 
 const FADE_MS = 400;
 const PULSE_MS = 800;
@@ -26,10 +29,12 @@ export class ColorFx {
   private raf = 0;
   private dead = false;
   private c = new THREE.Color();
+  private gradeBuf: Float32Array;
 
   constructor(private mesh: ProvinceMesh, private tileCount: number) {
     this.base = new Float32Array(tileCount * 3);
     this.shown = new Float32Array(tileCount * 3);
+    this.gradeBuf = new Float32Array(tileCount * 3);
   }
 
   private arr(): Float32Array {
@@ -51,6 +56,7 @@ export class ColorFx {
     const list = ids ? Array.from(ids) : Array.from({ length: this.tileCount }, (_, i) => i);
     for (const id of list) this.read(id, this.shown);
     write();
+    this.grade(list);
     const now = performance.now();
     for (const id of list) {
       this.read(id, this.base);
@@ -66,6 +72,27 @@ export class ColorFx {
       }
     }
     this.kick();
+  }
+
+  /**
+   * While a nation is selected (political map only): its land takes its government's grade, warmed by its
+   * mood, and every other nation is mildly desaturated. Runs after the base paint, so it never stacks.
+   */
+  private grade(list: number[]): void {
+    const s = useWorld.getState();
+    const world = s.world;
+    const sel = s.selectedCountryId;
+    if (sel == null || !world || s.mapMode !== 'political' || !world.countries[sel] || world.tiles.length !== this.tileCount) return;
+    const g = gradeOf(nationIdentity(world, sel));
+    for (const id of list) {
+      if (world.tiles[id]!.terrain === 'ocean') continue;
+      this.read(id, this.gradeBuf);
+      const i = id * 3;
+      this.c.setRGB(this.gradeBuf[i]!, this.gradeBuf[i + 1]!, this.gradeBuf[i + 2]!);
+      if (world.owner[id] === sel) applyGrade(this.c, g.exposure, g.saturation, g.tint);
+      else applyGrade(this.c, 1, OTHERS_SATURATION);
+      setTileColor(this.mesh, id, this.c);
+    }
   }
 
   /**

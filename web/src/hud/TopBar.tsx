@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useWorld } from '../state/world';
 import { TokenMeter } from '../ui';
+import { SpeedControl } from './SpeedControl';
 import type { WorldStore } from '../state/world';
 import './hud.css';
 
 export const MODES: WorldStore['mapMode'][] = ['political', 'terrain', 'diplomacy', 'strength'];
 const MODE_LABELS: Record<WorldStore['mapMode'], string> = { political: 'Political', terrain: 'Terrain', diplomacy: 'Diplomacy', strength: 'Strength' };
-const SPEEDS = [1, 2, 4, 8];
 
 function useCompact(): boolean {
   const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 1280px)').matches);
@@ -62,11 +62,9 @@ export function TopBar({ onCreate }: { onCreate: () => void }) {
             <button className={`seg icon ${world.paused ? 'on' : ''}`} title="Pause" aria-label="Pause" onClick={() => send({ type: 'control', action: 'pause', value: !world.paused })}>
               <svg width="10" height="11" viewBox="0 0 10 11"><rect width="3.5" height="11" fill="currentColor" /><rect x="6.5" width="3.5" height="11" fill="currentColor" /></svg>
             </button>
-            {SPEEDS.map((v) => (
-              <button key={v} className={`seg mono ${world.speed === v && !world.paused ? 'on' : ''}`} onClick={() => { send({ type: 'control', action: 'pause', value: false }); send({ type: 'control', action: 'speed', value: v }); }}>{v}x</button>
-            ))}
           </div>
         )}
+        {world && <SpeedControl />}
         {world && (
           <button className="btn onair" title="Terra Nova News" onClick={() => window.dispatchEvent(new CustomEvent('terra:news-broadcast'))}>
             <i className="onair-dot" />On air

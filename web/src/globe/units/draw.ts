@@ -2,7 +2,7 @@
 // loss numbers, smoke puffs and spark dots. Lane b (B5).
 import * as THREE from 'three';
 
-export type IconKind = 'spear' | 'sword' | 'musket' | 'tank' | 'drone' | 'buggy' | 'ship' | 'wagon';
+export type IconKind = 'spear' | 'sword' | 'musket' | 'rifle' | 'tank' | 'drone' | 'buggy' | 'ship' | 'wagon';
 
 export function canvas2d(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const c = document.createElement('canvas');
@@ -74,6 +74,20 @@ export function drawIcon(ctx: CanvasRenderingContext2D, kind: IconKind, cx: numb
       ctx.fillRect(-4, 1.6, 4, 3);
       ctx.lineWidth = 1.6;
       line(ctx, 14, 0, 19, 0);
+      break;
+    case 'rifle':
+      // a bolt rifle with a bayonet, crossed over a small cannon wheel (industrial age)
+      ctx.lineWidth = 2;
+      circle(ctx, -6, 9, 5.5, true);
+      ctx.save();
+      ctx.rotate(-0.5);
+      ctx.fillRect(-9, -1.3, 21, 2.6);
+      poly(ctx, [-16, -1.3, -8, -1.3, -8, 2.4, -16, 5.5]);
+      ctx.fillRect(-5, 1.3, 3, 4);
+      ctx.lineWidth = 1.6;
+      line(ctx, -3, -1.3, -1, -5);
+      poly(ctx, [12, -1.2, 20, 0, 12, 1.2]);
+      ctx.restore();
       break;
     case 'tank':
       ctx.beginPath();

@@ -35,7 +35,19 @@ export function Structures() {
       field.current = f;
       stale.current = true;
       setGroup(f.group);
-      unsub = useWorld.subscribe((s, prev) => { if (s.version !== prev.version) stale.current = true; });
+      // A nation founded mid-run can bring a style that is not loaded yet: on a version bump, if the set of
+      // styles in use grew, fetch the new ones and re-pool every structure.
+      let sig = [...styles].sort().join(',') + (nomadic ? '+n' : '');
+      unsub = useWorld.subscribe((s, prev) => {
+        if (s.version === prev.version) return;
+        stale.current = true;
+        if (!s.world) return;
+        const now = stylesInUse(s.world.countries);
+        const next = [...now.styles].sort().join(',') + (now.nomadic ? '+n' : '');
+        if (next === sig) return;
+        sig = next;
+        void ensureStyles(models, now.styles, now.nomadic).then(() => { if (live) { f?.refreshModels(); stale.current = true; } });
+      });
     });
     return () => { live = false; unsub?.(); f?.dispose(); field.current = null; setGroup(null); };
   }, [mesh, world, models]);
