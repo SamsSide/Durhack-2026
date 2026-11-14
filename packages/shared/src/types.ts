@@ -48,6 +48,7 @@ export interface Country {
   anthemPrompt: string;                                  // for the music model
   buildingStyle?: BuildingStyle;                         // its architecture (X4 styles); missing means 'medieval'
   nomadic?: boolean;                                     // herders and horse lords: camps as yurts
+  techAge?: TechAge;                                     // its weapons and ships; advances over time (missing means 'ancient')
   voiceStyle: string;                                    // for narration voice choice
   alive: boolean;
   population: number;
@@ -58,7 +59,8 @@ export type StructureKind = 'camp' | 'village' | 'town' | 'city' | 'capital'
   | 'farm' | 'port' | 'fort' | 'temple' | 'factory' | 'ruin';
 export interface Structure { id: string; tile: number; owner: number; kind: StructureKind; builtTick: number }
 
-export type UnitKind = 'army' | 'fleet' | 'settler';
+export type UnitKind = 'army' | 'fleet' | 'settler' | 'trader';   // trader: a merchant ship crossing the ocean between trading nations
+export type TechAge = 'ancient' | 'medieval' | 'gunpowder' | 'industrial' | 'modern';
 export interface Unit { id: string; owner: number; kind: UnitKind; tile: number; strength: number; target?: number }
 
 export type Stance = 'war' | 'hostile' | 'neutral' | 'trade' | 'alliance';

@@ -103,6 +103,7 @@ export interface Country {
   anthemPrompt: string;                                  // for the music model
   buildingStyle?: BuildingStyle;                         // its architecture (X4 styles); missing means 'medieval'
   nomadic?: boolean;                                     // herders and horse lords: camps as yurts
+  techAge?: TechAge;                                     // its weapons and ships; advances over time (missing means 'ancient')
   voiceStyle: string;                                    // for narration voice choice
   alive: boolean;
   population: number;
@@ -113,7 +114,8 @@ export type StructureKind = 'camp' | 'village' | 'town' | 'city' | 'capital'
   | 'farm' | 'port' | 'fort' | 'temple' | 'factory' | 'ruin';
 export interface Structure { id: string; tile: number; owner: number; kind: StructureKind; builtTick: number }
 
-export type UnitKind = 'army' | 'fleet' | 'settler';
+export type UnitKind = 'army' | 'fleet' | 'settler' | 'trader';   // trader: a merchant ship crossing the ocean between trading nations
+export type TechAge = 'ancient' | 'medieval' | 'gunpowder' | 'industrial' | 'modern';
 export interface Unit { id: string; owner: number; kind: UnitKind; tile: number; strength: number; target?: number }
 
 export type Stance = 'war' | 'hostile' | 'neutral' | 'trade' | 'alliance';
@@ -306,6 +308,15 @@ export function flagSvg(spec: FlagSpec, width?: number, height?: number): string
   }
 }
 ```
+
+  **Technology ages (owner decision, 14 Nov):** the manifest also has
+  `"ages": { "<age>": { "army": {...}, "fleet": {...}, "trader": {...} } }` for the five ages:
+  ancient (spearmen and archers; a galley; a trade galley), medieval (knights and crossbows; a
+  longship or cog; a merchant cog), gunpowder (musketeers and a cannon; a galleon; a merchant
+  galleon), industrial (riflemen and artillery; an ironclad; a steamer), modern (a tank; a
+  destroyer; a container ship). Lane b draws `ages[countries[unit.owner].techAge][unit.kind]`, then
+  `models[kind]`, then the cone. A nation's age advances during the run (a `country_updated` with
+  `techAge` and a chronicle line), so every unit it owns changes look at once.
 
   **Building styles (owner decision #91):** the manifest also has
   `"styles": { "<style>": { "<kind>": { "file": "<style>/<kind>.glb", "footprint": n } } }` for six
