@@ -8,6 +8,7 @@ import type { ControlMessage, NewWorldOptions, RunnerListener, WorldRunner } fro
 import { listReplayFiles, loadReplay, type ReplayFile } from './replays';
 import { Clock, TickLoop, clampSpeed, type ClockState } from './clock';
 import { anyBigMoment } from './bigMoments';
+import type { Decree, DecreeOutcome, DecreeRunner } from './decrees';
 
 const AGENTS_HEARTBEAT_MS = 1000;
 
@@ -188,6 +189,11 @@ export class RunnerHub implements WorldRunner {
   setPaused(p: boolean) { this.current.setPaused(p); }
   clockState() { return this.current.clockState?.(); }
   control(msg: ControlMessage) { this.current.control(msg); }
+  /** A spoken decree, already interpreted: only the live world takes it (a replay ignores decrees). */
+  applyDecree(decree: Decree): DecreeOutcome | null {
+    const live = this.live as WorldRunner & Partial<DecreeRunner>;
+    return this.current === this.live && live.applyDecree ? live.applyDecree(decree) : null;
+  }
   belief(id: number) { return this.current.belief(id); }
   /** Row A31: only the live engine has rulers; a replay never calls one. */
   prepareRuler(id: number): Promise<boolean> {
