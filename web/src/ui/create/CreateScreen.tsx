@@ -1,12 +1,24 @@
 // C1: the Create panel. App.tsx (lane b) mounts it over a scrim and closes it when world.id changes.
 import { useEffect, useRef, useState } from 'react';
-import type { FormEvent, KeyboardEvent } from 'react';
+import type { CSSProperties, FormEvent, KeyboardEvent } from 'react';
 import { useWorld } from '../../state/world';
 import './create.css';
 
 interface Replay { id: string; name: string; events: number }
 
-const ERAS = ['Stone age', 'Bronze age', 'Classical', 'Medieval', 'Age of sail', 'Industrial', 'Post-apocalyptic', 'Far future'];
+const ERAS = ['Stone age', 'Bronze age', 'Classical', 'Medieval', 'Age of sail', 'Industrial', 'Clockwork age', 'Ice age', 'Post-apocalyptic', 'Far future'];
+const MIN_NATIONS = 3;
+const MAX_NATIONS = 10;
+
+const PRESETS: { label: string; era: string; prompt: string }[] = [
+  { label: 'Post-apocalyptic', era: 'Post-apocalyptic', prompt: 'A drowned world where salt kingdoms trade over the old coastlines' },
+  { label: 'Bronze age', era: 'Bronze age', prompt: 'River valleys of walled cities, bronze-armed kings and rival temple priesthoods' },
+  { label: 'Floating archipelago', era: 'Far future', prompt: 'Sky islands tethered by rope bridges, each ruled by a guild of cloud-sailors' },
+  { label: 'Ice world', era: 'Ice age', prompt: 'A frozen planet where fur clans and ice-engineers fight over the last warm springs' },
+  { label: 'Desert empires', era: 'Classical', prompt: 'Sunbaked empires of caravan lords who war over wells, salt roads and old ruins' },
+  { label: 'Clockwork age', era: 'Industrial', prompt: 'Brass-and-steam republics whose automaton armies answer to rival inventor-queens' },
+  { label: 'Jungle city-states', era: 'Medieval', prompt: 'Vine-choked city-states of stepped pyramids, river traders and feuding sun cults' },
+];
 const WAIT_MS = 30000;
 
 async function postJson(url: string, body?: object): Promise<{ ok: boolean; error?: string }> {
@@ -30,7 +42,9 @@ async function postJson(url: string, body?: object): Promise<{ ok: boolean; erro
 
 export function CreateScreen() {
   const connected = useWorld((s) => s.connected);
+  const mode = useWorld((s) => s.budget?.mode);
   const [prompt, setPrompt] = useState('');
+  const [preset, setPreset] = useState<string | null>(null);
   const [nations, setNations] = useState(6);
   const [era, setEra] = useState('');
   const [seaLevel, setSeaLevel] = useState(0.55);
@@ -80,66 +94,104 @@ export function CreateScreen() {
     void run(() => postJson('/api/world', body));
   };
 
+  const pick = (p: (typeof PRESETS)[number]) => {
+    setPreset(p.label);
+    setPrompt(p.prompt);
+    setEra(p.era);
+  };
+  const step = (d: number) => setNations((n) => Math.min(MAX_NATIONS, Math.max(MIN_NATIONS, n + d)));
+
   const onSubmit = (e: FormEvent) => { e.preventDefault(); submit(); };
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); }
   };
+  const pct = (v: number) => `${Math.round(v * 100)}%`;
+  const fill = (v: number, min: number, max: number) => ({ '--tn-fill': `${((v - min) / (max - min)) * 100}%` }) as CSSProperties;
+  const modeNote = mode === 'mock' ? 'Mock mode: no API calls' : mode === 'live' ? 'Live: Gemini' : '';
 
   return (
     <form className="panel tn-create" onSubmit={onSubmit} aria-busy={busy}>
-      <h2 className="tn-create-title">Terra Nova</h2>
-      <p className="tn-create-sub">Describe a world. Its nations will do the rest.</p>
+      <header className="tn-create-head">
+        <span className="tn-cap tn-create-kicker">A new world</span>
+        <h2 className="tn-create-title">Found a World</h2>
+        <p className="tn-create-sub">Describe it in a line. The nations will write the rest.</p>
+      </header>
 
       <fieldset className="tn-create-set" disabled={busy}>
-        <textarea
-          className="tn-create-prompt"
-          rows={3}
-          autoFocus
-          value={prompt}
-          placeholder="a drowned post-apocalyptic world"
-          aria-label="Describe your world"
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={onKey}
-        />
+        <div className="tn-create-field">
+          <label className="tn-cap" htmlFor="tn-create-prompt">Your world</label>
+          <textarea
+            id="tn-create-prompt"
+            className="tn-create-prompt"
+            rows={3}
+            autoFocus
+            value={prompt}
+            placeholder="A drowned post-apocalyptic world"
+            onChange={(e) => { setPrompt(e.target.value); setPreset(null); }}
+            onKeyDown={onKey}
+          />
+        </div>
 
-        <details className="tn-create-more">
-          <summary>More options</summary>
-          <div className="tn-create-opts">
-            <label className="tn-create-row">
-              <span className="tn-create-label">Nations <b>{nations}</b></span>
-              <input type="range" min={3} max={10} step={1} value={nations} onChange={(e) => setNations(Number(e.target.value))} />
-            </label>
-            <label className="tn-create-row">
-              <span className="tn-create-label">Era</span>
-              <select value={era} onChange={(e) => setEra(e.target.value)}>
-                <option value="">Let the world decide</option>
-                {ERAS.map((x) => <option key={x} value={x}>{x}</option>)}
-              </select>
-            </label>
-            <label className="tn-create-row">
-              <span className="tn-create-label">Sea level <b>{seaLevel.toFixed(2)}</b></span>
-              <input type="range" min={0.3} max={0.8} step={0.05} value={seaLevel} onChange={(e) => setSeaLevel(Number(e.target.value))} />
-              <span className="tn-create-ends"><span>Dry</span><span>Drowned</span></span>
-            </label>
-            <label className="tn-create-row">
-              <span className="tn-create-label">Aggression <b>{aggression.toFixed(2)}</b></span>
-              <input type="range" min={0} max={1} step={0.05} value={aggression} onChange={(e) => setAggression(Number(e.target.value))} />
-              <span className="tn-create-ends"><span>Peaceful</span><span>Warlike</span></span>
-            </label>
+        <div className="tn-create-field">
+          <span className="tn-cap">Or start from</span>
+          <div className="tn-create-chips">
+            {PRESETS.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                className={`chip tn-create-chip${preset === p.label ? ' active' : ''}`}
+                aria-pressed={preset === p.label}
+                onClick={() => pick(p)}
+              >{p.label}</button>
+            ))}
           </div>
-        </details>
+        </div>
 
-        <button type="submit" className="btn tn-create-go" disabled={busy || !prompt.trim()}>Create</button>
+        <div className="tn-create-grid">
+          <div className="tn-create-field">
+            <span className="tn-cap">Nations</span>
+            <div className="tn-create-stepper">
+              <button type="button" className="tn-create-stbtn" aria-label="Fewer nations" disabled={nations <= MIN_NATIONS} onClick={() => step(-1)}>-</button>
+              <span className="tn-create-stval" aria-live="polite">{nations}</span>
+              <button type="button" className="tn-create-stbtn" aria-label="More nations" disabled={nations >= MAX_NATIONS} onClick={() => step(1)}>+</button>
+              <span className="tn-create-pips" aria-hidden="true">
+                {Array.from({ length: MAX_NATIONS - 2 }, (_, i) => (
+                  <i key={i} className={i < nations - 2 ? 'on' : ''} />
+                ))}
+              </span>
+            </div>
+            <span className="tn-create-hint">{MIN_NATIONS} to {MAX_NATIONS}</span>
+          </div>
+          <div className="tn-create-field">
+            <label className="tn-cap" htmlFor="tn-create-era">Era</label>
+            <select id="tn-create-era" className="tn-create-select" value={era} onChange={(e) => setEra(e.target.value)}>
+              <option value="">Let the world decide</option>
+              {ERAS.map((x) => <option key={x} value={x}>{x}</option>)}
+            </select>
+            <span className="tn-create-hint">Sets the starting technology and names.</span>
+          </div>
+          <div className="tn-create-field">
+            <label className="tn-cap" htmlFor="tn-create-sea">Sea level <b>{pct(seaLevel)}</b></label>
+            <input id="tn-create-sea" className="tn-create-range" style={fill(seaLevel, 0.3, 0.8)} type="range" min={0.3} max={0.8} step={0.05} value={seaLevel} onChange={(e) => setSeaLevel(Number(e.target.value))} />
+            <span className="tn-create-ends"><span>Dry continents</span><span>Drowned</span></span>
+          </div>
+          <div className="tn-create-field">
+            <label className="tn-cap" htmlFor="tn-create-agg">Aggression <b>{pct(aggression)}</b></label>
+            <input id="tn-create-agg" className="tn-create-range" style={fill(aggression, 0, 1)} type="range" min={0} max={1} step={0.05} value={aggression} onChange={(e) => setAggression(Number(e.target.value))} />
+            <span className="tn-create-ends"><span>Peaceful</span><span>Warlike</span></span>
+          </div>
+        </div>
       </fieldset>
 
-      {busy && (
-        <div className="tn-create-wait" role="status">
-          <span>Composing your world…</span>
-          <span className="tn-create-pulse" />
-        </div>
-      )}
       {!busy && error && <p className="tn-create-error" role="alert">{error}</p>}
-      {!connected && !busy && <p className="tn-create-quiet">Connecting to the server…</p>}
+      {!connected && !busy && !error && <p className="tn-create-quiet">Connecting to the server...</p>}
+
+      <div className="tn-create-foot">
+        <span className="tn-create-mode">{modeNote}</span>
+        <button type="submit" className="btn primary tn-create-go" disabled={busy || !prompt.trim()}>
+          {busy ? 'Founding the world...' : 'Create world'}
+        </button>
+      </div>
 
       {replays.length > 0 && (
         <section className="tn-create-saved">
