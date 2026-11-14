@@ -6,6 +6,7 @@ import { useProvinceMesh } from '../mesh/context';
 import { useEventStream } from '../status/useEventStream';
 import { UnitLayer } from './UnitLayer';
 import { armyPicker } from './pick';
+import { onPipPass } from '../pip/pipLod';
 
 export function Units() {
   const mesh = useProvinceMesh();
@@ -25,6 +26,8 @@ export function Units() {
     if (import.meta.env.DEV) (window as unknown as { __units?: UnitLayer }).__units = l; // dev only: lets a browser review read the marches
     l.sync();
     armyPicker.current = (ndc, camera, w, h) => l.pickArmy(camera, ndc, w, h);
+    // the news picture-in-picture films armies as 3D models even while the main camera is in orbit
+    const offPip = onPipPass((on, cam) => (on ? l.pipBegin(cam, performance.now()) : l.pipEnd()));
     let seen = useWorld.getState().version;
     const unsub = useWorld.subscribe((s) => {
       if (s.version === seen) return;
@@ -34,6 +37,7 @@ export function Units() {
     return () => {
       unsub();
       armyPicker.current = null;
+      offPip();
       if (ref.current === l) ref.current = null;
       setLayer((cur) => (cur === l ? null : cur));
       l.dispose();
