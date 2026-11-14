@@ -68,7 +68,8 @@ export function resetVoiceMeter(): void { charsUsed = 0; }
 export const voiceLive = () => currentMode() === 'live' && !!process.env.ELEVENLABS_API_KEY;
 
 /** Speak `text` in voice `voiceId`; throws VoiceUnavailable on mock mode, no key, cap or any API failure. */
-export async function speak(text: string, voiceId: string): Promise<Buffer> {
+export interface SpeakOptions { model?: string; settings?: { stability: number; similarity_boost: number; style: number } }
+export async function speak(text: string, voiceId: string, opts: SpeakOptions = {}): Promise<Buffer> {
   if (currentMode() !== 'live') throw new VoiceUnavailable('LLM_MODE is mock');
   const key = process.env.ELEVENLABS_API_KEY;
   if (!key) throw new VoiceUnavailable('ELEVENLABS_API_KEY is not set');
@@ -79,7 +80,7 @@ export async function speak(text: string, voiceId: string): Promise<Buffer> {
     const res = await fetch(`${API}/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
       method: 'POST',
       headers: { 'xi-api-key': key, 'content-type': 'application/json', accept: 'audio/mpeg' },
-      body: JSON.stringify({ text, model_id: model(), voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.25 } }),
+      body: JSON.stringify({ text, model_id: opts.model ?? model(), voice_settings: opts.settings ?? { stability: 0.5, similarity_boost: 0.75, style: 0.25 } }),
       signal: AbortSignal.timeout(60_000),
     });
     if (!res.ok) throw new Error(`${res.status} ${(await res.text()).slice(0, 160)}`);

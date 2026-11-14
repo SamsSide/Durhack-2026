@@ -9,6 +9,7 @@ import { currentMode } from '../llm';
 import { getLore, getRegionLore } from './loreAi';
 import { chooseVoice, speak } from './eleven';
 import { imageLive, paintFlag } from './paintedFlag';
+import { ensureChant } from './chant';
 
 const CACHE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.cache');
 const sha = (s: string) => crypto.createHash('sha256').update(s).digest('hex');
@@ -68,12 +69,22 @@ export function storyRoutes(runner: WorldRunner): Router {
     }
   });
 
-  for (const kind of ['anthem', 'chant'] as const) {
-    r.get(`/country/:id/${kind}`, (req, res) => {
-      if (countryId(req.params.id) === null) return void res.status(404).json({ error: 'no such country' });
-      res.type('audio/mpeg').sendFile(path.join(SAMPLES, `${kind}.mp3`));
-    });
-  }
+  r.get('/country/:id/anthem', (req, res) => {
+    if (countryId(req.params.id) === null) return void res.status(404).json({ error: 'no such country' });
+    res.type('audio/mpeg').sendFile(path.join(SAMPLES, 'anthem.mp3'));
+  });
+
+  r.get('/country/:id/chant', async (req, res) => {
+    const id = countryId(req.params.id);
+    const w = runner.getWorld();
+    if (id === null || !w) return void res.status(404).json({ error: 'no such country' });
+    if (currentMode() !== 'live') return void res.type('audio/mpeg').sendFile(path.join(SAMPLES, 'chant.mp3'));
+    try {
+      res.type('audio/mpeg').sendFile(await ensureChant(w, id));
+    } catch {
+      res.status(503).json({ error: 'voice unavailable' });
+    }
+  });
 
   r.get('/country/:id/flag', async (req, res) => {
     const id = countryId(req.params.id);

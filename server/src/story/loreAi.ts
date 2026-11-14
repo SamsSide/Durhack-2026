@@ -2,6 +2,7 @@
 import { relationOf, type World } from '@terra/shared';
 import { llmJson, loreModel, LlmUnavailable, type Schema } from '../llm';
 import type { WorldRunner } from '../runner';
+import { warmChants } from './chant';
 import {
   chronicleOf, countryLore, regionHistory, regionLore,
   type CountryLore, type RegionLore, type RelationLore,
@@ -96,7 +97,19 @@ let runner: WorldRunner | null = null;
 /** Index.ts hands over the runner; a new world clears the cache. */
 export function bindLore(r: WorldRunner): void {
   runner = r;
-  r.subscribe({ snapshot: () => resetLoreCache() });
+  let warmedWorld = '';
+  r.subscribe({
+    snapshot: (w) => {
+      resetLoreCache();
+      // Once per new world, a few seconds after it starts: make the chants of the likeliest first fighters.
+      if (w.id === warmedWorld) return;
+      warmedWorld = w.id;
+      setTimeout(() => {
+        const now = runner?.getWorld();
+        if (now && now.id === w.id) void warmChants(now).catch(() => undefined);
+      }, 5000).unref?.();
+    },
+  });
 }
 
 async function cached<T extends { asOfTick?: number }>(
