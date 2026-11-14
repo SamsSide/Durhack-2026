@@ -19,8 +19,8 @@ export function WealthLegend({ hidden = false }: { hidden?: boolean }) {
     if (c.treasury > rich!.treasury) rich = c;
   }
   return (
-    <div className="hud legend-box legend-wealth panel">
-      <div className="cap">Wealth</div>
+    <div className="hud legend-box legend-wealth tn-lacquer tn-frame">
+      <div className="cap tn-cartouche">Wealth</div>
       <div className="muted">Treasury of each nation, log scale</div>
       {poor && rich ? (
         <>

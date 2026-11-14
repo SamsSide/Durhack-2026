@@ -36,7 +36,7 @@ export function Calendar() {
   return (
     <div className={`tb-year${date ? ' dated' : ''}`} title={date ? `${date}, year ${year}` : `Year ${year}`}>
       <span className="cap">Year</span>
-      <span className="num">{year}</span>
+      <span className="num tn-gilt-text">{year}</span>
       {date && <span className={`tb-date${withDay ? ' day' : ''}`} aria-label={date}>{date}</span>}
       {date && <i className="tb-yearbar" style={{ width: `${yearPart * 100}%` }} />}
     </div>

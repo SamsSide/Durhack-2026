@@ -11,8 +11,8 @@ export function PoliticsLegend({ hidden = false }: { hidden?: boolean }) {
   const mapMode = useWorld((s) => s.mapMode);
   if (hidden || !world || mapMode !== 'politics') return null;
   return (
-    <div className="hud legend-box legend-politics panel">
-      <div className="cap">Politics</div>
+    <div className="hud legend-box legend-politics tn-lacquer tn-frame">
+      <div className="cap tn-cartouche">Politics</div>
       <div className="muted">Where each nation stands; strong colour means radical</div>
       <div className="lg-ramp" style={{ background: `linear-gradient(90deg, ${POLITICS_LEFT}, ${POLITICS_MID} 50%, ${POLITICS_RIGHT})` }} />
       <div className="lg-ends"><span>{movementOf(-100).short}</span><span>{movementOf(0).short}</span><span>{movementOf(100).short}</span></div>

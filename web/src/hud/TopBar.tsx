@@ -30,10 +30,10 @@ export function TopBar({ onCreate }: { onCreate: () => void }) {
   const conn = connected ? 'live' : world ? 'reconnecting' : 'offline';
   const connLabel = { live: 'Live', reconnecting: 'Reconnecting', offline: 'Offline' }[conn];
   return (
-    <div className={`topbar${compact ? ' compact' : ''}`}>
+    <div className={`topbar tn-lacquer tn-lacquer--bar-top${compact ? ' compact' : ''}`}>
       <div className="tb-group tb-left">
-        <span className="wordmark">Terra Nova</span>
-        <span className="vsep" />
+        <span className="wordmark tn-gilt-text">Terra Nova</span>
+        <span className="tn-sep" />
         {world && (
           <>
             <div className="tb-world">
@@ -43,18 +43,18 @@ export function TopBar({ onCreate }: { onCreate: () => void }) {
             <Calendar />
           </>
         )}
-        <span className={`conn conn-${conn}`}><i /><span className="conn-word">{connLabel}</span></span>
+        <span className={`conn conn-${conn}`}><i className="tn-roundel tn-roundel--dot" /><span className="conn-word">{connLabel}</span></span>
       </div>
-      <div className="tb-group">
+      <div className="tb-group tb-right">
         {world && <PreparePill />}
         {world && <SpeedControl />}
         {world && (
-          <button className="btn onair" title="Terra Nova News" onClick={() => window.dispatchEvent(new CustomEvent('terra:news-broadcast'))}>
-            <i className="onair-dot" />On air
+          <button className="tn-button tn-button--lacquer onair" title="Terra Nova News" onClick={() => window.dispatchEvent(new CustomEvent('terra:news-broadcast'))}>
+            <i className="onair-dot tn-roundel tn-roundel--dot" />On air
           </button>
         )}
         <span className="meter-hit" role="button" tabIndex={0} title="What this world cost" onClick={openClosing} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openClosing(); }}><TokenMeter /></span>
-        <button className="btn primary-dark" onClick={onCreate}>New world</button>
+        <button className="tn-button tn-button--gilt tb-new" onClick={onCreate}>New world</button>
       </div>
     </div>
   );

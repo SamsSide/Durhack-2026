@@ -195,7 +195,7 @@ export function Minimap({ hidden = false }: { hidden?: boolean }) {
   return (
     <>
     <MapModeStrip />
-    <div className="hud minimap" title="Click or drag to turn the globe">
+    <div className="hud minimap tn-lacquer tn-frame tn-frame--slim" title="Click or drag to turn the globe">
       <canvas ref={mapRef} width={W} height={H} />
       <canvas
         ref={viewRef}
@@ -215,14 +215,14 @@ function MapModeStrip() {
   const mapMode = useWorld((s) => s.mapMode);
   const setMapMode = useWorld((s) => s.setMapMode);
   return (
-    <div className="hud mm-modes" role="toolbar" aria-label="Map mode">
+    <div className="hud mm-modes tn-lacquer tn-frame tn-frame--slim" role="toolbar" aria-label="Map mode">
       {MODES.map((m, i) => {
         const tip = `Map mode: ${MAP_MODE_LABELS[m]}`;
         return (
           <button
             key={m}
             type="button"
-            className={`mm-mode${mapMode === m ? ' on' : ''}`}
+            className={`mm-mode tn-seg${mapMode === m ? ' on' : ''}`}
             aria-label={`${tip} (key ${i + 1})`}
             aria-pressed={mapMode === m}
             data-tip={tip}

@@ -131,7 +131,7 @@ export function SpeedControl() {
 
   return (
     <div className={`speedctl${paused ? ' paused' : ''}`}>
-      <button className={`speed-pause${paused ? ' on' : ''}`} aria-pressed={paused} aria-label={paused ? 'Resume' : 'Pause'} title={paused ? 'Resume' : 'Pause'} onClick={togglePause}>
+      <button className={`speed-pause tn-button tn-button--lacquer tn-button--round${paused ? ' on' : ''}`} aria-pressed={paused} aria-label={paused ? 'Resume' : 'Pause'} title={paused ? 'Resume' : 'Pause'} onClick={togglePause}>
         {paused
           ? <svg width="11" height="12" viewBox="0 0 11 12" aria-hidden="true"><path d="M1 0.5 L10.5 6 L1 11.5 Z" fill="currentColor" /></svg>
           : <svg width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><rect width="3.5" height="12" fill="currentColor" /><rect x="6.5" width="3.5" height="12" fill="currentColor" /></svg>}
@@ -156,8 +156,8 @@ export function SpeedControl() {
         <b>{readout.slice(0, cut)}</b>
         <small>{paused ? 'paused' : readout.slice(cut + 1)}</small>
       </span>
-      <div className="segs">
-        <button className={`seg${auto ? ' on' : ''}`} aria-pressed={auto} title="Auto pacing: the director slows the world for big moments" onClick={toggleAuto}>Auto</button>
+      <div className="segs tn-well">
+        <button className={`seg tn-seg${auto ? ' on' : ''}`} aria-pressed={auto} title="Auto pacing: the director slows the world for big moments" onClick={toggleAuto}>Auto</button>
       </div>
     </div>
   );

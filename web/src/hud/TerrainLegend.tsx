@@ -18,8 +18,8 @@ export function TerrainLegend({ hidden = false }: { hidden?: boolean }) {
   const mapMode = useWorld((s) => s.mapMode);
   if (hidden || !world || mapMode !== 'terrain') return null;
   return (
-    <div className="hud legend-box legend-terrain panel">
-      <div className="cap">Terrain</div>
+    <div className="hud legend-box legend-terrain tn-lacquer tn-frame">
+      <div className="cap tn-cartouche">Terrain</div>
       <div className="muted">Defence, army supply and yearly attrition</div>
       {ROWS.map(([t, colour]) => (
         <div className="lg-row" key={t}>
