@@ -9,6 +9,7 @@ import '../economy/economy.css';
 import { Council } from './Council';
 import { RegionView } from './RegionView';
 import { useLore } from './useLore';
+import { EconomyTab, PoliticsBlock, StatusChips, useMarketPlan } from './Economy';
 import { CloseIcon, Lines, useCardClass, useShort } from './shared';
 import './card.css';
 
@@ -53,9 +54,9 @@ function Flag({ countryId, spec }: { countryId: number; spec: Parameters<typeof 
 const fmt = (n: number) => Math.round(n).toLocaleString('en-GB');
 const short = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e4 ? `${(n / 1e3).toFixed(1)}K` : fmt(n));
 
-type Tab = 'culture' | 'politics' | 'history' | 'relations';
+type Tab = 'culture' | 'economy' | 'politics' | 'history' | 'relations';
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'culture', label: 'Culture' }, { id: 'politics', label: 'Politics' },
+  { id: 'culture', label: 'Culture' }, { id: 'economy', label: 'Economy' }, { id: 'politics', label: 'Politics' },
   { id: 'history', label: 'History' }, { id: 'relations', label: 'Relations' },
 ];
 
@@ -94,6 +95,7 @@ function Nation({ countryId }: { countryId: number }) {
   const agent = useWorld((st) => st.agents.find((a) => a.countryId === countryId));
   const economy = useEconomy();
 
+  const plan = useMarketPlan(world ?? null, true);
   const country = world?.countries[countryId];
   if (!world || !country) return null;
   const silenced = country.alive && agent?.link === 'cut';
@@ -173,6 +175,7 @@ function Nation({ countryId }: { countryId: number }) {
           <div><span className="tn-cap">Population</span><span className="tn-v">{short(country.population)}</span></div>
           <div><span className="tn-cap">Treasury</span><span className="tn-v">{fmt(country.treasury)}</span></div>
         </div>
+        <StatusChips world={world} countryId={countryId} plan={plan} />
         {treasury && (
           <div className="tn-treasury">
             {treasury.url
@@ -212,7 +215,13 @@ function Nation({ countryId }: { countryId: number }) {
               {text(lore?.culture, true)}
             </>
           )}
-          {tab === 'politics' && text(lore?.politics)}
+          {tab === 'economy' && <EconomyTab world={world} countryId={countryId} plan={plan} />}
+          {tab === 'politics' && (
+            <>
+              <PoliticsBlock world={world} countryId={countryId} />
+              {text(lore?.politics, true)}
+            </>
+          )}
           {tab === 'history' && text(lore?.history)}
           {tab === 'relations' && (
             relations.length === 0 ? <p className="tn-muted">No other nations yet.</p> : (

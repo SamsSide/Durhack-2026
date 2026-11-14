@@ -193,3 +193,39 @@
 .tn-short .tn-cm-n, .tn-short .tn-cm-vac { font-size: 15px; }
 .tn-short .tn-cm-name { line-height: 17px; }
 .tn-short .tn-cm-yrs { display: none; }
+
+/* Status chips (C13): one compact line under the facts row */
+.tn-status { display: flex; flex-wrap: wrap; gap: 4px 5px; padding: 6px 0 2px; }
+.tn-st {
+  font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  line-height: 15px; padding: 0 6px; border-radius: var(--radius-pill); border: 1px solid transparent; white-space: nowrap; cursor: default;
+}
+.tn-st-peace { color: var(--link-up); border-color: var(--link-up); }
+.tn-st-watch { color: var(--color-ink); border-color: var(--color-accent); }
+.tn-st-mob { color: var(--color-ink); background: var(--color-accent); border-color: var(--color-accent); }
+.tn-st-total { color: var(--color-parchment-light); background: var(--color-danger); border-color: var(--color-danger); }
+.tn-st-dev, .tn-st-short { color: var(--color-rubric); border-color: var(--color-rubric); }
+
+/* Economy tab and politics block */
+.tn-eco h3 { margin-top: 2px; }
+.tn-goods { list-style: none; margin: 0 0 8px; padding: 0; }
+.tn-goods li { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; line-height: 20px; border-bottom: 1px dotted var(--color-ink-faint); }
+.tn-good-p { font-family: var(--font-mono); font-size: 13px; color: var(--color-ink-muted); display: inline-flex; align-items: center; gap: 4px; }
+.tn-bad { color: var(--color-rubric); }
+.tn-arrow { display: inline-flex; line-height: 0; }
+.tn-up { color: var(--color-danger); }
+.tn-down { color: var(--link-up); }
+.tn-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.tn-market { margin: 4px 0 8px; font-style: italic; font-size: 14.5px; line-height: 19px; color: var(--color-ink-muted); }
+.tn-meter { display: flex; align-items: center; gap: 8px; }
+.tn-meter-bar { flex: 1; height: 4px; background: var(--color-ink-faint); border-radius: var(--radius-1); overflow: hidden; }
+.tn-meter-bar > div { height: 100%; background: var(--color-ink-muted); transition: width 250ms ease; }
+.tn-meter-bar > div.tn-warn { background: var(--color-rubric); }
+.tn-meter-v { font-family: var(--font-mono); font-size: 13px; min-width: 32px; text-align: right; }
+.tn-pol { margin-bottom: 8px; }
+.tn-pol-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.tn-pol-creed { font-style: italic; font-size: 14.5px; line-height: 19px; color: var(--color-ink-muted); margin: 1px 0 6px; }
+
+/* Five tabs at 380 px */
+.tn-tab { letter-spacing: 0.04em; padding: 4px 7px 5px; }
+.tn-tabs { justify-content: space-between; }
