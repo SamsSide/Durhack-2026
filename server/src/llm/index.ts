@@ -23,6 +23,8 @@ export interface LlmJsonOptions {
   maxOutputTokens: number;
   /** For logs and the meter, e.g. 'lore' or 'ruler'. */
   purpose: string;
+  /** Optional inline images (base64, no data: prefix) sent with the prompt (multimodal input). */
+  images?: { data: string; mimeType: string }[];
 }
 
 export interface Budget {
@@ -143,7 +145,9 @@ export async function llmJson<T>(opts: LlmJsonOptions): Promise<T> {
   try {
     const res = await client.models.generateContent({
       model: opts.model,
-      contents: opts.prompt,
+      contents: opts.images?.length
+        ? [{ role: 'user', parts: [...opts.images.map((i) => ({ inlineData: { data: i.data, mimeType: i.mimeType } })), { text: opts.prompt }] }]
+        : opts.prompt,
       config: {
         systemInstruction: opts.system,
         responseMimeType: 'application/json',
