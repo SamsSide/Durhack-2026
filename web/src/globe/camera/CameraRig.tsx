@@ -31,32 +31,9 @@ const isTyping = (t: EventTarget | null): boolean => {
 };
 const wrapPi = (a: number): number => a - Math.round(a / (2 * Math.PI)) * 2 * Math.PI;
 
-// Pixels to shift the view sideways so the selected nation sits in the free space between the
-// folded network tab (left) and the nation card (right). 0 with no selection or on narrow screens.
-function readPx(name: string, fallback: number): number {
-  try {
-    const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
-    return Number.isFinite(v) && v > 0 ? v : fallback;
-  } catch {
-    return fallback;
-  }
-}
-function focalOffsetPx(selected: boolean): number {
-  if (!selected || typeof window === 'undefined' || window.innerWidth < 1100) return 0;
-  const card = readPx('--card-width', 380);
-  const tab = readPx('--net-tab-width', 40);
-  const margin = 16;
-  return (card + margin - (tab + margin)) / 2; // card side minus tab side, halved
-}
-
 export function CameraRig() {
   const ref = useRef<CameraControlsImpl>(null);
   const flyingUntil = useRef(0);
-  const selected = useWorld((s) => s.selectedCountryId != null);
-  const selectedRef = useRef(selected);
-  selectedRef.current = selected;
-  const lastOff = useRef({ d: -1, h: -1, w: -1, sel: false, t: 0 });
-  const slantRef = useRef(2.5); // distance from the camera to what it centres on
   const dom = useThree((s) => s.gl.domElement);
   const world = useWorld((s) => s.world);
   // Two lookups so the ground point and the camera each keep their own "last tile" hint.
@@ -80,6 +57,8 @@ export function CameraRig() {
     c.touches.three = NONE;
     const A = (c.constructor as unknown as { ACTION: Record<string, number> }).ACTION;
     c.touches.two = (A.TOUCH_DOLLY ?? 0) as typeof c.touches.two;
+    // What you select is centred on screen: no sideways view shift for the docked card (#245).
+    void c.setFocalOffset(0, 0, 0, false);
     // Dev only: lets a browser review set the zoom exactly (window.__cam.dollyTo(3.5, false)).
     if (import.meta.env.DEV) {
       (window as unknown as { __cam?: unknown }).__cam = c;
@@ -213,7 +192,6 @@ export function CameraRig() {
     groundView.tilt = tilt;
     groundView.heading = heading;
     groundView.height = height;
-    slantRef.current = d + (slant - d) * tilt;
     // Near the ground a wheel notch moves a fixed share of the height (about a seventh), not of the
     // distance to the planet's centre, so the tilt range takes several notches instead of two.
     const k = Math.min(1, Math.max(0, (GROUND_START + 0.25 - h) / 0.25));
@@ -230,23 +208,6 @@ export function CameraRig() {
     const pan = speed + (Math.max(0.02, 0.3 * (d - gv.current.rg)) - speed) * groundView.tilt;
     c.azimuthRotateSpeed = pan;
     c.polarRotateSpeed = pan;
-    // Keep the sideways view shift right as zoom, window size and selection change (throttled).
-    const now = performance.now();
-    const last = lastOff.current;
-    const sel = selectedRef.current;
-    const h = window.innerHeight;
-    const w = window.innerWidth;
-    const changed =
-      sel !== last.sel || h !== last.h || w !== last.w || Math.abs(d - last.d) > 0.02 * Math.max(d, 0.1);
-    if (changed && now - last.t > 100) {
-      const cam = c.camera as { fov?: number };
-      const fov = ((cam.fov ?? 45) * Math.PI) / 180;
-      const px = focalOffsetPx(sel);
-      // In ground view the thing to centre is the ground point, much nearer than the planet's centre.
-      const shift = (px / Math.max(h, 1)) * 2 * slantRef.current * Math.tan(fov / 2);
-      void c.setFocalOffset(shift, 0, 0, true);
-      lastOff.current = { d, h, w, sel, t: now };
-    }
     if (flyingUntil.current && performance.now() > flyingUntil.current) {
       flyingUntil.current = 0;
       c.smoothTime = SMOOTH;

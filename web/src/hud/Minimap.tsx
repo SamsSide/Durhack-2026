@@ -8,6 +8,8 @@ import { tileColor } from '../globe/mesh/colors';
 import { getPalette } from '../globe/palette';
 import { globeCamera, lookAtLonLat } from '../globe/hover/cameraBridge';
 import { useWonders } from '../globe/wonders/store';
+import { MAP_MODE_LABELS, MapModeIcon } from './mapModeIcons';
+import { MODES } from './TopBar';
 import './hud.css';
 
 const CSS_W = 220, CSS_H = 120;
@@ -191,6 +193,8 @@ export function Minimap({ hidden = false }: { hidden?: boolean }) {
   };
 
   return (
+    <>
+    <MapModeStrip />
     <div className="hud minimap" title="Click or drag to turn the globe">
       <canvas ref={mapRef} width={W} height={H} />
       <canvas
@@ -201,6 +205,33 @@ export function Minimap({ hidden = false }: { hidden?: boolean }) {
         onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); turnTo(e); }}
         onPointerMove={(e) => { if (e.currentTarget.hasPointerCapture(e.pointerId)) turnTo(e); }}
       />
+    </div>
+    </>
+  );
+}
+
+/** Icon-only map-mode buttons on the top edge of the minimap (#245). Keys 1 to 6 still switch. */
+function MapModeStrip() {
+  const mapMode = useWorld((s) => s.mapMode);
+  const setMapMode = useWorld((s) => s.setMapMode);
+  return (
+    <div className="hud mm-modes" role="toolbar" aria-label="Map mode">
+      {MODES.map((m, i) => {
+        const tip = `Map mode: ${MAP_MODE_LABELS[m]}`;
+        return (
+          <button
+            key={m}
+            type="button"
+            className={`mm-mode${mapMode === m ? ' on' : ''}`}
+            aria-label={`${tip} (key ${i + 1})`}
+            aria-pressed={mapMode === m}
+            data-tip={tip}
+            onClick={() => setMapMode(m)}
+          >
+            <MapModeIcon mode={m} />
+          </button>
+        );
+      })}
     </div>
   );
 }

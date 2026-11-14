@@ -74,11 +74,43 @@
   right: var(--space-4); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 48px + var(--space-3));
   width: 220px; padding: 12px 16px;
 }
-body:has(.minimap) .legend-box { bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 48px + var(--space-3) + 122px + var(--space-3)); }
+body:has(.minimap) .legend-box { bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 48px + var(--space-3) + 122px + var(--mm-strip) + var(--space-3)); }
 body:has(.card-dock:not(.out)) .minimap { right: calc(var(--space-4) + var(--card-width) + var(--space-3)); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3)); }
 body:has(.card-dock:not(.out)) .legend-box { right: calc(var(--space-4) + var(--card-width) + var(--space-3)); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3)); }
-body:has(.card-dock:not(.out)):has(.minimap) .legend-box { bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 122px + var(--space-3)); }
-.minimap, .legend-box { transition: right var(--dur-fast) var(--ease-out), bottom var(--dur-fast) var(--ease-out); }
+body:has(.card-dock:not(.out)):has(.minimap) .legend-box { bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 122px + var(--mm-strip) + var(--space-3)); }
+.minimap, .legend-box, .mm-modes { transition: right var(--dur-fast) var(--ease-out), bottom var(--dur-fast) var(--ease-out); }
+
+/* Map-mode strip (#245): icon-only buttons sitting on the top edge of the minimap, same width.
+   It follows the minimap when a nation card is docked. Icons: mapModeIcons.tsx. */
+:root { --mm-strip: 32px; }
+.mm-modes {
+  right: var(--space-4); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 48px + var(--space-3) + 122px - 1px);
+  width: 222px; height: var(--mm-strip); display: flex;
+  background: linear-gradient(180deg, var(--color-surface-2) 0%, var(--color-surface) 100%);
+  border: 1px solid var(--color-accent); border-bottom-color: var(--color-border); border-radius: var(--radius-1) var(--radius-1) 0 0;
+  box-shadow: var(--shadow-1);
+}
+body:has(.mm-modes) .minimap { border-top-left-radius: 0; border-top-right-radius: 0; }
+body:has(.card-dock:not(.out)) .mm-modes { right: calc(var(--space-4) + var(--card-width) + var(--space-3)); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 122px - 1px); }
+.mm-mode {
+  position: relative; flex: 1 1 0; display: grid; place-items: center; padding: 0; cursor: pointer;
+  appearance: none; border: 0; border-left: 1px solid var(--color-border); background: transparent;
+  color: color-mix(in srgb, var(--color-accent) 70%, var(--color-text-muted));
+}
+.mm-mode:first-child { border-left: 0; }
+.mm-mode:hover { color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.mm-mode:focus-visible { outline: 1px solid var(--color-accent); outline-offset: -3px; }
+.mm-mode.on, .mm-mode.on:hover { background: var(--color-accent); color: var(--color-ink); }
+/* Tooltip: above the strip, right-aligned so the last buttons stay on screen. */
+.mm-mode::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); right: 0; z-index: 2;
+  padding: 4px 8px; white-space: nowrap; pointer-events: none;
+  font-family: var(--font-display); font-size: var(--text-cap); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-accent); border-radius: var(--radius-1);
+  box-shadow: var(--shadow-1); opacity: 0; transform: translateY(3px); transition: opacity 120ms var(--ease-out), transform 120ms var(--ease-out);
+}
+.mm-mode:first-child::after, .mm-mode:nth-child(2)::after { right: auto; left: 0; }
+.mm-mode:hover::after, .mm-mode:focus-visible::after { opacity: 1; transform: none; transition-delay: 250ms; }
 .legend-box .muted { font-size: var(--text-sm); margin-bottom: 6px; }
 .lg-row { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 22px; }
 .lg-sw { width: 14px; height: 14px; border: 1px solid var(--color-ink); border-radius: var(--radius-1); flex: none; }
@@ -92,8 +124,8 @@ body:has(.card-dock:not(.out)):has(.minimap) .legend-box { bottom: calc(var(--sp
 /* a herald dispatch (lane c, .tn-herald) owns top 64 px centre; it publishes its bottom edge + 8px as --tn-herald-bottom on :root while it shows */
 .belief-banner { top: var(--tn-herald-bottom, 64px); transition: top 200ms var(--ease-out); }
 /* the news lower-third (.tn-news) covers the minimap: fade the minimap out while it is on screen */
-.minimap { transition: right var(--dur-fast) var(--ease-out), bottom var(--dur-fast) var(--ease-out), opacity 200ms var(--ease-out); }
-body:has(.tn-news) .minimap { opacity: 0; pointer-events: none; }
+.minimap, .mm-modes { transition: right var(--dur-fast) var(--ease-out), bottom var(--dur-fast) var(--ease-out), opacity 200ms var(--ease-out); }
+body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes { opacity: 0; pointer-events: none; }
 .belief-banner .cap { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--holo-tint); }
 .belief-banner .btn { background: transparent; color: var(--holo-tint); border-color: var(--holo-tint); }
 .belief-banner .btn:hover { background: var(--holo-scanline); color: var(--holo-tint); }
@@ -103,7 +135,7 @@ body:has(.tn-news) .minimap { opacity: 0; pointer-events: none; }
 .card-dock.out { animation: card-out 240ms var(--ease-out) both; pointer-events: none; }
 @keyframes card-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(28px); } }
 @media (max-width: 1280px) {
-  .decree-slot, .legend-box, .minimap { right: var(--space-3); }
+  .decree-slot, .legend-box, .minimap, .mm-modes { right: var(--space-3); }
 }
 
 /* Terra Nova News: lower-third slot above the chronicle ticker, below the cards and dialogs */

@@ -6,8 +6,8 @@ import { Calendar } from './Calendar';
 import type { WorldStore } from '../state/world';
 import './hud.css';
 
+// The map modes, in shortcut order (keys 1 to 6). Their buttons are the icon strip on the minimap.
 export const MODES: WorldStore['mapMode'][] = ['political', 'terrain', 'diplomacy', 'strength', 'wealth', 'politics'];
-const MODE_LABELS: Record<WorldStore['mapMode'], string> = { political: 'Political', terrain: 'Terrain', diplomacy: 'Diplomacy', strength: 'Strength', wealth: 'Wealth', politics: 'Politics' };
 
 function useCompact(): boolean {
   const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 1400px)').matches);
@@ -26,8 +26,6 @@ export function TopBar({ onCreate }: { onCreate: () => void }) {
   const world = useWorld((s) => s.world);
   useWorld((s) => s.version);
   const connected = useWorld((s) => s.connected);
-  const mapMode = useWorld((s) => s.mapMode);
-  const setMapMode = useWorld((s) => s.setMapMode);
   const compact = useCompact();
   const conn = connected ? 'live' : world ? 'reconnecting' : 'offline';
   const connLabel = { live: 'Live', reconnecting: 'Reconnecting', offline: 'Offline' }[conn];
@@ -47,15 +45,6 @@ export function TopBar({ onCreate }: { onCreate: () => void }) {
         )}
         <span className={`conn conn-${conn}`}><i /><span className="conn-word">{connLabel}</span></span>
       </div>
-      {world && (
-        <div className="tb-group">
-          <div className="segs">
-            {MODES.map((m, i) => (
-              <button key={m} className={`seg ${mapMode === m ? 'on' : ''}`} title={`Shortcut ${i + 1}`} onClick={() => setMapMode(m)}>{MODE_LABELS[m]}</button>
-            ))}
-          </div>
-        </div>
-      )}
       <div className="tb-group">
         {world && <PreparePill />}
         {world && <SpeedControl />}
