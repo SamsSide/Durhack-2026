@@ -13,20 +13,22 @@
   --color-surface-2: #1d2230;            /* raised controls on the dark surface */
   --color-border: #343a4a;               /* hairlines on the dark surface */
   --color-text: #efe6d0;                 /* parchment-coloured text on dark */
-  --color-text-muted: #9a9484;
+  --color-text-muted: #aaa391;               /* 7:1 on the surface; readable on a projector */
 
   /* Parchment and ink */
   --color-parchment: #ecdfc0;
   --color-parchment-light: #f6eedb;      /* highlights, inputs */
   --color-parchment-dark: #d6c399;       /* aged edges, insets, hover */
   --color-ink: #2a1f14;                  /* iron-gall ink: text and borders on parchment */
-  --color-ink-muted: #6e5b43;
+  --color-ink-muted: #5e4c36;               /* 6.2:1 on parchment, 5:1 on its aged edge */
   --color-ink-faint: rgba(42, 31, 20, 0.18);  /* rules and dividers on parchment */
   --color-rubric: #9c2f22;               /* manuscript red: section headings on parchment */
   --color-accent: #c9a24b;               /* gilt: active state, the year, highlights */
   --color-danger: #b3261e;
   --color-ok: #4d7a3a;
   --color-warn: #c7802a;
+  --color-ok-bright: #6fbf5a;            /* the same green for the dark surface (the Live dot) */
+  --color-night-inset: #0d1620;          /* a hole in the parchment: cut rows, the Silence strip, dispatch bands */
 
   /* Fonts */
   --font-display: 'Cinzel', 'Trajan Pro', 'Times New Roman', serif;          /* titles, nation names, small-caps labels */
@@ -35,12 +37,16 @@
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;  /* years, numbers, the token meter */
 
   /* Type scale (px) */
-  --text-xs: 11px;    /* mono captions, chip labels */
-  --text-sm: 13px;    /* secondary lines, buttons */
-  --text-md: 15px;    /* body */
-  --text-lg: 18px;    /* lead text, row names */
+  /* Raised one step in the polish pass: the demo is read from across a room on a projector.
+     Nothing on screen is smaller than 10px, and only chips are that small. */
+  --text-cap: 11px;   /* Cinzel caps labels: the floor for any label */
+  --text-xs: 12px;    /* mono captions, buttons */
+  --text-sm: 14px;    /* secondary lines */
+  --text-md: 16px;    /* body */
+  --text-lg: 19px;    /* lead text, row names */
   --text-xl: 24px;    /* panel titles */
-  --text-2xl: 34px;   /* the Create screen title */
+  --text-2xl: 36px;   /* the Create screen title */
+  --text-hero: 84px;  /* the one number on the closing card */
   --tracking-caps: 0.08em;  /* letter-spacing for Cinzel labels */
 
   --space-1: 4px;
@@ -55,6 +61,16 @@
   --radius-3: 10px;
   --radius-pill: 999px; /* chips */
 
+  /* Fixed widths, so every lane lays out against the same numbers */
+  --card-width: 380px;
+  --net-width: 320px;
+  --herald-width: 320px;
+
+  /* Motion: one curve, two speeds */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 160ms;
+  --dur-slow: 600ms;
+
   --border-ink: 1.5px solid var(--color-ink);
   /* The atlas double rule: an outer ink line and an inner faint line, drawn with shadows. */
   --rule-double: inset 0 0 0 4px var(--color-parchment), inset 0 0 0 5px rgba(42, 31, 20, 0.45);
@@ -63,11 +79,22 @@
   --shadow-1: 0 4px 18px rgba(0, 0, 0, 0.55);
   --shadow-2: 0 12px 40px rgba(0, 0, 0, 0.7);
 
-  /* The hologram: a lit parchment page in a beam of light */
+  /* DEPRECATED (owner decision, 14 Nov): the hologram is removed. The nation card is a plain parchment
+     panel docked to the right. Every --holo-* variable stays defined so nothing breaks, but the design
+     no longer uses the glow, spill, scan lines, beam or opacity. --holo-tint is still the cyan for
+     selection, beliefs and the Silence. */
   --holo-tint: #7fe6d8;                                   /* cyan beam, the default */
   --holo-warm: #ffcf7a;                                   /* warm beam, while the card speaks or sings */
-  --holo-glow: 0 0 0 1px rgba(127, 230, 216, 0.75), 0 0 28px rgba(127, 230, 216, 0.45), 0 0 80px rgba(127, 230, 216, 0.18);
-  --holo-glow-warm: 0 0 0 1px rgba(255, 207, 122, 0.8), 0 0 28px rgba(255, 207, 122, 0.45), 0 0 80px rgba(255, 207, 122, 0.18);
+  --holo-glow: 0 0 0 1.5px rgba(127, 230, 216, 0.9), 0 0 34px rgba(127, 230, 216, 0.55), 0 0 110px rgba(127, 230, 216, 0.24);
+  --holo-glow-warm: 0 0 0 1.5px rgba(255, 207, 122, 0.95), 0 0 34px rgba(255, 207, 122, 0.55), 0 0 110px rgba(255, 207, 122, 0.24);
+  --holo-glow-cut: 0 0 0 1px rgba(127, 230, 216, 0.45), 0 0 22px rgba(127, 230, 216, 0.16);   /* a cut nation: the light is failing */
+  /* Light spilling up the page from the beam below it */
+  --holo-spill: linear-gradient(0deg, rgba(127, 230, 216, 0.26) 0%, rgba(127, 230, 216, 0) 42%);
+  --holo-spill-warm: linear-gradient(0deg, rgba(255, 207, 122, 0.30) 0%, rgba(255, 207, 122, 0) 42%);
+  /* The beam of a cut nation: broken into slices, like a failing signal */
+  --holo-beam-cut: repeating-linear-gradient(0deg, rgba(127, 230, 216, 0.24) 0 4px, transparent 4px 9px);
+  --silence-ink: #1e6b63;                                 /* cyan dark enough to read on parchment */
+  --silence-fill: rgba(127, 230, 216, 0.16);
   --holo-scanline: rgba(127, 230, 216, 0.12);
   --holo-scanlines: repeating-linear-gradient(0deg, var(--holo-scanline) 0 1px, transparent 1px 3px);
   --holo-beam: linear-gradient(0deg, rgba(127, 230, 216, 0.05) 0%, rgba(127, 230, 216, 0.38) 100%);
@@ -78,8 +105,8 @@
   --stance-war: #b3261e;
   --stance-hostile: #d0782a;
   --stance-neutral: #9a9484;
-  --stance-trade: #3f8fb0;
-  --stance-alliance: #4d8a4a;
+  --stance-trade: #2f7a9a;                /* darkened: white chip text passes AA */
+  --stance-alliance: #3f7d3d;
 
   /* Chronicle entry kinds (a diamond marker on the ticker and the timeline) */
   --kind-founding: #c9a24b;
@@ -98,7 +125,7 @@
   --kind-decree: #9c2f22;
 
   /* Network states */
-  --link-up: #4d7a3a;
+  --link-up: #3c6a2b;                     /* darkened: reads as text on parchment */
   --link-cut: #b3261e;
   --ruler-llm: #c9a24b;
   --ruler-autopilot: #6e7c8a;
@@ -176,17 +203,56 @@ button, select, input, textarea { font: inherit; }
 }
 .chip.active { background: var(--color-ink); color: var(--color-parchment); border-color: var(--color-ink); }
 
-/* The hologram page: put on the NationCard root when it is mounted in the beam. */
+/* DEPRECATED: the hologram page. Kept so existing markup still renders; do not use it in new code.
+   The NationCard root is a .panel docked right; add .speaking for the gilt rule. */
 .holo {
   position: relative;
   background: var(--parchment-fill);
-  opacity: var(--holo-opacity);
   border: 1px solid rgba(42, 31, 20, 0.6);
   border-radius: var(--radius-2);
-  box-shadow: var(--holo-glow);
+  box-shadow: var(--shadow-1);
 }
-.holo::after {
-  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
-  background: var(--holo-scanlines);
+.holo.silenced { filter: saturate(0.55); }
+
+/* The docked nation card while its nation speaks or sings: a gilt rule along the top edge. */
+.panel.speaking { box-shadow: inset 0 4px 0 var(--color-accent), var(--rule-double), var(--shadow-1); }
+
+/* Motion for the demo's key moments (docs/design/README.md, "Demo moments"). */
+@keyframes holo-rise {            /* the card unfolds upward out of the beam (clip-path, so it never fights a transform lane b sets) */
+  from { opacity: 0; clip-path: inset(100% 0 0 0); }
+  60% { opacity: var(--holo-opacity); }
+  to { opacity: var(--holo-opacity); clip-path: inset(-200px); }
 }
-.holo.speaking { box-shadow: var(--holo-glow-warm); }
+@keyframes holo-flicker {         /* two short dips; the page is light, not paper */
+  0%, 91%, 94%, 97%, 100% { opacity: var(--holo-opacity); }
+  92.5% { opacity: 0.78; }
+  95.5% { opacity: 0.86; }
+}
+@keyframes card-in {              /* the nation card slides in from the right edge (240ms, --ease-out) */
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes herald-in {            /* a dispatch drops in under the top bar */
+  from { opacity: 0; transform: translateY(-14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes herald-out { to { opacity: 0; transform: translateY(-8px); } }
+@keyframes cut-pulse {            /* the dot on a cut row, and the ring round a cut nation */
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@keyframes settle-flash {         /* a disputed province when the link is restored: gilt, then its true colour */
+  0% { outline: 3px solid var(--color-accent); box-shadow: 0 0 24px var(--color-accent); }
+  100% { outline: 3px solid transparent; box-shadow: none; }
+}
+@keyframes scribe {               /* the line being written on the founding scroll */
+  from { background-position: -200px 0; }
+  to { background-position: 200px 0; }
+}
+@keyframes ticker-new {           /* a new chronicle entry: a gilt wash that fades */
+  from { background: rgba(201, 162, 75, 0.55); }
+  to { background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .holo, .holo.silenced { animation: none; }
+}
