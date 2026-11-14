@@ -15,6 +15,7 @@ import { VehicleFx } from './vehicleFx';
 import { Traders } from './traders';
 import { clockNow, msPerYear } from '../../state/calendar';
 import { UnitModels } from './unitModels';
+import { formationSlots } from './formation';
 import { Pops, Smoke, Sparks, facing, tangentJitter } from './effects';
 import { arcHump, arcPoint, arrowGeometry, arrowMaterial, lineGeometry, lineMaterial, tileFanGeometry, writeArrow } from './ribbons';
 
@@ -37,6 +38,9 @@ const TREATY_WINDOW = 4000;
 const FALL_SHIELD = 6000;
 const MODEL_NEAR = 2.0;         // models fully shown below this camera distance
 const MODEL_FAR = 2.4;          // and gone above this (orbit shows counters only)
+const FIGURE_K = 1.5;          // figures a little larger than their footprint, so a formation reads at mid zoom
+const FORMATION_GAP = 0.6;     // figure spacing, as a share of the unit size
+const FORMATION_W = 3.0;       // a formation's width, for stepping two on one tile apart
 const AGE_POP_MS = 750;         // bounce when a nation reaches a new age
 const CLASH_MS = 2500;          // battle badge, smoke and loss numbers linger so a judge sees them
 const BATTLE_SMOKE_MS = 3000;
@@ -96,6 +100,7 @@ interface Column { pos: THREE.Vector3; n: THREE.Vector3; until: number; nextAt: 
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _j = new THREE.Vector3(), _camDir = new THREE.Vector3();
 const _n = new THREE.Vector3(), _side = new THREE.Vector3(), _mm = new THREE.Matrix4();
+const _p = new THREE.Vector3(), _fwd = new THREE.Vector3(), _right = new THREE.Vector3(), _fm = new THREE.Matrix4();
 const smooth = (e0: number, e1: number, x: number): number => {
   const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
   return t * t * (3 - 2 * t);
@@ -716,6 +721,15 @@ export class UnitLayer {
       }
     }
 
+    // in battle the formations face each other: the attacker turns to the tile, the defenders there to the attacker
+    if (st) {
+      this.statePos(st, now, _v);
+      if (_v.lengthSq() > 0 && _v.distanceTo(P) > 0.004) {
+        st.head.subVectors(P, _v);
+        for (const u of this.states.values()) if (u.owner === e.defender && u.kind === 'army' && u.to === e.tile && u.from === u.to) u.head.subVectors(_v, P);
+      }
+    }
+
     this.pops.show(now, 'clash', this.clashTex, P, 0.036, 1, CLASH_MS);
     // terrain defence bonus: a small shield beside the clash badge
     const ter = this.world.tiles[e.tile]?.terrain;
@@ -1043,17 +1057,21 @@ export class UnitLayer {
     chip.mat.color.setRGB(c, c, c);
   }
 
-  /** The age model under a counter, standing where the counter is and facing its march. */
+  /** The age model under a counter, standing where the counter is and facing its march. An army
+   *  is a formation of 3 to 7 figures (#287) when its age has them, else the one army model. */
   private drawModel(chip: Chip, now: number, k: number): void {
     if (chip.kind !== 'army' && chip.kind !== 'fleet') return;
     const lead = chip.moving ?? chip.units[0];
     if (!lead || k <= 0 || chip.pos.lengthSq() === 0) return;
     const f = facing(chip.pos, _camDir);
     if (f <= 0) return;
-    const model = this.models.resolve(this.ageFor(chip.owner), chip.kind);
+    const age = this.ageFor(chip.owner);
+    const model = this.models.resolve(age, chip.kind);
     const alpha = this.alphaOf(lead, now);
     if (alpha <= 0.02) return;
-    const size = this.unitSize * (model.footprint / 0.5) * this.near * k * this.popScale(chip.owner, now) * (0.35 + 0.65 * alpha);
+    const scale = this.near * k * this.popScale(chip.owner, now) * (0.35 + 0.65 * alpha);
+    const size = this.unitSize * (model.footprint / 0.5) * scale;
+    const front = chip.kind === 'army' ? this.models.resolveFigure(age, 'front') : null;
     _n.copy(chip.pos).normalize();
     _v.copy(chip.pos).addScaledVector(_n, 0.0003 - CHIP_LIFT);
     let hop = 0;
@@ -1062,18 +1080,44 @@ export class UnitLayer {
       if (t >= 0 && t < 1) hop = Math.max(hop, Math.sin(Math.PI * t));
     }
     if (hop) _v.addScaledVector(_n, hop * size * 0.5);
+    const face = lead.face.lengthSq() > 1e-12 ? lead.face : lead.head;
     // several counters on one tile: step the models sideways so they do not overlap
     const stack = Math.max(0, chip.stack);
+    const step = front ? this.unitSize * scale * FORMATION_W : size * 0.9;
     if (stack) {
-      _side.crossVectors(_n, lead.head.lengthSq() > 1e-12 ? lead.head : _w.set(0, 1, 0)).normalize();
-      _v.addScaledVector(_side, ((stack % 2) ? 1 : -1) * Math.ceil(stack / 2) * size * 0.9);
+      _side.crossVectors(_n, face.lengthSq() > 1e-12 ? face : _w.set(0, 1, 0)).normalize();
+      _v.addScaledVector(_side, ((stack % 2) ? 1 : -1) * Math.ceil(stack / 2) * step);
+    }
+    const team = this.team(chip.owner);
+    const fx = this.near > 0.5 && k >= 1 && alpha >= 1;
+    const moving = !!chip.moving && !lead.dissolve;
+    if (front) {
+      // the formation's own frame: forward along the march, right across it
+      standMatrix(_mm, _v, face, 1);
+      _fwd.setFromMatrixColumn(_mm, 2);
+      _right.setFromMatrixColumn(_mm, 0).negate(); // standMatrix's +x is up x forward, which is the left
+      const r = _v.length();
+      const gap = this.unitSize * scale * FORMATION_GAP;
+      let strength = 0;
+      for (const u of chip.units) strength += u.strength;
+      const slots = formationSlots(strength);
+      for (let i = 0; i < slots.length; i++) {
+        const s = slots[i]!;
+        const fig = s.role === 'front' ? front : this.models.resolveFigure(age, s.role) ?? model;
+        // a little step in time per figure, so the line does not march as one block
+        const sway = moving ? Math.sin(now * 0.012 + i * 1.7) * 0.06 : 0;
+        _p.copy(_v).addScaledVector(_right, s.x * gap).addScaledVector(_fwd, (s.z + sway) * gap).setLength(r);
+        const fs = this.unitSize * (fig.footprint / 0.5) * scale * FIGURE_K;
+        this.field.push(fig, standMatrix(_fm, _p, face, fs), team);
+        if (fx && fig.anchors.length) this.fx.emit({ anchors: fig.anchors, stand: _fm, size: fs, moving, facing: f }, now, this.lastDt);
+      }
+      return;
     }
     const sea = chip.kind === 'fleet';
     const bob = sea ? Math.sin(now * 0.002 + chip.tile) * 0.07 : 0;
     if (sea) _v.addScaledVector(_n, Math.sin(now * 0.0016 + chip.tile * 1.3) * size * 0.035); // riding the swell
-    const face = lead.face.lengthSq() > 1e-12 ? lead.face : lead.head;
-    this.field.push(model, standMatrix(_mm, _v, face, size, bob), this.team(chip.owner));
-    if (this.near > 0.5 && k >= 1 && alpha >= 1) this.fx.emit({ anchors: model.anchors, stand: _mm, size, moving: !!chip.moving && !lead.dissolve, facing: f }, now, this.lastDt);
+    this.field.push(model, standMatrix(_mm, _v, face, size, bob), team);
+    if (fx) this.fx.emit({ anchors: model.anchors, stand: _mm, size, moving, facing: f }, now, this.lastDt);
   }
 
   dispose(): void {
