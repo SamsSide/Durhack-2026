@@ -3,7 +3,7 @@
 // anthem, chant, narration, flag and chronicle prompts need. Tables from docs/research/nation-identity.md.
 import type { BuildingStyle, Country, FlagEmblem, FlagLayout, TechAge, World } from '@terra/shared';
 
-export type EraKey = 'bronze' | 'classical' | 'medieval' | 'gunpowder' | 'industrial' | 'modern' | 'future' | 'post_apoc';
+export type EraKey = 'bronze' | 'classical' | 'medieval' | 'gunpowder' | 'industrial' | 'modern' | 'future' | 'stellar' | 'post_apoc';
 export type GovKey = 'communist' | 'junta' | 'theocracy' | 'merchant' | 'democracy' | 'monarchy' | 'tribal' | 'technocracy';
 export type MoodKey = 'martial' | 'pious' | 'wealthy' | 'pioneer';
 export type TerrainKey = 'mountain' | 'coast' | 'ice' | 'desert' | 'forest' | 'plains';
@@ -19,7 +19,7 @@ const ERA_RULES: [EraKey, RegExp][] = [
   ['classical', /classical|antiquity|iron age|roman|hellenic|republic of/],
   ['bronze', /bronze|stone age|neolithic|pharaoh|chariot|\bdawn\b|\bancient\b/],
 ];
-const ERA_ORDER: EraKey[] = ['bronze', 'classical', 'medieval', 'gunpowder', 'industrial', 'modern', 'future', 'post_apoc'];
+const ERA_ORDER: EraKey[] = ['bronze', 'classical', 'medieval', 'gunpowder', 'industrial', 'modern', 'future', 'stellar', 'post_apoc'];
 
 /** The era band of the world's setting (first match wins; medieval by default). */
 export function worldEraKey(world: Pick<World, 'era' | 'prompt' | 'name'>): EraKey {
@@ -27,14 +27,15 @@ export function worldEraKey(world: Pick<World, 'era' | 'prompt' | 'name'>): EraK
   return ERA_RULES.find(([, re]) => re.test(text))?.[0] ?? 'medieval';
 }
 
-const AGE_ERA: Record<TechAge, EraKey> = { ancient: 'classical', medieval: 'medieval', gunpowder: 'gunpowder', industrial: 'industrial', modern: 'modern', future: 'future', stellar: 'future' };
+const AGE_ERA: Record<TechAge, EraKey> = { ancient: 'classical', medieval: 'medieval', gunpowder: 'gunpowder', industrial: 'industrial', modern: 'modern', future: 'future', stellar: 'stellar' };
 
 /** The nation's era now: a ruined or far-future setting wins; otherwise its tech age (it advances during a run).
  *  A nation with no tech age yet takes the world's own era; an explicit 'ancient' is bronze or classical. */
 export function eraKeyOf(world: Pick<World, 'era' | 'prompt' | 'name'>, country: Pick<Country, 'techAge'>): EraKey {
   const band = worldEraKey(world);
-  if (band === 'post_apoc' || band === 'future') return band;
   const age = country.techAge;
+  if (band === 'post_apoc') return band;
+  if (band === 'future') return age === 'stellar' ? 'stellar' : band;   // a far-future world's nations still reach the stellar age
   if (!age) return band;
   if (age === 'ancient') return ERA_ORDER.indexOf(band) <= 1 ? band : 'classical'; // an ancient nation in a medieval world is still ancient
   return AGE_ERA[age];
@@ -94,7 +95,8 @@ const ERA_SOUND: Record<EraKey, { instruments: string; percussion: string; produ
   gunpowder: { instruments: 'fifes, natural trumpets, harpsichord, strings', percussion: 'snare and bass drum', production: 'baroque court', negative: 'electric guitar, synthesizer, drum machine', diction: 'cannon, flags, sails and crowns' },
   industrial: { instruments: 'brass band, full orchestra, organ', percussion: 'military snare, timpani', production: '1900s recording, slight crackle', negative: 'synthesizer, drum machine, electric guitar', diction: 'furnaces, rails, engines and the working day' },
   modern: { instruments: 'symphony orchestra, synth pads', percussion: 'stadium drums, claps', production: 'modern cinematic, clean', negative: 'lute, medieval', diction: 'the nation, the people, the flag' },
-  future: { instruments: 'analog synths, choir pads, arpeggiator', percussion: 'electronic toms, sub bass', production: 'wide, glossy, sci-fi', negative: 'lute, harpsichord', diction: 'stars, circuits and the long horizon' },
+  future: { instruments: 'analog synths, choir pads, arpeggiator, drum machine', percussion: 'electronic toms, sub bass', production: 'wide, glossy, sci-fi', negative: 'lute, harpsichord', diction: 'stars, circuits and the long horizon' },
+  stellar: { instruments: 'vast synth pads, cosmic choir, electronic strings, vocoder', percussion: 'deep sub pulses, glitch percussion, electronic toms', production: 'vast, cold, orbital and cinematic', negative: 'lute, harpsichord, acoustic folk, brass band', diction: 'orbits, starships, the long dark and a sky of satellites' },
   post_apoc: { instruments: 'scavenged metal, detuned guitar, harmonica', percussion: 'pipes and barrels hit, distorted kick', production: 'lo-fi, distorted', negative: 'orchestra, polished studio', diction: 'ash, rust, scrap and survival' },
 };
 
@@ -135,6 +137,10 @@ export interface ChantStyle {
   voiceKey?: 'harry' | 'brian' | 'bill';
   voiced: string;
 }
+/** In the future and stellar ages the troops are drilled and machine-precise: whatever the government, the chant is exact, even and in perfect unison. */
+const machineChant = (line: string, eraKey: EraKey): string =>
+  eraKey === 'future' || eraKey === 'stellar' ? `${line}; delivered by drilled, machine-precise troops in perfect unison, clipped and exact, with no ragged edges` : line;
+
 const CHANT: Record<GovKey, ChantStyle> = {
   communist: { key: 'hurrah choir', line: 'a massed army choir: a short marching slogan with a "Hurrah!" call, repeated', tag: '[shouting]', stability: 0, style: 0.6, voiceKey: 'brian', voiced: 'a massed army choir' },
   junta: { key: 'drill call', line: 'a drill sergeant call and response: three or four terse barked commands and the troops answering "Sir"', tag: '[barking orders, shouting]', stability: 0.5, style: 0.5, voiceKey: 'harry', voiced: 'a single commander' },
@@ -226,7 +232,7 @@ export function nationIdentity(world: Pick<World, 'era' | 'prompt' | 'name' | 't
   const terrain = terrainKeyOf(world, c);
   const mood = moodKeyOf(c.temperament);
   const era = ERA_SOUND[eraKey], gov = GOV_SOUND[governmentKey];
-  const nomad = governmentKey === 'tribal' && (c.nomadic || terrain === 'plains' || terrain === 'desert') && eraKey !== 'future';
+  const nomad = governmentKey === 'tribal' && (c.nomadic || terrain === 'plains' || terrain === 'desert') && eraKey !== 'future' && eraKey !== 'stellar';
   const touch = TERRAIN_TOUCH[terrain];
   const instruments = [nomad ? NOMAD_SOUND.instruments : era.instruments, touch].filter(Boolean).join(', ');
   const style = c.buildingStyle ?? 'medieval';
@@ -245,7 +251,7 @@ export function nationIdentity(world: Pick<World, 'era' | 'prompt' | 'name' | 't
     },
     narrationTone: `Narrate in the voice of ${gov.narration}.`,
     chantStyle: {
-      ...chant, percussion: era.percussion, vocals: gov.chantVocals, bpm: gov.chantBpm, tempo: `${gov.chantBpm} BPM`, diction: era.diction,
+      ...chant, line: machineChant(chant.line, eraKey), percussion: era.percussion, vocals: gov.chantVocals, bpm: gov.chantBpm, tempo: `${gov.chantBpm} BPM`, diction: era.diction,
     },
     chronicleTone: CHRONICLE[governmentKey],
   };

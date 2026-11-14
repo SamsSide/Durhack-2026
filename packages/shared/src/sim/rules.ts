@@ -11,7 +11,7 @@ import {
   WAR_EARLIEST, ageScaled, armyStrengthFor, diplomacyTurn, enemiesOf, inTruce, isCombatant, marchTurn, type WarLedger,
 } from './war';
 import { unrestTurn, type UnrestMemory } from './regions';
-import { ageStrength, ageTurn, type AgeMemory } from './ages';
+import { ageStrength, ageTurn, satelliteTurn, type AgeMemory } from './ages';
 import { tradeTurn } from './trade';
 import { TERRAIN_EFFECTS } from './terrain';
 
@@ -458,6 +458,9 @@ export function nationTurn(
     emit({ type: 'country_updated', countryId, patch: { techAge: next.age } });
     emit({ type: 'chronicle', entry: { id: `c-${countryId}-${tick}-age`, tick, year: view.year, kind: next.kind, countries: [countryId], text: next.text } });
   }
+
+  const sat = satelliteTurn(view, countryId, tick, ctx.ages);   // view still holds last year's age, so a launch comes the year after arrival
+  if (sat) emit({ type: 'chronicle', entry: { id: `c-${countryId}-${tick}-sat`, tick, year: view.year, kind: 'growth', countries: [countryId], text: sat } });
 
   // --- 6. the chronicle: milestones first, now and then a proclamation
   if (!notable && rng() < 0.014) notable = { kind: 'proclamation', text: fill(tone.proclaim[Math.floor(rng() * tone.proclaim.length)]!, me, regionLabel()) };
