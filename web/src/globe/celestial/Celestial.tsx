@@ -6,7 +6,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useWorld } from '../../state/world';
 import { tileHeight } from '../mesh/buildProvinceMesh';
-import { SUN_DIST, advanceSun, holdSun, setSunAngle, radialTexture, reducedMotion, smooth, sunDir } from './sun';
+import { SUN_DIST, advanceSun, holdSun, setSunAngle, radialTexture, reducedMotion, rimFade, smooth, sunDir } from './sun';
 
 const KEY = '#ffcf9a'; // warm orange key (the gallery's dusk look, softened so the map colours stay true)
 const FILL = '#aeb2e2'; // purple-blue shade on the night side
@@ -49,7 +49,7 @@ function Sun() {
     flare.renderOrder = 998;
     const ghostTex = radialTexture([[0, 'rgba(255,255,255,0.0)'], [0.55, 'rgba(255,255,255,0.18)'], [0.8, 'rgba(255,255,255,0.5)'], [0.9, 'rgba(255,255,255,0.12)'], [1, 'rgba(255,255,255,0)']]);
     const spotTex = radialTexture([[0, 'rgba(255,255,255,0.7)'], [0.6, 'rgba(255,255,255,0.15)'], [1, 'rgba(255,255,255,0)']]);
-    const ghosts = ([[0.55, 0.05, spotTex, '#ffd29a'], [0.25, 0.022, ghostTex, '#9fd8ff'], [-0.3, 0.06, ghostTex, '#c7a6ff'], [-0.7, 0.03, spotTex, '#ffb37a'], [-1.05, 0.09, ghostTex, '#8fe0c8']] as const)
+    const ghosts = ([[0.55, 0.05, spotTex, '#ffd29a'], [0.25, 0.022, ghostTex, '#9fd8ff'], [-0.3, 0.06, ghostTex, '#b4b8ff'], [-0.7, 0.03, spotTex, '#ffb37a'], [-1.05, 0.09, ghostTex, '#8fe0c8']] as const)
       .map(([f, size, map, color]) => {
         const s = new THREE.Sprite(new THREE.SpriteMaterial({ map, color, ...additive, depthTest: false }));
         s.renderOrder = 999;
@@ -82,7 +82,6 @@ function Sun() {
     ndc.copy(disc.position).project(camera);
     const inFront = ndc.z < 1 ? 1 : 0;
     const onScreen = inFront * smooth(1.6, 1.0, Math.max(Math.abs(ndc.x), Math.abs(ndc.y)));
-    const glare = onScreen * Math.max(onLimb, visible * 0.3);
     const fovK = Math.tan(THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov ?? 45) / 2) * 2;
     const D = 0.6;
     const place = (s: THREE.Sprite, x: number, y: number, size: number) => {
@@ -93,10 +92,13 @@ function Sun() {
     place(flare, ndc.x, ndc.y, 0.36 + onLimb * 0.16);
     flare.material.rotation = Math.atan2(ndc.y, ndc.x) * 0.5;
     flare.material.opacity = onScreen * onLimb * 0.95;
+    // Ghosts are drawn over the planet (no depth test), so keep them faint, smaller, and weaker still while
+    // the sun is hidden behind the planet and only its limb glow shows.
+    const ghostK = onScreen * Math.max(onLimb * 0.35, visible * 0.3);
     for (const g of ghosts) {
       const { f, size } = g.userData as { f: number; size: number };
-      place(g, ndc.x * f, ndc.y * f, size * 2);
-      g.material.opacity = glare * 0.4;
+      place(g, ndc.x * f, ndc.y * f, size * 1.4);
+      g.material.opacity = ghostK * 0.22;
     }
   });
   return (
@@ -171,6 +173,7 @@ void main() {
 const RIM_FRAG = /* glsl */ `
 uniform vec3 uSunV;
 uniform vec3 uWarm;
+uniform float uFade;
 varying vec3 vNormalV;
 void main() {
   vec3 n = normalize(vNormalV);
@@ -181,7 +184,7 @@ void main() {
   float toward = max(dot(side, sunSide), 0.0);
   float lit = max(dot(n, uSunV), 0.0);
   float back = max(-uSunV.z, 0.0);
-  float i = rim * (0.5 * lit + pow(toward, 3.0) * (0.25 + 0.9 * back));
+  float i = rim * (0.5 * lit + pow(toward, 3.0) * (0.25 + 0.9 * back)) * uFade;
   gl_FragColor = vec4(uWarm * i, i);
 }`;
 
@@ -195,7 +198,7 @@ function Shells() {
       }),
       rim: new THREE.ShaderMaterial({
         ...base, fragmentShader: RIM_FRAG, side: THREE.BackSide,
-        uniforms: { uSunV: { value: new THREE.Vector3() }, uWarm: { value: new THREE.Color('#ffb070') } },
+        uniforms: { uSunV: { value: new THREE.Vector3() }, uWarm: { value: new THREE.Color('#ffb070') }, uFade: { value: 1 } },
       }),
     };
   }, []);
@@ -203,6 +206,7 @@ function Shells() {
   useFrame(({ camera }) => {
     terminator.uniforms.uFade.value = smooth(1.3, 1.8, camera.position.length()); // the shell sits above the terrain: hide it close up
     (rim.uniforms.uSunV.value as THREE.Vector3).copy(sunDir).transformDirection(camera.matrixWorldInverse);
+    rim.uniforms.uFade.value = rimFade(camera.position.length()); // the camera can zoom inside this shell
   });
   return (
     <>
