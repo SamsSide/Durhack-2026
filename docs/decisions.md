@@ -42,3 +42,6 @@
 2026-11-14 19:20 · owner · Solana economy (docs/research/solana-economy.md): one fixed-supply Token-2022 world currency, a wallet per nation signing its own payments, the sim is the truth and the chain a 5-second mirror; payments for trade dues, reparations, plunder and seizure, war chests and subsidies, and pooled funds when nations join forces and move together; live devnet in the demo with a saved signature file as backup; dependencies approved: @solana/kit 8.6, kit-plugin-rpc and kit-plugin-signer 0.23, @solana-program/token-2022 0.20, @solana-program/memo 0.16 (never @solana/web3.js) · MLH Best Use of Solana
 
 - 2026-11-14 16:30 · Owner: terrain matters in the rules (#135). One `TERRAIN_EFFECTS` table in `@terra/shared` (defence, supply, attrition, move, income, pop, yields) with lane b's numbers; a `unit_attrition` event; landings fight at -20%. Row A28.
+
+- 2026-11-14 16:50 · Owner: a council per nation, ruler and general only (#146), with cover, succession and a kill control for the demo. Row A29.
+- 2026-11-14 16:50 · Owner: wonders with a small bonus (#147), 2 to 4 per world, 8 models. Row A30.
