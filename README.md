@@ -1,283 +1,358 @@
 # Terra Nova
 
-Our entry for DurHack 2026 (Durham University, 24 hours, theme: Composition).
+**Type one line, and watch a living 3D planet build itself, ruled by AI nations that keep going
+even when they cannot talk to each other.**
 
-Type one line ("a drowned post-apocalyptic world"), or drop in a picture, and watch a living 3D
-planet build itself. About 1,200 irregular provinces form on a globe you can spin and zoom. Every
-nation on it is ruled by its own independent AI: it settles land, builds towns and wonders,
-moves through the ages from bows to starships, trades, pays its debts and goes to war, province
-by province. A chronicle tells the story; each nation has its own narrated history, an anthem
-written from what has actually happened to it, and a war chant. Terra Nova News, read in our own
-cloned voices, reports on the world every couple of minutes.
+![Terra Nova: a living planet of AI nations, with the chronicle, the network panel, the decree box and the minimap](docs/shots/ui-qa-main.jpg)
 
-There is no central brain. Each nation (and each nation's general) is a separate agent with its
-own copy of the world, publishing events on a message bus. Cut a nation's link, silence its
-ruler, delete it or kill its general, and the world keeps building: the cut nation acts on what
-it last knew, its neighbours notice the silence, the ruins are carved up, a successor inherits
-the dead general's memory. Restore the link and the missing years merge in, with disputes
-settled on screen.
+Type one line ("a drowned post-apocalyptic world"), or drop in a picture, and a planet of about
+1,200 irregular provinces forms on a globe you can spin and zoom. Every nation on it is ruled by
+its own independent AI: it settles land, builds towns and wonders, moves through the ages from
+bows to starships, trades, pays its debts and goes to war, province by province. There is no
+central brain: each nation is a separate agent with its own copy of the world, so you can cut
+its link, silence its ruler or delete it and the world keeps building. The money is real, on
+Solana devnet, every payment signed by the paying nation's own key, and Terra Nova News reports
+on the world every couple of minutes, read aloud in our own cloned voices.
 
-The money is real, on Solana devnet: one Token-2022 world currency with a fixed supply of
-1,000,000 and its mint authority revoked, a wallet per nation, and every payment between nations
-(trade dues, reparations, plunder, seizure, war chests, subsidies, pooled war funds) signed by
-the paying nation's own key.
+Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 
-The submission text and the demo shot list: [`docs/submission.md`](docs/submission.md).
+## Contents
 
-## Screenshots
+- [Features](#features)
+- [Quick start](#quick-start)
+- [Controls and key bindings](#controls-and-key-bindings)
+- [How it works](#how-it-works)
+- [Tech stack](#tech-stack)
+- [Project layout](#project-layout)
+- [Docs](#docs)
+- [Team](#team)
 
-All in [`docs/shots/`](docs/shots/); the interface design is in [`docs/design/`](docs/design/).
+## Features
 
-| What | Files |
+### A world from one line
+
+- **Found a world** from a line of text, a picture (Gemini reads its mood, palette and setting)
+  or a preset, with the era, the number of nations (3 to 10), sea level and aggression.
+- **About 1,200 provinces** on a spherical Voronoi globe, each with terrain and a good; nations
+  and places are named after Durham colleges and North East towns.
+- **Technology ages** from ancient through medieval, gunpowder, industrial and modern to the
+  future and stellar ages; units, buildings and ships change with each age.
+- **A living world:** boats, caravans, birds and smoke, volumetric clouds with drifting weather,
+  rain and storms, a sun with a day and night cycle and a passing moon.
+- **Close up**, the camera tilts to a ground view of walled towns, rivers and buildings in one of
+  several identity styles; city walls grow from palisades to walled cores as cities grow.
+- **Wonders** from the Great Wall to a space elevator.
+
+| | | |
+| --- | --- | --- |
+| ![The Found a World screen: prompt, picture, presets, era, nations, sea level and aggression](docs/shots/depth-create-after.jpg) | ![A walled capital seen from the ground view](docs/shots/ground-view-2.jpg) | ![A busy coast with boats, birds and a walled town](docs/shots/living-world-1.jpg) |
+| Found a world | The ground view | A living world |
+
+### AI nations, and the network cut
+
+- **One agent per nation** (and per general), each with its own replica of the world, publishing
+  events on a message bus. Rulers ask Gemini for schema-checked decisions and fall back to
+  autopilot on any failure.
+- **The network panel** draws the nations as a node graph. Cut a nation's link, wake it, delete
+  it, or black out every link at once, and the rest carry on. A cut nation acts on what it last
+  knew; its neighbours notice the silence; *Show beliefs* shows a nation's own (stale) map.
+- **Restore the link** and the missing years merge back in, with border disputes settled on
+  screen. The cut and the rulers' proclamations show on the globe.
+- **Secession:** restless regions break away as new nations with their own agents and rulers.
+
+### The council
+
+- Every nation has a **ruler and a general**, each of whom you can cut off or kill. They grow
+  old and die (natural death rises from 50); a successor inherits the dead general's memory,
+  and the nation card shows the council, its ages and its succession.
+- The **nation card** shows provinces, population, treasury, army, readiness, devastation,
+  unrest, diplomacy, and tabs for culture, economy, politics, history and relations.
+
+| | |
 | --- | --- |
-| Calm UI: one left panel, war tabs, node-graph network | `calm-ui-1.jpg`, `calm-ui-2.jpg`, `calm-ui-3.jpg` |
-| The material system (depth, bevels, engraving), before and after | `materials-sheet.jpg`, `depth-card-*`, `depth-chron-*`, `depth-create-*`, `depth-hud-*`, `depth-labels-*`, `depth-net-*`, `depth-overlay-*` (`-before.jpg` and `-after.jpg`) |
-| Time gears up to ten years a second | `gears-10y.jpg` |
-| A living world: boats, caravans, birds, smoke, weather | `living-world-1.jpg`, `living-world-2.jpg`, `living-world-3.jpg` |
-| Terra Nova News with the animated anchor | `news-anchor-1.jpg`, `news-anchor-2.jpg`, `news-anchor-3.jpg` |
-| A confirmed payment on the Solana Explorer | `solana-devnet-payment.jpg` |
+| ![The node-graph network panel with cut, wake, delete, blackout and show beliefs](docs/shots/depth-net-after.jpg) | ![A nation card with its ruler, general, stats, diplomacy and council controls](docs/shots/depth-card-after.jpg) |
+| The network panel | The nation card and its council |
 
-![The calm UI](docs/shots/calm-ui-1.jpg)
-![A living world](docs/shots/living-world-1.jpg)
-![The news anchor](docs/shots/news-anchor-1.jpg)
-![The material system](docs/shots/materials-sheet.jpg)
+### Decrees
 
-## Run it
+- **Type or speak a decree** ("a plague", "a meteor", "a prophet") and Gemini interprets it; its
+  severity comes from its words and every effect scales with it. Storm decrees bring storms.
+- The decree box shows what the decree did, with real numbers, and it is reported as a dispatch.
+  A decree that names no place strikes the whole nation.
 
-Needs Node 22 or later.
+### Terra Nova News
+
+- Gemini watches the globe and writes a bulletin; an **animated, lip-synced anchor** reads it in
+  a broadcast window, in one of the team's own cloned voices (ElevenLabs).
+- The broadcast **cuts to a live picture-in-picture** of the place each story is about.
+- Each nation also has a narrated history, an **anthem** written from what has actually happened
+  to it, and a **war chant**.
+
+| | |
+| --- | --- |
+| ![Terra Nova News with the animated anchor and the lower third](docs/shots/news-anchor-2.jpg) | ![Terra Nova News cutting to a live picture of the capital it reports on](docs/shots/news-pip-1.jpg) |
+| The anchor | The live picture-in-picture |
+
+### The economy, on Solana
+
+- One **Token-2022 world currency** on Solana devnet with a fixed supply of 1,000,000 and its mint
+  authority revoked, and a wallet per nation.
+- Every payment between nations (trade dues, tribute, reparations, plunder, seizure, war chests,
+  subsidies, pooled war funds) is a memo plus a transfer **signed by the paying nation's key**,
+  settled in 5-second windows; each payment gets a seal on the globe when Solana confirms it.
+- Each province makes a good; shortages, a goods market, trade routes, coin bursts and payment
+  arcs on the globe, and a treasury ledger in the network panel.
+- Optional **Tiger Data** hypertables chart each nation's territory over time.
+
+| | |
+| --- | --- |
+| ![The treasury ledger with confirmed, sent, queued and failed payments](docs/shots/depth-polish-network-treasury.jpg) | ![A confirmed payment between two nations on the Solana Explorer](docs/shots/solana-devnet-payment.jpg) |
+| The treasury ledger | A payment on the Solana Explorer |
+
+### War
+
+- **Wars are fought province by province** with seeded battles that every replica computes the
+  same way. Terrain matters for battles, movement, supply and attrition; armies route round
+  mountains, stop at enemy lines, and chokepoint forts hold them.
+- **Army formations** of front, flank and back figures for every age, from spearmen and
+  catapults to tanks and beyond; armies fire at each other by era (arrows, cannon,
+  artillery and tracers).
+- **War effects:** explosions, smoke along the front and ruined buildings; devastation, war
+  readiness and politics that drift to extremes under war.
+
+### The rocket launch
+
+- When a nation reaches the stellar age it launches satellites: each goes up on a **rocket with
+  stage separation and a booster burning up** on the way down, then circles the globe.
+
+| | |
+| --- | --- |
+| ![Army formations of front, flank and back figures for every age](assets/preview-formations.png) | ![The rocket, booster and satellite models](assets/preview-launch.png) |
+| Army formations by age | The rocket, booster and satellite |
+
+### Music and voices
+
+- **Instrumental era music** for the world's leading age plays under the voices, ducks while
+  anyone speaks and crossfades when the age changes.
+- Narration, chants, anthems, news anchors and a royal herald, in the team's own cloned voices.
+
+### The interface
+
+- **A calm, material UI** built from our Figma design: one left panel at a time, small war tabs,
+  depth, bevels, engraved names and plated badges.
+- **Six map modes:** political, terrain, diplomacy, strength, wealth and politics, by the minimap.
+- **Time gears** from a week a second to ten years a second, with a pacing director that slows
+  down for big moments, a **timeline scrubber** that rebuilds the globe at any past year, and a
+  **spotlight tour** of the world's big moments.
+- **Presentation mode** hides every panel and leaves the globe and the year; the screen starts
+  collapsed.
+- A **closing card** shows what the world cost (calls and tokens), and every run is recorded and
+  can be **replayed exactly** with no API calls.
+
+| | | |
+| --- | --- | --- |
+| ![The calm interface: one left panel, war tabs and the node-graph network](docs/shots/calm-ui-1.jpg) | ![The chronicle timeline open over the globe](docs/shots/depth-chron-after-timeline.jpg) | ![The time gears, from a week to ten years a second](docs/shots/time-gears-1280x720.png) |
+| The calm interface | The chronicle timeline | The time gears |
+
+More screenshots are in [`docs/shots/`](docs/shots/), and the interface design in
+[`docs/design/`](docs/design/).
+
+## Quick start
+
+Needs **Node 22** or later.
 
 ```bash
 npm install
-npm run dev     # server on http://localhost:8787, web on http://localhost:5173
-npm run mock    # a scripted world with no API calls, plus the web app
+npm run demo        # a mock rehearsal: the whole app, no API spend
 ```
 
-Copy `.env.example` to `.env` (git-ignored; the file lists every variable name, get the values from the owner in person) and fill in what you need. Every key is optional:
-with none set the app runs fully in mock mode.
+### The demo commands
 
-| Variable | Values | What |
-| --- | --- | --- |
-| `LLM_MODE` | `mock` (default), `live` | `live` calls Gemini and ElevenLabs (needs `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`); `mock` uses canned answers and sample audio. Live budgets are shared, so use it for demos only |
-| `SOLANA_MODE` | `off`, `mock` (default), `devnet` | `mock` makes fake signatures with no network; `devnet` mints the world currency and settles payments on Solana devnet every 5 seconds |
-| `TIGER_DATABASE_URL` | a Postgres URL | Optional: write every event to Tiger Data hypertables |
+| Command | What |
+| --- | --- |
+| `npm run demo` | A mock rehearsal: the whole app with no API calls, opened in the browser |
+| `npm run demo:live` | Live: Gemini, ElevenLabs and Solana devnet (needs the keys below) |
+| `npm run demo:reset` | A fresh prepared world between judges, servers kept running |
+| `npm run demo:stop` | Stop the demo |
+| `npm run demo:status` | Show what is running |
 
-For `SOLANA_MODE=devnet`, make the keypairs first (written outside the repo, to
-`~/.config/durhack/solana` or `SOLANA_KEYS_DIR`; never overwrites; prints only the Commons
-address), then fund that Commons address from the devnet faucet:
+Flags (pass them after `--`, e.g. `npm run demo -- --nations 8`):
+
+| Flag | What |
+| --- | --- |
+| `--prompt "..."` | The world prompt (reset reuses the last one) |
+| `--nations N` | How many nations |
+| `--replay <id>` | Play a saved world instead of a new one: instant, no API calls |
+| `--lan` | Open the app to teammates on the same network |
+| `--no-open` | Do not open the browser |
+
+### Development
 
 ```bash
-npx tsx scripts/solana-keys.ts
+npm run dev     # server on http://localhost:8787, web on http://localhost:5173
+npm run mock    # a scripted world with no API calls, plus the web app
+./check.sh      # the smoke gate: lint, build, the app starts (under a minute)
 ```
 
-Other limits (token caps, voice and anthem caps, model ids) are listed in `.env.example` and
-`docs/contracts.md`. Every run is saved as an event log in `server/replays/` and can be replayed
-exactly with no API calls. `./check.sh` is the smoke gate (lint, build, the app starts).
+### Keys
 
-## Architecture
+Copy `.env.example` to `.env` (git-ignored) and fill in what you need. Every key is optional:
+with none set the app runs fully in mock mode.
 
-- **One event log.** Nothing changes in place; every change is an event and `applyEvent` in
-  `packages/shared` is the only code that changes a world, on the server and in the browser.
-- **`packages/shared`**: types, the sphere (spherical Voronoi provinces), and the pure rules:
-  growth, war, terrain, ages, secession, council, wonders, trade, payments, economy.
-- **Rules move the world, Gemini rules the nations.** The server ticks every half second; battles
-  are a seeded pure function, so replicas agree with no referee. Rulers ask Gemini rarely, for
-  schema-checked JSON, and fall back to autopilot on any failure.
-- **One agent per nation and per general** (`server/src/agents`), each with its own replica,
-  publishing on a message bus whose links can be cut (`server/src/engine`).
-- **Story and sound** (`server/src/story`): lore, narration, anthems, chants, news and decrees,
-  Gemini for words and ElevenLabs for voice and music, cached on disk by content hash.
-- **Money** (`server/src/chain`): the sim is the truth; a Solana devnet mirror settles every 5 s.
-- **Replays and memory:** every run is recorded to `server/replays/` and replays exactly; the
-  server keeps only a recent chronicle window and streams the full log from disk.
-- **`web`**: Vite, React, three.js (react-three-fiber), zustand: the globe, the map modes, 100
-  low-poly models, and the calm material-system interface built from the Figma design.
-
-## Sponsor tech
-
-| Sponsor | What it does in Terra Nova |
+| Variable | What |
 | --- | --- |
-| Google Gemini | World bible, ruler decisions as schema-checked JSON, lore and anthem lyrics; reads a picture on the Create screen; hears spoken decrees; watches the globe for Terra Nova News (`gemini-3.5-flash-lite`, `gemini-3.5-flash`) |
-| ElevenLabs | Narration, war chants (`eleven_v3`), anthems (Music API), news anchors, narrators and the royal herald in the team's cloned voices |
-| Solana | Token-2022 world currency on devnet; every payment between nations a memo plus TransferChecked signed by the payer |
-| Tiger Data | Optional: events and nation stats in hypertables, territory over time from a continuous aggregate |
-| Entire | Every Claude Code session on the team's laptops captured and linked to commits |
+| `LLM_MODE` | `mock` (default) uses canned answers and sample audio; `live` calls Gemini and ElevenLabs |
+| `SOLANA_MODE` | `off`, `mock` (default, fake signatures, no network) or `devnet` (real payments on Solana devnet) |
+| `GEMINI_API_KEY` | Gemini, for `LLM_MODE=live` |
+| `ELEVENLABS_API_KEY` | ElevenLabs, for `LLM_MODE=live` |
+| `TEAM_VOICES` | The ElevenLabs voices used for anchors, narrators and the herald |
+| `TIGER_DATABASE_URL` | Optional: a Postgres URL for Tiger Data |
+| `GEMINI_MODEL_RULER`, `GEMINI_MODEL_BIBLE`, `GEMINI_MODEL_LORE` | Gemini model ids |
+| `ELEVEN_MODEL`, `ELEVEN_CHANT_MODEL`, `ELEVEN_MUSIC_MODEL` | ElevenLabs model ids |
+| `LLM_MAX_CALLS_PER_MIN`, `LLM_MAX_TOKENS_PER_RUN`, `ELEVEN_MAX_CHARS_PER_RUN`, `ANTHEM_MAX_PER_RUN`, `BROADCAST_MAX_PER_RUN` | Budgets per run |
+| `SOLANA_RPC_URL`, `SOLANA_WS_URL`, `SOLANA_KEYS_DIR`, `SOLANA_SETTLE_MS`, `SOLANA_MAX_TX_PER_WINDOW`, `SOLANA_FLOAT` | Solana settings |
+| `PORT` | The server port (default 8787) |
+
+For `SOLANA_MODE=devnet`, make the keypairs first with `npx tsx scripts/solana-keys.ts` (they
+are written outside the repo, or to `SOLANA_KEYS_DIR`; it never overwrites and prints only the
+Commons address), then fund that address from the devnet faucet.
+
+## Controls and key bindings
+
+Keys do nothing while you are typing in a text box.
+
+### Keyboard
+
+| Key | What it does | Where |
+| --- | --- | --- |
+| `1` to `6` | Map mode: political, terrain, diplomacy, strength, wealth, politics | Anywhere |
+| `P` | Presentation mode on or off (hides every panel) | Anywhere |
+| `Esc` | Leave presentation mode; close the chronicle timeline, the closing card or the prepare panel | Anywhere |
+| `S` | Spotlight tour of the world's big moments on or off | Anywhere |
+| `H` | Open or close the chronicle timeline | Anywhere |
+| `End` | Show the closing card (what this world cost) | Anywhere |
+| `Q` / `E` | Turn the view left or right | Ground view (zoomed right in) |
+| `Left` / `Right` (or `Down` / `Up`) | Step back or forward; with `Shift`, 10 steps | Timeline scrubber |
+| `PageDown` / `PageUp` | 10 steps back or forward | Timeline scrubber |
+| `Home` / `End` | Jump to the start or to now | Timeline scrubber |
+| `[` / `]` | Previous or next big moment | Timeline scrubber |
+| `Esc` | Back to the live world, then close the scrubber | Timeline scrubber |
+| `Left` / `Right` (or `Down` / `Up`) | Slower or faster gear | Time gears |
+| `Home` / `End` | Slowest or fastest gear | Time gears |
+| `Enter` | Proclaim the decree | Decree box |
+| Hold `Space` or `Enter` | Speak a decree while held | Decree microphone button |
+| `Enter` (`Shift+Enter` for a new line) | Create the world | Found a world screen |
+| `Enter` / `Space` | Choose a picture | Picture drop zone |
+| `Left` / `Right` | Move between points | Territory chart |
+
+### Mouse
+
+| Action | What it does |
+| --- | --- |
+| Drag | Spin the globe |
+| Scroll | Zoom; zoomed right in, the camera tilts to a ground view |
+| Right-drag or `Ctrl`+drag | Turn the view in the ground view |
+| Click a province | Select its nation and open the nation card (zoomed in, the province too) |
+| Click the ocean or unclaimed land | Close the card |
+| Double-click a province | Fly to its nation |
+| Click or drag on the minimap | Turn the globe to that spot |
+| Click a map-mode icon by the minimap | Change the map mode |
+| Click a council marker on the globe | Select that nation |
+| Click a payment arc | Open that payment on the Solana Explorer |
+| Hold the microphone button | Speak a decree |
+| Click the token meter | Show the closing card |
+| History button | Open the timeline scrubber |
+
+Clicking or scrolling on the globe pauses the spotlight tour for a moment.
+
+## How it works
+
+- **One event log.** Nothing changes in place; every change is an event, and `applyEvent` in
+  `packages/shared` is the only code that changes a world, on the server and in the browser.
+- **`packages/shared`**: the types, the sphere (spherical Voronoi provinces) and the pure rules:
+  growth, war, terrain, ages, secession, council, wonders, trade, payments and the economy.
+- **The server engine** ticks the world; battles are a seeded pure function, so every replica
+  agrees with no referee.
+- **One agent per nation and per general** (`server/src/agents`), each with its own replica,
+  publishing on a **message bus** whose links can be cut (`server/src/engine`).
+- **Mock or live.** `LLM_MODE=mock` runs the whole world with canned answers and no network;
+  `live` asks **Gemini** for the world bible, ruler decisions (schema-checked JSON), lore,
+  decrees and the news, and **ElevenLabs** for voices, chants, anthems and music.
+- **Money** (`server/src/chain`): the sim is the truth; a **Solana devnet** ledger mirrors every
+  payment, settled every 5 seconds.
+- **Stats** (`server/src/tiger`): optional **Tiger Data** hypertables and a continuous aggregate.
+- **Replays:** every run is recorded and replays exactly with no API calls.
+- **The web** (`web`): Vite, React and three.js (react-three-fiber), zustand; it applies the
+  same events to its own replica and draws the globe and the interface.
+
+```mermaid
+flowchart LR
+  WEB["Browser<br/>React, three.js, zustand<br/>applyEvent replica"]
+  SRV["Server engine<br/>clock, observer, replays"]
+  BUS["Message bus<br/>a link per nation"]
+  AG["Nation agents x N<br/>own replica, own ruler"]
+  SH["packages/shared<br/>types, sphere, rules"]
+  GEM["Gemini"]
+  EL["ElevenLabs"]
+  SOL["Solana devnet"]
+  TIG["Tiger Data"]
+  WEB -- "HTTP and WebSocket" --> SRV
+  SRV --- BUS --- AG
+  AG --> GEM
+  SRV --> GEM & EL
+  SRV -- "payments" --> SOL
+  SRV -- "stats" --> TIG
+  SH -.-> WEB & SRV
+```
+
+More detail, the algorithms and the problems we hit: [`docs/documentation.md`](docs/documentation.md).
+
+## Tech stack
+
+- **Language:** TypeScript everywhere, Node 22, npm workspaces
+- **Server:** Express, `ws`, `@google/genai` (Gemini), ElevenLabs, `@solana/kit` with the
+  Token-2022 and memo programs, `pg` (Tiger Data)
+- **Web:** Vite, React, three.js with `@react-three/fiber` and `@react-three/drei`, zustand
+- **Shared:** a pure rules package (`@terra/shared`) used by both sides
+- **Art:** low-poly models made in Blender; the interface designed in Figma
+
+## Project layout
+
+| Folder | What |
+| --- | --- |
+| [`packages/shared/`](packages/shared/) | Types, the hex sphere, `applyEvent` and every rule, shared by server and web |
+| [`server/`](server/) | The engine, the nation agents, the bus, Gemini, ElevenLabs, the Solana ledger, replays |
+| [`web/`](web/) | The browser app: the globe, the map modes, the interface, the audio |
+| [`assets/`](assets/) | Blender sources and model previews |
+| [`scripts/`](scripts/) | The demo scripts, Solana key setup, git hooks and team scripts |
+| [`docs/`](docs/) | How it works, the submission, contracts, research, screenshots and plans |
+| [`check.sh`](check.sh) | The smoke gate |
+
+## Docs
+
+- [`docs/documentation.md`](docs/documentation.md): how Terra Nova works, its algorithms, the
+  problems we hit and judge Q&A
+- [`docs/submission.md`](docs/submission.md): the submission text
+- [`docs/contracts.md`](docs/contracts.md): every interface between the parts (APIs, events,
+  data shapes)
+- [`docs/research/`](docs/research/): research on game economies, building styles, map visuals
+  and the Solana economy
 
 ## Team
 
 | GitHub | Lane |
 | --- | --- |
-| [@SamsSide](https://github.com/SamsSide) (owner) | World, story and sound: simulation, agents, Gemini, resilience, voice and music, Blender models, Figma design |
+| [@SamsSide](https://github.com/SamsSide) | World, story and sound: simulation, agents, Gemini, resilience, voice and music, Blender models, Figma design |
 | [@CutGrass88](https://github.com/CutGrass88) | The globe, and the Solana economy |
 | [@Justin-CODING-PY](https://github.com/Justin-CODING-PY) | The interface and the submission |
 
-The humans planned, designed and tested; Claude Code agents on each laptop did most of the
-coding, coordinating through GitHub issues and pull requests. How that works is below.
+## Built at DurHack 2026
 
-- **The plan:** [`docs/hackathon-plan.md`](docs/hackathon-plan.md)
-- **Who is doing what next:** [`docs/roadmap.md`](docs/roadmap.md) and [`docs/lanes/`](docs/lanes/)
-- **How it works (for judges):** [`docs/documentation.md`](docs/documentation.md)
-- **Rules for agents:** [`CLAUDE.md`](CLAUDE.md) and the `durhack-*` skills in `.claude/skills/`
+Terra Nova was built in 24 hours at DurHack 2026, Durham University. The humans planned,
+designed and tested; Claude Code agents on each laptop did most of the coding, coordinating
+through GitHub issues and pull requests. The rules they followed are in [`CLAUDE.md`](CLAUDE.md).
 
-## Joining the team (working on this repo)
+## Keeping this README current
 
-1. Accept the GitHub invite to `SamsSide/Durhack-2026`.
-2. Install [Claude Code](https://claude.com/claude-code), [GitHub CLI](https://cli.github.com)
-   (`gh auth login`), git, and `jq` or Python 3.
-3. `gh repo clone SamsSide/Durhack-2026 && cd Durhack-2026`
-4. Open Claude Code in the folder and say: **"durhack-init, join me"**. It installs the git
-   hooks, finds your lane, starts the inbox watcher and tells you what's next.
-5. Optional: the Figma MCP (UI work) and the chrome-devtools MCP (browser research; setup
-   commands in `.claude/skills/durhack-browser/SKILL.md`).
-
-## The idea in one picture
-
-The team is split into **lanes**, one per person (2 to 4). Each lane owns its own folders and
-its own lane file. Lanes meet at **checkpoints**. Anything one lane needs from another goes
-through an **issue**; anything that changes the plan goes to the **owner**.
-
-```mermaid
-flowchart TB
-  subgraph Owner["Owner: SamsSide"]
-    O1["Decides idea, prizes, plan,<br/>contracts, stack"]
-    O2["Merges needs-owner PRs"]
-  end
-  subgraph GH["GitHub repo"]
-    I["Issues<br/>agent-request / needs-owner / human-test"]
-    P["Pull requests"]
-    M[("main<br/>(PR only)")]
-    B["DurHack tests board"]
-  end
-  subgraph LA["Lane A laptop"]
-    CA["Claude + agents"] --- WA["inbox watcher"]
-  end
-  subgraph LB["Lane B laptop"]
-    CB["Claude + agents"] --- WB["inbox watcher"]
-  end
-  subgraph LC["Lane C / D laptops"]
-    CC["Claude + agents"] --- WC["inbox watcher"]
-  end
-  CA & CB & CC -- "open / answer" --> I
-  WA & WB & WC -. "poll every 60 s" .-> I
-  CA & CB & CC -- "push branch, open PR" --> P
-  P -- "squash merge" --> M
-  I -- "human-test" --> B
-  I -- "needs-owner" --> O1
-  P -- "touches plan / rules" --> O2
-```
-
-## How agents ask each other for things
-
-Lane A's agent needs an endpoint from lane B. It doesn't stop and wait: it opens an issue
-assigned to B's person, keeps building against a mock, and swaps in the real thing when the
-answer arrives.
-
-```mermaid
-sequenceDiagram
-  autonumber
-  participant A as Lane A agent
-  participant GH as GitHub issue
-  participant WB as Lane B watcher
-  participant B as Lane B agent
-  participant WA as Lane A watcher
-  A->>GH: ask.sh request --to b<br/>(label agent-request, assigned to B)
-  Note over A: keeps working on a mock
-  WB-->>GH: polls (60 s)
-  WB->>B: DURHACK [new] #12 from A: need POST /api/scan
-  B->>B: builds it on a branch, opens PR "Closes #12"
-  B->>GH: reply.sh 12 --pr 34 --close<br/>(what, where, how to call it)
-  WA-->>GH: polls (60 s)
-  WA->>A: DURHACK [reply] / [closed] #12
-  A->>A: pulls main, replaces the mock
-```
-
-The three kinds of issue (forms in `.github/ISSUE_TEMPLATE/`):
-
-| Label | When | Assigned to |
-| --- | --- | --- |
-| `agent-request` | One lane needs something from another: an API, a function, data, a fix, an answer | That lane's person |
-| `needs-owner` | A decision only the owner makes: plan, roadmap, contracts, stack, a dependency, another lane's code | SamsSide |
-| `human-test` | Something a person should try by hand (agents only run a quick smoke check) | Whoever will test it; also on the board |
-
-Add `blocking` if the asker is stuck until it's answered. Answers are posted with
-`scripts/durhack/reply.sh` and labelled `answered` (or `declined`); testers label
-`test-passed` or `test-failed`.
-
-## How a change reaches main
-
-**Nothing is ever pushed to `main`.** Not by agents, not by the owner, not for a typo. A
-pre-push hook blocks it on every laptop; GitHub blocks it too if the repo's plan allows rulesets.
-
-```mermaid
-flowchart LR
-  S["git switch -c a/topic<br/>from origin/main"] --> W["Agents build<br/>(durhack-execute)"]
-  W --> G{"./check.sh<br/>smoke gate"}
-  G -- red --> F["one fix round"] --> G2{"green?"}
-  G2 -- no --> H["human-test issue<br/>or draft PR"]
-  G2 -- yes --> R
-  G -- green --> R["pr.sh open<br/>rebase on main, push, PR"]
-  R --> C{"conflict?"}
-  C -- yes --> X["durhack-pr resolves<br/>(rules per file)"] --> R
-  C -- no --> O{"touches owner paths?<br/>plan, roadmap, contracts,<br/>CLAUDE.md, .claude, .github, scripts"}
-  O -- no --> MG["lane merges its own PR<br/>straight away, no prompt"]
-  O -- yes --> NO["label needs-owner<br/>SamsSide reviews and merges"]
-  MG & NO --> MAIN[("main")]
-  MAIN --> T["human-test issues<br/>for people to try"]
-```
-
-## Who can change what
-
-```mermaid
-flowchart TB
-  Q{"What are you changing?"}
-  Q -- "code in my lane's folders,<br/>my lane file, docs/documentation.md,<br/>docs/prizes, docs/research" --> Y["Do it. PR, merge it yourself."]
-  Q -- "another lane's code or lane file" --> AR["agent-request issue to that lane"]
-  Q -- "plan, roadmap, contracts, stack,<br/>a new dependency, rules, skills, scripts" --> NO["needs-owner issue.<br/>Keep working on something else."]
-  NO --> D{"Owner decides"}
-  D -- yes --> PR["PR (owner merges)"]
-  D -- no --> DROP["Don't do it"]
-```
-
-A teammate saying "just do it" doesn't override this; only the owner's answer does.
-
-## The skills
-
-| Skill | What it does |
-| --- | --- |
-| `durhack-dev` | Start here. The rules and which skill to use |
-| `durhack-init` | Set up the team (2–4 lanes, GitHub labels, board, hooks), or join on a new laptop |
-| `durhack-prizes` | Researches every prize in parallel and builds a prize matrix to win as many as possible |
-| `durhack-plan` | Idea, hackathon plan, contracts, N-lane roadmap with checkpoints; lane build plans |
-| `durhack-execute` | Builds a lane plan with agents, smoke gate, one fix round, PR |
-| `durhack-inbox` | Cross-lane issues: ask, answer, watch, owner decisions, human tests |
-| `durhack-pr` | Opening, merging and resolving conflicts on PRs |
-| `durhack-explain` | How the program works, its algorithms and the problems we hit; judge prep |
-| `durhack-handoff` | Writes and commits a handoff, gives the command for a fresh session (warned at ~650k tokens) |
-| `durhack-browser` | Research and screenshots in your own Chrome |
-
-Agents (`.claude/agents/`): `durhack-builder` (any code), `durhack-frontend` (UI, Figma),
-`durhack-researcher` (web research), `durhack-reviewer` (read-only checkpoint review).
-
-## Scripts
-
-| Command | What |
-| --- | --- |
-| `scripts/durhack/whoami.sh` | Your login, lane and role |
-| `scripts/durhack/inbox.sh --list` | Everything open that concerns you |
-| `scripts/durhack/inbox.sh --watch 60` | The background watcher (one line per new event) |
-| `scripts/durhack/ask.sh request\|owner\|test ...` | Open an issue |
-| `scripts/durhack/reply.sh <n> --body-file f [--pr n] [--close]` | Answer an issue |
-| `scripts/durhack/pr.sh sync\|open\|status\|merge` | The PR flow |
-| `scripts/durhack/install-hooks.sh` | Git hooks: no commits or pushes on main, no AI attribution, no keys |
-| `scripts/durhack/setup-github.sh ...` | Owner's one-time GitHub setup |
-| `./check.sh` | The smoke gate (under a minute) |
-
-## Rules everyone follows
-
-- Never push to `main`; every change is a PR.
-- The owner (SamsSide) decides the plan; others ask with `needs-owner`.
-- Stay in your lane; ask other lanes with `agent-request`.
-- Contracts (`docs/contracts.md`) before code; mock what isn't built yet.
-- No AI attribution and no emojis in commits, PRs, issues or comments.
-- API keys only in `.env` (never committed).
-- Lane PRs are pushed, opened and merged automatically once green; nobody waits on a prompt.
-- Keep sessions small: at ~650k tokens of context, hand off to a fresh session (`durhack-handoff`).
+Every PR that adds or changes something a user can see updates this README (features,
+screenshots, controls, commands).
