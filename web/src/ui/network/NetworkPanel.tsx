@@ -2,11 +2,20 @@ import { useState } from 'react';
 import { useWorld } from '../../state/world';
 import { useBelief } from '../../state/belief';
 import { NationRow } from './NationRow';
+import { LedgerPanel } from '../economy/LedgerPanel';
+import { EconomyCounter } from '../economy/EconomyCounter';
+import { useEconomy } from '../economy/useEconomy';
 import './network.css';
 
 const FOLD_KEY = 'tn-network-folded';
 function readFolded(): boolean {
   try { const v = localStorage.getItem(FOLD_KEY); return v == null ? true : v === '1'; } catch { return true; }
+}
+
+const TAB_KEY = 'tn-network-tab';
+type NetTab = 'network' | 'treasury';
+function readTab(): NetTab {
+  try { return localStorage.getItem(TAB_KEY) === 'treasury' ? 'treasury' : 'network'; } catch { return 'network'; }
 }
 
 export function NetworkPanel() {
@@ -22,6 +31,13 @@ export function NetworkPanel() {
   const belief = useBelief();
 
   const [folded, setFolded] = useState(readFolded);
+  const [tab, setTabState] = useState<NetTab>(readTab);
+  const economy = useEconomy();
+  const economyOn = economy.status === 'ok';
+  const setTab = (t: NetTab) => {
+    setTabState(t);
+    try { localStorage.setItem(TAB_KEY, t); } catch { /* storage unavailable */ }
+  };
 
   if (!world) return null;
 
@@ -42,6 +58,7 @@ export function NetworkPanel() {
         <span className="tn-nt-title">The Network</span>
         <span className="tn-state up"><i />{upCount} up</span>
         {cutCount > 0 && <span className="tn-state cut"><i />{cutCount} cut</span>}
+        <EconomyCounter />
         <svg width="6" height="10" viewBox="0 0 6 10" aria-hidden="true"><path d="M1 1L5 5L1 9" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg>
       </button>
     );
@@ -66,6 +83,8 @@ export function NetworkPanel() {
   }
   const beliefDisabled = beliefOf == null && selected == null;
 
+  const showTab: NetTab = economyOn ? tab : 'network';
+
   return (
     <aside className="tn-net panel">
       <header className="tn-net-head">
@@ -76,6 +95,14 @@ export function NetworkPanel() {
         <button className="tn-net-fold" onClick={() => setFold(true)} aria-label="Fold the network panel"><svg width="6" height="10" viewBox="0 0 6 10" aria-hidden="true"><path d="M5 1L1 5L5 9" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg></button>
       </header>
 
+      {economyOn && (
+        <div className="tn-net-tabs" role="tablist">
+          <button type="button" role="tab" aria-selected={showTab === 'network'} className={`tn-net-tabbtn${showTab === 'network' ? ' tn-on' : ''}`} onClick={() => setTab('network')}>Network</button>
+          <button type="button" role="tab" aria-selected={showTab === 'treasury'} className={`tn-net-tabbtn${showTab === 'treasury' ? ' tn-on' : ''}`} onClick={() => setTab('treasury')}>Treasury</button>
+        </div>
+      )}
+
+      {showTab === 'treasury' ? <LedgerPanel /> : (<>
       <button
         className={`tn-switch tn-blackout ${blackedOut ? 'on' : ''}`}
         role="switch"
@@ -118,6 +145,7 @@ export function NetworkPanel() {
           />
         ))}
       </ul>
+      </>)}
     </aside>
   );
 }
