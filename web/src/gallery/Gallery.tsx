@@ -181,7 +181,7 @@ function Grid({ rows, colour, rotate, variant, onPick, picked, onExport }: {
                 <div className="gal-row-sub">
                   {row.sub}
                   {row.proto && isProtoStyle(row.id) && (
-                    <button type="button" className="gal-btn gal-btn--small" onClick={() => onExport(row.id as ProtoStyle)}>Export GLB</button>
+                    <button type="button" className="tn-button tn-button--lacquer tn-button--sm gal-btn" onClick={() => onExport(row.id as ProtoStyle)}>Export GLB</button>
                   )}
                 </div>
               )}
@@ -282,7 +282,7 @@ export function Gallery() {
         <CameraRig cols={cols} rows={rows.length} fitKey={`${coldWar}-${rows.length}`} />
       </Canvas>
 
-      <header className="gal-bar">
+      <header className="gal-bar tn-lacquer tn-lacquer--bar-top">
         <div className="gal-title">
           <h1>Model gallery</h1>
           <p>Every building style side by side. Drag to orbit, scroll to zoom. Click a row name to see it at globe scale.</p>
@@ -297,25 +297,25 @@ export function Gallery() {
           </div>
           <div className="gal-group">
             <span className="gal-label">Light</span>
-            <button type="button" className={`gal-btn${light === 'day' ? ' is-on' : ''}`} onClick={() => setLight('day')}>Day</button>
-            <button type="button" className={`gal-btn${light === 'dusk' ? ' is-on' : ''}`} onClick={() => setLight('dusk')}>Dusk</button>
+            <button type="button" className={`tn-button tn-button--lacquer gal-btn${light === 'day' ? ' is-active' : ''}`} onClick={() => setLight('day')}>Day</button>
+            <button type="button" className={`tn-button tn-button--lacquer gal-btn${light === 'dusk' ? ' is-active' : ''}`} onClick={() => setLight('dusk')}>Dusk</button>
           </div>
           <div className="gal-group">
-            <button type="button" className={`gal-btn${rotate ? ' is-on' : ''}`} aria-pressed={rotate} onClick={() => setRotate(!rotate)}>Auto-rotate</button>
-            <button type="button" className={`gal-btn${mini ? ' is-on' : ''}`} aria-pressed={mini} onClick={() => setMini(!mini)}>Globe scale (40 px)</button>
-            <button type="button" className={`gal-btn gal-btn--rubric${coldWar ? ' is-on' : ''}`} aria-pressed={coldWar} onClick={() => setColdWar(!coldWar)}>Cold War</button>
+            <button type="button" className={`tn-button tn-button--lacquer gal-btn${rotate ? ' is-active' : ''}`} aria-pressed={rotate} onClick={() => setRotate(!rotate)}>Auto-rotate</button>
+            <button type="button" className={`tn-button tn-button--lacquer gal-btn${mini ? ' is-active' : ''}`} aria-pressed={mini} onClick={() => setMini(!mini)}>Globe scale (40 px)</button>
+            <button type="button" className={`tn-button tn-button--lacquer gal-btn${coldWar ? ' is-active' : ''}`} aria-pressed={coldWar} onClick={() => setColdWar(!coldWar)}>Cold War</button>
           </div>
           <div className="gal-group">
             <span className="gal-label">Highland</span>
             {HIGHLAND_VARIANTS.map((v) => (
-              <button key={v} type="button" className={`gal-btn${variant === v ? ' is-on' : ''}`} onClick={() => setVariant(v)}>{pretty(v)}</button>
+              <button key={v} type="button" className={`tn-button tn-button--lacquer gal-btn${variant === v ? ' is-active' : ''}`} onClick={() => setVariant(v)}>{pretty(v)}</button>
             ))}
           </div>
           <div className="gal-group">
-            <button type="button" className="gal-btn gal-btn--gilt" disabled={!!busy} onClick={() => void exportStyles([...PROTO_STYLES])}>
+            <button type="button" className="tn-button tn-button--gilt gal-btn" disabled={!!busy} onClick={() => void exportStyles([...PROTO_STYLES])}>
               {busy ?? `Export all prototypes (${PROTO_STYLES.length * PROTO_KINDS.length} GLB)`}
             </button>
-            <a className="gal-btn" href={`${import.meta.env.BASE_URL ?? '/'}`}>Back to the app</a>
+            <a className="tn-button tn-button--lacquer gal-btn" href={`${import.meta.env.BASE_URL ?? '/'}`}>Back to the app</a>
           </div>
         </div>
       </header>
@@ -324,11 +324,11 @@ export function Gallery() {
       {error && <div className="gal-status gal-status--bad">Manifest failed to load ({error}); showing prototypes only.</div>}
 
       {mini && miniRows.length > 0 && (
-        <aside className="gal-mini-panel">
+        <aside className="gal-mini-panel tn-lacquer tn-frame">
           <div className="gal-mini-head">
             <span className="gal-label">At globe scale: {miniRows.map((r) => r.label).join(' vs ')}</span>
-            <button type="button" className={`gal-btn gal-btn--small${zoomed ? ' is-on' : ''}`} onClick={() => setZoomed(!zoomed)}>Magnify x3</button>
-            <button type="button" className="gal-btn gal-btn--small" onClick={() => setMini(false)}>Close</button>
+            <button type="button" className={`tn-button tn-button--lacquer tn-button--sm gal-btn${zoomed ? ' is-active' : ''}`} onClick={() => setZoomed(!zoomed)}>Magnify x3</button>
+            <button type="button" className="tn-button tn-button--lacquer tn-button--sm gal-btn" onClick={() => setMini(false)}>Close</button>
           </div>
           <GlobeScale rows={miniRows} colour={colour} variant={variant} light={light} zoomed={zoomed} />
           <p className="gal-mini-note">Rendered at 1 device pixel per pixel, so this is the real silhouette. Magnify only enlarges the pixels.</p>

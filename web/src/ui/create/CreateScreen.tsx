@@ -167,8 +167,8 @@ export function CreateScreen() {
   if (founding) {
     const steps = foundingSteps(nations);
     return (
-      <section className="panel tn-founding" aria-live="polite" aria-busy="true">
-        <span className="tn-cap tn-create-kicker">Founding</span>
+      <section className="tn-sheet tn-frame tn-founding" aria-live="polite" aria-busy="true">
+        <span className="tn-cartouche">Founding</span>
         <h2>The scribes are writing your world</h2>
         <p className="tn-fo-prompt">&ldquo;{prompt.trim()}&rdquo;</p>
         <ol className="tn-fo-steps">
@@ -190,9 +190,10 @@ export function CreateScreen() {
   }
 
   return (
-    <form className="panel tn-create" onSubmit={onSubmit} aria-busy={busy}>
+    <form className="tn-sheet tn-frame tn-frame--corners tn-create" onSubmit={onSubmit} aria-busy={busy}>
+      <span className="tn-cartouche">A new world</span>
+      <div className="tn-create-body">
       <header className="tn-create-head">
-        <span className="tn-cap tn-create-kicker">A new world</span>
         <h2 className="tn-create-title">Found a World</h2>
         <p className="tn-create-sub">Describe it in a line. The nations will write the rest.</p>
       </header>
@@ -202,7 +203,7 @@ export function CreateScreen() {
           <label className="tn-cap" htmlFor="tn-create-prompt">Your world</label>
           <textarea
             id="tn-create-prompt"
-            className="tn-create-prompt"
+            className="tn-input tn-create-prompt"
             rows={3}
             autoFocus
             value={prompt}
@@ -249,7 +250,7 @@ export function CreateScreen() {
               <button
                 key={p.label}
                 type="button"
-                className={`chip tn-create-chip${preset === p.label ? ' active' : ''}`}
+                className="tn-chip tn-create-chip"
                 aria-pressed={preset === p.label}
                 onClick={() => pick(p)}
               >{p.label}</button>
@@ -257,13 +258,29 @@ export function CreateScreen() {
           </div>
         </div>
 
+        <div className="tn-create-field">
+          <span className="tn-cap" id="tn-create-era">Era</span>
+          <div className="tn-well tn-well--paper tn-create-eras" role="group" aria-labelledby="tn-create-era">
+            {[''].concat(ERAS).map((x) => (
+              <button
+                key={x || 'auto'}
+                type="button"
+                aria-pressed={era === x}
+                className="tn-seg"
+                onClick={() => setEra(x)}
+              >{x || 'Let the world decide'}</button>
+            ))}
+          </div>
+          <span className="tn-create-hint">Sets the starting technology and names.</span>
+        </div>
+
         <div className="tn-create-grid">
           <div className="tn-create-field">
             <span className="tn-cap">Nations</span>
             <div className="tn-create-stepper">
-              <button type="button" className="tn-create-stbtn" aria-label="Fewer nations" disabled={nations <= MIN_NATIONS} onClick={() => step(-1)}>-</button>
-              <span className="tn-create-stval" aria-live="polite">{nations}</span>
-              <button type="button" className="tn-create-stbtn" aria-label="More nations" disabled={nations >= MAX_NATIONS} onClick={() => step(1)}>+</button>
+              <button type="button" className="tn-button tn-button--sm tn-create-stbtn" aria-label="Fewer nations" disabled={nations <= MIN_NATIONS} onClick={() => step(-1)}>-</button>
+              <span className="tn-well tn-well--paper tn-create-stval" aria-live="polite">{nations}</span>
+              <button type="button" className="tn-button tn-button--sm tn-create-stbtn" aria-label="More nations" disabled={nations >= MAX_NATIONS} onClick={() => step(1)}>+</button>
               <span className="tn-create-pips" aria-hidden="true">
                 {Array.from({ length: MAX_NATIONS - 2 }, (_, i) => (
                   <i key={i} className={i < nations - 2 ? 'on' : ''} />
@@ -271,14 +288,6 @@ export function CreateScreen() {
               </span>
             </div>
             <span className="tn-create-hint">{MIN_NATIONS} to {MAX_NATIONS}</span>
-          </div>
-          <div className="tn-create-field">
-            <label className="tn-cap" htmlFor="tn-create-era">Era</label>
-            <select id="tn-create-era" className="tn-create-select" value={era} onChange={(e) => setEra(e.target.value)}>
-              <option value="">Let the world decide</option>
-              {ERAS.map((x) => <option key={x} value={x}>{x}</option>)}
-            </select>
-            <span className="tn-create-hint">Sets the starting technology and names.</span>
           </div>
           <div className="tn-create-field">
             <label className="tn-cap" htmlFor="tn-create-sea">Sea level <b>{pct(seaLevel)}</b></label>
@@ -304,27 +313,29 @@ export function CreateScreen() {
       {!busy && error && <p className="tn-create-error" role="alert">{error}</p>}
       {!connected && !busy && !error && <p className="tn-create-quiet">Connecting to the server...</p>}
 
+      <hr className="tn-rule tn-create-rule" />
       <div className="tn-create-foot">
         <span className="tn-create-mode">{modeNote}</span>
-        <button type="submit" className="btn primary tn-create-go" disabled={busy || !prompt.trim()}>
+        <button type="submit" className="tn-button tn-button--gilt tn-button--lg tn-create-go" disabled={busy || !prompt.trim()}>
           Create world
         </button>
       </div>
 
       {replays.length > 0 && (
         <section className="tn-create-saved">
-          <h3>Saved worlds</h3>
+          <h3 className="tn-header-bar" style={{ '--tn-bleed': '34px' } as CSSProperties}>Saved worlds</h3>
           <ul>
             {replays.map((r) => (
               <li key={r.id}>
                 <span className="tn-create-rname">{r.name}</span>
                 <span className="tn-create-rev">{r.events.toLocaleString('en-GB')} events</span>
-                <button type="button" className="btn" disabled={busy} onClick={() => void run(() => postJson(`/api/replays/${encodeURIComponent(r.id)}/play`))}>Replay</button>
+                <button type="button" className="tn-button tn-button--sm" disabled={busy} onClick={() => void run(() => postJson(`/api/replays/${encodeURIComponent(r.id)}/play`))}>Replay</button>
               </li>
             ))}
           </ul>
         </section>
       )}
+      </div>
     </form>
   );
 }
