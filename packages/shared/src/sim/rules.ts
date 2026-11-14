@@ -19,7 +19,7 @@ import { chokepoints } from './paths';
 import { WONDER_BUILD_TICKS, WONDER_COST, planWonder, wonderBonusOf } from './wonders';
 import {
   devastationOf, isShort, landDevastation, marketPlan, movementKey, outputMul, politicsOf, politicsStep, popCapMul, readinessOf,
-  readinessStep, seizureLine, upkeepMul,
+  readinessStep, seizureLine, POLITICS, upkeepMul,
 } from './economy';
 
 export type Focus = 'expand' | 'develop' | 'fortify' | 'attack';
@@ -36,8 +36,8 @@ export interface TurnContext {
   /** B11: provinces it had lost in war when last it looked (to tell a year it lost land). */
   econ?: EconMemory;
 }
-export interface EconMemory { lost: number }
-export const newEconMemory = (): EconMemory => ({ lost: -1 });
+export interface EconMemory { lost: number; gained: number }
+export const newEconMemory = (): EconMemory => ({ lost: -1, gained: 0 });
 
 // ---- tables ---------------------------------------------------------------------------------
 
@@ -535,13 +535,30 @@ export function nationTurn(
   const enemyOnLand = view.units.some((u) => u.kind === 'army' && u.tile >= 0 && enemySet.has(u.owner) && own[u.tile] === countryId);
   const prevPol = politicsOf(me);
   const warReadiness = readinessStep(wr, { attack: policy.focus === 'attack', atWar, enemyOnLand, farRight: movementKey(prevPol.axis) === 'black_standard' });
-  let lostNow = 0;
-  for (const x of ctx.wars?.values() ?? []) lostNow += x.lost;
-  const lostLand = !!ctx.econ && ctx.econ.lost >= 0 && lostNow > ctx.econ.lost;
-  if (ctx.econ) ctx.econ.lost = lostNow;
+  // Won or lost: this year's provinces lost and gained (from the war ledger), the net over its current wars,
+  // and the reparations of a peace made last year (paid: humiliated; received: vindicated).
+  let lostTotal = 0, gainedTotal = 0, warNet = 0;
+  for (const [foe, x] of ctx.wars?.entries() ?? []) {
+    lostTotal += x.lost; gainedTotal += x.gained;
+    if (enemySet.has(foe)) warNet += x.gained - x.lost;
+  }
+  const seen = !!ctx.econ && ctx.econ.lost >= 0;
+  const lostYear = seen ? Math.max(0, lostTotal - ctx.econ!.lost) : 0;
+  const gainedYear = seen ? Math.max(0, gainedTotal - ctx.econ!.gained) : 0;
+  if (ctx.econ) { ctx.econ.lost = lostTotal; ctx.econ.gained = gainedTotal; }
+  let paidRep = false, gotRep = false;
+  for (const r of view.relations) {
+    if (r.stance !== 'neutral' || (r.a !== countryId && r.b !== countryId) || r.since !== tick - 1) continue;
+    const t = ctx.wars?.get(r.a === countryId ? r.b : r.a);
+    if (!t) continue;
+    if (t.gained - t.lost < 0) paidRep = true; else if (t.gained - t.lost > 0) gotRep = true;
+  }
+  let provinces = 0;
+  for (let i = 0; i < own.length; i++) if (own[i] === countryId) provinces++;
+  const poverty = Math.max(0, Math.min(1, 1 - treasury / Math.max(1, provinces) / POLITICS.richPerProvince));
   const politics = politicsStep(prevPol, {
-    atWar, avgDevastation: landDevastation(view, countryId), warReadiness, poor: treasury < 10, lostLand, foodShort,
-    prosperous: !atWar && treasury > 100,
+    atWar, avgDevastation: landDevastation(view, countryId), poverty, foodShort, prosperous: !atWar && treasury > 100,
+    lostNow: lostYear, gainedNow: gainedYear, warNet, paidReparations: paidRep, gotReparations: gotRep,
   });
   emit({ type: 'country_updated', countryId, patch: { population: newPop, treasury: Math.round(treasury * 10) / 10, warReadiness, politics } });
   const seized = seizureLine(prevPol.axis, politics.axis, me.name.replace(/^The /, 'the '));

@@ -318,21 +318,43 @@ export const startPolitics = (t: Country['temperament']): { axis: number; radica
   ({ axis: Math.round(40 * (t.aggression - t.trade)), radicalism: 10 });
 
 export interface PoliticsInput {
-  atWar: boolean; avgDevastation: number; warReadiness: number;
-  poor: boolean; lostLand: boolean; foodShort: boolean; prosperous: boolean;
+  atWar: boolean; avgDevastation: number;
+  /** 0..1: how poor the nation is (treasury per province against POLITICS.richPerProvince). */
+  poverty: number; foodShort: boolean; prosperous: boolean;
+  /** Provinces taken from it, and provinces it took, this year (named enemies). */
+  lostNow: number; gainedNow: number;
+  /** Net provinces (gained minus lost) over the wars it is fighting now. */
+  warNet: number;
+  /** The year after a peace: it paid reparations (humiliated) or received them (vindicated). */
+  paidReparations: boolean; gotReparations: boolean;
 }
+
+/** Tuned so a 6-nation world over 300 years ends with a mix of centre, far left and far right (check-politics.ts). */
+export const POLITICS = {
+  richPerProvince: 4, lostLandRight: 20, losing: 4, humiliation: 20, devastation: 0.1, poverty: 3, hunger: 3,
+  warStrain: 1, calm: 2, winCalm: 0.5, winPull: 3, axisGain: 50, centrePull: 2,
+};
 
 /** One year of politics: radicalism, then the pull on the axis. Values kept to one decimal. */
 export function politicsStep(prev: { axis: number; radicalism: number }, i: PoliticsInput): { axis: number; radicalism: number } {
-  const b = (x: boolean): number => (x ? 1 : 0);
-  let rad = prev.radicalism + 4 * b(i.atWar) + i.avgDevastation / 10 + i.warReadiness / 25 + 5 * b(i.poor) + 5 * b(i.lostLand)
-    + 3 * b(i.foodShort) - 6 - 4 * b(i.prosperous);
-  rad = Math.max(0, Math.min(100, rad));
-  const left = 5 * b(i.poor) + 3 * b(i.foodShort);
-  const right = 5 * b(i.lostLand) + 2 * b(i.atWar) + i.warReadiness / 20;
-  let axis = prev.axis + (right - left) * rad / 50;
+  const K = POLITICS, b = (x: boolean): number => (x ? 1 : 0);
+  const won = i.gainedNow > i.lostNow || (i.atWar && i.warNet > 0) || i.gotReparations;
+  const losing = i.atWar && i.warNet < 0;
+  // Causes. Left: poverty and devastation. Right: lost land and humiliation.
+  const leftCause = K.poverty * i.poverty + K.hunger * b(i.foodShort) + K.devastation * i.avgDevastation;
+  const rightCause = K.lostLandRight * Math.min(3, i.lostNow) + (i.paidReparations ? K.humiliation : 0) + (losing ? K.losing : 0);
+  let delta = leftCause + rightCause + K.warStrain * b(i.atWar)
+    - K.calm - 4 * b(i.prosperous);
+  if (won) delta = delta > 0 ? delta * K.winCalm : delta - 2;       // a won war halves the year's radicalism change
+  const rad = Math.max(0, Math.min(100, prev.radicalism + delta));
+  let axis = prev.axis;
+  if (leftCause > 0 || rightCause > 0) {
+    const stronger = rightCause > leftCause ? rightCause - leftCause : leftCause - rightCause;   // the stronger cause sets the direction
+    axis += (rightCause > leftCause ? 1 : -1) * (stronger + 1) * (Math.max(rad, 10)) / K.axisGain;
+  }
+  if (won || (leftCause === 0 && rightCause === 0)) axis -= Math.sign(axis) * Math.min(Math.abs(axis), won ? K.winPull : K.centrePull);
+  if (rad > 50 && Math.abs(axis) > 20 && !won) axis += Math.sign(axis) * rad / 12;   // a radical people digs in
   if (rad < 20) axis = Math.abs(axis) <= 3 ? 0 : axis - 3 * Math.sign(axis);
-  if (rad > 50 && Math.abs(axis) > 20) axis += Math.sign(axis) * rad / 25;
   axis = Math.max(-100, Math.min(100, axis));
   const r1 = (x: number): number => Math.round(x * 10) / 10;
   return { axis: r1(axis), radicalism: r1(rad) };
