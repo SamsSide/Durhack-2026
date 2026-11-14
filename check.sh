@@ -22,6 +22,27 @@ step "no conflict markers" bash -c '! git grep -nE "^(<<<<<<< |>>>>>>> )" -- . "
 # step "node: install"           npm ci --silent
 # step "node: lint"              npm run -s lint
 # step "node: build"             npm run -s build
+
+step "node: deps installed"       test -d node_modules
+step "typecheck"                  npm run -s typecheck
+step "web: build"                 npm run -s build -w web
+mock_boot() {
+  local port="${PORT:-$((20000 + RANDOM % 20000))}" log pid rc=1
+  log="$(mktemp)"
+  PORT="$port" npm run -s mock:server >"$log" 2>&1 &
+  pid=$!
+  for _ in $(seq 1 40); do
+    if curl -fsS "localhost:$port/api/health" 2>/dev/null | grep -q '"ok":true'; then rc=0; break; fi
+    sleep 0.25
+  done
+  pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null
+  # npm spawns tsx spawns node: stop whatever still listens on the port
+  command -v fuser >/dev/null && fuser -k "$port/tcp" >/dev/null 2>&1
+  [ "$rc" = 0 ] || tail -15 "$log"
+  rm -f "$log"
+  return "$rc"
+}
+step "mock server boots"          mock_boot
 # step "server boots"            bash -c 'timeout 20 npm start & sleep 8; curl -fsS localhost:3000/health'
 
 echo
