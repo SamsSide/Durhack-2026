@@ -6,6 +6,8 @@ import { createApp } from './net/http';
 import { attachWs } from './net/ws';
 import { MockRunner } from './mock/runner';
 import { EngineRunner } from './engine/runner';
+import { RunnerHub } from './engine/replayRunner';
+import { bindRecorder } from './engine/replays';
 import type { LlmMode, WorldRunner } from './runner';
 import { forceMockMode, resetRun } from './llm';
 import { bindLore } from './story/loreAi';
@@ -19,8 +21,11 @@ const mode: LlmMode = mockFlag ? 'mock' : process.env.LLM_MODE === 'live' ? 'liv
 const port = Number(process.env.PORT ?? 8787);
 
 // `npm run mock` plays the scripted mock world; `npm run dev` builds real worlds (rows A2, A3).
-const runner: WorldRunner = mockFlag ? new MockRunner() : new EngineRunner();
+const live: WorldRunner = mockFlag ? new MockRunner() : new EngineRunner();
 if (mockFlag) forceMockMode(true);
+// Every run is recorded (row A9); the hub lets a saved run be played in place of the live world.
+bindRecorder(live);
+const runner: WorldRunner = new RunnerHub(live);
 bindLore(runner);
 bindTiger(runner);
 // The engine resets the meter itself before it writes a world's bible (so the bible counts).

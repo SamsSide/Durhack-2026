@@ -67,10 +67,12 @@ export function bindTiger(runner: WorldRunner): void {
 
   runner.subscribe({
     snapshot: (w) => {
+      if (runner.playback?.()) return; // a replay's events are already in the database
       worldId = w.id; year = w.year; lastStatsTick = -Infinity;
       sampleStats(w); // the starting point of every series
     },
     events: (events: WorldEvent[]) => {
+      if (runner.playback?.()) return;
       try {
         const now = new Date();
         const w = runner.getWorld();
