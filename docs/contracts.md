@@ -337,7 +337,7 @@ export const useWorld: UseBoundStore<StoreApi<WorldStore>>;
   background, colours from X7). On a narrow screen the same card docks to the side instead.
 - **Interface components (lane c gives to lane b):** `web/src/ui/index.ts` exports
   `CreateScreen` (no props), `NationCard` (`{ countryId: number; regionId?: number | null }`),
-  `Chronicle` (no props) and `NetworkPanel` (no props). The seed ships a working placeholder for
+  `Chronicle` (no props), `NetworkPanel` (no props), `DecreeBox` (no props) and `TokenMeter` (no props). The decree box and token meter sit in the top-bar area per the design (lane b places them). The seed ships a working placeholder for
   each, already placed in `App.tsx`, so the names and props never change.
 - **Mock:** none needed: the seed (row A1) ships the real store, working against
   `npm run mock`. Lane a writes it; lane b owns it from then on.
