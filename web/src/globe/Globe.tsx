@@ -7,7 +7,7 @@ import { useWorld } from '../state/world';
 import { useBelief } from '../state/belief';
 import { buildProvinceMesh } from './mesh/buildProvinceMesh';
 import type { ProvinceMesh } from './mesh/buildProvinceMesh';
-import { writeColors } from './mesh/colors';
+import { wealthKey, writeColors } from './mesh/colors';
 import { ProvinceMeshContext } from './mesh/context';
 import { ColorFx } from './colorFx';
 import { CameraRig } from './camera/CameraRig';
@@ -20,6 +20,8 @@ import { Space } from './space/Space';
 import { Celestial } from './celestial';
 import { Orbit } from './orbit';
 import { Trade } from './trade/Trade';
+import { Routes } from './trade/Routes';
+import { CoinBurst } from './trade/CoinBurst';
 import { Structures } from './structures/Structures';
 import { Units } from './units';
 import { Clouds } from './clouds';
@@ -57,6 +59,7 @@ function Planet({ world, mesh }: { world: World; mesh: ProvinceMesh }) {
     let lastEventId: string | null = null;
     let lastMode = useWorld.getState().mapMode;
     let lastSel = useWorld.getState().selectedCountryId;
+    let lastWealth = '';
 
     const fx = new ColorFx(mesh, world.tiles.length);
 
@@ -91,10 +94,17 @@ function Planet({ world, mesh }: { world: World; mesh: ProvinceMesh }) {
       lastMode = s.mapMode;
       lastSel = s.selectedCountryId;
       const statusChanged = setStatuses(s.agents); // a cut or deleted nation dims or greys its land
+      // wealth mode: a payment or a year's income can move a nation along the gold scale
+      let wealthChanged = false;
+      if (s.mapMode === 'wealth') {
+        const k = wealthKey(world);
+        wealthChanged = k !== lastWealth;
+        lastWealth = k;
+      } else lastWealth = '';
       const changed = s.version !== seenVersion ? diff(events) : new Map<number, string>();
       seenVersion = s.version;
       lastEventId = events.length ? events[events.length - 1]!.id : lastEventId;
-      if (modeChanged || statusChanged || changed === null || seenVersion < 0) paintAll(modeChanged || statusChanged);
+      if (modeChanged || statusChanged || wealthChanged || changed === null || seenVersion < 0) paintAll(modeChanged || statusChanged || wealthChanged);
       else if (changed.size > 0) {
         fx.repaint(() => writeColors(mesh, world, ownerFn(), s.mapMode, s.selectedCountryId, changed.keys()), changed.keys(), false);
         if (s.beliefOf == null) {
@@ -145,7 +155,9 @@ function Scene({ world }: { world: World }) {
       <Structures />
       <Wonders />
       <Units />
+      <Routes />
       <Trade />
+      <CoinBurst />
       <Towns />
       <EventBeacons />
       <Council />

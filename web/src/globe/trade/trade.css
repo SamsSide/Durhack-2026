@@ -1,0 +1,14 @@
+/* B13: labels on the gold payment arcs. Lane b. */
+.pay-arc-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
+.pay-arc-label {
+  position: absolute; left: 0; top: 0; visibility: hidden; opacity: 0;
+  max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding: 2px 7px; border-radius: 3px;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; line-height: 16px;
+  color: #ffe9a8; background: rgba(12, 10, 6, 0.72); border: 1px solid rgba(255, 201, 64, 0.35);
+  pointer-events: none; will-change: transform, opacity;
+  transition: border-color 120ms ease-out, background 120ms ease-out;
+}
+.pay-arc-label.has-url { pointer-events: auto; cursor: pointer; }
+.pay-arc-label.has-url::after { content: ' \2197'; color: #ffc940; }
+.pay-arc-label.hover { border-color: #ffc940; background: rgba(28, 20, 6, 0.9); color: #fff4c4; }

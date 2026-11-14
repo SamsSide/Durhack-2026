@@ -7,8 +7,8 @@ import { SpeedControl } from './SpeedControl';
 import type { WorldStore } from '../state/world';
 import './hud.css';
 
-export const MODES: WorldStore['mapMode'][] = ['political', 'terrain', 'diplomacy', 'strength'];
-const MODE_LABELS: Record<WorldStore['mapMode'], string> = { political: 'Political', terrain: 'Terrain', diplomacy: 'Diplomacy', strength: 'Strength' };
+export const MODES: WorldStore['mapMode'][] = ['political', 'terrain', 'diplomacy', 'strength', 'wealth'];
+const MODE_LABELS: Record<WorldStore['mapMode'], string> = { political: 'Political', terrain: 'Terrain', diplomacy: 'Diplomacy', strength: 'Strength', wealth: 'Wealth' };
 
 function useCompact(): boolean {
   const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 1280px)').matches);

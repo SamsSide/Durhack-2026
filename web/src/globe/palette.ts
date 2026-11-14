@@ -20,6 +20,10 @@ export interface Palette {
   strengthLow: string;
   strengthHigh: string;
   strengthNone: string;
+  /** Wealth map mode (B12): dark bronze for the poorest nation to bright gold for the richest. */
+  wealthLow: string;
+  wealthHigh: string;
+  wealthNone: string;
   unclaimedTint: string;
   ink: string;
   parchment: string;
@@ -44,6 +48,9 @@ const DEFAULTS: Palette = {
   strengthLow: '#f3e9c6',
   strengthHigh: '#7a1f12',
   strengthNone: '#d8d2c0',
+  wealthLow: '#4a2e14',
+  wealthHigh: '#ffd34d',
+  wealthNone: '#8a867c',
   unclaimedTint: '#d8d2c0',
   ink: '#2a1f14',
   parchment: '#ecdfc0',

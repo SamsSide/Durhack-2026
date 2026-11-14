@@ -6,7 +6,7 @@ import { VK_COAST_BOT, VK_COAST_TOP, VK_LIP, VK_SLOPE, VK_WALL_BOT, VK_WALL_TOP 
 import type { ProvinceMesh } from './buildProvinceMesh';
 import { statusOf } from '../status/statusTint';
 
-export type MapMode = 'political' | 'terrain' | 'diplomacy' | 'strength';
+export type MapMode = 'political' | 'terrain' | 'diplomacy' | 'strength' | 'wealth';
 
 const tmp = new THREE.Color();
 const WHITE = new THREE.Color('#ffffff');
@@ -23,6 +23,32 @@ function strengthByCountry(world: World): { value: Float64Array; max: number } {
     if (value[i]! > max) max = value[i]!;
   }
   return { value, max };
+}
+
+/** Treasury of each living nation on a 0..1 log scale between the poorest and the richest (B12). */
+export function wealthScale(world: World): { t: Float64Array; min: number; max: number } {
+  const t = new Float64Array(world.countries.length);
+  let lo = Infinity, hi = -Infinity, min = 0, max = 0;
+  for (const c of world.countries) {
+    if (!c?.alive) continue;
+    const v = Math.log1p(Math.max(0, c.treasury));
+    if (v < lo) { lo = v; min = c.treasury; }
+    if (v > hi) { hi = v; max = c.treasury; }
+  }
+  const span = hi - lo;
+  for (const c of world.countries) {
+    if (!c?.alive) continue;
+    t[c.id] = span > 1e-9 ? (Math.log1p(Math.max(0, c.treasury)) - lo) / span : 1;
+  }
+  return { t, min: Number.isFinite(lo) ? min : 0, max: Number.isFinite(hi) ? max : 0 };
+}
+
+/** Changes when any nation's wealth colour would visibly change (20 steps), so the globe repaints only then. */
+export function wealthKey(world: World): string {
+  const { t } = wealthScale(world);
+  let k = '';
+  for (const c of world.countries) if (c?.alive) k += `${c.id}:${Math.round((t[c.id] ?? 0) * 20)},`;
+  return k;
 }
 
 /** Terrain mode biome colour: dry band where desert meets non-desert, coast takes its land neighbour's tone. */
@@ -55,6 +81,7 @@ function biomeColor(world: World, tileId: number, out: THREE.Color): THREE.Color
 function colorBase(
   world: World, tileId: number, owner: number, mode: MapMode, sel: number | null,
   out: THREE.Color, str: { value: Float64Array; max: number } | null,
+  wealth: { t: Float64Array } | null = null,
 ): THREE.Color {
   const pal = getPalette();
   const tile = world.tiles[tileId]!;
@@ -72,6 +99,11 @@ function colorBase(
     const s = str ?? strengthByCountry(world);
     const t = s.max > 0 ? (s.value[owner] ?? 0) / s.max : 0;
     return out.set(pal.strengthLow).lerp(tmp.set(pal.strengthHigh), t);
+  }
+  if (mode === 'wealth') {
+    if (!country) return out.set(pal.wealthNone);
+    const t = (wealth ?? wealthScale(world)).t[owner] ?? 0;
+    return out.set(pal.wealthLow).lerp(tmp.set(pal.wealthHigh), t);
   }
   if (!country) return out.set(terrain);
   out.set(terrain);
@@ -124,7 +156,7 @@ export function toneFactor(world: World, tileId: number, mode: MapMode): number 
   const tile = world.tiles[tileId];
   if (!tile || tile.terrain === 'ocean') return 1;
   const step = TONE_STEPS[toneClasses(world)[tileId] ?? 0]! - 1;
-  return 1 + (mode === 'diplomacy' || mode === 'strength' ? step * 0.5 : step);
+  return 1 + (mode === 'diplomacy' || mode === 'strength' || mode === 'wealth' ? step * 0.5 : step);
 }
 
 function applyRelief(world: World, tileId: number, out: THREE.Color, mode: MapMode = 'political'): THREE.Color {
@@ -137,16 +169,18 @@ function applyRelief(world: World, tileId: number, out: THREE.Color, mode: MapMo
 function colorWith(
   world: World, tileId: number, owner: number, mode: MapMode, sel: number | null,
   out: THREE.Color, str: { value: Float64Array; max: number } | null,
+  wealth: { t: Float64Array } | null = null,
 ): THREE.Color {
-  colorStatus(world, tileId, owner, mode, sel, out, str);
+  colorStatus(world, tileId, owner, mode, sel, out, str, wealth);
   return applyRelief(world, tileId, out, mode);
 }
 
 function colorStatus(
   world: World, tileId: number, owner: number, mode: MapMode, sel: number | null,
   out: THREE.Color, str: { value: Float64Array; max: number } | null,
+  wealth: { t: Float64Array } | null = null,
 ): THREE.Color {
-  colorBase(world, tileId, owner, mode, sel, out, str);
+  colorBase(world, tileId, owner, mode, sel, out, str, wealth);
   const tile = world.tiles[tileId];
   if (owner < 0 || !tile || tile.terrain === 'ocean') return out;
   const st = statusOf(owner);
@@ -202,10 +236,11 @@ export function writeColors(
   selectedCountryId: number | null, tileIds?: Iterable<number>,
 ): void {
   const str = mode === 'strength' ? strengthByCountry(world) : null;
+  const wealth = mode === 'wealth' ? wealthScale(world) : null;
   const c = new THREE.Color();
   const ids = tileIds ?? world.tiles.keys();
   for (const id of ids) {
-    colorWith(world, id, ownerOf(id), mode, selectedCountryId, c, str);
+    colorWith(world, id, ownerOf(id), mode, selectedCountryId, c, str, wealth);
     fill(mesh, id, c);
   }
   (mesh.geometry.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true;
