@@ -1,6 +1,7 @@
-// X6: sound. Narration, anthem and automatic war chants, all fetched from the X3 routes.
+// X6: sound. Narration, anthem and automatic war chants, all fetched from the X3 routes; era music under them (music.ts).
 import { useWorld } from '../state/world';
 import type { WorldEvent } from '@terra/shared';
+import { music } from './music';
 
 export type AudioState = 'idle' | 'loading' | 'narration' | 'anthem' | 'broadcast';
 
@@ -9,12 +10,19 @@ let countryId = null as number | null;
 let muted = false;
 let el: HTMLAudioElement | null = null;
 let token = 0;
-let snapshot: { state: AudioState; countryId: number | null; muted: boolean } = { state, countryId, muted };
+let snapshot: { state: AudioState; countryId: number | null; muted: boolean; music: boolean } = { state, countryId, muted, music: music.enabled() };
 const listeners = new Set<() => void>();
 
 function emit(): void {
-  snapshot = { state, countryId, muted };
+  snapshot = { state, countryId, muted, music: music.enabled() };
   listeners.forEach((l) => l());
+  duckMusic();
+}
+music.onChange(() => { if (snapshot.music !== music.enabled()) emit(); });
+
+/** The era music ducks while anyone speaks: narration, an anthem, a chant, the decree herald or the news bulletin. */
+function duckMusic(): void {
+  music.setDucked(herald !== null || chants.size > 0 || state === 'narration' || state === 'anthem' || state === 'broadcast');
 }
 
 function halt(): void {
@@ -64,6 +72,7 @@ let warned = false;
 function applyDuck(): void {
   const ducked = herald !== null || state === 'narration' || state === 'broadcast' || (state === 'loading' && (kindNow === 'narration' || kindNow === 'broadcast'));
   for (const c of chants) c.el.volume = ducked ? c.base * DUCK : c.base;
+  duckMusic();
 }
 // The decree herald: its own element, so it never changes the X6 state; it only ducks chants.
 let herald = null as HTMLAudioElement | null;
@@ -109,10 +118,13 @@ export const audio = {
   stop(): void { stopHerald(); halt(); state = 'idle'; countryId = null; kindNow = null; applyDuck(); emit(); },
   setMuted(m: boolean): void {
     muted = m; if (el) el.muted = m;
+    music.setGlobalMuted(m);
     if (m) stopHerald();
     if (m) { for (const c of chants) c.el.pause(); chants.clear(); }
     emit();
   },
+  /** Era music on or off (remembered in localStorage; on by default). It still waits for a gesture and a world. */
+  setMusicEnabled(on: boolean): void { music.setEnabled(on); emit(); },
   /** The analyser on the bulletin that is playing now, or null (not playing, muted, or Web Audio unavailable). */
   broadcastAnalyser(): AnalyserNode | null {
     return state === 'broadcast' && !muted && tapped !== null && tapped.el === el ? analyser : null;
@@ -142,7 +154,7 @@ function startChant(id: number, base: number, onNearEnd?: () => void): void {
   const entry = { el: a, base };
   chants.add(entry);
   a.volume = base;
-  const drop = () => { chants.delete(entry); };
+  const drop = () => { chants.delete(entry); duckMusic(); };
   let fired = false;
   const next = () => { if (!fired) { fired = true; onNearEnd?.(); } };
   a.ontimeupdate = () => { if (a.duration && a.currentTime >= a.duration - OVERLAP_S) next(); };

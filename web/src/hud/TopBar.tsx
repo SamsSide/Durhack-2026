@@ -4,6 +4,7 @@ import { useSlowVersion } from '../ui/useSlowVersion';
 import { PreparePill, TokenMeter } from '../ui';
 import { SpeedControl } from './SpeedControl';
 import { Calendar } from './Calendar';
+import { MusicToggle } from '../audio/MusicToggle';
 import type { WorldStore } from '../state/world';
 import './hud.css';
 
@@ -54,6 +55,7 @@ export function TopBar({ onCreate }: { onCreate: () => void }) {
             <i className="onair-dot tn-roundel tn-roundel--dot" />On air
           </button>
         )}
+        <MusicToggle />
         <span className="meter-hit" role="button" tabIndex={0} title="What this world cost" onClick={openClosing} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openClosing(); }}><TokenMeter /></span>
         <button className="tn-button tn-button--gilt tb-new" onClick={onCreate}>New world</button>
       </div>

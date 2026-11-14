@@ -653,8 +653,9 @@ export const audio: {
   playBroadcast(audioUrl: string): Promise<void>;     // a news bulletin (row A21); ducks chants, stops narration and anthem
   broadcastAnalyser(): AnalyserNode | null;          // the playing bulletin's analyser for the anchor's lip-sync (C14), null when none plays or Web Audio is unavailable
   stop(): void;
-  setMuted(muted: boolean): void;
-  getState(): { state: AudioState; countryId: number | null; muted: boolean };
+  setMuted(muted: boolean): void;                      // also silences the era music
+  setMusicEnabled(on: boolean): void;                 // era music on or off, remembered in localStorage ('tn.music'), on by default
+  getState(): { state: AudioState; countryId: number | null; muted: boolean; music: boolean };
   subscribe(listener: () => void): () => void;       // for React's useSyncExternalStore
 };
 ```
@@ -665,6 +666,18 @@ export const audio: {
   War sound is automatic: the module watches `recentEvents` in the store (X5) and, when a war
   is declared or a battle is fought, plays the chants of the nations involved (X3 chant), louder
   when one of them is selected. Lanes b and c do not call anything for it.
+
+  **Era music** (`web/src/audio/music.ts`, owner 14 Nov) is automatic too. Files:
+  `web/public/audio/music/<age>.mp3` for the seven `TechAge`s, instrumental, about 105 s, 96 kbps
+  stereo, made once by `server/scripts/make-era-music.ts` (ElevenLabs Music, `force_instrumental`).
+  The track follows the world's leading era (the most advanced `techAge` among living nations),
+  crossfading over 5 s when it changes and changing at most once every 30 s (a new world resets
+  it). It loops with a 3 s crossfade over the file's full-level span. Levels: each file is trimmed
+  to -16 LUFS, then the music bus plays at 0.2 against the voices at 1.0. It **ducks to 30 percent**
+  (300 ms attack, 1 s release) whenever narration, an anthem, a chant, the decree herald or the
+  news bulletin is playing. It starts only after the first user gesture, stays silent while
+  there is no world (the Create screen), and respects `setMuted` and the top bar's music toggle
+  (`web/src/audio/MusicToggle.tsx`).
 
 - **Mock:** in mock mode the server returns bundled samples, so the module behaves the same.
   Until row A14 merges, lane c codes against a stub with the same signature that only changes
