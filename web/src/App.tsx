@@ -4,8 +4,8 @@ import { Globe } from './globe';
 import * as ui from './ui';
 import { Chronicle, CreateScreen, DecreeBox, NationCard, NetworkPanel, PreparePanel } from './ui';
 import { useWorld } from './state/world';
-import { EventFeed, LedgerPanel } from './hud/lookup';
-import { BeliefBanner, useEconomyOn, ClosingCard, DiplomacyLegend, Minimap, MODES, TerrainLegend, TopBar, useTimelineOpen, WealthLegend, PoliticsLegend } from './hud';
+import { EventFeed } from './hud/lookup';
+import { BeliefBanner, ClosingCard, DiplomacyLegend, Minimap, MODES, TerrainLegend, TopBar, useTimelineOpen, WealthLegend, PoliticsLegend } from './hud';
 import { HoverTooltip } from './globe/hover/HoverTooltip';
 import { useEffect, useState } from 'react';
 import { TimelineScrubber } from './globe/timeline';   // B9 timeline (lane a)
@@ -21,8 +21,6 @@ export function App() {
   const regionId = useWorld((s) => s.selectedRegionId);
   const [creating, setCreating] = useState(false);
   const timelineOpen = useTimelineOpen();
-  const econOn = useEconomyOn();
-  const [ledgerOpen, setLedgerOpen] = useState(false);
   // Keep the card mounted while its slide-out plays.
   const [dock, setDock] = useState<{ id: number; regionId: number | null } | null>(null);
   const [dockOut, setDockOut] = useState(false);
@@ -51,15 +49,10 @@ export function App() {
       <Globe />
       <TopBar onCreate={() => setCreating(true)} />
       <BeliefBanner />
-      {world && <div style={{ ...overlay, top: 64, left: 'var(--space-4)', bottom: 'calc(var(--space-4) + var(--ticker-height) + var(--space-3))' }}><NetworkPanel /></div>}
-      {world && econOn && LedgerPanel && (
-        <div className="ledger-slot">
-          <button className="btn ledger-toggle" onClick={() => setLedgerOpen((o) => !o)}>{ledgerOpen ? 'Hide ledger' : 'Ledger'}</button>
-          {ledgerOpen && <div className="ledger-body"><LedgerPanel /></div>}
-        </div>
-      )}
+      {world && <div className="left-net" style={{ ...overlay, top: 64, left: 'var(--space-4)', bottom: 'calc(var(--space-4) + var(--ticker-height) + var(--space-3))' }}><NetworkPanel /></div>}
       {world && <Minimap hidden={timelineOpen} />}
-      {world && dock && <div className={`hud card-dock${dockOut ? ' out' : ''}`}><NationCard countryId={dock.id} regionId={dock.regionId} /></div>}
+      {/* Calm UI (#245): the card docks on the LEFT, under the folded Network tab; only one left panel is open at a time */}
+      {world && dock && <div className={`hud left-dock${dockOut ? ' out' : ''}`}><NationCard countryId={dock.id} regionId={dock.regionId} /></div>}
       <DiplomacyLegend hidden={timelineOpen} />
       <TerrainLegend hidden={timelineOpen} />
       <WealthLegend hidden={timelineOpen} />

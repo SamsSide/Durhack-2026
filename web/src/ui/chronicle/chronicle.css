@@ -193,57 +193,54 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
   .tn-tl-head { justify-content: space-between; }
 }
 
-/* Dispatches (reference: .herald, .h-*). Fixed top centre under the top bar, one at a time. */
+/* Dispatches: a stack of small tabs, top right under the top bar, newest on top. */
 .tn-herald-slot {
-  position: fixed; top: 64px; left: 50%; transform: translateX(-50%);
-  z-index: 40; pointer-events: none;
+  position: fixed; top: 64px; right: var(--space-4); z-index: 40;
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-end;
+  pointer-events: none;
 }
+/* the nation card now docks on the left (#245), so the stack keeps the far right corner */
+.tn-herald-slot { transition: right var(--dur-fast) var(--ease-out); }
 .tn-herald {
-  width: var(--herald-width);
+  pointer-events: auto; cursor: pointer; text-align: left;
+  display: block; width: 344px; min-height: 36px; padding: 0;
   background: var(--parchment-fill); color: var(--color-ink);
-  border: 1.5px solid var(--color-ink); border-radius: var(--radius-1);
+  border: 1px solid var(--color-ink); border-left: 4px solid var(--color-ink); border-radius: var(--radius-1);
   box-shadow: var(--shadow-2); overflow: hidden;
-  font-family: var(--font-serif);
-  animation: herald-in 600ms var(--ease-out) both;
+  font-family: var(--font-serif); font-size: 15px;
+  animation: tab-in 200ms var(--ease-out) both;
+  transition: opacity 400ms ease-in;
 }
-.tn-herald.tn-leaving { animation: herald-out 500ms ease-in both; }
-.tn-h-band {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 12px; line-height: 28px;
-  font-family: var(--font-display); font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--color-parchment-light); background: var(--color-ink);
-}
-.tn-h-band .tn-h-year { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0; font-weight: 600; }
-.tn-herald.tn-war .tn-h-band { background: var(--color-danger); }
-.tn-herald.tn-return .tn-h-band { background: var(--color-night-inset); color: var(--holo-tint); }
-.tn-h-body { padding: 12px 14px 13px; text-align: center; }
-.tn-h-vs { display: flex; align-items: center; justify-content: center; gap: 12px; }
-.tn-h-vs.tn-gone { opacity: 0.45; filter: grayscale(1); }
+.tn-herald.tn-war { border-left-color: var(--kind-war); }
+.tn-herald.tn-fall { border-left-color: var(--kind-fall); }
+.tn-herald.tn-return { border-left-color: var(--kind-return); }
+.tn-herald.tn-leaving { opacity: 0; }
+.tn-herald:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+.tn-h-row { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; }
+/* older tabs fade back, so the newest reads first */
+.tn-herald:nth-child(2):not(:hover) { opacity: 0.8; }
+.tn-herald:nth-child(3):not(:hover) { opacity: 0.55; }
+.tn-herald.tn-leaving:nth-child(n) { opacity: 0; }
+.tn-h-flags { display: flex; gap: 3px; flex: none; }
 .tn-h-flag { display: block; line-height: 0; }
 .tn-h-flag svg { display: block; }
-.tn-h-x { font-style: italic; font-size: 15px; color: var(--color-ink-muted); }
-.tn-h-title {
-  font-family: var(--font-display); font-size: 18px; font-weight: 700; line-height: 23px; letter-spacing: 0.03em; margin-top: 9px;
-}
-.tn-h-quote { font-style: italic; font-size: 15px; line-height: 19px; color: var(--color-ink-muted); margin-top: 6px; }
+.tn-h-text { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tn-h-year { flex: none; font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--color-rubric); }
+.tn-h-more { display: none; padding: 0 10px 9px; border-top: 1px solid var(--color-ink-faint); }
+.tn-herald:hover .tn-h-more, .tn-herald:focus-visible .tn-h-more { display: block; }
+.tn-h-quote { display: block; font-style: italic; font-size: 14px; line-height: 18px; color: var(--color-ink-muted); margin-top: 6px; }
 .tn-h-quote span {
   display: block; font-style: normal; font-family: var(--font-display); font-size: 10px; font-weight: 600;
   letter-spacing: 0.12em; text-transform: uppercase; margin-top: 3px;
 }
-.tn-h-stats {
-  display: grid; grid-template-columns: 1fr 1fr 1fr; margin-top: 10px;
-  border-top: 1px solid var(--color-ink-faint); border-bottom: 1px solid var(--color-ink-faint);
-}
-.tn-h-stats div { display: flex; flex-direction: column; padding: 6px 0 7px; border-left: 1px solid var(--color-ink-faint); }
-.tn-h-stats div:first-child { border-left: none; }
-.tn-h-stats b { font-family: var(--font-mono); font-size: 24px; line-height: 28px; font-weight: 600; color: var(--silence-ink); }
-.tn-h-stats span {
-  font-family: var(--font-display); font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--color-ink-muted);
-}
+.tn-h-stats { display: flex; justify-content: space-between; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--color-ink-muted); }
+.tn-h-stats b { font-family: var(--font-mono); font-size: 14px; color: var(--silence-ink); }
+/* no end opacity: the tab settles on its own (an older tab is dimmer, a leaving one fades) */
+@keyframes tab-in { from { opacity: 0; transform: translateX(24px); } to { transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .tn-tl.panel, .tn-t-new, .tn-herald, .tn-herald.tn-leaving { animation: none; }
+  .tn-tl.panel, .tn-t-new, .tn-herald { animation: none; }
+  .tn-herald, .tn-herald-slot { transition: none; }
 }
 
 /* 720 px projector: the lanes get the room, so six nations fit without scrolling. */

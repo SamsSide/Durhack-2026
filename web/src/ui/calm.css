@@ -1,0 +1,26 @@
+/* Calm UI (#245): one left panel at a time. The nation card docks on the left under the folded
+   Network tab; the Network panel takes the same column when it is open (ui/leftPanel.ts keeps
+   only one of them up). The right side keeps the war tabs, the minimap and the decree box. */
+.left-net { pointer-events: none; }
+.left-net > * { pointer-events: auto; }
+.left-dock {
+  left: var(--space-4);
+  top: calc(64px + 40px + var(--space-2));                                      /* below the folded Network tab */
+  bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3));
+  width: var(--left-panel-width);
+  display: flex; flex-direction: column; justify-content: flex-start;
+  pointer-events: none;
+  animation: left-dock-in 240ms var(--ease-out) both;
+}
+.left-dock > * { pointer-events: auto; min-height: 0; }
+.left-dock.out { animation: left-dock-out 240ms var(--ease-out) both; }
+.left-dock.out > * { pointer-events: none; }
+@keyframes left-dock-in { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+@keyframes left-dock-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-28px); } }
+/* The picture-card feed shares the left column: it steps aside while a panel is open. */
+.event-feed-slot { transition: opacity var(--dur-fast) var(--ease-out); }
+body:has(.left-dock:not(.out)) .event-feed-slot,
+body:has(.tn-net.panel) .event-feed-slot { opacity: 0; visibility: hidden; }
+@media (prefers-reduced-motion: reduce) { .left-dock, .left-dock.out { animation: none; } }
+/* While the card is open the folded Network tab is only a way back: it drops its counters and fits the column. */
+body:has(.left-dock:not(.out)) .tn-net-tab > :not(.tn-nt-title):not(.tn-state):not(svg) { display: none; }

@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
-import { flagSvg } from '@terra/shared';
-import type { Stance } from '@terra/shared';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { flagSvg, goodOf, landDevastation, movementOf, politicsOf, readinessBand, readinessOf } from '@terra/shared';
+import type { Stance, World } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import { audio } from '../../audio';
 import { useAudio } from '../../audio/useAudio';
 import { useEconomy } from '../economy/useEconomy';
 import '../economy/economy.css';
 import { Council } from './Council';
+import { Portrait } from './Portrait';
 import { RegionView } from './RegionView';
 import { useLore } from './useLore';
 import { EconomyTab, PoliticsBlock, StatusChips, useMarketPlan } from './Economy';
@@ -54,6 +55,39 @@ function Flag({ countryId, spec }: { countryId: number; spec: Parameters<typeof 
 const fmt = (n: number) => Math.round(n).toLocaleString('en-GB');
 const short = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e4 ? `${(n / 1e3).toFixed(1)}K` : fmt(n));
 
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** The numbers of the stats grid (#245), walked once per world version. */
+function useNationStats(world: World | null, countryId: number) {
+  const version = useWorld((s) => s.version);
+  return useMemo(() => {
+    if (!world) return null;
+    let provinces = 0;
+    const goods = new Map<string, number>();
+    for (let i = 0; i < world.owner.length; i++) {
+      if (world.owner[i] !== countryId) continue;
+      provinces++;
+      const g = goodOf(world, i);
+      if (g) goods.set(g, (goods.get(g) ?? 0) + 1);
+    }
+    let mainGood: string | null = null, best = 0;
+    for (const [g, n] of goods) if (n > best) { best = n; mainGood = g; }
+    let army = 0;
+    for (const u of world.units) if (u.owner === countryId) army += u.strength;
+    let regions = 0, unrest = 0;
+    for (const r of world.regions) {
+      if (world.owner[r.capitalTile] !== countryId) continue;
+      regions++;
+      unrest += Math.max(0, Math.min(1, r.unrest));
+    }
+    return { provinces, mainGood, army, unrest: regions ? (unrest / regions) * 100 : 0, devastation: landDevastation(world, countryId) };
+  }, [world, countryId, version]);
+}
+
+const DIPLOMACY: { stance: Stance; label: string }[] = [
+  { stance: 'war', label: 'At war' }, { stance: 'alliance', label: 'Allies' }, { stance: 'trade', label: 'Trade pacts' },
+];
+
 type Tab = 'culture' | 'economy' | 'politics' | 'history' | 'relations';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'culture', label: 'Culture' }, { id: 'economy', label: 'Economy' }, { id: 'politics', label: 'Politics' },
@@ -96,6 +130,7 @@ function Nation({ countryId }: { countryId: number }) {
   const economy = useEconomy();
 
   const plan = useMarketPlan(world ?? null, true);
+  const stats = useNationStats(world ?? null, countryId);
   const country = world?.countries[countryId];
   if (!world || !country) return null;
   const silenced = country.alive && agent?.link === 'cut';
@@ -110,8 +145,11 @@ function Nation({ countryId }: { countryId: number }) {
     }
   }
   const treasury = economy.status === 'ok' ? economy.data?.nations.find((n) => n.countryId === countryId) : undefined;
-  let provinces = 0;
-  for (const o of world.owner) if (o === countryId) provinces++;
+  const ruler = country.council?.ruler ?? null;
+  const rulerAge = ruler?.born != null ? Math.max(0, world.year - ruler.born) : null;
+  const movement = movementOf(politicsOf(country).axis);
+  const readiness = readinessOf(country);
+  const coin = (economy.status === 'ok' && economy.data?.currency.symbol) || 'TNC';
 
   const label = (k: 'narration' | 'anthem') => {
     if (failed === k) return 'Voice unavailable';
@@ -157,24 +195,65 @@ function Nation({ countryId }: { countryId: number }) {
           <div className="tn-head-text">
             <div className="tn-gov">{country.government}</div>
             <h2 className="tn-name">{country.name}</h2>
-            <div className="tn-sub">Led by {country.leader}</div>
             {!country.alive && <div className="tn-fallen">{fallYear != null ? `Fallen in Y${fallYear}` : 'Fallen'}</div>}
           </div>
           <button type="button" className="tn-close" aria-label="Close" onClick={() => select(null)}><CloseIcon /></button>
         </header>
-        {silenced ? (
+        <div className="tn-ruler">
+          {ruler && <Portrait seed={ruler.portraitSeed} role="ruler" color={country.color} size={30} />}
+          <div className="tn-ruler-text">
+            <span className="tn-cap">{ruler ? 'Ruler' : 'Led by'}</span>
+            <span className="tn-ruler-name">{ruler ? ruler.name : country.leader}</span>
+          </div>
+          {rulerAge != null && <span className="tn-ruler-age" title={`Born in Y${ruler!.born}`}>aged {rulerAge}</span>}
+        </div>
+        {silenced && (
           <div className="tn-silence">
             <div className="tn-silence-top"><span className="tn-silence-cap">Link cut</span><span className="tn-silence-yrs">silent {silentYears} {silentYears === 1 ? 'yr' : 'yrs'}</span></div>
             <div className="tn-silence-txt">It rules on from the world as it knew it in Y{world.year - silentYears}.{!isShort && ' Its map no longer matches the truth.'}</div>
           </div>
-        ) : (
-          <p className="tn-ideology">{country.ideology}</p>
         )}
-        <div className="tn-facts">
-          <div><span className="tn-cap">Provinces</span><span className="tn-v">{fmt(provinces)}</span></div>
-          <div><span className="tn-cap">Population</span><span className="tn-v">{short(country.population)}</span></div>
-          <div><span className="tn-cap">Treasury</span><span className="tn-v">{fmt(country.treasury)}</span></div>
+        <div className="tn-pair">
+          <div title={movement.creed}><span className="tn-cap">Movement</span><span className="tn-pair-v">{movement.name}</span></div>
+          <div><span className="tn-cap">Main good</span><span className="tn-pair-v">{stats?.mainGood ? cap(stats.mainGood) : 'None'}</span></div>
         </div>
+        <div className="tn-grid">
+          <div className="tn-grid-row">
+            <div><span className="tn-cap">Provinces</span><span className="tn-v">{fmt(stats?.provinces ?? 0)}</span></div>
+            <div><span className="tn-cap">Population</span><span className="tn-v">{short(country.population)}</span></div>
+            <div><span className="tn-cap">Treasury</span><span className="tn-v">{fmt(country.treasury)} <small>{coin}</small></span></div>
+          </div>
+          <div className="tn-grid-row">
+            <div title="The summed strength of its armies and fleets"><span className="tn-cap">Army</span><span className="tn-v">{fmt(stats?.army ?? 0)}</span></div>
+            <div title={`War readiness ${Math.round(readiness)} of 100: ${readinessBand(readiness)}`}><span className="tn-cap">Readiness</span><span className="tn-v">{Math.round(readiness)}</span></div>
+            <div title="Mean devastation of its provinces"><span className="tn-cap">Devastation</span><span className={`tn-v${(stats?.devastation ?? 0) > 5 ? ' tn-bad' : ''}`}>{Math.round(stats?.devastation ?? 0)}%</span></div>
+            <div title="Mean unrest of the regions it holds"><span className="tn-cap">Unrest</span><span className={`tn-v${(stats?.unrest ?? 0) > 50 ? ' tn-bad' : ''}`}>{Math.round(stats?.unrest ?? 0)}%</span></div>
+          </div>
+        </div>
+        <section className="tn-dip" aria-label="Diplomacy">
+          <h3>Diplomacy</h3>
+          {!relations.some((r) => r.stance === 'war' || r.stance === 'alliance' || r.stance === 'trade') && (
+            <p className="tn-dip-none">No wars, allies or trade pacts yet.</p>
+          )}
+          {DIPLOMACY.map(({ stance, label }) => {
+            const group = relations.filter((r) => r.stance === stance);
+            if (group.length === 0) return null;
+            return (
+              <div key={stance} className={`tn-dip-row tn-dip-${stance}`}>
+                <span className="tn-dip-label">{label}</span>
+                <span className="tn-dip-flags">
+                  {group.map(({ other }) => {
+                    const oc = world.countries[other]!;
+                    return (
+                      <button key={other} type="button" className="tn-dip-flag" title={oc.name} aria-label={`${label}: ${oc.name}`} onClick={() => { select(other); flyTo(other); }}
+                        dangerouslySetInnerHTML={{ __html: flagSvg(oc.flag, 30, 20) }} />
+                    );
+                  })}
+                </span>
+              </div>
+            );
+          })}
+        </section>
         <StatusChips world={world} countryId={countryId} plan={plan} />
         {treasury && (
           <div className="tn-treasury">
@@ -218,6 +297,7 @@ function Nation({ countryId }: { countryId: number }) {
           {tab === 'economy' && <EconomyTab world={world} countryId={countryId} plan={plan} />}
           {tab === 'politics' && (
             <>
+              <p className="tn-ideology">{country.ideology}</p>
               <PoliticsBlock world={world} countryId={countryId} />
               {text(lore?.politics, true)}
             </>
