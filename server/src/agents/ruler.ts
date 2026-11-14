@@ -44,6 +44,11 @@ export function makeDigest(world: World, countryId: number, focus: Focus = 'expa
     if (o !== countryId) return;
     for (const nb of world.tiles[t]!.neighbors) { const no = world.owner[nb]!; if (no >= 0 && no !== countryId) border.add(no); }
   });
+  // Nations at war with it or allied to it count as neighbours too, even without a shared border (row A6).
+  for (const r of world.relations) {
+    if (r.stance !== 'war' && r.stance !== 'alliance') continue;
+    if (r.a === countryId) border.add(r.b); else if (r.b === countryId) border.add(r.a);
+  }
   const neighbours = [...border].filter((id) => world.countries[id]?.alive).map((id) => {
     const rel = relationOf(world, countryId, id);
     return { id, name: world.countries[id]!.name, stance: rel.stance, strength: r2(strengthOf(id) / Math.max(1, mine)), grievance: r2(rel.grievance) };

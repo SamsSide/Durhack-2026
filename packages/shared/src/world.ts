@@ -10,6 +10,15 @@ export function applyEvent(world: World, event: WorldEvent): void {
     case 'tile_claimed':
       world.owner[event.tile] = event.owner;
       for (const s of world.structures) if (s.tile === event.tile && s.kind !== 'ruin') s.owner = event.owner;
+      // Grievance (row A6): a lost province rankles; so does land grabbed along a shared border.
+      if (event.owner >= 0 && event.from >= 0 && event.cause !== 'collapse') addGrievance(world, event.owner, event.from, 0.04);
+      else if (event.owner >= 0 && event.cause === 'expand') {
+        const seen = new Set<number>();
+        for (const j of world.tiles[event.tile]?.neighbors ?? []) {
+          const o = world.owner[j] ?? -1;
+          if (o >= 0 && o !== event.owner && !seen.has(o)) { seen.add(o); addGrievance(world, event.owner, o, 0.01); }
+        }
+      }
       break;
     case 'structure_built':
       world.structures.push({ ...event.structure });
@@ -33,13 +42,30 @@ export function applyEvent(world: World, event: WorldEvent): void {
     case 'unit_removed':
       world.units = world.units.filter((x) => x.id !== event.unitId);
       break;
-    case 'battle':
+    case 'battle': {
+      // Losses come off the attacking army and the defending units on the tile, in list order
+      // (row A6). Units that lose everything are removed by the unit_removed events that follow.
+      const atk = world.units.find((x) => x.id === event.attackerUnit);
+      if (atk) atk.strength = Math.max(1, atk.strength - event.losses.attacker);
+      let left = event.losses.defender;
+      for (const u of world.units) {
+        if (left <= 0) break;
+        if (u.tile !== event.tile || u.owner !== event.defender || u.kind === 'settler') continue;
+        const take = Math.min(left, u.strength);
+        u.strength = Math.max(1, u.strength - take);
+        left -= take;
+      }
+      addGrievance(world, event.attacker, event.defender, 0.01);
       break;
+    }
     case 'relation_changed': {
       const a = Math.min(event.a, event.b);
       const b = Math.max(event.a, event.b);
       const r = world.relations.find((x) => x.a === a && x.b === b);
       if (r) {
+        // A broken alliance is remembered (betrayal); a peace treaty halves old grudges.
+        if (r.stance === 'alliance' && event.stance !== 'alliance') r.grievance = Math.min(1, r.grievance + 0.4);
+        if (r.stance === 'war' && event.stance !== 'war') r.grievance = Math.round(r.grievance * 50) / 100;
         r.stance = event.stance;
         r.since = event.tick;
         if (event.stance === 'war') r.grievance = Math.min(1, r.grievance + 0.3);
@@ -74,6 +100,16 @@ export function applyEvent(world: World, event: WorldEvent): void {
       world.chronicle.push(event.entry);
       break;
   }
+}
+
+/** Raises the grievance between two nations (creating a neutral relation if there is none yet). */
+function addGrievance(world: World, x: number, y: number, by: number): void {
+  if (x === y || x < 0 || y < 0) return;
+  const a = Math.min(x, y);
+  const b = Math.max(x, y);
+  const r = world.relations.find((q) => q.a === a && q.b === b);
+  if (r) r.grievance = Math.min(1, Math.round((r.grievance + by) * 1000) / 1000);
+  else world.relations.push({ a, b, stance: 'neutral', since: 0, grievance: by });
 }
 
 export function countryTiles(world: World, countryId: number): number[] {

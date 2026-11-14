@@ -6,12 +6,19 @@ import type {
   ChronicleKind, Country, Structure, StructureKind, Terrain, Unit, World, WorldEvent,
 } from '../types';
 import { hashString, type Rng } from '../rng';
-import { countryTiles } from '../world';
+import { countryTiles, relationOf } from '../world';
+import {
+  WAR_EARLIEST, armyStrengthFor, diplomacyTurn, enemiesOf, inTruce, marchTurn, type WarLedger,
+} from './war';
 
 export type Focus = 'expand' | 'develop' | 'fortify' | 'attack';
 export interface NationPolicy { focus: Focus; targets?: number[] }
 /** Optional extra knowledge a nation brings (not stored on Country). */
-export interface TurnContext { regionNames?: string[] }
+export interface TurnContext {
+  regionNames?: string[];
+  /** What it remembers of its wars (provinces and battles won and lost per enemy), kept by its agent. */
+  wars?: WarLedger;
+}
 
 // ---- tables ---------------------------------------------------------------------------------
 
@@ -22,7 +29,8 @@ const STRUCT_POP: Record<StructureKind, number> = { capital: 9000, camp: 600, vi
 const TRADE_KINDS: StructureKind[] = ['port', 'town', 'city', 'factory'];
 
 export const COST = { camp: 4, village: 28, town: 80, city: 220, farm: 12, port: 20, fort: 24, temple: 28, factory: 70, army: 22, fleet: 30 } as const;
-const UPKEEP: Record<string, number> = { army: 0.35, fleet: 0.4, settler: 0.1 };
+/** Upkeep a turn: bigger armies cost more. */
+const upkeep = (u: Unit): number => (u.kind === 'settler' ? 0.1 : (u.kind === 'fleet' ? 0.15 : 0.1) + u.strength * 0.015);
 const claimCost = (owned: number): number => 14 + owned * 2.2;
 
 const isSettlement = (k: StructureKind): boolean => k === 'camp' || k === 'village' || k === 'town' || k === 'city' || k === 'capital';
@@ -37,7 +45,7 @@ export function nationIncome(world: World, countryId: number): number {
     if (s.owner !== countryId) continue;
     inc += STRUCT_INCOME[s.kind] * (TRADE_KINDS.includes(s.kind) ? tradeMul : 1);
   }
-  for (const u of world.units) if (u.owner === countryId) inc -= UPKEEP[u.kind] ?? 0;
+  for (const u of world.units) if (u.owner === countryId) inc -= upkeep(u);
   return inc;
 }
 
@@ -87,21 +95,33 @@ export function autopilotPolicy(world: World, countryId: number): NationPolicy {
     if (world.owner[j] === -1 && isLand(world, j) && world.tiles[j]!.terrain !== 'ice' && !seen.has(j)) { seen.add(j); frontier++; }
   }
   const rivals = neighbourNations(world, countryId);
+  const wars = enemiesOf(world, countryId);
+  let grudge = 0;
+  for (const o of rivals.keys()) grudge = Math.max(grudge, relationOf(world, countryId, o).grievance);
   const noise = (salt: number): number => (hashString(`${countryId}:${Math.floor(world.tick / 40)}:${salt}`) % 1000) / 1000 * 0.5;
   const score: Record<Focus, number> = {
     expand: (frontier > 0 ? 0.9 : -5) + t.expansion * 1.2 + noise(1),
     develop: 0.5 + t.trade * 0.8 + t.faith * 0.4 + (frontier === 0 ? 0.3 : 0) + (c.treasury > 150 ? 0.4 : 0) + noise(2),
     fortify: rivals.size > 0 ? 0.3 + (1 - t.aggression) * 0.7 + noise(3) : -5,
-    attack: rivals.size > 0 && mine.length >= 10 && world.tick >= 100 ? t.aggression * 2.2 - 0.2 + (frontier === 0 ? 0.8 : 0) + noise(4) : -5,
+    attack: wars.length ? 4 : rivals.size > 0 && mine.length >= 8 && world.tick >= WAR_EARLIEST
+      ? t.aggression * 2.2 - 0.3 + grudge * 1.5 + (frontier === 0 ? 0.8 : 0) + noise(4) : -5,
   };
   let focus: Focus = 'develop';
   let best = -Infinity;
   for (const f of ['expand', 'develop', 'fortify', 'attack'] as Focus[]) if (score[f] > best) { best = score[f]; focus = f; }
-  // Targets: peaceful-looking neighbours, weakest first.
-  const targets = [...rivals.keys()]
-    .filter((o) => { const r = world.relations.find((x) => x.a === Math.min(o, countryId) && x.b === Math.max(o, countryId)); return !r || (r.stance !== 'alliance' && r.stance !== 'trade'); })
-    .sort((a, b) => countryTiles(world, a).length - countryTiles(world, b).length);
-  return { focus, targets };
+  // Targets: its enemies first, then neighbours it is not friends with and has no truce with, the most
+  // resented first, then the weakest.
+  // A hot-blooded or aggrieved nation will tear up a trade pact; nobody on autopilot turns on an ally.
+  const others = [...rivals.keys()]
+    .filter((o) => {
+      const r = relationOf(world, countryId, o);
+      if (r.stance === 'war' || r.stance === 'alliance' || inTruce(world, countryId, o, world.tick)) return false;
+      return r.stance !== 'trade' || t.aggression > 0.55 || r.grievance >= 0.12;
+    })
+    .map((o) => ({ o, g: relationOf(world, countryId, o).grievance, n: countryTiles(world, o).length }))
+    .sort((a, b) => (b.g - a.g) || (a.n - b.n) || (a.o - b.o))
+    .map((x) => x.o);
+  return { focus, targets: [...wars, ...others] };
 }
 
 // ---- words -----------------------------------------------------------------------------------
@@ -155,6 +175,27 @@ export function nationTurn(
   const myRegions = new Set<number>();
   for (let i = 0; i < own.length; i++) if (own[i] === countryId) myRegions.add(view.tiles[i]!.region);
   let notable: { kind: ChronicleKind; text: string } | null = null;
+  let capital = me.capitalTile;
+  // --- 0. the capital fell to an enemy: the court moves to the largest settlement left (row A6)
+  if (own[capital] !== countryId) {
+    const rank: Partial<Record<StructureKind, number>> = { city: 4, town: 3, village: 2, camp: 1 };
+    const seats = myStructs.filter((s) => own[s.tile] === countryId && rank[s.kind]).sort((a, b) => (rank[b.kind]! - rank[a.kind]!) || (a.tile - b.tile));
+    const seat = seats[0];
+    const tiles: number[] = [];
+    for (let i = 0; i < own.length; i++) if (own[i] === countryId) tiles.push(i);
+    const at = seat ? seat.tile : tiles.find((i) => !structAt.has(i));
+    if (at !== undefined) {
+      if (seat) { emit({ type: 'structure_upgraded', structureId: seat.id, kind: 'capital' }); seat.kind = 'capital'; }
+      else {
+        const s: Structure = { id: uid('s'), tile: at, owner: countryId, kind: 'capital', builtTick: tick };
+        emit({ type: 'structure_built', structure: s }); structAt.set(at, s); myStructs.push(s);
+      }
+      emit({ type: 'country_updated', countryId, patch: { capitalTile: at } });
+      capital = at;
+      const reg = view.regions[view.tiles[at]!.region]?.name;
+      notable = { kind: 'proclamation', text: `The court of ${me.name} flees to ${reg || 'the provinces'} and raises a new capital there.` };
+    }
+  }
   const regionLabel = (): string => view.regions[capRegion]?.name || me.name;
 
   const spend = (cost: number): boolean => { if (treasury < cost) return false; treasury -= cost; return true; };
@@ -305,12 +346,24 @@ export function nationTurn(
     if (!spots.length) return false;
     spend(COST.factory); place(pickRand(spots), 'factory'); return true;
   };
-  const wantArmies = policy.focus === 'attack' ? Math.ceil(ownedCount() / 3) : policy.focus === 'fortify' ? Math.ceil(ownedCount() / 6) : t.aggression > 0.5 ? 1 + Math.floor(ownedCount() / 12) : 0;
+  const enemies = enemiesOf(view, countryId);
+  const foes = new Set([...enemies, ...(policy.focus === 'attack' ? policy.targets ?? [] : [])]);
+  const wantArmies = policy.focus === 'attack' ? Math.min(6, 2 + Math.floor(ownedCount() / 10))
+    : policy.focus === 'fortify' ? Math.min(4, 1 + Math.floor(ownedCount() / 12))
+      : t.aggression > 0.5 ? Math.min(3, 1 + Math.floor(ownedCount() / 15)) : 0;
   const trySpawn = (kind: 'army' | 'fleet'): boolean => {
+    const forts = countKind('fort');
     if (kind === 'army') {
-      if (treasury < COST.army || myUnits.filter((u) => u.kind === 'army').length >= wantArmies) return false;
-      spend(COST.army);
-      const u: Unit = { id: uid('u'), owner: countryId, kind: 'army', tile: me.capitalTile, strength: 6 };
+      const strength = armyStrengthFor({ ...me, treasury }, forts);
+      const cost = 10 + strength * 0.6;
+      if (treasury < cost || myUnits.filter((u) => u.kind === 'army').length >= wantArmies) return false;
+      // Raised at a fort facing the enemy if there is one, else at the capital.
+      const seats = [capital, ...myStructs.filter((s) => s.kind === 'fort').map((s) => s.tile)].filter((i) => own[i] === countryId);
+      const facing = seats.filter((i) => view.tiles[i]!.neighbors.some((j) => foes.has(own[j]!)));
+      const at = facing.length ? facing[Math.floor(rng() * facing.length)]! : seats[0];
+      if (at === undefined) return false;
+      spend(cost);
+      const u: Unit = { id: uid('u'), owner: countryId, kind: 'army', tile: at, strength };
       emit({ type: 'unit_spawned', unit: u }); myUnits.push(u); return true;
     }
     const ports = myStructs.filter((s) => s.kind === 'port');
@@ -319,7 +372,8 @@ export function nationTurn(
     const sea = view.tiles[p.tile]!.neighbors.find((j) => view.tiles[j]!.terrain === 'ocean');
     if (sea === undefined) return false;
     spend(COST.fleet);
-    const u: Unit = { id: uid('u'), owner: countryId, kind: 'fleet', tile: sea, strength: 5 };
+    const strength = Math.max(5, Math.round(armyStrengthFor({ ...me, treasury }, forts) * 0.6));
+    const u: Unit = { id: uid('u'), owner: countryId, kind: 'fleet', tile: sea, strength };
     emit({ type: 'unit_spawned', unit: u }); myUnits.push(u); return true;
   };
 
@@ -331,8 +385,8 @@ export function nationTurn(
     { w: policy.focus === 'fortify' ? 4 : policy.focus === 'attack' ? 1.5 : 0.3 + t.aggression * 0.6, run: tryFort },
     { w: t.faith > 0.4 ? 0.6 + t.faith * 2.4 : 0.1, run: tryTemple },
     { w: dev ? 0.5 + t.trade * 2 : 0.3, run: tryFactory },
-    { w: policy.focus === 'attack' ? 4 : policy.focus === 'fortify' ? 2 : t.aggression > 0.5 ? 1 : 0, run: () => trySpawn('army') },
-    { w: 0.3 + t.trade * 0.9, run: () => trySpawn('fleet') },
+    { w: enemies.length ? 6 : policy.focus === 'attack' ? 4 : policy.focus === 'fortify' ? 2 : t.aggression > 0.5 ? 1 : 0, run: () => trySpawn('army') },
+    { w: (0.3 + t.trade * 0.9) * (enemies.length ? 2 : 1), run: () => trySpawn('fleet') },
   ];
   const slots = dev ? 2 + (rng() < 0.4 ? 1 : 0) : rng() < 0.7 ? 1 : 0;
   for (let s = 0; s < slots; s++) {
@@ -346,43 +400,19 @@ export function nationTurn(
     }
   }
 
-  // --- 4. armies walk to the border facing their target (attack focus; war itself is row A6)
-  if (policy.focus === 'attack') {
-    const armies = myUnits.filter((u) => u.kind === 'army');
-    if (armies.length) {
-      const want = new Set(policy.targets ?? []);
-      const goals: number[] = [];
-      for (let i = 0; i < own.length; i++) {
-        if (own[i] !== countryId) continue;
-        if (view.tiles[i]!.neighbors.some((j) => own[j] >= 0 && own[j] !== countryId && (want.size === 0 || want.has(own[j]!)))) goals.push(i);
-      }
-      if (goals.length) {
-        const dist = new Map<number, number>(goals.map((g) => [g, 0]));
-        const q = [...goals];
-        for (let h = 0; h < q.length; h++) {
-          for (const j of view.tiles[q[h]!]!.neighbors) if (own[j] === countryId && !dist.has(j)) { dist.set(j, dist.get(q[h]!)! + 1); q.push(j); }
-        }
-        let moves = 0;
-        for (const a of armies) {
-          if (moves >= 2) break;
-          const d = dist.get(a.tile);
-          if (d === undefined || d === 0 || rng() < 0.4) continue;
-          const next = view.tiles[a.tile]!.neighbors.filter((j) => dist.get(j) === d - 1);
-          if (!next.length) continue;
-          const to = pickRand(next);
-          emit({ type: 'unit_moved', unitId: a.id, from: a.tile, to, arriveTick: tick + 1 });
-          a.tile = to; moves++;
-        }
-      }
-    }
-  }
+  // --- 4. diplomacy and war (row A6, sim/war.ts): alliances, peace, declarations, trade; then the march
+  diplomacyTurn({ view, me: countryId, tick, rng, focus: policy.focus, targets: policy.targets ?? [], ledger: ctx.wars, own, emit });
+  marchTurn({ view, me: countryId, tick, rng, focus: policy.focus, targets: policy.targets ?? [], own, units: myUnits.filter((u) => u.kind !== 'settler'), emit, uid });
+  // Spent armies go home (one a turn), which frees a place for a fresh one.
+  const spent = myUnits.find((u) => u.kind !== 'settler' && u.tile >= 0 && u.strength <= (enemies.length ? 5 : 3));
+  if (spent) { emit({ type: 'unit_removed', unitId: spent.id, reason: 'disband' }); spent.tile = -1; }
 
   // --- 5. money and people
   let income = 0;
   for (let i = 0; i < own.length; i++) if (own[i] === countryId) income += TILE_INCOME[view.tiles[i]!.terrain];
   const tradeMul = 0.8 + 0.6 * t.trade;
   for (const s of myStructs) income += STRUCT_INCOME[s.kind] * (TRADE_KINDS.includes(s.kind) ? tradeMul : 1);
-  for (const u of myUnits) income -= UPKEEP[u.kind] ?? 0;
+  for (const u of myUnits) if (u.tile >= 0) income -= upkeep(u);
   treasury = Math.max(0, treasury + income * 0.4 - treasury * 0.01);
   let cap = 0;
   for (let i = 0; i < own.length; i++) if (own[i] === countryId) cap += TILE_POP[view.tiles[i]!.terrain];
@@ -411,8 +441,9 @@ export function isEventValid(world: World, e: WorldEvent): boolean {
   if (!world.countries[a]?.alive) return false;
   switch (e.type) {
     case 'tile_claimed':
-      return e.owner === a && world.tiles[e.tile] !== undefined && world.tiles[e.tile]!.terrain !== 'ocean'
-        && world.owner[e.tile] === e.from && (e.cause !== 'expand' || e.from === -1);
+      // A nation claims for itself, or cedes its own province by treaty (cause 'conquest', from itself).
+      return (e.owner === a || (e.from === a && e.cause === 'conquest' && e.owner >= 0)) && world.tiles[e.tile] !== undefined
+        && world.tiles[e.tile]!.terrain !== 'ocean' && world.owner[e.tile] === e.from && (e.cause !== 'expand' || e.from === -1);
     case 'structure_built':
       return e.structure.owner === a && world.owner[e.structure.tile] === a
         && !world.structures.some((s) => s.tile === e.structure.tile && s.kind !== 'ruin')
@@ -426,6 +457,8 @@ export function isEventValid(world: World, e: WorldEvent): boolean {
       return world.units.some((u) => u.id === e.unitId && u.owner === a);
     case 'country_updated':
       return e.countryId === a;
+    case 'relation_changed':
+      return (e.a === a || e.b === a) && e.a !== e.b && !!world.countries[e.a === a ? e.b : e.a];
     case 'region_updated':
       return world.regions[e.regionId] !== undefined && (e.patch.name === undefined || world.regions[e.regionId]!.name === '');
     default:

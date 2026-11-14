@@ -4,8 +4,8 @@
 // inside the tick loop; between calls, and whenever the ruler is silenced or fails, the rules run on
 // its last focus or on autopilotPolicy from its temperament.
 import {
-  applyEvent, applyTickBatch, autopilotPolicy, cloneWorld, hashString, mulberry32, nationTurn, relationOf,
-  type ChronicleKind, type NationPolicy, type World, type WorldEvent,
+  applyEvent, applyTickBatch, autopilotPolicy, cloneWorld, hashString, mulberry32, nationTurn, noteWarEvents, relationOf,
+  type ChronicleKind, type NationPolicy, type WarLedger, type World, type WorldEvent,
 } from '@terra/shared';
 import type { MessageBus, BusEndpoint } from '../engine/bus';
 import { SILENCE_NOTICE_TICKS, noticeText } from '../engine/resilience';
@@ -44,6 +44,8 @@ export class NationAgent implements BusEndpoint {
   /** Ruler output waiting for its next turn (relation changes, the proclamation). */
   private pendingRuler: EventBody[] = [];
   private lastDecision: { tick: number; decision: RulerDecision } | null = null;
+  /** Provinces and battles won and lost per enemy, from the events it applied (row A6). */
+  readonly wars: WarLedger = new Map();
 
   constructor(id: number, world: World, private bus: MessageBus, private opts: NationAgentOptions) {
     this.id = id;
@@ -54,7 +56,11 @@ export class NationAgent implements BusEndpoint {
 
   /** The policy this turn: the ruler's, or autopilot from its temperament. */
   currentPolicy(): NationPolicy {
-    if (this.policy && !this.silenced && this.ruler === 'llm') return this.policy;
+    if (this.policy && !this.silenced && this.ruler === 'llm') {
+      // An attack with no named target goes for the neighbour autopilot would pick (row A6).
+      if (this.policy.focus === 'attack' && !this.policy.targets?.length) return { ...this.policy, targets: autopilotPolicy(this.replica, this.id).targets };
+      return this.policy;
+    }
     return autopilotPolicy(this.replica, this.id);
   }
 
@@ -72,11 +78,11 @@ export class NationAgent implements BusEndpoint {
     const events: WorldEvent[] = [
       ...this.rulerEvents(tick, year),
       ...this.noticeSilence(tick, year),
-      ...nationTurn(w, this.id, policy, tick, rng, { regionNames: this.opts.regionNames }),
+      ...nationTurn(w, this.id, policy, tick, rng, { regionNames: this.opts.regionNames, wars: this.wars }),
     ];
     for (const e of events) e.lamport = ++this.lamport;
     const onWire = this.bus.publish(this.id, events);
-    if (!onWire) applyTickBatch(w, events);
+    if (!onWire) noteWarEvents(this.wars, this.id, applyTickBatch(w, events));
     this.bus.heartbeat(this.id, tick);
   }
 
@@ -84,7 +90,11 @@ export class NationAgent implements BusEndpoint {
     if (!this.pendingRuler.length) return [];
     const out = this.pendingRuler.map((b, k) => {
       const ev = { id: `e-${this.id}-${tick}-r${k}`, tick, actor: this.id, lamport: 0, ...b } as WorldEvent;
-      if (ev.type === 'chronicle') ev.entry = { ...ev.entry, id: `c-${this.id}-${tick}-r${k}`, tick, year };
+      // Offers keep their protocol id (c-<from>-<tick>-offer-<kind>-<to>, see sim/war.ts).
+      if (ev.type === 'chronicle') {
+        const id = ev.entry.id.startsWith('offer-') ? `c-${this.id}-${tick}-${ev.entry.id}` : `c-${this.id}-${tick}-r${k}`;
+        ev.entry = { ...ev.entry, id, tick, year };
+      }
       return ev;
     });
     this.pendingRuler = [];
@@ -97,7 +107,7 @@ export class NationAgent implements BusEndpoint {
     if (this.deleted) return;
     for (const e of batch) if (e.lamport > this.lamport) this.lamport = e.lamport;
     if (this.opts.onBigEvent && bigEventTargets(this.replica, batch).includes(this.id)) this.opts.onBigEvent(this.id);
-    applyTickBatch(this.replica, batch);
+    noteWarEvents(this.wars, this.id, applyTickBatch(this.replica, batch));
   }
 
   hear(from: number, tick: number): void { this.lastHeard.set(from, tick); this.noticed.delete(from); }
@@ -225,13 +235,30 @@ export class NationAgent implements BusEndpoint {
     this.policy = { focus: d.focus, targets: d.target !== undefined ? [d.target] : undefined };
     this.ruler = 'llm';
     this.lastDecision = { tick: this.replica.tick, decision: d };
+    // Row A6: war is declared by one side; peace, trade and alliance are offers the other side accepts
+    // on its own turn (sim/war.ts diplomacyTurn); stepping down from friendship is one-sided.
+    const chron = (kind: 'war' | 'peace' | 'alliance' | 'betrayal' | 'proclamation', other: number, text: string, id = ''): void => {
+      this.pendingRuler.push({ type: 'chronicle', entry: { id, tick: 0, year: 0, kind, countries: [this.id, other], text } });
+    };
+    const reason = d.proclamation.slice(0, 160);
     for (const s of d.stances) {
-      this.pendingRuler.push({ type: 'relation_changed', a: this.id, b: s.with, stance: s.stance, reason: d.proclamation.slice(0, 160) });
       const other = this.replica.countries[s.with];
-      const kind: ChronicleKind | null = s.stance === 'war' ? 'war' : s.stance === 'alliance' ? 'alliance' : null;
-      if (other && kind) {
-        const text = kind === 'war' ? `${me.name} declares war on ${other.name}.` : `${me.name} offers an alliance to ${other.name}.`;
-        this.pendingRuler.push({ type: 'chronicle', entry: { id: '', tick: 0, year: 0, kind, countries: [this.id, s.with], text } });
+      if (!other || !other.alive) continue;
+      const cur = relationOf(this.replica, this.id, s.with).stance;
+      if (s.stance === cur) continue;
+      if (s.stance === 'war') {
+        this.pendingRuler.push({ type: 'relation_changed', a: this.id, b: s.with, stance: 'war', reason });
+        chron('war', s.with, `${me.name} declares war on ${other.name}.`);
+        if (cur === 'alliance') chron('betrayal', s.with, `${me.name} turns on its ally ${other.name}.`);
+      } else if (cur === 'war') {
+        chron('peace', s.with, `${me.name} sends envoys to ${other.name} to talk of peace.`, `offer-peace-${s.with}`);
+      } else if (s.stance === 'trade' || (s.stance === 'alliance' && cur !== 'trade')) {
+        chron('proclamation', s.with, `${me.name} sends merchants to ${other.name} with an offer of trade.`, `offer-trade-${s.with}`);
+      } else if (s.stance === 'alliance') {
+        chron('alliance', s.with, `${me.name} offers an alliance to ${other.name}.`, `offer-alliance-${s.with}`);
+      } else {
+        this.pendingRuler.push({ type: 'relation_changed', a: this.id, b: s.with, stance: s.stance, reason });
+        if (cur === 'alliance') chron('betrayal', s.with, `${me.name} renounces its alliance with ${other.name}.`);
       }
     }
     this.pendingRuler.push({
