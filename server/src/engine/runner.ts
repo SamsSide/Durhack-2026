@@ -14,6 +14,7 @@ import { NationAgent } from '../agents/nation';
 import {
   FALL_AFTER_TICKS, disputeText, fallText, findDisputes, returnText, silenceText,
 } from './resilience';
+import { decreeEvents, interpretDecree, interpretDecreeMock, type Decree } from './decrees';
 import { RulerScheduler } from '../agents/ruler';
 import { currentMode, getBudget, resetRun } from '../llm';
 
@@ -353,15 +354,23 @@ export class EngineRunner implements WorldRunner {
       case 'speed': this.setSpeed(msg.value); break;
       case 'pause': this.setPaused(msg.value); break;
       case 'decree': {
-        const n = ++this.decrees;
-        const ev: WorldEvent = {
-          id: `e-decree-${n}`, tick: w.tick, actor: 'decree', lamport: ++this.lamport, type: 'chronicle',
-          entry: { id: `c-decree-${n}`, tick: w.tick, year: w.year, kind: 'decree', countries: [], text: msg.text },
-        };
-        this.bus.deliver([ev]);       // news for every agent that can hear it, and the true world
-        break;
+        // Typed decrees take the same path as spoken ones (row A20): interpret, then applyDecree.
+        if (currentMode() === 'live') void interpretDecree(msg.text, w).then((d) => { if (this.world === w) this.applyDecree(d); });
+        else this.applyDecree(interpretDecreeMock(msg.text, w));
+        return;
       }
     }
+    this.syncStatuses();
+    this.flushOut();
+    this.pushAgents(true);
+  }
+
+  /** Applies an interpreted decree: its events go through the bus like any world event (row A20). */
+  applyDecree(decree: Decree): void {
+    const w = this.world;
+    if (!w) return;
+    const events = decreeEvents(w, decree, w.tick, { n: ++this.decrees, lamport: () => ++this.lamport });
+    this.bus.deliver(events);
     this.syncStatuses();
     this.flushOut();
     this.pushAgents(true);

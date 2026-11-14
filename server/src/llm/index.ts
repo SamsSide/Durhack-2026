@@ -25,6 +25,8 @@ export interface LlmJsonOptions {
   purpose: string;
   /** Optional inline images (base64, no data: prefix) sent with the prompt (multimodal input). */
   images?: { data: string; mimeType: string }[];
+  /** Optional inline audio clip (base64, no data: prefix): Gemini hears it directly (row A20). */
+  audio?: { data: string; mimeType: string };
 }
 
 export interface Budget {
@@ -145,8 +147,12 @@ export async function llmJson<T>(opts: LlmJsonOptions): Promise<T> {
   try {
     const res = await client.models.generateContent({
       model: opts.model,
-      contents: opts.images?.length
-        ? [{ role: 'user', parts: [...opts.images.map((i) => ({ inlineData: { data: i.data, mimeType: i.mimeType } })), { text: opts.prompt }] }]
+      contents: opts.images?.length || opts.audio
+        ? [{ role: 'user', parts: [
+          ...(opts.images ?? []).map((i) => ({ inlineData: { data: i.data, mimeType: i.mimeType } })),
+          ...(opts.audio ? [{ inlineData: { data: opts.audio.data, mimeType: opts.audio.mimeType } }] : []),
+          { text: opts.prompt },
+        ] }]
         : opts.prompt,
       config: {
         systemInstruction: opts.system,
