@@ -79,7 +79,10 @@
   --shadow-1: 0 4px 18px rgba(0, 0, 0, 0.55);
   --shadow-2: 0 12px 40px rgba(0, 0, 0, 0.7);
 
-  /* The hologram: a lit parchment page in a beam of light */
+  /* DEPRECATED (owner decision, 14 Nov): the hologram is removed. The nation card is a plain parchment
+     panel docked to the right. Every --holo-* variable stays defined so nothing breaks, but the design
+     no longer uses the glow, spill, scan lines, beam or opacity. --holo-tint is still the cyan for
+     selection, beliefs and the Silence. */
   --holo-tint: #7fe6d8;                                   /* cyan beam, the default */
   --holo-warm: #ffcf7a;                                   /* warm beam, while the card speaks or sings */
   --holo-glow: 0 0 0 1.5px rgba(127, 230, 216, 0.9), 0 0 34px rgba(127, 230, 216, 0.55), 0 0 110px rgba(127, 230, 216, 0.24);
@@ -200,7 +203,8 @@ button, select, input, textarea { font: inherit; }
 }
 .chip.active { background: var(--color-ink); color: var(--color-parchment); border-color: var(--color-ink); }
 
-/* The hologram page: put on the NationCard root when it is mounted in the beam. */
+/* DEPRECATED: the hologram page. Kept so existing markup still renders; do not use it in new code.
+   The NationCard root is a .panel docked right; add .speaking for the gilt rule. */
 .holo {
   position: relative;
   background: var(--parchment-fill);
@@ -219,6 +223,9 @@ button, select, input, textarea { font: inherit; }
 /* The nation's link is cut: the page loses colour and the light fails. */
 .holo.silenced { box-shadow: var(--holo-glow-cut); filter: saturate(0.55); animation: holo-rise var(--dur-slow) var(--ease-out) both, holo-flicker 1.6s infinite; }
 
+/* The docked nation card while its nation speaks or sings: a gilt rule along the top edge. */
+.panel.speaking { box-shadow: inset 0 4px 0 var(--color-accent), var(--rule-double), var(--shadow-1); }
+
 /* Motion for the demo's key moments (docs/design/README.md, "Demo moments"). */
 @keyframes holo-rise {            /* the card unfolds upward out of the beam (clip-path, so it never fights a transform lane b sets) */
   from { opacity: 0; clip-path: inset(100% 0 0 0); }
@@ -229,6 +236,10 @@ button, select, input, textarea { font: inherit; }
   0%, 91%, 94%, 97%, 100% { opacity: var(--holo-opacity); }
   92.5% { opacity: 0.78; }
   95.5% { opacity: 0.86; }
+}
+@keyframes card-in {              /* the nation card slides in from the right edge (240ms, --ease-out) */
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes herald-in {            /* a dispatch drops in under the top bar */
   from { opacity: 0; transform: translateY(-14px); }

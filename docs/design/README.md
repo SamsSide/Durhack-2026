@@ -1,7 +1,7 @@
 # Terra Nova: interface design (X7)
 
 **Figma:** [Terra Nova — interface](https://www.figma.com/design/7cKEqNpTmvmNd9CUSlxrA6)
-(page "Screens": ten frames numbered `01` to `10`, with the six first-pass frames kept below them
+(page "Screens": ten frames numbered `01` to `10`, with the six first-pass frames, which still show the removed hologram, kept below them
 as `v1 (superseded)`; variable collection "tokens", mode "dark", named exactly like
 `web/src/theme/tokens.css` without the `--`. Opaque fills, strokes and text in the ten frames are
 bound to those colour variables; translucent paints and gradients are not, Figma cannot bind them
@@ -23,10 +23,10 @@ were shrunk is in a comment at the top of that script).
 | The running world, a nation selected | [overview.png](overview.png) |
 | Create screen | [create.png](create.png) |
 | Founding: the five seconds after Create | [founding.png](founding.png) |
-| Hologram nation card: idle, speaking, the Silence | [card.png](card.png) |
+| Nation card (docked right): idle, speaking, the Silence | [card.png](card.png) |
 | Chronicle ticker and timeline | [chronicle.png](chronicle.png) |
 | Network panel, diplomacy mode, beliefs, blackout, folded | [network.png](network.png) |
-| Top bar and its states, compact bar, decree, buttons, docked card | [topbar.png](topbar.png) |
+| Top bar and its states, compact bar, decree, buttons, card loading | [topbar.png](topbar.png) |
 | Dispatches (war, restore, fall) and the restore on the map | [moments.png](moments.png) |
 | Closing card: what the world cost | [closing.png](closing.png) |
 | The projector, 1280 x 720, at the moment of the demo | [projector-720.png](projector-720.png) |
@@ -37,8 +37,8 @@ No variable and no class name was renamed or removed. Values changed, and classe
 
 1. **The globe is the hero again.** In the first pass the open network panel and a 550 px card
    covered most of the world. Now the network panel is folded to a 40 px tab by default
-   (`.net-tab`) and opens when asked, and the running-world frame shows the camera flown in to
-   the selected nation, so the planet fills the frame.
+   (`.net-tab`) and opens when asked, and the card is docked to the right edge, so the whole
+   planet is in view between them.
 2. **Readable from across a room.** The type scale went up one step (`--text-xs` 12, `--text-sm`
    14, `--text-md` 16, `--text-lg` 19, `--text-2xl` 36); labels have a floor of 11 px
    (`--text-cap`) and only chips are 10 px. The first pass had 9 px labels.
@@ -47,15 +47,19 @@ No variable and no class name was renamed or removed. Values changed, and classe
    alliance chips was 3.6:1 and 4.2:1; `--stance-trade` and `--stance-alliance` are darker (4.8:1,
    5:1) and the hostile chip takes ink text. `--color-text-muted` on the night is 7:1. Every
    chronicle diamond has a thin ink edge, so the pale kinds (silence, founding) show on parchment.
-4. **The hologram reads as light.** A stronger rim (`--holo-glow`), light spilling up the page
-   from the beam (`--holo-spill`), four small registration marks at the corners (`.hb`), a 3 px
-   emitter line where the beam meets the page, rings on the ground at the capital. The card is
-   shorter and clearer: the government is a rubric kicker over the name, three numbers in one
-   row, the summary without a heading.
+4. **The hologram is removed (owner decision, 14 Nov).** It did not look good enough. There is
+   no beam, no scan lines, no flicker and no cyan or warm glow. The nation card is a plain
+   parchment panel docked to the right edge, sliding in when a nation is selected. While the
+   nation speaks, a 4 px gilt rule lights along its top edge and the progress line turns gilt.
+   The `--holo-*` variables and the `.holo` class stay defined in `tokens.css`, marked
+   deprecated, so nothing breaks; the design no longer uses them. `--holo-tint` lives on as the
+   cyan for selection, beliefs and the Silence. The card itself is shorter and clearer than in
+   the first pass: the government is a rubric kicker over the name, three numbers in one row,
+   the summary without a heading.
 5. **One idea for the cut: the lights go out.** A cut nation is a dark hole in the parchment
    everywhere it appears, in `--color-night-inset` with cyan text: its row in the network panel,
-   a "Link cut" strip on its card in place of its motto, its lane on the timeline. Its beam breaks
-   into slices and its border on the map becomes a dotted cyan ring.
+   a "Link cut" strip on its card in place of its motto, its lane on the timeline. Its border on
+   the map becomes a dotted cyan ring.
 6. **A quieter network panel.** Resting rows show one green word ("Link up") and one plain word
    for the ruler; boxes are kept for buttons and the red Cut chip. Rows are two lines instead of
    three, so six nations fit at 720 px. Delete is red text with no box.
@@ -82,8 +86,8 @@ needed; fallbacks keep it readable offline):
    `--color-surface`). Everything you read is parchment (`--parchment-fill`) with ink
    (`--color-ink`). Parchment never sits on parchment without an ink border between.
 2. **Palette.** Ink `#2a1f14` on parchment `#ecdfc0`; rubric red `#9c2f22` for section headings
-   and years; gilt `#c9a24b` for "active" and the year in the top bar; cyan `#7fe6d8` only for the
-   hologram, the selection outline and anything about the network or beliefs.
+   and years; gilt `#c9a24b` for "active", the year in the top bar and a card that is speaking; cyan
+   `#7fe6d8` only for the selection outline and anything about the network, beliefs or the Silence.
 3. **Type scale.** 12 / 14 / 16 / 19 / 24 / 36 px (`--text-xs` to `--text-2xl`), plus `--text-cap`
    11 for Cinzel caps labels and `--text-hero` 84 for the closing number. Body 16, card name 22
    Cinzel, panel title 20 Cinzel, Create title 36 Cinzel. Nothing is under 10 px, and only chips
@@ -93,30 +97,26 @@ needed; fallbacks keep it readable offline):
 5. **Buttons.** Cinzel caps. On parchment: outlined ink; primary is solid ink with parchment
    text; danger is rubric red outline. On the dark bar: segmented controls, the active segment is
    filled parchment.
-6. **The hologram.** The card is the same parchment page, lit from below: `.holo` in `tokens.css`
-   gives `--holo-opacity` (0.94, the globe faintly shows through), `--holo-glow` (cyan rim and
-   halo), `--holo-spill` (light climbing the lower 40% of the page) and the `--holo-scanlines`
-   overlay. A 3px cyan line runs along its bottom edge where the beam meets it, and four 11 px
-   corner marks (`.hb`) say "projected". While narration or the anthem plays, swap to the warm set
-   (`.holo.speaking`). When the nation's link is cut, `.holo.silenced`: `--holo-glow-cut`, less
-   colour, a faster flicker.
-7. **The beam** (lane b) is a trapezoid from the card's bottom edge (card width) to a point at
-   the capital, filled with `--holo-beam` (brightest at both ends, faint in the middle), with a
-   narrower brighter core, and at the capital a white-hot ellipse inside a soft disc inside a thin
-   ring. The capital need not be under the card's centre: the beam may lean (the running-world
-   frame has it 30% across). A cut nation's beam is `--holo-beam-cut`: slices, no white core, a
-   dotted ring. Plain CSS can do it (`clip-path: polygon(...)` plus the gradient), or three.js.
+6. **The nation card** is an ordinary `.panel` (1.5px ink, double rule, `--shadow-2`) docked to
+   the right edge under the top bar: right 16, top 64, 380 wide. It slides in from the right when
+   a nation is selected (keyframes `card-in`, 240 ms, `--ease-out`) and out when closed. Speaking:
+   class `.speaking` on the panel (`.warm` in `reference.html`) adds a 4px gilt rule inside the
+   top edge and a gilt progress line. That is the whole effect.
+7. **No hologram.** The beam, glow, spill, scan lines and corner marks are gone. `--holo-*` and
+   `.holo` are deprecated but still defined; `reference.html` keeps the old `.holo-look`, `.beam`,
+   `.hb` and `.scan` rules for the same reason and uses none of them.
 8. **Map conventions.** Political: nation colours at about 88% over the ocean, ink borders, the
    selected nation outlined in cyan. Diplomacy: stance colours (`--stance-*`) relative to the
    selected nation, which turns gilt. Army strength: small parchment tags with a mono number and
-   a left bar in the nation's colour. Capitals: parchment dot ringed in ink. Nation names are painted on the land in
-   letter-spaced Cinzel capitals, ink at 80%. A cut nation: dotted cyan ring, land dimmed. A
+   a left bar in the nation's colour. Capitals: parchment dot ringed in ink. Nation and region names are **billboarded**:
+   letter-spaced Cinzel capitals, ink at 80%, always turned to face the camera, upright and
+   horizontal on screen at any globe angle (never wrapped onto the surface or rotated with it). A cut nation: dotted cyan ring, land dimmed. A
    deleted nation: ruin grey, dotted edge, name struck through.
 9. **Do:** use the variables; keep text on parchment; let italic carry secondary text; use the
    nation's own colour only as a small swatch, a flag or a map fill.
 10. **Don't:** no emojis or icon fonts (the few icons are inline SVG: play, stop, pause,
     close, chevron, diamond); no sans-serif; no rounded "app" cards; no blur or backdrop-filter;
-    no cyan on parchment except the hologram; cyan text sits on `--color-night-inset`, never on
+    no cyan on parchment; cyan text sits on `--color-night-inset`, never on
     parchment (on parchment use `--silence-ink`).
 
 ## Demo moments
@@ -128,9 +128,9 @@ In the order of the demo script (`docs/hackathon-plan.md` section 2). Keyframes 
 | --- | --- | --- | --- | --- |
 | 1 | Founding | The Create panel is replaced by a small scroll under the forming globe: "The scribes are writing your world", the prompt echoed, five steps that tick (two at once, then one about every 1.2 s, the last waits for the snapshot). The veil lifts and the borders are drawn dashed. | `.founding`, `.fo-step.done / .doing`, `.fo-pen` with `scribe` | c (CreateScreen), b (globe) |
 | 2 | A new chronicle entry | The newest ticker entry arrives on a gilt wash that fades over 2 s. | `.t-item.new`, `ticker-new` | c |
-| 3 | The hologram | The card unfolds upward out of the beam (600 ms), then flickers twice every 6 s. While it narrates or sings the rim, spill and beam turn warm. | `.holo`, `.holo.speaking`, `holo-rise`, `holo-flicker` | b (beam), c (card) |
-| 4 | War declared | A dispatch drops in top right under the top bar for about 6 s: red band, both flags, one headline, the aggressor's line. | `.herald.war`, `herald-in`, `herald-out` | c (or b) |
-| 5a | Cut | The row goes dark with a cyan counter ("silent 12 yrs · 7 events queued") and a cyan Restore button; the dot pulses. On the map: a dotted cyan ring, the land dimmed. On its card: the "Link cut" strip, less colour, a broken beam. | `.nrow.is-cut`, `.btn.restore`, `cut-pulse`, `.card.silenced` / `.holo.silenced`, `.c-silence`, `--holo-beam-cut` | c (row, card), b (map, beam) |
+| 3 | Select a nation | Its border lights cyan and its card slides in from the right edge (240 ms). While it narrates or sings, a 4 px gilt rule lights along the card's top edge and the progress line turns gilt. No beam, no glow. | `.panel`, `.panel.speaking` (`.docked.warm` in the reference), `card-in` | b (placement), c (card) |
+| 4 | War declared | A dispatch drops in top centre under the top bar for about 6 s: red band, both flags, one headline, the aggressor's line. | `.herald.war`, `herald-in`, `herald-out` | c (or b) |
+| 5a | Cut | The row goes dark with a cyan counter ("silent 12 yrs · 7 events queued") and a cyan Restore button; the dot pulses. On the map: a dotted cyan ring, the land dimmed. On its card: the "Link cut" strip in place of the motto. | `.nrow.is-cut`, `.btn.restore`, `cut-pulse`, `.card.silenced`, `.c-silence` | c (row, card), b (map) |
 | 5b | Delete | Dispatch with an ink band; the row is struck through with a rubric "Deleted Y209" stamp; the land turns ruin grey with a dotted edge until the neighbours take it. | `.herald.fall`, `.nrow.deleted`, `.state.del` | c, b |
 | 5c | Restore | Dispatch with a night band and three numbers: years silent, events merged, disputes settled. On the map each disputed province flashes gilt for about 1.5 s and takes its true colour, with a small tag naming who it went to. The row turns back to parchment. | `.herald.return`, `.h-stats`, `settle-flash`, `.map-tag` | c, b |
 | 5d | Blackout | The Blackout switch row turns solid red ("Every link is cut") and every row goes dark. | `.switch-row.blackout.on` | c |
@@ -144,16 +144,16 @@ Component names and props are fixed by X5. Class names are those in `reference.h
 - Margins 16 px; everything under the top bar starts at y 64.
 - **Network:** top left. Folded by default to `.net-tab` (40 px: "The Network", "4 up", a red
   "1 cut" chip when any link is cut, a chevron). Open it is 320 px wide (`--net-width`).
-- **Card and beam:** when a nation is selected the camera flies in so its capital sits low in
-  the view (about 85% of the height at 720 px, lower-middle at 900 px) and the card stands above
-  it, top edge at y 64. The beam fills whatever is left between the card and the capital; keep at
-  least 70 px of it.
-- **Dispatch:** top right, 320 px (`--herald-width`), one at a time.
+- **Card:** docked right (right 16, top 64, 380 wide), slides in on selection. The globe keeps
+  the space between the network tab or panel and the card; fly the camera so the selected
+  nation is centred in that space, not under the card.
+- **Dispatch:** top centre of the free space, 320 px (`--herald-width`), one at a time. It
+  covers the top of the globe for its six seconds; that is accepted, every other spot is taken
+  when the network panel and the card are both open.
 - **Decree:** bottom right, 8 px above the ticker. **Ticker:** bottom, full width.
-- **Belief banner:** top centre at y 64; if a card is open, the card starts under it.
+- **Belief banner:** top centre at y 64; a dispatch that arrives while it shows sits under it.
 - **At 1280 x 720** (the projector): top bar gets `.compact`; the card gets `.short`; everything
   above still fits with the network panel open (see `projector-720.png`).
-- Below 1100 px wide the card docks to the right edge instead (`topbar.png`, right side).
 
 ### CreateScreen (no props) — `create.png`, `founding.png`
 Centered parchment panel 640 px wide over the dimmed, still-forming globe; the wordmark sits top
@@ -188,22 +188,20 @@ Culture shows the tags as chips plus one sentence; Relations lists every other n
 name, stance chip (`.stance-war` etc.; hostile takes ink text, neutral is outlined). Footer:
 Narrate and Anthem as equal outlined buttons with a play triangle.
 States:
-- **speaking** (`.warm` here, `.holo.speaking` in tokens): the active button is solid ink with a
-  stop square, "Stop" or "Stop anthem" and equaliser bars; a 2px rubric progress line and a mono
-  "Narration · 0:22 / 0:58" line under it; rim, spill, corner marks and beam turn warm.
+- **speaking** (`.warm` here, `.panel.speaking` in tokens): the active button is solid ink with a
+  stop square, "Stop" or "Stop anthem" and equaliser bars; a 3px gilt progress line and a mono
+  "Narration · 0:22 / 0:58" line under it; a 4px gilt rule along the top edge.
 - **silenced** (new; `.silenced`; the nation's `connected` is false): the ideology quote is
   replaced by `.c-silence`, a night strip with a cyan left rule: "Link cut" (cyan caps) and
   "silent 12 yrs" (cyan mono) on one line, then italic "It rules on from the world as it knew it
-  in Y202. Its map no longer matches the truth." The bottom edge turns dotted, the glow dims.
-  Narrate and Anthem still work.
+  in Y202. Its map no longer matches the truth." Narrate and Anthem still work.
 - **short** (new; `.short`; viewport under 800 px tall): the summary and the strip's second
   sentence are hidden, about 455 px tall.
 - **audio loading:** the button reads "Loading...". **lore loading:** three faint bars and italic
   "Consulting the archives..." where the summary and tabs would be. **lore error:** italic "No
   lore is available yet." **fallen nation:** a rubric "Fallen in Y..." line under the leader.
-- **docked** (`.docked.panel-look`): a normal panel, no glow, scan lines or corner marks.
-In the beam the root gets `.holo`. Tab state and the speaking state are local to the component;
-the component never draws the beam.
+The card is always the docked panel (`.docked.panel-look` in the reference, `.panel` in the app):
+no `.holo`, no beam. Tab state and the speaking state are local to the component.
 
 ### Chronicle (no props) — `chronicle.png`, `moments.png`
 **Ticker** (default): a 40 px parchment strip along the bottom (16 px margins), a solid ink label
@@ -279,5 +277,6 @@ and "Back to the world".
 
 The globe in the frames is a flat SVG painting standing in for lane b's 3D planet: it shows the
 intended palette (ocean teal to navy, nation fills, ink borders, painted names, faint parchment
-graticule, cyan atmosphere rim), not geometry. Flags are simplified versions of the shared `flagSvg` layouts.
+graticule, cyan atmosphere rim), not geometry. Its labels are drawn the way billboarded labels
+look: upright and horizontal. Flags are simplified versions of the shared `flagSvg` layouts.
 All names and numbers come from the mock world in `packages/shared/src/mock.ts`.

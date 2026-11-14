@@ -228,8 +228,9 @@ function decree(x, y, typed = false) {
     <span class="btn primary small">Proclaim</span>
   </div>`;
 }
-// The nation card. state: idle | narration | anthem. cut: the nation's link is cut (the Silence).
+// The nation card: a parchment panel docked to the right edge. state: idle | narration | anthem. cut: the nation's link is cut (the Silence).
 function card({ id = 0, state = 'idle', docked = false, loading = false, tab = 'culture', cut = false, short = false } = {}) {
+  docked = true; // owner decision, 14 Nov: no hologram. The card is always the docked parchment panel.
   const n = N[id];
   const narr = state === 'narration', anth = state === 'anthem', speaking = narr || anth;
   const rel = N.filter((o) => o.id !== id).slice(0, 5).map((o) => {
@@ -311,7 +312,7 @@ function netPanel({ blackout = false, beliefs = false, compact = false } = {}) {
 function netTab(cutCount = 1) {
   return `<div class="net-tab"><span class="nt-title">The Network</span><span class="state up"><i></i>4 up</span>${cutCount ? `<span class="state cut"><i></i>${cutCount} cut</span>` : ''}${ico.chevronR('#2a1f14')}</div>`;
 }
-// A dispatch: one at a time, top right under the top bar, about six seconds.
+// A dispatch: one at a time, top centre under the top bar, about six seconds.
 function herald(kind) {
   if (kind === 'war') return `<div class="herald war">
     <div class="h-band"><span>War declared</span><span class="mono">Y212</span></div>
@@ -343,13 +344,13 @@ const label = (x, y, t) => `<div class="spec-label" style="left:${x}px;top:${y}p
 const note = (x, y, w, title, t) => `<div class="spec-note" style="left:${x}px;top:${y}px;width:${w}px"><div class="cap">${title}</div>${t}</div>`;
 
 // ---------- screens ----------
-// 1. The running world. The camera has flown to the selected nation: the globe fills the frame, the network is folded away.
+// 1. The running world. The globe has the whole frame; the network is folded away; the selected nation's card is docked right.
 const overview = screen('overview', 'Overview · the running world', `
-  ${globe({ x: -35, y: -175, size: 1500, cut: 4 })}
-  ${holo({ left: 646, top: 64, apexY: 770, apex: 0.3 })}
+  ${globe({ x: 140, y: 68, size: 770, cut: 4 })}
+  <div class="abs" style="right:16px;top:64px">${card({})}</div>
   ${topbar({})}
   <div class="abs" style="left:16px;top:64px">${netTab(1)}</div>
-  <div class="abs" style="right:16px;top:64px">${herald('war')}</div>
+  <div class="abs" style="left:365px;top:64px">${herald('war')}</div>
   ${decree(1044, 784)}
   ${ticker(16, 844, 1408)}
 `);
@@ -396,14 +397,15 @@ const founding = screen('founding', 'Create · founding the world', `
   ${note(1040, 600, 360, 'Founding state', 'Replaces the Create panel the moment Create is pressed (about 5 s live, under 1 s in mock). The veil lifts, the globe turns and its borders are drawn dashed. Steps tick on a timer, not on real progress: two done at once, then one about every 1.2 s; the last waits for the snapshot. The line being written shimmers (keyframes "scribe").')}
 `);
 
-const cardScreen = screen('card', 'Hologram nation card', `
+const cardScreen = screen('card', 'Nation card', `
   ${globe({ x: -380, y: 700, size: 2200, armies: false, names: false, dim: 0.9 })}
-  ${label(40, 22, 'In the beam · idle · culture tab')}
-  ${holo({ left: 40, top: 52, apexY: 836 })}
-  ${label(530, 22, 'Speaking · anthem playing · warm beam · relations tab')}
-  ${holo({ left: 530, top: 52, apexY: 836, state: 'anthem', tab: 'relations' })}
-  ${label(1020, 22, 'The Silence · this nation is cut off · broken beam')}
-  ${holo({ left: 1020, top: 52, apexY: 836, id: 4, cut: true })}
+  ${label(40, 22, 'Idle · culture tab')}
+  <div class="abs" style="left:40px;top:52px">${card({})}</div>
+  ${label(530, 22, 'Speaking · anthem playing · gilt rule · relations tab')}
+  <div class="abs" style="left:530px;top:52px">${card({ state: 'anthem', tab: 'relations' })}</div>
+  ${label(1020, 22, 'The Silence · this nation is cut off')}
+  <div class="abs" style="left:1020px;top:52px">${card({ id: 4, cut: true })}</div>
+  ${note(40, 640, 600, 'Docked', 'The card is a parchment panel docked to the right edge under the top bar (right 16, top 64, 380 wide). It slides in from the right when a nation is selected (keyframes "card-in", 240 ms) and out when it is closed. No beam, no glow, no scan lines. While the nation speaks or sings a 4 px gilt rule lights along its top edge and the progress line turns gilt.')}
 `, { starCount: 90 });
 
 const chronEntries = [
@@ -483,7 +485,7 @@ const topScreen = screen('topbar', 'Top bar · states', `
   ${label(16, 748, 'Buttons on the dark surface and on parchment')}
   <div class="row-specs" style="top:776px"><span class="btn">Default</span><span class="btn active">Active</span><span class="btn danger">Danger</span><span class="btn primary-dark">New world</span></div>
   <div class="abs panel-look" style="left:470px;top:764px;padding:14px 18px;display:flex;gap:10px;align-items:center"><span class="btn">Default</span><span class="btn primary">Primary</span><span class="btn danger">Delete</span><span class="chip">Chip</span><span class="chip active">Chip on</span></div>
-  ${label(1020, 80, 'Card docked · narrow screens · lore loading')}
+  ${label(1020, 80, 'Card · lore loading')}
   <div class="abs" style="left:1020px;top:104px">${card({ docked: true, loading: true })}</div>
 `, { starCount: 70 });
 
@@ -496,7 +498,7 @@ const moments = screen('moments', 'Demo moments · dispatches and the restore', 
   <div class="abs" style="left:400px;top:100px">${herald('return')}</div>
   ${label(760, 76, 'Nation deleted · ink band')}
   <div class="abs" style="left:760px;top:100px">${herald('fall')}</div>
-  ${note(40, 420, 660, 'Dispatches', 'One component, three bands. A dispatch drops in at the top right under the top bar (keyframes "herald-in", 600 ms), stays about 6 s, and leaves upward. Only one shows at a time; a newer one replaces it. Triggers, from recentEvents: a war declared, a link restored (the count of merged events and settled disputes comes from the same batch), a nation deleted or fallen. Everything else stays in the ticker.')}
+  ${note(40, 420, 660, 'Dispatches', 'One component, three bands. A dispatch drops in at the top centre under the top bar (keyframes "herald-in", 600 ms), stays about 6 s, and leaves upward. Only one shows at a time; a newer one replaces it. Triggers, from recentEvents: a war declared, a link restored (the count of merged events and settled disputes comes from the same batch), a nation deleted or fallen. Everything else stays in the ticker.')}
   ${globe({ x: 760, y: 392, size: 640, settled: true, gone: 5, selected: 4, armies: false })}
   <div class="map-tag" style="left:${760 + 0.64 * 640 + 34}px;top:${392 + 0.4 * 640 - 44}px"><span class="cap">Settled</span>Awarded to the Sunspire Dominion</div>
   ${note(40, 600, 660, 'The restore, on the map', 'While a nation is cut its border is a dotted cyan ring and its land is dimmed. On Restore the ring closes, each disputed province flashes gilt for about 1.5 s (keyframes "settle-flash") and takes its true colour, and a small parchment tag names who it went to. A deleted nation turns ruin grey with a dotted edge and its name is struck through until the neighbours have taken it.')}
@@ -525,8 +527,8 @@ const closing = screen('closing', 'Closing card · what the world cost', `
 
 // 9. The projector: 1280 x 720, at the moment of the demo. Network open, the cut nation selected.
 const projector = screen('projector-720', 'Projector · 1280 x 720 · the moment', `
-  ${globe({ x: 152, y: 322, size: 1000, selected: 4, cut: 4, gone: 5 })}
-  ${holo({ left: 542, top: 64, apexY: 612, id: 4, cut: true, short: true })}
+  ${globe({ x: 338, y: 74, size: 540, selected: 4, cut: 4, gone: 5 })}
+  <div class="abs" style="right:16px;top:64px">${card({ id: 4, cut: true, short: true })}</div>
   ${topbar({ compact: true })}
   <div class="abs" style="left:16px;top:64px">${netPanel({})}</div>
   ${decree(884, 604)}
@@ -632,7 +634,7 @@ body{padding:40px;display:flex;flex-direction:column;gap:60px}
 .d-input{flex:1;font-size:15px;font-style:italic;color:var(--color-ink-muted);border-bottom:1px solid var(--color-ink-muted);line-height:24px;white-space:nowrap;overflow:hidden}
 .d-input.typed{font-style:normal;color:var(--color-ink)}
 
-/* hologram card */
+/* nation card. The hologram is gone (owner decision): .holo-stack, .beam, .beam-foot, .holo-look, .hb and .scan below are kept so old markup does not break, but no screen uses them. */
 .holo-stack{position:absolute;width:var(--card-width);display:flex;flex-direction:column}
 .holo-stack .card{flex:none}
 .beam{flex:1;min-height:0;width:var(--card-width);display:block}
@@ -654,6 +656,10 @@ body{padding:40px;display:flex;flex-direction:column;gap:60px}
 .warm .hb{border-color:var(--holo-warm)}
 .silenced .hb{opacity:0.45}
 .docked{position:relative;box-shadow:var(--rule-double),var(--shadow-2);border:1.5px solid var(--color-ink)}
+/* speaking: a gilt rule along the top edge and a gilt progress line. Nothing else changes. */
+.docked.warm .card-in{box-shadow:inset 0 4px 0 var(--color-accent)}
+.docked.warm .progress div{background:var(--color-accent);height:3px}
+.docked.warm .progress{height:3px}
 .card-in{position:relative;padding:18px 20px 16px}
 .c-head{display:flex;gap:14px;align-items:center}
 .flag{flex:none;box-shadow:0 1px 3px rgba(0,0,0,0.35)}
