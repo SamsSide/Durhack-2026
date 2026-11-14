@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "models": {
+    "camp": {
+      "file": "camp.glb",
+      "footprint": 0.6
+    },
+    "village": {
+      "file": "village.glb",
+      "footprint": 0.8
+    },
+    "town": {
+      "file": "town.glb",
+      "footprint": 0.9
+    },
+    "city": {
+      "file": "city.glb",
+      "footprint": 1.0
+    },
+    "capital": {
+      "file": "capital.glb",
+      "footprint": 1.0
+    },
+    "farm": {
+      "file": "farm.glb",
+      "footprint": 0.8
+    },
+    "port": {
+      "file": "port.glb",
+      "footprint": 0.8
+    },
+    "fort": {
+      "file": "fort.glb",
+      "footprint": 0.7
+    },
+    "temple": {
+      "file": "temple.glb",
+      "footprint": 0.7
+    },
+    "factory": {
+      "file": "factory.glb",
+      "footprint": 0.8
+    },
+    "ruin": {
+      "file": "ruin.glb",
+      "footprint": 0.8
+    },
+    "army": {
+      "file": "army.glb",
+      "footprint": 0.5
+    },
+    "fleet": {
+      "file": "fleet.glb",
+      "footprint": 0.5
+    },
+    "settler": {
+      "file": "settler.glb",
+      "footprint": 0.4
+    },
+    "tree": {
+      "file": "tree.glb",
+      "footprint": 0.3
+    }
+  }
+}
