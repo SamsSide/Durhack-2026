@@ -6,6 +6,7 @@ import { useWorld } from '../../state/world';
 import { clockNow } from '../../state/calendar';
 import { useProvinceMesh } from '../mesh/context';
 import { LivingLayer } from './LivingLayer';
+import { lodCamera, pipDetail } from '../pip/pipLod';
 
 export function Living() {
   const mesh = useProvinceMesh();
@@ -23,7 +24,9 @@ export function Living() {
     setLayer(l);
     if (import.meta.env.DEV) (window as unknown as { __terraLiving?: LivingLayer }).__terraLiving = l; // dev only: stats, enabled
     const unsub = useWorld.subscribe((s, prev) => { if (s.version !== prev.version || s.world !== prev.world) stale.current = true; });
+    const offPip = pipDetail(l.group); // the news PiP may show the living world while the main view is in orbit
     return () => {
+      offPip();
       unsub();
       if (ref.current === l) ref.current = null;
       setLayer((cur) => (cur === l ? null : cur));
@@ -43,7 +46,7 @@ export function Living() {
       const w = useWorld.getState().world;
       if (w) l.rebuild(w);
     }
-    l.update(camera, Math.min(dt, 0.1), clockNow().paused, size.height);
+    l.update(lodCamera(camera), Math.min(dt, 0.1), clockNow().paused, size.height);
   });
 
   return layer ? <primitive object={layer.group} /> : null;
