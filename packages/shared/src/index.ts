@@ -10,3 +10,4 @@ export * from './sim/rules';
 export * from './sim/sync';
 export * from './sim/war';
 export * from './sim/style';
+export * from './sim/regions';

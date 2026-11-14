@@ -4,7 +4,7 @@
 // (engine/bus.ts) and applies what arrives to the true world, which is what the browser sees. It never
 // decides anything for a nation. Rulers (row A5) are called from here, fire and forget.
 import {
-  applyEvent, applyTickBatch, generateWorld, hashString, mulberry32,
+  applyEvent, applyTickBatch, findSecession, generateWorld, hashString, mulberry32,
   type AgentStatus, type ChronicleKind, type World, type WorldEvent,
 } from '@terra/shared';
 import type { ControlMessage, NewWorldOptions, RunnerListener, WorldRunner } from '../runner';
@@ -16,6 +16,7 @@ import {
 } from './resilience';
 import { decreeEvents, interpretDecree, interpretDecreeMock, type Decree } from './decrees';
 import { RulerScheduler } from '../agents/ruler';
+import { secessionBatch } from './secession';
 import { currentMode, getBudget, resetRun } from '../llm';
 
 const TICK_MS = 500;
@@ -176,6 +177,23 @@ export class EngineRunner implements WorldRunner {
     for (const id of order) this.agents.get(id)!.turn(tick, w.year);
     this.bus.flush();
     this.collapseDeleted(tick);
+    this.secede(tick);
+  }
+
+  /** Row A18: a restless region may break away. The world decides (findSecession, a pure function of
+   *  the true world; see engine/secession.ts for why), every replica applies the one batch, and the new
+   *  nation gets its own agent and ruler, its replica cloned from the true world after the batch. */
+  private secede(tick: number): void {
+    const plan = findSecession(this.world!, tick, (id) => {
+      const a = this.agents.get(id);
+      return !!a && !a.deleted && this.bus.link(id) === 'up';
+    });
+    if (!plan) return;
+    const { events, country, regionNames } = secessionBatch(this.world!, plan, (body) => this.worldEvent(body));
+    this.bus.deliver(events);
+    const agent = this.addAgent(country.id, regionNames, currentMode() === 'live' && !!process.env.GEMINI_API_KEY);
+    agent.lamport = this.lamport;
+    this.scheduler.notify(country.id);
   }
 
   /** The ruler loop (row A5): at most one call per step, chosen by the scheduler; never awaited. */

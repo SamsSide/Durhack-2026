@@ -4,7 +4,7 @@
 // inside the tick loop; between calls, and whenever the ruler is silenced or fails, the rules run on
 // its last focus or on autopilotPolicy from its temperament.
 import {
-  applyEvent, applyTickBatch, autopilotPolicy, cloneWorld, hashString, mulberry32, nationTurn, noteWarEvents, relationOf,
+  applyEvent, applyTickBatch, autopilotPolicy, cloneWorld, hashString, mulberry32, nationTurn, newUnrestMemory, noteUnrestEvents, noteWarEvents, relationOf,
   type ChronicleKind, type NationPolicy, type WarLedger, type World, type WorldEvent,
 } from '@terra/shared';
 import type { MessageBus, BusEndpoint } from '../engine/bus';
@@ -46,6 +46,8 @@ export class NationAgent implements BusEndpoint {
   private lastDecision: { tick: number; decision: RulerDecision } | null = null;
   /** Provinces and battles won and lost per enemy, from the events it applied (row A6). */
   readonly wars: WarLedger = new Map();
+  /** Provinces it took and battles it fought, per region, for the unrest of its regions (row A18). */
+  readonly unrestMemo = newUnrestMemory();
 
   constructor(id: number, world: World, private bus: MessageBus, private opts: NationAgentOptions) {
     this.id = id;
@@ -78,11 +80,11 @@ export class NationAgent implements BusEndpoint {
     const events: WorldEvent[] = [
       ...this.rulerEvents(tick, year),
       ...this.noticeSilence(tick, year),
-      ...nationTurn(w, this.id, policy, tick, rng, { regionNames: this.opts.regionNames, wars: this.wars }),
+      ...nationTurn(w, this.id, policy, tick, rng, { regionNames: this.opts.regionNames, wars: this.wars, unrest: this.unrestMemo }),
     ];
     for (const e of events) e.lamport = ++this.lamport;
     const onWire = this.bus.publish(this.id, events);
-    if (!onWire) noteWarEvents(this.wars, this.id, applyTickBatch(w, events));
+    if (!onWire) this.note(applyTickBatch(w, events));
     this.bus.heartbeat(this.id, tick);
   }
 
@@ -107,7 +109,13 @@ export class NationAgent implements BusEndpoint {
     if (this.deleted) return;
     for (const e of batch) if (e.lamport > this.lamport) this.lamport = e.lamport;
     if (this.opts.onBigEvent && bigEventTargets(this.replica, batch).includes(this.id)) this.opts.onBigEvent(this.id);
-    noteWarEvents(this.wars, this.id, applyTickBatch(this.replica, batch));
+    this.note(applyTickBatch(this.replica, batch));
+  }
+
+  /** What it remembers of the events it applied: its wars (row A6) and its regions' unrest (row A18). */
+  private note(applied: WorldEvent[]): void {
+    noteWarEvents(this.wars, this.id, applied);
+    noteUnrestEvents(this.unrestMemo, this.id, this.replica, applied);
   }
 
   hear(from: number, tick: number): void { this.lastHeard.set(from, tick); this.noticed.delete(from); }

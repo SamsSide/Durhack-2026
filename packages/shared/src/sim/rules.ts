@@ -6,10 +6,11 @@ import type {
   ChronicleKind, Country, Structure, StructureKind, Terrain, Unit, World, WorldEvent,
 } from '../types';
 import { hashString, type Rng } from '../rng';
-import { countryTiles, relationOf } from '../world';
+import { countryTiles, regionOwner, relationOf } from '../world';
 import {
   WAR_EARLIEST, armyStrengthFor, diplomacyTurn, enemiesOf, inTruce, marchTurn, type WarLedger,
 } from './war';
+import { unrestTurn, type UnrestMemory } from './regions';
 
 export type Focus = 'expand' | 'develop' | 'fortify' | 'attack';
 export interface NationPolicy { focus: Focus; targets?: number[] }
@@ -18,6 +19,8 @@ export interface TurnContext {
   regionNames?: string[];
   /** What it remembers of its wars (provinces and battles won and lost per enemy), kept by its agent. */
   wars?: WarLedger;
+  /** What it remembers for the unrest of its regions (provinces taken, battles fought; row A18). */
+  unrest?: UnrestMemory;
 }
 
 // ---- tables ---------------------------------------------------------------------------------
@@ -407,6 +410,9 @@ export function nationTurn(
   const spent = myUnits.find((u) => u.kind !== 'settler' && u.tile >= 0 && u.strength <= (enemies.length ? 5 : 3));
   if (spent) { emit({ type: 'unit_removed', unitId: spent.id, reason: 'disband' }); spent.tile = -1; }
 
+  // --- 4b. the unrest of its regions, as it sees it (row A18, sim/regions.ts)
+  unrestTurn(view, countryId, tick, emit, ctx.unrest, ctx.wars);
+
   // --- 5. money and people
   let income = 0;
   for (let i = 0; i < own.length; i++) if (own[i] === countryId) income += TILE_INCOME[view.tiles[i]!.terrain];
@@ -460,7 +466,9 @@ export function isEventValid(world: World, e: WorldEvent): boolean {
     case 'relation_changed':
       return (e.a === a || e.b === a) && e.a !== e.b && !!world.countries[e.a === a ? e.b : e.a];
     case 'region_updated':
-      return world.regions[e.regionId] !== undefined && (e.patch.name === undefined || world.regions[e.regionId]!.name === '');
+      // A nation names a region once; only the nation holding a region's main town reports its unrest.
+      return world.regions[e.regionId] !== undefined && (e.patch.name === undefined || world.regions[e.regionId]!.name === '')
+        && (e.patch.unrest === undefined || regionOwner(world, e.regionId) === a);
     default:
       return true;
   }
