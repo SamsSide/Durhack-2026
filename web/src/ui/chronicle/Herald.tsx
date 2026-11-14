@@ -17,14 +17,14 @@ type Dispatch =
   | { key: string; kind: 'fall'; year: number; c: Country; line: string };
 
 function Flag({ c }: { c: Country }) {
-  return <span className="tn-h-flag" dangerouslySetInnerHTML={{ __html: flagSvg(c.flag, 24, 16) }} />;
+  return <span className="tn-h-flag tn-flag-plate" dangerouslySetInnerHTML={{ __html: flagSvg(c.flag, 24, 16) }} />;
 }
 
 function mainOf(d: Dispatch): Country { return d.kind === 'war' ? d.a : d.c; }
 
 /** One dispatch as a small tab; hover or focus opens the detail. */
 function Tab({ d, leaving }: { d: Dispatch; leaving: boolean }) {
-  const cls = `tn-herald tn-${d.kind}${leaving ? ' tn-leaving' : ''}`;
+  const cls = `tn-herald tn-lacquer tn-frame tn-frame--slim tn-${d.kind}${leaving ? ' tn-leaving' : ''}`;
   const brief = (n: string) => n.replace(/^The /, '');
   // A war is two flags and "A vs B" (calm UI, #245); the full line is in the hover detail.
   const text = d.kind === 'war' ? `${brief(d.a.name)} vs ${brief(d.b.name)}` : d.kind === 'return' ? `${d.c.name} returns from the Silence` : `${d.c.name} falls`;

@@ -34,7 +34,7 @@ export function NewsBroadcast() {
     <div className={`tn-newscast ${visible ? 'tn-newscast-in' : 'tn-newscast-out'}`}>
     <AnchorWindow bulletin={showPreparing ? null : bulletin} footage={footage} />
     <section
-      className={`tn-news ${visible ? 'tn-news-in' : 'tn-news-out'}`}
+      className={`tn-news tn-lacquer tn-frame ${visible ? 'tn-news-in' : 'tn-news-out'}`}
       aria-label="Terra Nova News"
       role="status"
     >

@@ -54,7 +54,7 @@ export function TimelineScrubber() {
   if (!open) {
     return (
       <div className="tls">
-        <button type="button" className="btn tls-toggle" onClick={openTimeline} aria-expanded={false} title="Scrub back through the years">
+        <button type="button" className="tn-button tn-button--lacquer tls-toggle" onClick={openTimeline} aria-expanded={false} title="Scrub back through the years">
           History
         </button>
       </div>
@@ -121,8 +121,8 @@ export function TimelineScrubber() {
   const tipSide = tipPct < 22 ? ' tls-tip-left' : tipPct > 78 ? ' tls-tip-right' : '';
 
   return (
-    <div className={`tls tls-open${inPast ? ' tls-past' : ''}`} role="group" aria-label="History of the world">
-      <button type="button" className="btn tls-toggle active" onClick={closeTimeline} aria-expanded title="Close the history bar">
+    <div className={`tls tls-open tn-lacquer tn-frame tn-frame--slim${inPast ? ' tls-past' : ''}`} role="group" aria-label="History of the world">
+      <button type="button" className="tn-button tn-button--lacquer tls-toggle is-active" onClick={closeTimeline} aria-expanded title="Close the history bar">
         History
       </button>
 
@@ -134,7 +134,7 @@ export function TimelineScrubber() {
       {status === 'error' ? (
         <div className="tls-note">
           The history could not be read{error ? ` (${error})` : ''}.
-          <button type="button" className="btn" onClick={openTimeline}>Try again</button>
+          <button type="button" className="tn-button tn-button--lacquer tn-button--sm" onClick={openTimeline}>Try again</button>
         </div>
       ) : status === 'ready' && maxTick === 0 ? (
         <div className="tls-note">This world is in its first year. There is no past to visit yet.</div>
@@ -177,7 +177,7 @@ export function TimelineScrubber() {
           ))}
           {ready && <div className="tls-thumb" style={{ left: `${pct}%` }} />}
           {ready && tip && (
-            <div className={`tls-tip${tipSide}`} style={{ left: `${tipPct}%` }} role="tooltip">
+            <div className={`tls-tip tn-tooltip${tipSide}`} style={{ left: `${tipPct}%` }} role="tooltip">
               <div className="tls-tip-k"><i className={`tls-dia tls-k-${tip.kind}`} />Y{tip.year} · {KIND_LABEL[tip.kind]}</div>
               {tip.text}
             </div>
@@ -186,7 +186,7 @@ export function TimelineScrubber() {
       )}
 
       {ready && <span className="tls-range">{yearOf(0)} to {yearOf(maxTick)}</span>}
-      <button type="button" className={`btn tls-live${inPast ? '' : ' on'}`} onClick={() => void goLive()} disabled={viewTick == null} title="Return to the present (Escape)">
+      <button type="button" className={`tn-button tn-button--lacquer tn-button--sm tls-live${inPast ? '' : ' on'}`} onClick={() => void goLive()} disabled={viewTick == null} title="Return to the present (Escape)">
         <i />Live
       </button>
     </div>

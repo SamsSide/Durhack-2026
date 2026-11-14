@@ -45,7 +45,7 @@ function open(card: FeedCard) {
 
 function Card({ card }: { card: FeedCard }) {
   return (
-    <button type="button" className={`tn-feed-card${card.gone ? ' tn-feed-out' : ''}`} onClick={() => open(card)} title={card.title}>
+    <button type="button" className={`tn-feed-card tn-lacquer tn-frame tn-frame--slim${card.gone ? ' tn-feed-out' : ''}`} onClick={() => open(card)} title={card.title}>
       <span className="tn-feed-thumb">
         {card.thumb && <img src={card.thumb} alt="" width={144} height={81} />}
         <Icon kind={card.kind} />
@@ -53,7 +53,7 @@ function Card({ card }: { card: FeedCard }) {
       <span className="tn-feed-text">
         <span className="tn-feed-flags">
           {card.countries.map((c) => (
-            <span key={c.id} className="tn-feed-flag" dangerouslySetInnerHTML={{ __html: flagSvg(c.flag, 30, 20) }} />
+            <span key={c.id} className="tn-feed-flag tn-flag-plate" dangerouslySetInnerHTML={{ __html: flagSvg(c.flag, 30, 20) }} />
           ))}
           <span className="tn-feed-year">Y{card.year}</span>
         </span>

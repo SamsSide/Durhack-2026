@@ -35,38 +35,43 @@
 .tn-k-death { fill: var(--kind-death, #5a4a3c); }
 .tn-k-succession { fill: var(--kind-succession, #b08d3a); }
 
-/* Outlined ink button on parchment (reference: .ticker .btn, .btn.small) */
-.tn-btn {
-  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex: none;
-  background: transparent; color: var(--color-ink);
-  border: 1px solid var(--color-ink); border-radius: var(--radius-1);
-  padding: 2px 10px; cursor: pointer;
-  font-family: var(--font-display); font-size: 10px; font-weight: 600;
-  letter-spacing: var(--tracking-caps); text-transform: uppercase; line-height: 20px;
-}
-.tn-btn:hover { background: var(--color-parchment-dark); }
-.tn-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
-
 /* Ticker (reference: .ticker, .t-label, .t-track, .t-item, .t-sep) */
+/* The chronicle bar: night lacquer with the moulded gilt edge on top (tn-lacquer--bar-bottom).
+   It floats inset from the screen edges, so it also gets a black edge and a faint gilt rim on the
+   sides and bottom, and gilt end-caps. */
 .tn-ticker {
   height: var(--ticker-height);
   display: flex; align-items: center; gap: 14px;
-  padding: 0 10px 0 0;
-  background: var(--parchment-fill);
-  border: 1.5px solid var(--color-ink);
-  border-radius: var(--radius-1);
-  box-shadow: var(--shadow-1);
-  color: var(--color-ink);
+  padding: 0 6px 0 8px;
+  color: var(--color-text);
   overflow: hidden;
 }
-.tn-t-label {
-  align-self: stretch; display: flex; align-items: center; flex: none;
-  padding: 0 14px;
-  background: var(--color-ink); color: var(--color-parchment);
-  font-family: var(--font-display); font-size: 12px; font-weight: 700;
-  letter-spacing: 0.16em; text-transform: uppercase;
+.tn-ticker.tn-lacquer--bar-bottom {
+  border: 1px solid #000;
+  border-radius: var(--radius-1);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    inset 0 -1px 0 rgba(0,0,0,.5),
+    inset 3px 0 0 -1px var(--gilt-lo), inset -3px 0 0 -1px var(--gilt-lo),
+    0 0 0 1px rgba(201,162,75,.4),
+    0 -1px 0 #6e5524,
+    0 -2px 0 var(--gilt),
+    0 -3px 0 var(--gilt-deep),
+    0 -10px 20px rgba(0,0,0,.45),
+    0 4px 10px rgba(0,0,0,.5);
 }
-.tn-t-track { flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: center; overflow: hidden; white-space: nowrap; font-size: 16px; }
+.tn-t-label { flex: none; font-size: var(--text-xs); }
+.tn-t-track {
+  flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: center; overflow: hidden; white-space: nowrap; font-size: 16px;
+  /* the text runs in a shallow engraved channel, fading at both ends */
+  margin: 6px 0; padding: 0 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #07090f, rgba(7,9,15,.55) 3%, rgba(7,9,15,.55) 97%, #07090f);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.05);
+  text-shadow: var(--engrave-on-dark);
+}
+.tn-ticker .tn-yr { color: var(--gilt-hi); }
+.tn-t-toggle { flex: none; }
 /* The belt holds the cells edge to edge (each carries its own trailing space), so taking the
    first cell off moves the rest by exactly its width. Ticker.tsx owns the transform. */
 .tn-t-belt { display: flex; flex: none; align-items: center; will-change: transform; }
@@ -77,42 +82,45 @@
   color: inherit; font: inherit; cursor: pointer;
 }
 .tn-t-item:disabled { cursor: default; }
-.tn-t-item:not(:disabled):hover .tn-t-txt { text-decoration: underline; text-decoration-color: var(--color-ink-muted); }
-.tn-t-item:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.tn-t-item:not(:disabled):hover .tn-t-txt { color: var(--gilt-hi); text-decoration: underline; text-decoration-color: rgba(201,162,75,.6); }
+.tn-t-item:focus-visible { outline: 2px solid var(--gilt-hi); outline-offset: 2px; }
 .tn-t-new { animation: ticker-new 2s ease-out both; }  /* a gilt wash that fades (keyframes in tokens.css); no weight change, a cell's width must never move */
-.tn-t-sep { width: 4px; height: 4px; transform: rotate(45deg); background: var(--color-ink-muted); flex: none; }
-.tn-t-empty { color: var(--color-ink-muted); font-style: italic; font-size: 14px; }
+.tn-t-sep { width: 5px; height: 5px; transform: rotate(45deg); background: linear-gradient(135deg, var(--gilt-hi), var(--gilt-lo)); box-shadow: 0 0 0 1px rgba(0,0,0,.6); flex: none; }
+.tn-t-empty { color: var(--color-text-muted); font-style: italic; font-size: 14px; }
 
-/* Timeline panel (reference: .timeline, .tl-head, .legend). The .panel class gives fill, border and rules. */
-.tn-tl.panel {
-  position: relative;
-  isolation: isolate;
+/* Timeline panel (reference: .timeline, .tl-head, .legend): a framed parchment sheet (tn-sheet
+   tn-frame tn-frame--corners) with the title on a cartouche. It never clips (the plate and the corners
+   sit on the frame); the lanes scroll inside .tn-tl-scroll. */
+.tn-tl {
   width: 100%;
   height: min(400px, 50vh);
   display: flex; flex-direction: column;
-  padding: 16px 20px 14px;
-  overflow: hidden;
+  padding: 24px 24px 14px;
+  margin-bottom: 4px;              /* clear of the chronicle bar's moulding */
   animation: tn-tl-rise 200ms ease-out both;
 }
 @keyframes tn-tl-rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 .tn-tl-head { display: flex; align-items: center; gap: 24px; flex: none; }
 .tn-tl-title { flex: none; }
-.tn-tl.panel h2 { font-size: 20px; letter-spacing: 0.06em; margin: 0; }
-.tn-tl-title .muted { font-size: 14px; }
+.tn-tl-plate { margin: 0; font-size: var(--text-sm); padding: 5px 26px 4px; }
+.tn-tl-sub { font-size: 14px; font-style: italic; color: var(--color-ink-muted); text-shadow: var(--engrave-on-paper); }
 .tn-legend { flex: 1; display: flex; flex-wrap: wrap; gap: 4px 14px; justify-content: flex-end; font-size: 13px; }
 .tn-lg { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 
 /* Body: scrolls both ways; the axis sticks to the top, the names to the left. */
 .tn-tl-scroll {
-  flex: 1; min-height: 0; margin-top: 12px;
-  overflow: auto; position: relative;
+  flex: 1; min-height: 0; margin-top: 10px;
+  overflow: auto; position: relative; contain: paint;
+  border: 1px solid rgba(42,31,20,.45);
+  border-radius: 2px;
+  box-shadow: var(--well-paper);
   scrollbar-width: thin; scrollbar-color: var(--color-ink-muted) transparent;
 }
 .tn-tl-none { color: var(--color-ink-muted); font-style: italic; margin: var(--space-3) 0; }
 .tn-tl-grid { position: relative; min-width: 100%; }
 
-.tn-tl-axisrow { position: sticky; top: 0; z-index: 3; display: flex; height: 36px; background: var(--color-parchment); }
-.tn-tl-corner { position: sticky; left: 0; z-index: 4; width: 200px; flex: none; background: var(--color-parchment); border-bottom: 1px solid var(--color-ink); }
+.tn-tl-axisrow { position: sticky; top: 0; z-index: 3; display: flex; height: 36px; background: linear-gradient(180deg, var(--color-parchment-light), var(--color-parchment)); box-shadow: 0 2px 3px rgba(42,31,20,.18); }
+.tn-tl-corner { position: sticky; left: 0; z-index: 4; width: 200px; flex: none; background: linear-gradient(180deg, var(--color-parchment-light), var(--color-parchment)); border-bottom: 1px solid var(--color-ink); border-right: 1px solid rgba(42,31,20,.35); }
 .tn-tl-axis { position: relative; flex: none; height: 36px; border-bottom: 1px solid var(--color-ink); }
 .tn-tl-tick {
   position: absolute; top: 14px; height: 22px;
@@ -135,7 +143,9 @@
   width: 200px; height: 33px; padding: 0 10px 0 0;
   display: flex; align-items: center; gap: 8px;
   background: var(--color-parchment); border: 0; margin: 0;
+  box-shadow: inset -1px 0 0 rgba(42,31,20,.35), 3px 0 4px -2px rgba(42,31,20,.18);
   color: var(--color-ink); font-family: var(--font-serif); font-size: 14.5px; font-weight: 500; text-align: left;
+  text-shadow: var(--engrave-on-paper);
   cursor: pointer;
 }
 button.tn-tl-name:hover .tn-tl-nm { text-decoration: underline; text-decoration-color: var(--color-ink-muted); }
@@ -162,17 +172,12 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
 .tn-tl-ev:hover { stroke-width: 1.75; }
 
 /* Tooltip (reference: .tip, .tip-k) */
-.tn-tl-tip {
-  position: absolute; z-index: 5; width: 250px; padding: 8px 10px;
-  background: var(--color-parchment-light);
-  border: 1px solid var(--color-ink); border-radius: var(--radius-1);
-  box-shadow: 0 3px 10px color-mix(in srgb, var(--color-ink) 35%, transparent);
-  font-size: 13px; line-height: 17px; pointer-events: none;
-}
-.tn-tl-tip-k { display: flex; align-items: center; gap: 5px; margin-bottom: 3px; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--color-rubric); }
+/* the look is tn-tooltip (night lacquer, gilt hairline) */
+.tn-tl-tip { position: absolute; z-index: 5; width: 250px; padding: 8px 10px; font-size: 13px; line-height: 17px; pointer-events: none; }
+.tn-tl-tip-k { display: flex; align-items: center; gap: 5px; margin-bottom: 3px; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--gilt-hi); }
 
 /* The last three entries (reference: .tl-list, .tl-entry) */
-.tn-tl-list { flex: none; margin-top: 10px; border-top: 1px solid var(--color-ink-faint); padding-top: 6px; }
+.tn-tl-list { flex: none; margin-top: 8px; padding-top: 14px; background: var(--diamond) center top / 10px 10px no-repeat, linear-gradient(90deg, transparent, rgba(42,31,20,.5) 15%, rgba(42,31,20,.5) calc(50% - 10px), transparent calc(50% - 10px), transparent calc(50% + 10px), rgba(42,31,20,.5) calc(50% + 10px), rgba(42,31,20,.5) 85%, transparent) center 4.5px / 100% 1px no-repeat; }
 .tn-tl-entry {
   display: flex; align-items: center; gap: 10px; width: 100%;
   background: none; border: 0; padding: 0; margin: 0; text-align: left; cursor: pointer;
@@ -201,45 +206,53 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
 }
 /* the nation card now docks on the left (#245), so the stack keeps the far right corner */
 .tn-herald-slot { transition: right var(--dur-fast) var(--ease-out); }
+/* A small framed lacquer plate (tn-lacquer tn-frame tn-frame--slim); the kind is a lit stripe on the
+   left of the row, the flags sit in gilt flag plates. */
 .tn-herald {
+  --k: var(--gilt);
   pointer-events: auto; cursor: pointer; text-align: left;
-  display: block; width: 344px; min-height: 36px; padding: 0;
-  background: var(--parchment-fill); color: var(--color-ink);
-  border: 1px solid var(--color-ink); border-left: 4px solid var(--color-ink); border-radius: var(--radius-1);
-  box-shadow: var(--shadow-2); overflow: hidden;
+  display: block; width: 344px; min-height: 40px; padding: 0;
+  overflow: hidden;
   font-family: var(--font-serif); font-size: 15px;
   animation: tab-in 200ms var(--ease-out) both;
-  transition: opacity 400ms ease-in;
+  transition: opacity 400ms ease-in, transform var(--dur-fast);
 }
-.tn-herald.tn-war { border-left-color: var(--kind-war); }
-.tn-herald.tn-fall { border-left-color: var(--kind-fall); }
-.tn-herald.tn-return { border-left-color: var(--kind-return); }
+.tn-herald.tn-war { --k: var(--kind-war); }
+.tn-herald.tn-fall { --k: var(--kind-fall); }
+.tn-herald.tn-return { --k: var(--kind-return); }
+.tn-herald:hover .tn-h-text { color: var(--gilt-hi); }
+.tn-herald:active { transform: translateY(1px); }
 .tn-herald.tn-leaving { opacity: 0; }
-.tn-herald:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
-.tn-h-row { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; }
+.tn-herald:focus-visible { outline: 2px solid var(--gilt-hi); outline-offset: 2px; }
+.tn-h-row {
+  display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px 0 12px;
+  background: linear-gradient(90deg, var(--k) 0 4px, rgba(0,0,0,.6) 4px 5px, transparent 5px);
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,.35);
+}
 /* older tabs fade back, so the newest reads first */
 .tn-herald:nth-child(2):not(:hover) { opacity: 0.8; }
 .tn-herald:nth-child(3):not(:hover) { opacity: 0.55; }
 .tn-herald.tn-leaving:nth-child(n) { opacity: 0; }
-.tn-h-flags { display: flex; gap: 3px; flex: none; }
-.tn-h-flag { display: block; line-height: 0; }
-.tn-h-flag svg { display: block; }
-.tn-h-text { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tn-h-year { flex: none; font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--color-rubric); }
-.tn-h-more { display: none; padding: 0 10px 9px; border-top: 1px solid var(--color-ink-faint); }
+.tn-h-flags { display: flex; gap: 4px; flex: none; }
+.tn-h-flag.tn-flag-plate { width: 28px; height: 20px; line-height: 0; }
+.tn-h-text { flex: 1; min-width: 0; font-size: 15px; color: var(--color-text); text-shadow: var(--engrave-on-dark); transition: color var(--dur-fast); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tn-h-year { flex: none; font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--gilt-hi); text-shadow: var(--engrave-on-dark); }
+.tn-h-more { display: none; padding: 0 12px 10px; border-top: 1px solid rgba(201,162,75,.3); }
 .tn-herald:hover .tn-h-more, .tn-herald:focus-visible .tn-h-more { display: block; }
-.tn-h-quote { display: block; font-style: italic; font-size: 14px; line-height: 18px; color: var(--color-ink-muted); margin-top: 6px; }
+.tn-h-quote { display: block; font-style: italic; font-size: 14px; line-height: 18px; color: var(--color-text-muted); margin-top: 6px; }
+.tn-h-quote span { color: var(--gilt); }
 .tn-h-quote span {
   display: block; font-style: normal; font-family: var(--font-display); font-size: 10px; font-weight: 600;
   letter-spacing: 0.12em; text-transform: uppercase; margin-top: 3px;
 }
-.tn-h-stats { display: flex; justify-content: space-between; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--color-ink-muted); }
-.tn-h-stats b { font-family: var(--font-mono); font-size: 14px; color: var(--silence-ink); }
+.tn-h-stats { display: flex; justify-content: space-between; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--color-text-muted); }
+.tn-h-stats b { font-family: var(--font-mono); font-size: 14px; color: var(--gilt-hi); }
 /* no end opacity: the tab settles on its own (an older tab is dimmer, a leaving one fades) */
 @keyframes tab-in { from { opacity: 0; transform: translateX(24px); } to { transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .tn-tl.panel, .tn-t-new, .tn-herald { animation: none; }
+  .tn-tl, .tn-t-new, .tn-herald { animation: none; }
+  .tn-herald:active { transform: none; }
   .tn-herald, .tn-herald-slot { transition: none; }
 }
 

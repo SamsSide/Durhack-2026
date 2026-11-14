@@ -189,7 +189,7 @@ export function Timeline({ world, agents, observed, selectedId, onPick, onClose 
     const above = li >= 3 && li >= lanes.length - 2;
     tip = (
       <div
-        className="tn-tl-tip"
+        className="tn-tl-tip tn-tooltip"
         style={{
           left: right ? NAME_W + hx - 12 - TIP_W : NAME_W + hx + 12,
           top: above ? li * LANE_H + LANE_H - 2 : li * LANE_H + 4,
@@ -208,18 +208,18 @@ export function Timeline({ world, agents, observed, selectedId, onPick, onClose 
   for (let y = Math.ceil(start / 10) * 10; y <= end; y += 10) ticks.push(y);
 
   return (
-    <div className="panel tn-tl tn-chron-timeline" role="dialog" aria-label="The Chronicle">
+    <div className="tn-sheet tn-frame tn-frame--corners tn-tl tn-chron-timeline" role="dialog" aria-label="The Chronicle">
+      <h2 className="tn-cartouche tn-tl-plate">The Chronicle</h2>
       <div className="tn-tl-head">
         <div className="tn-tl-title">
-          <h2>The Chronicle</h2>
-          <div className="muted">of {ofName(world.name)}, years {start} to {end}</div>
+          <div className="tn-tl-sub">of {ofName(world.name)}, years {start} to {end}</div>
         </div>
         <div className="tn-legend">
           {legend.map((k) => (
             <span key={k} className="tn-lg"><Diamond kind={k} />{KIND_LABEL[k]}</span>
           ))}
         </div>
-        <button type="button" className="tn-btn" onClick={onClose}>
+        <button type="button" className="tn-button tn-button--sm" onClick={onClose}>
           Collapse <Chevron />
         </button>
       </div>
