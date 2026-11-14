@@ -14,3 +14,5 @@
 .tn-meter-live .mode { color: var(--color-ink); background: var(--color-accent); }
 .tn-meter-capped { border-color: color-mix(in srgb, var(--color-danger) 70%, transparent); }
 .tn-meter-capped .mode { color: var(--color-parchment-light); background: var(--color-danger); }
+/* "<n> calls ·" is one group so lane b can hide it in the compact top bar (#98). Keeps the meter's 5px gap inside it. */
+.tn-meter .calls { display: inline-flex; align-items: center; gap: 5px; }
