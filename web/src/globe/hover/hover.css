@@ -26,3 +26,4 @@
 .ht-cap { font-family: var(--font-display); font-size: var(--text-cap); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
 .ht-num { font-family: var(--font-mono); font-size: 15px; font-weight: 600; color: var(--color-accent); }
 @media (prefers-reduced-motion: reduce) { .hover-tip { transition: none; } }
+.ht-fx { margin-top: 4px; font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--color-text-muted); white-space: nowrap; }

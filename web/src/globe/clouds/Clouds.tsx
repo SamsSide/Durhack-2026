@@ -1,14 +1,18 @@
 // Procedural cloud shells plus soft cloud shadows on the land (lane b).
-// Two thin transparent spheres above the labels, one darkening shell just over the terrain.
+// Two thin transparent spheres, drawn before the names so the names always read on top, and one
+// faint shadow shell just over the terrain.
 // One shared fbm CanvasTexture, generated once. Fades out as the camera zooms in.
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-const FADE_FAR = 2.6; // fully visible above this camera distance
-const FADE_NEAR = 1.8; // gone below this
-const CLOUD_MAX = 0.34; // opacity cap so borders and names stay readable
-const SHADOW_MAX = 0.14;
+const FADE_FAR = 3.0; // fully visible above this camera distance
+const FADE_NEAR = 2.3; // gone below this
+const CLOUD_MAX = 0.22; // opacity cap so borders and names stay readable
+const SHADOW_MAX = 0.06;
+const COVER = 0.62; // noise threshold: higher means fewer, smaller puffs
+const SOFT = 0.14; // edge softness of a puff
+const RENDER_ORDER = 900; // before the names (1000) so the cloud shells never veil them
 const R_CLOUD_A = 1.085;
 const R_CLOUD_B = 1.105;
 const R_SHADOW = 1.063; // just above the tallest terrain (1.06), under the labels' lift
@@ -46,13 +50,13 @@ function makeCloudTexture(): THREE.CanvasTexture {
     for (let x = 0; x < W; x++) {
       const lon = ((x + 0.5) / W) * Math.PI * 2;
       const px = cl * Math.cos(lon), py = sl, pz = cl * Math.sin(lon);
-      let a = 0, amp = 0.5, f = 2.2, sum = 0;
+      let a = 0, amp = 0.5, f = 3.1, sum = 0;
       for (let o = 0; o < 5; o++) {
         a += amp * vnoise(px * f + 11, py * f * 1.4 + 7, pz * f + 3);
         sum += amp; amp *= 0.5; f *= 2.05;
       }
       a /= sum;
-      const d = Math.min(1, Math.max(0, (a - 0.5) / 0.22));
+      const d = Math.min(1, Math.max(0, (a - COVER) / SOFT));
       const i = (y * W + x) * 4;
       img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
       img.data[i + 3] = Math.round(sm(d) * 255);
@@ -83,8 +87,8 @@ export function Clouds() {
   );
   const mats = useMemo(() => {
     const mk = (color: string): THREE.MeshBasicMaterial =>
-      new THREE.MeshBasicMaterial({ map: tex, color, transparent: true, opacity: 0, depthWrite: false, fog: false });
-    return { a: mk('#ffffff'), b: mk('#f4f7ff'), s: mk('#05080f') };
+      new THREE.MeshBasicMaterial({ map: tex, color, transparent: true, opacity: 0, depthWrite: false, fog: false, toneMapped: false });
+    return { a: mk('#ffffff'), b: mk('#ffffff'), s: mk('#1a2230') };
   }, [tex]);
   useEffect(() => () => { tex.dispose(); geo.dispose(); mats.a.dispose(); mats.b.dispose(); mats.s.dispose(); }, [tex, geo, mats]);
 
@@ -112,8 +116,8 @@ export function Clouds() {
   return (
     <group>
       <mesh ref={s} geometry={geo} material={mats.s} scale={R_SHADOW} renderOrder={2} raycast={() => null} />
-      <mesh ref={a} geometry={geo} material={mats.a} scale={R_CLOUD_A} renderOrder={1100} raycast={() => null} />
-      <mesh ref={b} geometry={geo} material={mats.b} scale={R_CLOUD_B} renderOrder={1101} raycast={() => null} />
+      <mesh ref={a} geometry={geo} material={mats.a} scale={R_CLOUD_A} renderOrder={RENDER_ORDER} raycast={() => null} />
+      <mesh ref={b} geometry={geo} material={mats.b} scale={R_CLOUD_B} renderOrder={RENDER_ORDER + 1} raycast={() => null} />
     </group>
   );
 }

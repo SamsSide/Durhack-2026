@@ -158,3 +158,9 @@ body:has(.tn-herald) .belief-banner { top: 148px; }
 .speed-val { font-family: var(--font-mono); font-size: 13px; color: var(--color-accent); min-width: 40px; text-align: right; }
 .topbar.compact .speed-slider { width: 90px; }
 .topbar.compact .speed-val { min-width: 34px; }
+
+/* Terrain legend: wider than the diplomacy one to fit the effects line */
+.legend-box.legend-terrain { width: 330px; }
+.legend-terrain .lg-row { font-size: 13px; }
+.legend-terrain .lg-name { width: 62px; flex: none; }
+.legend-terrain .lg-fx { color: var(--color-text-muted); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }

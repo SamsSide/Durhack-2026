@@ -50,7 +50,37 @@ interface LabelData extends LabelAxis {
   kind: 'nation' | 'region';
   owner: number;
   dir: [number, number, number];
+  /** Unit centres of the labelled tiles (x, y, z per tile), to anchor on the part in view. */
+  pts: Float32Array;
   flag: FlagSpec;
+}
+
+const ANCHOR_EVERY = 120; // ms between re-anchoring on the visible part of the land
+const VIS_LO = 0.45, VIS_HI = 0.97; // tiles weigh in from this facing (cos to camera), fully at the top
+const IN_VIEW = 0.3; // a tile facing more than this counts as in view
+
+/**
+ * The anchor of a name: the centre of the part of its land that faces the camera. A big nation's
+ * whole-body centroid is often at the limb or round the back while half of it is in view; anchoring
+ * there hid every big name at the default zoom. Returns the share of the land in view.
+ */
+function visibleAnchor(pts: Float32Array, cam: THREE.Vector3, out: THREE.Vector3): number {
+  const d = cam.length() || 1;
+  const cx = cam.x / d, cy = cam.y / d, cz = cam.z / d;
+  let x = 0, y = 0, z = 0, w = 0, seen = 0;
+  const n = pts.length / 3;
+  for (let i = 0; i < n; i++) {
+    const px = pts[3 * i]!, py = pts[3 * i + 1]!, pz = pts[3 * i + 2]!;
+    const f = px * cx + py * cy + pz * cz;
+    if (f > IN_VIEW) seen++;
+    let k = Math.min(1, Math.max(0, (f - VIS_LO) / (VIS_HI - VIS_LO)));
+    if (k <= 0) continue;
+    k *= k; // the part nearest the middle of the view pulls hardest: room for the name
+    x += px * k; y += py * k; z += pz * k; w += k;
+  }
+  if (w <= 0) return 0;
+  out.set(x, y, z).normalize();
+  return seen / Math.max(1, n);
 }
 
 const clamp = (x: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, x));
@@ -72,6 +102,7 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
 
   const n = Math.max(1, data.name.length);
   const dir = useMemo(() => new THREE.Vector3(...data.dir), [data.dir]);
+  const anchor = useRef({ goal: new THREE.Vector3(...data.dir), cur: new THREE.Vector3(...data.dir), share: 1, t: -1e9 });
   const axis = useMemo(() => new THREE.Vector3(...data.axis), [data.axis]);
   const minor = useMemo(() => new THREE.Vector3(...data.minor), [data.minor]);
   const tmp = useMemo(() => ({ right: new THREE.Vector3(), up: new THREE.Vector3(), pos: new THREE.Vector3(), ndc: new THREE.Vector3() }), []);
@@ -91,12 +122,24 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
     const inner = innerRef.current;
     if (!g || !inner) return;
     const d = camera.position.length();
+    // Re-anchor on the land in view (throttled), and glide there so the name never jumps.
+    const an = anchor.current;
+    const nowA = performance.now();
+    if (nowA - an.t > ANCHOR_EVERY) {
+      an.t = nowA;
+      an.share = visibleAnchor(data.pts, camera.position, an.goal);
+      if (an.share <= 0) an.goal.copy(dir);
+    }
+    if (an.cur.dot(an.goal) < 0.2) an.cur.copy(an.goal); // a fresh view: snap
+    else an.cur.lerp(an.goal, 0.15).normalize();
     let alpha = data.kind === 'nation'
       ? clamp01((d - FADE_NEAR) / (FADE_FAR - FADE_NEAR))
       : clamp01((CLOSE - d) / 0.2);
     // Far-side hiding: fade out well before the limb so a name never shows through the planet.
-    const facing = camera.position.dot(dir) / d;
+    const facing = camera.position.dot(an.cur) / d;
     alpha *= clamp01((facing - 0.25) / 0.15);
+    // Only a sliver of the land in view: let the name go (it would sit on a few tiles at the limb).
+    alpha *= clamp01((an.share - 0.08) / 0.1);
     const deleted = statusOf(data.owner) === 'deleted';
     if (deleted) alpha *= 0.5;
     g.visible = alpha > 0.01;
@@ -104,7 +147,7 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
 
     // Lift above the tallest terrain plus a margin that grows as the camera pulls back.
     const R = TOP + 0.004 + 0.008 * Math.max(0, d - 1);
-    tmp.pos.copy(dir).multiplyScalar(R);
+    tmp.pos.copy(an.cur).multiplyScalar(R);
     g.position.copy(tmp.pos);
 
     // The nation's axis in the screen plane.
@@ -246,6 +289,15 @@ function unit(c: [number, number, number]): [number, number, number] {
   return [c[0] / len, c[1] / len, c[2] / len];
 }
 
+function centres(world: { tiles: { center: [number, number, number] }[] }, tiles: number[]): Float32Array {
+  const out = new Float32Array(tiles.length * 3);
+  tiles.forEach((t, i) => {
+    const c = unit(world.tiles[t]!.center);
+    out[3 * i] = c[0]; out[3 * i + 1] = c[1]; out[3 * i + 2] = c[2];
+  });
+  return out;
+}
+
 export function NationLabels() {
   const mesh = useProvinceMesh();
   const font = useSyncExternalStore(subscribeFont, labelFont);
@@ -277,7 +329,7 @@ export function NationLabels() {
         if (!c || c.alive === false || tiles.length === 0 || !c.name) continue;
         const body = mainBody(world, tiles);
         const centre = mesh.centroidOf(body);
-        out.push({ key: `n${id}`, name: c.name, kind: 'nation', owner: id, dir: unit(centre), flag: c.flag, ...labelAxis(world, body, centre) });
+        out.push({ key: `n${id}`, name: c.name, kind: 'nation', owner: id, dir: unit(centre), pts: centres(world, body), flag: c.flag, ...labelAxis(world, body, centre) });
       }
       for (const r of world.regions) {
         if (!r.name || r.tiles.length === 0) continue;
@@ -285,7 +337,7 @@ export function NationLabels() {
         const oc = owner >= 0 ? world.countries[owner] : undefined;
         if (!oc || oc.alive === false) continue;
         const centre = mesh.centroidOf(r.tiles);
-        out.push({ key: `r${r.id}`, name: r.name, kind: 'region', owner, dir: unit(centre), flag: r.flag, ...labelAxis(world, r.tiles, centre) });
+        out.push({ key: `r${r.id}`, name: r.name, kind: 'region', owner, dir: unit(centre), pts: centres(world, r.tiles), flag: r.flag, ...labelAxis(world, r.tiles, centre) });
       }
       setLabels(out);
     };
