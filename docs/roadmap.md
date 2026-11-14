@@ -9,14 +9,18 @@
 
 ## Where we are
 
-**Planning, 14 Nov 15:40. Nothing is built yet; building starts when the owner says so.** The
-project is Terra Nova (`hackathon-plan.md`). Contracts X1 to X7 are agreed.
+**14 Nov, 21:15. Built and on `main`; hand testing before CP2 (Sun 08:00).** Every row in
+every lane is built (status `testing`) except B8 (frame rate at the top gear, second pass in
+flight on `a/perf2`) and #276 (presentation mode and a collapsed-by-default screen, lane c).
+Today's big pieces: calm UI with one left panel (#254), a material-system UI depth pass the team
+chose to keep (#258 to #268), living world (#252), 1,200 provinces (#240), time gears from
+1 week to 10 years a second (#267), the freeze fix and server guards (#255), the memory cap
+(#259), a full demo dry run (#274), a UI bug test (#277), devnet payments verified (#270), and
+the submission text, video plan and README (#269).
 
-**Nobody waits.** Lane a's first row, the seed (A1, about 30 minutes), puts every shared piece on
-`main`: types, mock server, mock routes, the store, the app shell, placeholders and default
-colours. After it, no row in any lane depends on another lane: lanes b and c build against the
-mock and swap in the real pieces as they merge. During those 30 minutes lanes b and c pull,
-read the plan and write their first lane plans.
+**Open, for people:** the hand tests (#222 lane b CP2 suite; #23, #24, #39, #40, #82 lane c;
+#53 war chants), one live rehearsal with Gemini, ElevenLabs and devnet, the `[check]` items in
+`docs/submission.md`, and re-recording the demo world on the final build.
 
 ## Up next, per lane
 
