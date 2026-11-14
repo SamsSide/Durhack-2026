@@ -180,6 +180,9 @@ export class TickLoop {
     try {
       this.fire(this.clock.take(at), at);
       this.clock.poll(at);
+    } catch (e) {
+      // One bad year is logged and the clock keeps ringing; a throw here used to end the process.
+      console.error('tick failed (the clock keeps running):', e);
     } finally {
       if (this.running && !this.timer) this.schedule(this.clock.delay());
     }

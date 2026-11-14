@@ -10,9 +10,15 @@ const ACTIONS_WITH_COUNTRY = ['cut', 'restore', 'silence', 'wake', 'delete'];
 const COUNCIL_ACTIONS = ['kill', 'cut_member', 'restore_member'];   // row A29, with a role
 
 export function attachWs(server: Server, runner: WorldRunner, mode: LlmMode): WebSocketServer {
-  const wss = new WebSocketServer({ server, path: '/ws' });
-  const send = (ws: WebSocket, msg: object) => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); };
-  const broadcast = (msg: object) => { const s = JSON.stringify(msg); for (const c of wss.clients) if (c.readyState === WebSocket.OPEN) c.send(s); };
+  // Control messages are tiny; a huge frame is refused instead of buffered.
+  const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 1024 * 1024 });
+  // An 'error' event with no listener is thrown, and that would end the whole process.
+  wss.on('error', (e) => console.warn('ws server error:', e.message));
+  const send = (ws: WebSocket, msg: object) => { try { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); } catch { /* a closing socket */ } };
+  const broadcast = (msg: object) => {
+    const s = JSON.stringify(msg);
+    for (const c of wss.clients) { try { if (c.readyState === WebSocket.OPEN) c.send(s); } catch { /* a closing socket */ } }
+  };
   const budget = () => getBudget();
 
   runner.subscribe({
@@ -29,6 +35,8 @@ export function attachWs(server: Server, runner: WorldRunner, mode: LlmMode): We
   onPrepare((m) => broadcast(m));       // row A31: prepare progress
 
   wss.on('connection', (ws) => {
+    // A bad frame from one client (too big, malformed) closes that socket only.
+    ws.on('error', (e) => console.warn('ws client error:', e.message));
     const world = runner.getWorld();
     if (world) { send(ws, { type: 'snapshot', world }); send(ws, { type: 'agents', agents: world.agents }); }
     else send(ws, { type: 'none' });
@@ -39,7 +47,7 @@ export function attachWs(server: Server, runner: WorldRunner, mode: LlmMode): We
     const prep = world ? latestPrepare(world.id) : null;
     if (prep) send(ws, prep);
 
-    ws.on('message', (raw) => {
+    const onMessage = (raw: { toString(): string }) => {
       let msg: any;
       try { msg = JSON.parse(raw.toString()); } catch { return send(ws, { type: 'error', message: 'invalid JSON' }); }
       if (!msg || typeof msg !== 'object') return send(ws, { type: 'error', message: 'message must be an object' });
@@ -69,6 +77,11 @@ export function attachWs(server: Server, runner: WorldRunner, mode: LlmMode): We
         return;
       }
       send(ws, { type: 'error', message: `unknown message type: ${String(msg.type)}` });
+    };
+    // A control that throws answers with an error; it never takes the server down.
+    ws.on('message', (raw) => {
+      try { onMessage(raw); }
+      catch (e) { console.error('ws message failed:', e); send(ws, { type: 'error', message: 'that control failed' }); }
     });
   });
   return wss;
