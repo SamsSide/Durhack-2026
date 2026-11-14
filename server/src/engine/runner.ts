@@ -18,21 +18,18 @@ import { decreeEvents, interpretDecree, interpretDecreeMock, type Decree } from 
 import { RulerScheduler } from '../agents/ruler';
 import { secessionBatch } from './secession';
 import { currentMode, getBudget, resetRun } from '../llm';
+import { Clock, TickLoop, clampSpeed, type ClockState } from './clock';
+import { anyBigMoment } from './bigMoments';
 
-const TICK_MS = 500;
-const MAX_TICKS_PER_STEP = 16;
 const AGENTS_HEARTBEAT_MS = 1000;
 
 export class EngineRunner implements WorldRunner {
   private world: World | null = null;        // the truth: only ever changed by applying published events
   private initial: World | null = null;
   private log: WorldEvent[] = [];
-  private timer: ReturnType<typeof setInterval> | null = null;
   private listeners = new Set<RunnerListener>();
   private lamport = 0;
   private decrees = 0;
-  private lastTick = 0;
-  private acc = 0;
   private lastAgents = '';
   private lastAgentsPush = 0;
   private generation = 0;
@@ -45,6 +42,13 @@ export class EngineRunner implements WorldRunner {
   private deletedAt = new Map<number, number>();
   private fallen = new Set<number>();
   private worldSeq = 0;
+  private scanned = 0;                          // how much of `outgoing` the director has looked at
+  private clock = new Clock();
+  private loop = new TickLoop(this.clock, (n, now) => this.step(n, now));
+
+  constructor() {
+    this.clock.onChange = (s) => { for (const l of this.listeners) l.clock?.(s); };
+  }
 
   getWorld(): World | null { return this.world; }
   getLog() { return this.world && this.initial ? { initial: this.initial, events: this.log } : null; }
@@ -84,8 +88,11 @@ export class EngineRunner implements WorldRunner {
     this.log = [];
     this.lamport = 0;
     this.outgoing = [];
-    this.lastTick = Date.now();
-    this.acc = 0;
+    this.scanned = 0;
+    this.clock.setPaused(false);
+    this.clock.reset();
+    w.speed = this.clock.target;
+    w.paused = false;
     this.lastAgents = '';
     this.bus = this.makeBus();
     this.bus.setObserver(this.observer);
@@ -118,42 +125,42 @@ export class EngineRunner implements WorldRunner {
   replay(_id: string): World | null { return null; }
 
   start(): void {
-    if (this.timer || !this.world) return;
-    this.lastTick = Date.now();
-    this.timer = setInterval(() => this.step(), 100);
+    if (this.loop.active || !this.world) return;
+    this.loop.start();
   }
 
-  stop(): void {
-    if (this.timer) clearInterval(this.timer);
-    this.timer = null;
-  }
+  stop(): void { this.loop.stop(); }
 
+  /** Row A25: any speed from 0.1 to 64 (clamped); the director may run below it in auto pacing. */
   setSpeed(speed: number): void {
-    if (![1, 2, 4, 8].includes(speed)) return;
-    if (this.world) this.world.speed = speed;
+    if (!Number.isFinite(speed)) return;
+    if (this.world) this.world.speed = clampSpeed(speed);
+    this.clock.setTarget(speed);
   }
 
   setPaused(paused: boolean): void {
     if (this.world) this.world.paused = paused;
+    this.clock.setPaused(paused);
   }
 
-  private step(): void {
+  clockState(): ClockState { return this.clock.state(); }
+
+  /** One timer fire: the ticks the clock says are due (maybe none), then the ruler loop. */
+  private step(n: number, now: number): void {
     const w = this.world;
-    const now = Date.now();
-    const dt = now - this.lastTick;
-    this.lastTick = now;
     if (!w || w.paused) return;
-    this.acc = Math.min(this.acc + (dt * w.speed) / TICK_MS, MAX_TICKS_PER_STEP);
-    let n = 0;
-    while (this.acc >= 1) { this.acc -= 1; n++; }
-    this.advance(n);
+    if (n) this.advance(n);
     this.rulers(now);
   }
 
   /** Runs `ticks` years at once and broadcasts the result (the timer uses it; so can headless checks). */
   advance(ticks: number): void {
     if (!this.world) return;
-    for (let i = 0; i < ticks; i++) this.runTick();
+    for (let i = 0; i < ticks; i++) {
+      this.runTick();
+      // Auto pacing: stop the rest of this fire's years at the first big moment.
+      if (this.scanBig() && this.clock.pacing === 'auto') break;
+    }
     this.syncStatuses();
     this.flushOut();
     this.pushAgents();
@@ -205,7 +212,7 @@ export class EngineRunner implements WorldRunner {
       if (capped && a.ruler === 'llm') a.fallBack();          // the budget cap is the same path as silence
       nations.push({ id: a.id, alive: !!this.world?.countries[a.id]?.alive, silenced: a.silenced });
     }
-    for (const id of this.scheduler.tick(now, nations)) void this.agents.get(id)?.think();
+    for (const id of this.scheduler.tick(now, nations, this.world?.tick)) void this.agents.get(id)?.think();
   }
 
   /** The observer's view of each agent: link, queue, ruler (heartbeats set lastHeardTick). */
@@ -224,10 +231,21 @@ export class EngineRunner implements WorldRunner {
 
   private flushOut(): void {
     if (!this.outgoing.length) return;
+    this.scanBig();
     const batch = this.outgoing;
     this.outgoing = [];
+    this.scanned = 0;
     this.log.push(...batch);
     for (const l of this.listeners) l.events?.(batch);
+  }
+
+  /** Looks at what was applied since the last scan; a big moment tells the pacing director. */
+  private scanBig(): boolean {
+    const fresh = this.outgoing.slice(this.scanned);
+    this.scanned = this.outgoing.length;
+    if (!anyBigMoment(fresh, this.world)) return false;
+    this.clock.bigMoment();
+    return true;
   }
 
   /** Agent statuses go out when something other than a heartbeat changed, and at most once a
@@ -370,6 +388,7 @@ export class EngineRunner implements WorldRunner {
         break;
       }
       case 'speed': this.setSpeed(msg.value); break;
+      case 'pacing': this.clock.setPacing(msg.value); break;
       case 'pause': this.setPaused(msg.value); break;
       case 'decree': {
         // Typed decrees take the same path as spoken ones (row A20): interpret, then applyDecree.

@@ -13,9 +13,13 @@ export function attachWs(server: Server, runner: WorldRunner, mode: LlmMode): We
   const budget = () => getBudget();
 
   runner.subscribe({
-    snapshot: (world) => { broadcast({ type: 'snapshot', world }); broadcast({ type: 'agents', agents: world.agents }); },
+    snapshot: (world) => {
+      broadcast({ type: 'snapshot', world }); broadcast({ type: 'agents', agents: world.agents });
+      const c = runner.clockState?.(); if (c) broadcast({ type: 'clock', ...c });
+    },
     events: (events) => broadcast({ type: 'events', events }),
     agents: (agents) => broadcast({ type: 'agents', agents }),
+    clock: (state) => broadcast({ type: 'clock', ...state }),
   });
   setInterval(() => broadcast(budget()), 2000).unref();
 
@@ -23,6 +27,8 @@ export function attachWs(server: Server, runner: WorldRunner, mode: LlmMode): We
     const world = runner.getWorld();
     if (world) { send(ws, { type: 'snapshot', world }); send(ws, { type: 'agents', agents: world.agents }); }
     else send(ws, { type: 'none' });
+    const clock = runner.clockState?.();
+    if (world && clock) send(ws, { type: 'clock', ...clock });
     send(ws, budget());
 
     ws.on('message', (raw) => {
@@ -39,7 +45,8 @@ export function attachWs(server: Server, runner: WorldRunner, mode: LlmMode): We
         const a = msg.action;
         if (ACTIONS_WITH_COUNTRY.includes(a) && typeof msg.countryId === 'number') runner.control(msg as ControlMessage);
         else if ((a === 'blackout' || a === 'pause') && typeof msg.value === 'boolean') runner.control(msg as ControlMessage);
-        else if (a === 'speed' && [1, 2, 4, 8].includes(msg.value)) runner.control(msg as ControlMessage);
+        else if (a === 'speed' && typeof msg.value === 'number' && Number.isFinite(msg.value)) runner.control({ action: 'speed', value: msg.value });
+        else if (a === 'pacing' && (msg.value === 'auto' || msg.value === 'manual')) runner.control({ action: 'pacing', value: msg.value });
         else if (a === 'decree' && typeof msg.text === 'string' && msg.text.trim()) runner.control({ action: 'decree', text: msg.text.trim() });
         else return send(ws, { type: 'error', message: `bad control: ${String(a)}` });
         return;

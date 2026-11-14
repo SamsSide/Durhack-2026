@@ -1,6 +1,7 @@
 // The seam between the network layer and whatever produces the world. The mock runner
 // implements it for `npm run mock`; the real engine (engine/runner.ts) for `npm run dev`.
 import type { AgentStatus, World, WorldEvent } from '@terra/shared';
+import type { ClockState, Pacing } from './engine/clock';
 
 export type LlmMode = 'mock' | 'live';
 
@@ -13,12 +14,15 @@ export type ControlMessage =
   | { action: 'cut' | 'restore' | 'silence' | 'wake' | 'delete'; countryId: number }
   | { action: 'blackout' | 'pause'; value: boolean }
   | { action: 'speed'; value: number }
+  | { action: 'pacing'; value: Pacing }
   | { action: 'decree'; text: string };
 
 export interface RunnerListener {
   snapshot?(world: World): void;
   events?(events: WorldEvent[]): void;
   agents?(agents: AgentStatus[]): void;
+  /** Row A25: the effective speed, the chosen target, the pacing mode or pause changed. */
+  clock?(state: ClockState): void;
 }
 
 export interface WorldRunner {
@@ -37,6 +41,8 @@ export interface WorldRunner {
   stop(): void;
   setSpeed(speed: number): void;
   setPaused(paused: boolean): void;
+  /** Row A25: the clock as clients should see it (X2 `clock`). */
+  clockState?(): ClockState | undefined;
   control(msg: ControlMessage): void;
   /** The tile ownership as that nation's own replica sees it. */
   belief(countryId: number): number[] | null;

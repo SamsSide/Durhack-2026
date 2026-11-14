@@ -1,8 +1,8 @@
-// Mock WorldRunner: plays mockEvents() into a server-side World at about four batches a second.
+// Mock WorldRunner: plays mockEvents() into a server-side World on the shared clock (row A25).
 import { applyEvent, mockEvents, mockWorld, type AgentStatus, type World, type WorldEvent } from '@terra/shared';
 import type { ControlMessage, NewWorldOptions, RunnerListener, WorldRunner } from '../runner';
-
-const BATCH_MS = 250;
+import { Clock, TickLoop, clampSpeed, type ClockState } from '../engine/clock';
+import { anyBigMoment } from '../engine/bigMoments';
 
 export class MockRunner implements WorldRunner {
   private world: World | null = null;
@@ -10,15 +10,19 @@ export class MockRunner implements WorldRunner {
   private log: WorldEvent[] = [];
   private gen: Generator<WorldEvent> | null = null;
   private pending: WorldEvent | null = null;
-  private timer: ReturnType<typeof setInterval> | null = null;
   private listeners = new Set<RunnerListener>();
-  private speed = 1;
-  private paused = false;
-  private acc = 0;
+  private clock = new Clock();
+  private loop = new TickLoop(this.clock, (n) => this.step(n));
   private lamport = 0;
   private decrees = 0;
   private lastAgents = '';
+  private lastAgentsPush = 0;
 
+  constructor() {
+    this.clock.onChange = (s) => { for (const l of this.listeners) l.clock?.(s); };
+  }
+
+  clockState(): ClockState { return this.clock.state(); }
   getWorld(): World | null { return this.world; }
   getLog() { return this.world && this.initial ? { initial: this.initial, events: this.log } : null; }
 
@@ -29,9 +33,9 @@ export class MockRunner implements WorldRunner {
     this.log = [];
     this.gen = mockEvents(w);
     this.pending = null;
-    this.speed = 1;
-    this.paused = false;
-    this.acc = 0;
+    this.clock.setPaused(false);
+    w.speed = this.clock.target;
+    w.paused = false;
     this.lamport = 0;
     this.lastAgents = '';
     this.start();
@@ -56,38 +60,33 @@ export class MockRunner implements WorldRunner {
   }
 
   start(): void {
-    if (this.timer || !this.world) return;
-    this.timer = setInterval(() => this.step(), BATCH_MS);
+    if (this.loop.active || !this.world) return;
+    this.loop.start();
   }
 
-  stop(): void {
-    if (this.timer) clearInterval(this.timer);
-    this.timer = null;
-  }
+  stop(): void { this.loop.stop(); }
 
   setSpeed(speed: number): void {
-    if (![1, 2, 4, 8].includes(speed)) return;
-    this.speed = speed;
-    if (this.world) this.world.speed = speed;
+    if (!Number.isFinite(speed)) return;
+    if (this.world) this.world.speed = clampSpeed(speed);
+    this.clock.setTarget(speed);
   }
 
   setPaused(paused: boolean): void {
-    this.paused = paused;
     if (this.world) this.world.paused = paused;
+    this.clock.setPaused(paused);
   }
 
   private next(): WorldEvent {
     return this.gen!.next().value as WorldEvent;
   }
 
-  /** One batch: whole ticks, `speed` of them per batch. */
-  private step(): void {
+  /** One timer fire: `ticks` whole years, broadcast as one batch. */
+  private step(ticks: number): void {
     const w = this.world;
-    if (!w || !this.gen || this.paused) return;
-    this.acc += this.speed;
+    if (!w || !this.gen || w.paused || !ticks) return;
     const batch: WorldEvent[] = [];
-    while (this.acc >= 1) {
-      this.acc -= 1;
+    for (let i = 0; i < ticks; i++) {
       const first = this.pending ?? this.next();
       this.pending = null;
       batch.push(first);
@@ -106,6 +105,7 @@ export class MockRunner implements WorldRunner {
       applyEvent(w, e);
       this.lamport = Math.max(this.lamport, e.lamport);
     }
+    if (anyBigMoment(batch, w)) this.clock.bigMoment();
     this.log.push(...batch);
     // Cut nations "hear" nothing; up nations are heard at the current tick.
     for (const a of w.agents) {
@@ -119,9 +119,12 @@ export class MockRunner implements WorldRunner {
 
   private pushAgents(force = false): void {
     if (!this.world) return;
-    const json = JSON.stringify(this.world.agents);
-    if (!force && json === this.lastAgents) return;
+    // At most once a second when only the heartbeat moved (row A25: batches can be 16 a second).
+    const json = JSON.stringify(this.world.agents.map((a) => ({ ...a, lastHeardTick: 0 })));
+    const now = Date.now();
+    if (!force && json === this.lastAgents && now - this.lastAgentsPush < 1000) return;
     this.lastAgents = json;
+    this.lastAgentsPush = now;
     for (const l of this.listeners) l.agents?.(this.world.agents);
   }
 
@@ -137,6 +140,7 @@ export class MockRunner implements WorldRunner {
       case 'delete': { const a = agent(msg.countryId); if (a) { a.deleted = true; a.link = 'cut'; } break; }
       case 'blackout': for (const a of w.agents) if (!a.deleted) a.link = msg.value ? 'cut' : 'up'; break;
       case 'speed': this.setSpeed(msg.value); break;
+      case 'pacing': this.clock.setPacing(msg.value); break;
       case 'pause': this.setPaused(msg.value); break;
       case 'decree': {
         const n = ++this.decrees;
