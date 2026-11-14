@@ -193,10 +193,45 @@
   color: var(--color-text); text-shadow: var(--engrave-on-dark);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Owner #317: the war report on a war beat, top right over the live picture (opposite the LIVE bug).
+   A small lacquer plate with a war-red edge: both flags, the two armies, the losses. No blur. */
+.tn-warrep {
+  position: absolute; right: 8px; top: 8px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 3px;
+  padding: 4px 8px 5px;
+  background: linear-gradient(180deg, rgba(14,16,26,.95), rgba(9,11,18,.92));
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px #000, 0 0 0 2px rgba(201,162,75,.6), inset 0 3px 0 var(--stance-war, #b0322a);
+  color: var(--color-text);
+  animation: tn-pip-strap 320ms var(--ease-out) 380ms both;
+}
+.tn-warrep-title {
+  padding-top: 2px;
+  font-family: var(--font-display); font-weight: 700; font-size: 9px; line-height: 1.1;
+  letter-spacing: var(--tracking-caps); text-transform: uppercase; text-align: center;
+  color: var(--gilt-hi); text-shadow: var(--engrave-on-dark);
+  max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tn-warrep-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.tn-warrep-flag { width: 26px; height: 18px; line-height: 0; }
+.tn-warrep-num {
+  min-width: 3.1em; text-align: center;
+  font: 700 13px/1 var(--font-mono); color: #f6e7c4; text-shadow: var(--engrave-on-dark);
+}
+.tn-warrep-vs {
+  font-family: var(--font-display); font-size: 9px; font-weight: 700;
+  letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--gilt);
+}
+.tn-warrep-loss { padding: 0 2px; }
+.tn-warrep-lost { min-width: 3.4em; text-align: center; font: 600 11px/1 var(--font-mono); color: #ff8a78; text-shadow: var(--engrave-on-dark); }
+.tn-warrep-label {
+  font-family: var(--font-display); font-size: 8px; font-weight: 600;
+  letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted);
+}
 @keyframes tn-pip-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes tn-pip-off { from { opacity: 1; } to { opacity: 0; } }
 @keyframes tn-pip-strap { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) {
-  .tn-pip, .tn-pip-out, .tn-pip-strap, .tn-pip-live-dot { animation: none; }
+  .tn-pip, .tn-pip-out, .tn-pip-strap, .tn-pip-live-dot, .tn-warrep { animation: none; }
   /* the reduced-motion "Speaking" label sits top right, clear of the LIVE bug */
 }

@@ -79,3 +79,4 @@
 - 14 Nov (owner): polish mode ON: polish, fixes, performance and approved features only; a new major feature needs the owner's yes first. Toggle: the `## Polish mode: ON` heading in CLAUDE.md.
 - 14 Nov (owner): we do not enter the MLH Best Use of Entire prize (not used properly enough); removed from the Devpost draft and the submission text. Entire keeps recording sessions as before.
 - 14 Nov (owner): `npm run demo` starts the live demo (Gemini, ElevenLabs, Solana devnet) on this laptop; `npm run demo:mock` is the no-spend rehearsal; `npm run demo:live` stays as an alias.
+- 14 Nov (owner, #317): one warmonger per world and earlier first wars; a war-report scene on the news.

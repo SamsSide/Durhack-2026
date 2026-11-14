@@ -13,7 +13,7 @@ import { imageLive, paintFlag } from './paintedFlag';
 import { ensureChant } from './chant';
 import { ensureNarration, narrationTarget } from './narration';
 import { anthemFile, anthemLive } from './anthem';
-import { ensureAudio, getBulletin, makeBroadcast } from './broadcast';
+import { clearBattles, ensureAudio, getBulletin, makeBroadcast, noteEvents } from './broadcast';
 
 const CACHE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.cache');
 const sha = (s: string) => crypto.createHash('sha256').update(s).digest('hex');
@@ -41,6 +41,8 @@ const SAMPLES = path.join(path.dirname(fileURLToPath(import.meta.url)), 'samples
 export function storyRoutes(runner: WorldRunner): Router {
   const r = Router();
   const playing = () => runner.playback?.() === true;
+  // Owner #317: the news remembers the battles it saw, for the war report on a war beat.
+  runner.subscribe({ snapshot: () => clearBattles(), events: (e) => noteEvents(e) });
   const countryId = (s: string | undefined) => {
     const id = Number(s);
     const w = runner.getWorld();
