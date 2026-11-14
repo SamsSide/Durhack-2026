@@ -7,10 +7,9 @@ import { flagSvg, regionOwner } from '@terra/shared';
 import type { FlagSpec } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import { CLOSE } from '../constants';
+import { getPalette } from '../palette';
 import { useProvinceMesh } from '../mesh/context';
 
-const INK = '#2a2118';
-const HALO = '#f3e9c6';
 const EXTRA_LIFT = 0.002;
 const RENDER_ORDER = 20;
 const FADE_FAR = 1.5; // nation names fully visible above this camera distance
@@ -40,6 +39,8 @@ function surfaceQuat(pos: THREE.Vector3): THREE.Quaternion {
 }
 
 function FlagLabel({ data }: { data: LabelData }) {
+  const INK = getPalette().ink;
+  const HALO = getPalette().parchment;
   const groupRef = useRef<THREE.Group>(null);
   const textRef = useRef<any>(null); // troika Text instance
   const flagMat = useRef<THREE.MeshBasicMaterial>(null);

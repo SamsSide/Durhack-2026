@@ -8,10 +8,10 @@ import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import type { World } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import { CLOSE } from '../constants';
+import { getPalette } from '../palette';
 import { useProvinceMesh } from '../mesh/context';
 import type { ProvinceMesh } from '../mesh/buildProvinceMesh';
 
-const INK = '#2a2118';
 const REGION_OPACITY = 0.35;
 const PROVINCE_OPACITY = 0.1;
 const PROVINCE_NEAR = 1.4;
@@ -25,7 +25,7 @@ interface Layer {
 
 function makeLayer(group: THREE.Group, width: number, opacity: number, vertexColors: boolean, dashed = false): Layer {
   const mat = new LineMaterial({
-    color: vertexColors ? 0xffffff : new THREE.Color(INK).getHex(),
+    color: vertexColors ? 0xffffff : new THREE.Color(getPalette().ink).getHex(),
     linewidth: width,
     vertexColors,
     transparent: true,
@@ -60,11 +60,6 @@ function setLayer(layer: Layer, positions: number[], colors?: number[]): void {
   layer.line.visible = true;
 }
 
-const tmp = new THREE.Color();
-function darkened(hex: string): [number, number, number] {
-  tmp.set(hex).multiplyScalar(0.55);
-  return [tmp.r, tmp.g, tmp.b];
-}
 
 interface Layers { nation: Layer; coastOwned: Layer; coastFree: Layer; region: Layer; province: Layer }
 
@@ -72,7 +67,8 @@ function rebuild(layers: Layers, world: World, mesh: ProvinceMesh): void {
   const nationP: number[] = [], nationC: number[] = [];
   const coastOwnedP: number[] = [], coastFreeP: number[] = [];
   const regionP: number[] = [], provinceP: number[] = [];
-  const cols = world.countries.map((c) => (c ? darkened(c.color) : ([0.16, 0.13, 0.09] as [number, number, number])));
+  const ink = new THREE.Color(getPalette().ink);
+  const inkRgb: [number, number, number] = [ink.r, ink.g, ink.b];
 
   for (const e of mesh.edges) {
     const ta = world.tiles[e.tileA], tb = world.tiles[e.tileB];
@@ -88,11 +84,9 @@ function rebuild(layers: Layers, world: World, mesh: ProvinceMesh): void {
     }
     if (oa !== ob) {
       const mid = [(e.a[0] + e.b[0]) / 2, (e.a[1] + e.b[1]) / 2, (e.a[2] + e.b[2]) / 2];
-      const ca = oa >= 0 ? cols[oa] : undefined, cb = ob >= 0 ? cols[ob] : undefined;
       if (oa >= 0 || ob >= 0) {
-        const fa = ca ?? cb!, fb = cb ?? ca!;
         nationP.push(...e.a, ...mid, ...mid, ...e.b);
-        nationC.push(...fa, ...fa, ...fb, ...fb);
+        nationC.push(...inkRgb, ...inkRgb, ...inkRgb, ...inkRgb);
       }
       continue;
     }

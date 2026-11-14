@@ -46,7 +46,7 @@ function colorWith(
   }
   if (!country) return out.set(terrain);
   out.set(terrain);
-  return out.lerp(tmp.set(country.color), 0.75);
+  return out.lerp(tmp.set(country.color), pal.nationFill);
 }
 
 export function tileColor(

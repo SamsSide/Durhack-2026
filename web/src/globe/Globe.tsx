@@ -15,6 +15,8 @@ import { Picking } from './camera/usePicking';
 import { HoverHighlight } from './camera/HoverHighlight';
 import { SelectionGlow } from './camera/SelectionGlow';
 import { Political } from './political/Political';
+import { Atmosphere } from './atmosphere/Atmosphere';
+import { Structures } from './structures/Structures';
 
 const SPACE = '#0b0f14';
 
@@ -124,6 +126,7 @@ function Scene({ world }: { world: World }) {
       <HoverHighlight />
       <SelectionGlow />
       <Political />
+      <Structures />
     </ProvinceMeshContext.Provider>
   );
 }
@@ -138,6 +141,7 @@ export function Globe() {
       <color attach="background" args={[space]} />
       <hemisphereLight args={['#fff6e0', '#33414a', 0.6]} />
       <CameraLight />
+      <Atmosphere />
       {world && <Scene world={world} />}
       <CameraRig />
     </Canvas>
