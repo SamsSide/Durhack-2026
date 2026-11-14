@@ -1,4 +1,5 @@
 // The 3D globe: one province mesh, live colours, click-to-select, fly-to. Lane b.
+import { Readiness } from './economy/Readiness';
 import { useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -7,7 +8,7 @@ import { useWorld } from '../state/world';
 import { useBelief } from '../state/belief';
 import { buildProvinceMesh } from './mesh/buildProvinceMesh';
 import type { ProvinceMesh } from './mesh/buildProvinceMesh';
-import { wealthKey, writeColors } from './mesh/colors';
+import { devastationKey, politicsKey, wealthKey, writeColors } from './mesh/colors';
 import { ProvinceMeshContext } from './mesh/context';
 import { ColorFx } from './colorFx';
 import { CameraRig } from './camera/CameraRig';
@@ -60,6 +61,7 @@ function Planet({ world, mesh }: { world: World; mesh: ProvinceMesh }) {
     let lastMode = useWorld.getState().mapMode;
     let lastSel = useWorld.getState().selectedCountryId;
     let lastWealth = '';
+    let lastScorch = '';
 
     const fx = new ColorFx(mesh, world.tiles.length);
 
@@ -101,6 +103,10 @@ function Planet({ world, mesh }: { world: World; mesh: ProvinceMesh }) {
         wealthChanged = k !== lastWealth;
         lastWealth = k;
       } else lastWealth = '';
+      // B11: scorch shows in every mode but terrain; politics colours follow each nation's axis
+      const scorchKey = s.mapMode === 'terrain' ? '' : `${devastationKey(world)}`;
+      const polKey = s.mapMode === 'politics' ? politicsKey(world) : '';
+      if (scorchKey + polKey !== lastScorch) { wealthChanged = true; lastScorch = scorchKey + polKey; }
       const changed = s.version !== seenVersion ? diff(events) : new Map<number, string>();
       seenVersion = s.version;
       lastEventId = events.length ? events[events.length - 1]!.id : lastEventId;
@@ -152,6 +158,7 @@ function Scene({ world }: { world: World }) {
       <HoverHighlight />
       <SelectionGlow />
       <Political />
+      <Readiness />
       <Structures />
       <Wonders />
       <Units />

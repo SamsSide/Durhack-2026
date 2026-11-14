@@ -6,7 +6,7 @@ import { VK_COAST_BOT, VK_COAST_TOP, VK_LIP, VK_SLOPE, VK_WALL_BOT, VK_WALL_TOP 
 import type { ProvinceMesh } from './buildProvinceMesh';
 import { statusOf } from '../status/statusTint';
 
-export type MapMode = 'political' | 'terrain' | 'diplomacy' | 'strength' | 'wealth';
+export type MapMode = 'political' | 'terrain' | 'diplomacy' | 'strength' | 'wealth' | 'politics';
 
 const tmp = new THREE.Color();
 const WHITE = new THREE.Color('#ffffff');
@@ -49,6 +49,62 @@ export function wealthKey(world: World): string {
   let k = '';
   for (const c of world.countries) if (c?.alive) k += `${c.id}:${Math.round((t[c.id] ?? 0) * 20)},`;
   return k;
+}
+
+/** B11 politics ramp: deep red (far left), grey (centre), dark navy (far right). */
+export const POLITICS_LEFT = '#8f1d14';
+export const POLITICS_MID = '#8a867c';
+export const POLITICS_RIGHT = '#16255e';
+const polA = new THREE.Color(), polB = new THREE.Color();
+
+/** Colour of a nation on the politics axis (-100..100); radicalism (0..100) raises the saturation. */
+export function politicsColor(axis: number, radicalism: number, out: THREE.Color): THREE.Color {
+  const a = Math.max(-100, Math.min(100, axis));
+  const t = Math.abs(a) / 100;
+  out.set(POLITICS_MID).lerp(polA.set(a < 0 ? POLITICS_LEFT : POLITICS_RIGHT), Math.pow(t, 0.8));
+  const sat = 0.35 + 0.65 * Math.max(0, Math.min(100, radicalism)) / 100;
+  const g = out.r * 0.3 + out.g * 0.59 + out.b * 0.11;
+  return out.lerp(polB.setRGB(g, g, g), 1 - sat);
+}
+
+/** Missing politics means { axis: 0, radicalism: 10 }. */
+export function politicsOf(c: World['countries'][number]): { axis: number; radicalism: number } {
+  return c.politics ?? { axis: 0, radicalism: 10 };
+}
+
+/** Changes when any nation's politics colour would visibly change, so the globe repaints only then. */
+export function politicsKey(world: World): string {
+  let k = '';
+  for (const c of world.countries) {
+    if (!c?.alive) continue;
+    const p = politicsOf(c);
+    k += `${c.id}:${Math.round(p.axis / 4)}:${Math.round(p.radicalism / 10)},`;
+  }
+  return k;
+}
+
+/** Changes when any province's scorch would visibly change (steps of 6), so the globe repaints only then. */
+export function devastationKey(world: World): number {
+  const d = world.devastation;
+  if (!d) return 0;
+  let h = 0;
+  for (let i = 0; i < d.length; i++) {
+    const q = Math.floor((d[i] ?? 0) / 6);
+    if (q) h = (h * 31 + q * (i % 251 + 1) + i) | 0;
+  }
+  return h;
+}
+
+const ASH = new THREE.Color('#4a3a2c');
+
+/** Scorch: darker and ash-brown as devastation (0..100) rises; barely there below 20. */
+function scorch(world: World, tileId: number, out: THREE.Color): THREE.Color {
+  const d = world.devastation?.[tileId] ?? 0;
+  if (d <= 1) return out;
+  const x = Math.min(1, d / 100);
+  const amt = d < 20 ? 0.1 * (d / 20) : 0.1 + 0.55 * ((d - 20) / 80);
+  out.lerp(ASH, amt);
+  return out.multiplyScalar(1 - 0.3 * x * x);
 }
 
 /** Terrain mode biome colour: dry band where desert meets non-desert, coast takes its land neighbour's tone. */
@@ -99,6 +155,11 @@ function colorBase(
     const s = str ?? strengthByCountry(world);
     const t = s.max > 0 ? (s.value[owner] ?? 0) / s.max : 0;
     return out.set(pal.strengthLow).lerp(tmp.set(pal.strengthHigh), t);
+  }
+  if (mode === 'politics') {
+    if (!country) return out.set(pal.wealthNone);
+    const p = politicsOf(country);
+    return politicsColor(p.axis, p.radicalism, out);
   }
   if (mode === 'wealth') {
     if (!country) return out.set(pal.wealthNone);
@@ -156,7 +217,7 @@ export function toneFactor(world: World, tileId: number, mode: MapMode): number 
   const tile = world.tiles[tileId];
   if (!tile || tile.terrain === 'ocean') return 1;
   const step = TONE_STEPS[toneClasses(world)[tileId] ?? 0]! - 1;
-  return 1 + (mode === 'diplomacy' || mode === 'strength' || mode === 'wealth' ? step * 0.5 : step);
+  return 1 + (mode === 'diplomacy' || mode === 'strength' || mode === 'wealth' || mode === 'politics' ? step * 0.5 : step);
 }
 
 function applyRelief(world: World, tileId: number, out: THREE.Color, mode: MapMode = 'political'): THREE.Color {
@@ -182,7 +243,9 @@ function colorStatus(
 ): THREE.Color {
   colorBase(world, tileId, owner, mode, sel, out, str, wealth);
   const tile = world.tiles[tileId];
-  if (owner < 0 || !tile || tile.terrain === 'ocean') return out;
+  if (!tile || tile.terrain === 'ocean') return out;
+  if (mode !== 'terrain') scorch(world, tileId, out);
+  if (owner < 0) return out;
   const st = statusOf(owner);
   if (!st) return out;
   const pal = getPalette();

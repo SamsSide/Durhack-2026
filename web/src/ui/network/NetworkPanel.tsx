@@ -94,7 +94,7 @@ export function NetworkPanel() {
       <header className="tn-net-head">
         <div>
           <h2 className="tn-net-title">The Network</h2>
-          <p className="tn-net-sub">Cut a nation off, silence its AI or delete it, and watch the rest carry on.</p>
+          <p className="tn-net-sub">Each nation thinks for itself. Cut one off and watch.</p>
         </div>
         <button className="tn-net-fold" onClick={() => setFold(true)} aria-label="Fold the network panel"><svg width="6" height="10" viewBox="0 0 6 10" aria-hidden="true"><path d="M5 1L1 5L5 9" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg></button>
       </header>
@@ -112,8 +112,6 @@ export function NetworkPanel() {
         className={`tn-switch tn-blackout ${blackedOut ? 'on' : ''}`}
         role="switch"
         aria-checked={blackedOut}
-        title="Cut every link at once"
-        aria-label="Blackout: cut every link at once"
         disabled={live.length === 0}
         onClick={() => send({ type: 'control', action: 'blackout', value: anyUp })}
       >
@@ -128,8 +126,6 @@ export function NetworkPanel() {
         className={`tn-switch ${beliefOf != null ? 'on' : ''}`}
         role="switch"
         aria-checked={beliefOf != null}
-        title="Show the selected nation's own map instead of the truth"
-        aria-label="Show beliefs: show the selected nation's own map instead of the truth"
         disabled={beliefDisabled}
         onClick={() => showBelief(beliefOf != null ? null : selected)}
       >
@@ -139,7 +135,6 @@ export function NetworkPanel() {
         </span>
         <span className={`tn-toggle ${beliefOf != null ? 'on' : ''}`}><i /></span>
       </button>
-      {beliefDisabled && <p className="tn-sw-hint">Select a nation first</p>}
 
       <PrepareSwitch />
 

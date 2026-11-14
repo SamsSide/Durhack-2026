@@ -56,5 +56,4 @@ budget, run them one at a time in the order below, on Sonnet.
 - 14 Nov · #150 · Browser QA at 1280 x 709: Create fits under the top bar, all timeline lanes fit, herald publishes --tn-herald-bottom, news clears the network panel, herald queue capped, war bands end at a fall
 - 14 Nov · #155 · C9 Solana: Treasury tab with the ledger and counter, treasury link on the card
 - 14 Nov · #159 · C10 visual event feed (EventFeed) for lane b to place
-- 14 Nov · #174 · C11 council on the card: cameo portraits, status chips, memory, Kill / Cut / Restore
-- 14 Nov · this PR · Herald dispatches as small top-right tabs; network controls explained (#217)
+- 14 Nov · this PR · C11 council on the card: cameo portraits, status chips, memory, Kill / Cut / Restore

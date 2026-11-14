@@ -31,7 +31,9 @@
 .topbar.compact .tb-era, .topbar.compact .tn-meter .calls, .topbar.compact .conn-live .conn-word { display: none; }
 .topbar.compact .tb-name { line-height: 28px; }
 .topbar.compact .tb-world { max-width: 170px; }
-.topbar.compact .seg { padding: 0 9px; }
+.topbar.compact .seg { padding: 0 5px; letter-spacing: 0.03em; }
+.topbar.compact .wordmark { letter-spacing: 0.1em; }
+.topbar.compact .tb-group { gap: 7px; }
 .topbar.compact .seg.mono, .topbar.compact .seg.icon { padding: 0 8px; }
 
 .segs { display: flex; border: 1px solid var(--color-border); border-radius: var(--radius-1); background: var(--color-surface); }
@@ -238,3 +240,7 @@ body:has(.tn-news) .minimap { opacity: 0; pointer-events: none; }
 .legend-wealth .lg-names { font-family: inherit; font-size: 11px; color: var(--color-text-muted); margin-bottom: 6px; }
 .legend-wealth .lg-names span { max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .legend-wealth .lg-names span:last-child { text-align: right; }
+
+/* Politics legend (B11): red, grey, navy ramp */
+.legend-politics .lg-ramp { height: 10px; border-radius: 2px; border: 1px solid var(--color-accent); margin: 4px 0 4px; }
+.legend-politics .lg-ends { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--color-text-muted); margin-bottom: 6px; }

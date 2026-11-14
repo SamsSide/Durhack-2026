@@ -5,7 +5,7 @@ import * as ui from './ui';
 import { Chronicle, CreateScreen, DecreeBox, NationCard, NetworkPanel, PreparePanel } from './ui';
 import { useWorld } from './state/world';
 import { EventFeed, LedgerPanel } from './hud/lookup';
-import { BeliefBanner, useEconomyOn, ClosingCard, DiplomacyLegend, Minimap, MODES, TerrainLegend, TopBar, useTimelineOpen, WealthLegend } from './hud';
+import { BeliefBanner, useEconomyOn, ClosingCard, DiplomacyLegend, Minimap, MODES, TerrainLegend, TopBar, useTimelineOpen, WealthLegend, PoliticsLegend } from './hud';
 import { HoverTooltip } from './globe/hover/HoverTooltip';
 import { useEffect, useState } from 'react';
 import { TimelineScrubber } from './globe/timeline';   // B9 timeline (lane a)
@@ -63,6 +63,7 @@ export function App() {
       <DiplomacyLegend hidden={timelineOpen} />
       <TerrainLegend hidden={timelineOpen} />
       <WealthLegend hidden={timelineOpen} />
+      <PoliticsLegend hidden={timelineOpen} />
       {world && !timelineOpen && <div className="hud decree-slot"><DecreeBox /></div>}
       {/* B9 timeline (lane a): the history scrubber, in the band above the chronicle ticker */}
       {world && !showCreate && <TimelineScrubber />}

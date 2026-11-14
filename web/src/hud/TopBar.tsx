@@ -6,13 +6,13 @@ import { Calendar } from './Calendar';
 import type { WorldStore } from '../state/world';
 import './hud.css';
 
-export const MODES: WorldStore['mapMode'][] = ['political', 'terrain', 'diplomacy', 'strength', 'wealth'];
-const MODE_LABELS: Record<WorldStore['mapMode'], string> = { political: 'Political', terrain: 'Terrain', diplomacy: 'Diplomacy', strength: 'Strength', wealth: 'Wealth' };
+export const MODES: WorldStore['mapMode'][] = ['political', 'terrain', 'diplomacy', 'strength', 'wealth', 'politics'];
+const MODE_LABELS: Record<WorldStore['mapMode'], string> = { political: 'Political', terrain: 'Terrain', diplomacy: 'Diplomacy', strength: 'Strength', wealth: 'Wealth', politics: 'Politics' };
 
 function useCompact(): boolean {
-  const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 1280px)').matches);
+  const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 1400px)').matches);
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 1280px)');
+    const mq = window.matchMedia('(max-width: 1400px)');
     const on = () => setCompact(mq.matches);
     mq.addEventListener('change', on);
     return () => mq.removeEventListener('change', on);
