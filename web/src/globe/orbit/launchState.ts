@@ -69,5 +69,15 @@ export function deliver(id: number, phase: number): boolean {
   return true;
 }
 
+/** A satellite is shot down (#317 item 15): it leaves its ring. Returns its phase, or null when none is drawn. */
+export function lose(id: number, index: number): number | null {
+  const list = phases.get(id);
+  if (!list?.length) return null;
+  const [phase] = list.splice(Math.min(Math.max(0, index), list.length - 1), 1);
+  if (!list.length) phases.delete(id);
+  bump();
+  return phase ?? null;
+}
+
 export function subscribe(f: () => void): () => void { subs.add(f); return () => { subs.delete(f); }; }
 export const revision = (): number => rev;

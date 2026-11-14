@@ -239,6 +239,7 @@ export type WorldEvent = Base & (
   | { type: 'country_founded'; country: Country; regionId?: number }    // a secession, or a nation created later; its tiles follow as tile_claimed
   | { type: 'region_updated'; regionId: number; patch: Partial<Pick<Region, 'name' | 'flag' | 'unrest'>> }
   | { type: 'chronicle'; entry: ChronicleEntry }
+  | { type: 'satellite_lost'; attacker: number; victim: number; index: number }   // #317: see "Satellites" below
 );
 
 export function applyEvent(world: World, event: WorldEvent): void;   // mutates; the only way a World changes
@@ -344,6 +345,16 @@ export type PaymentReason = 'trade' | 'reparations' | 'plunder' | 'seizure' | 'w
   after it may, then one every 60 years while below its cap. Each launch is the nation's own
   `country_updated { satellites }` plus a chronicle line whose id ends in `-sat` (lane b's rocket
   starts on that line).
+- **Satellites shot down (owner, #317 item 15, 14 Nov):** a nation in the `modern` age or later at
+  all-out war (war readiness 80 or more) with a modern-or-later enemy that has satellites up may
+  shoot one down: `satellite_lost { attacker, victim, index }` (actor the attacker, `index`
+  0..satellites-1), valid only while the two are at war and the victim still has that satellite.
+  `applyEvent` takes one off `countries[victim].satellites`. Rare and bounded (`satelliteStrike` in
+  `sim/ages.ts`: 5 in 1000 a year in the modern age, 8 later, from a hash of the tick; at most once
+  every 80 years per attacker). It comes with a chronicle line (kind `battle`, countries
+  `[attacker, victim]`, id ending `-satlost-<victim>`). The victim launches a replacement on its
+  usual rhythm. The browser (`web/src/globe/orbit/Strike.tsx`, lane a) draws a strike from the
+  attacker's capital, a flash and debris at the satellite, and the wreck falling off its ring.
 
 | Terrain | defence | supply | attrition | move | yields |
 | --- | --- | --- | --- | --- | --- |

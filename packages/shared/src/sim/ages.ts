@@ -5,6 +5,7 @@
 // age at the same moment. Armies and fleets raised in a later age are stronger, and battles give the
 // more advanced side a modest edge (sim/war.ts).
 import type { ChronicleKind, Country, Structure, TechAge, World } from '../types';
+import { hashString } from '../rng';
 
 export const AGES: readonly TechAge[] = ['ancient', 'medieval', 'gunpowder', 'industrial', 'modern', 'future', 'stellar'];
 
@@ -55,6 +56,8 @@ export interface AgeMemory {
   docked: Set<string>;
   /** The tick of its next satellite launch (the count up is `Country.satellites`, in the world). */
   satNext?: number;
+  /** The first tick it may shoot down another rival satellite (#317 item 15). */
+  strikeNext?: number;
 }
 export const newAgeMemory = (): AgeMemory => ({ docked: new Set() });
 
@@ -140,4 +143,41 @@ export function satelliteTurn(view: World, me: number, tick: number, mem: AgeMem
       ? `${c.name} launches its first satellite into orbit: a new star crosses the sky above its capital.`
       : `${c.name} launches another satellite: ${n + 1} now circle its sky.`,
   };
+}
+
+/** War readiness at which a war is all-out (the "Total war" band). */
+const ALL_OUT = 80;
+/** Years between two satellites one nation shoots down. */
+const STRIKE_GAP = 80;
+/** Chance a year, in thousandths, that a modern nation at all-out war strikes (future and stellar: `STRIKE_PERMILLE_LATE`). */
+const STRIKE_PERMILLE = 5;
+const STRIKE_PERMILLE_LATE = 8;
+
+/**
+ * Anti-satellite strikes (owner, #317 item 15). A modern-or-later nation at all-out war (war readiness
+ * 80 or more) with a modern-or-later enemy that has satellites up now and then shoots one down: rarely
+ * (under one in a hundred a year, from a hash of the tick, so the turn's random stream is untouched), at
+ * most once every `STRIKE_GAP` years. Returns the victim, the satellite (0..n-1) and the chronicle
+ * text, or null. `enemies` are the nations it is at war with (sorted).
+ */
+export function satelliteStrike(view: World, me: number, enemies: number[], tick: number, mem: AgeMemory | undefined): { victim: number; index: number; text: string } | null {
+  const c = view.countries[me]!;
+  const age = ageIndex(c.techAge);
+  if (!mem || age < 4 || (c.warReadiness ?? 0) < ALL_OUT || tick < (mem.strikeNext ?? 0)) return null;
+  const targets = enemies.filter((id) => { const e = view.countries[id]; return !!e?.alive && ageIndex(e.techAge) >= 4 && satellitesOf(e) > 0; });
+  if (!targets.length) return null;
+  const h = hashString(`strike:${view.seed}:${me}:${tick}`);
+  if (h % 1000 >= (age >= 5 ? STRIKE_PERMILLE_LATE : STRIKE_PERMILLE)) return null;
+  const h2 = hashString(`strike-pick:${view.seed}:${me}:${tick}`);
+  const victim = targets[h2 % targets.length]!;
+  const v = view.countries[victim]!;
+  const index = (h2 >>> 8) % satellitesOf(v);
+  mem.strikeNext = tick + STRIKE_GAP;
+  const vn = v.name.replace(/^The /, 'the ');
+  const left = satellitesOf(v) - 1;
+  const after = left === 0 ? `; ${vn} is blind in orbit` : left === 1 ? '; one of its satellites still circles' : `; ${left} of its satellites still circle`;
+  const text = age >= 5
+    ? `${c.name} burns a satellite of ${vn} out of orbit with a ground-based laser${after}.`
+    : `A missile from ${c.name.replace(/^The /, 'the ')} knocks a satellite of ${vn} out of the sky, scattering debris along its orbit${after}.`;
+  return { victim, index, text };
 }

@@ -170,6 +170,7 @@ export type WorldEvent = Base & (
   | { type: 'country_founded'; country: Country; regionId?: number }    // a secession, or a nation created later; its tiles follow as tile_claimed
   | { type: 'region_updated'; regionId: number; patch: Partial<Pick<Region, 'name' | 'flag' | 'unrest'>> }
   | { type: 'chronicle'; entry: ChronicleEntry }
+  | { type: 'satellite_lost'; attacker: number; victim: number; index: number } // #317: actor is the attacker; index 0..satellites-1 of the victim's; applyEvent takes one off Country.satellites
   | { type: 'payment'; from: number; to: number; amount: number; reason: PaymentReason; note: string } // coins, 2 decimals; actor is the payer (plunder: the attacker)
 );
 

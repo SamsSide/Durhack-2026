@@ -11,7 +11,7 @@ import {
   WAR_EARLIEST, ageScaled, earlyWarmonger, reachableNations, armyStrengthFor, diplomacyTurn, enemiesOf, inTruce, isCombatant, marchTurn, type MarchInput, type WarLedger,
 } from './war';
 import { unrestTurn, type UnrestMemory } from './regions';
-import { ageStrength, ageTurn, satelliteTurn, type AgeMemory } from './ages';
+import { ageStrength, ageTurn, satelliteStrike, satelliteTurn, type AgeMemory } from './ages';
 import { tradeTurn } from './trade';
 import { MOOD, moodLine, moodStep, type MoodMemory } from './mood';
 import { paymentTurn } from './payments';
@@ -607,6 +607,12 @@ export function nationTurn(
     emit({ type: 'country_updated', countryId, patch: { satellites: sat.satellites } });
     emit({ type: 'chronicle', entry: { id: `c-${countryId}-${tick}-sat`, tick, year: view.year, kind: 'growth', countries: [countryId], text: sat.text } });
   }
+  // #317 item 15: in an all-out war between modern-or-later nations, now and then it shoots down a rival's satellite
+  const strike = atWar ? satelliteStrike(view, countryId, enemies, tick, ctx.ages) : null;
+  if (strike) {
+    emit({ type: 'satellite_lost', attacker: countryId, victim: strike.victim, index: strike.index });
+    emit({ type: 'chronicle', entry: { id: `c-${countryId}-${tick}-satlost-${strike.victim}`, tick, year: view.year, kind: 'battle', countries: [countryId, strike.victim], text: strike.text } });
+  }
 
   // --- 6. the chronicle: milestones first, now and then a proclamation
   if (!notable && rng() < 0.014) notable = { kind: 'proclamation', text: fill(tone.proclaim[Math.floor(rng() * tone.proclaim.length)]!, me, regionLabel()) };
@@ -663,6 +669,10 @@ export function isEventValid(world: World, e: WorldEvent): boolean {
       return world.units.some((u) => u.id === e.unitId && u.owner === a);
     case 'country_updated':
       return e.countryId === a;
+    case 'satellite_lost':
+      // #317: a nation strikes at a rival it is at war with, which must still have that satellite up.
+      return e.attacker === a && e.victim !== a && e.index >= 0 && e.index < (world.countries[e.victim]?.satellites ?? 0)
+        && relationOf(world, a, e.victim).stance === 'war';
     case 'payment':
       // A nation pays out of its own treasury; plunder and seizure are derived in settleMove with the attacker as actor.
       return e.from !== e.to && (e.from === a || ((e.reason === 'plunder' || e.reason === 'seizure') && e.to === a));

@@ -1,6 +1,7 @@
 // Calendar gate on tech ages (#313): run a fast mock world and fail if any nation enters an age before
 // its earliest year, or a satellite flies before 1957, before the modern age, or above its age's cap
-// (1 modern, 2 future, 4 stellar; #317 item 14). Also reports the first age steps and launches seen.
+// (1 modern, 2 future, 4 stellar; #317 item 14), or a satellite is shot down outside a war between
+// modern-or-later nations (#317 item 15). Also reports the first age steps, launches and shoot-downs seen.
 // Run from the repo root:  npx tsx server/scripts/check-age-gate.ts [ticks] [seed] [prompt]
 import { ageIndex, ageTurn, newAgeMemory, satelliteTurn, AGES, AGE_EARLIEST_YEAR, SATELLITE_CAP, SATELLITE_EARLIEST_YEAR, type TechAge, type WorldEvent } from '@terra/shared';
 import { EngineRunner } from '../src/engine/runner';
@@ -22,6 +23,7 @@ const bad: string[] = [];
 const steps: Record<string, number> = {};
 let sats = 0;
 const firstSat: Record<string, number> = {};   // age -> first year a nation in that age launched
+const strikes: string[] = [];
 for (let t = 0; t < ticks; t++) {
   batches.length = 0;
   runner.advance(1);
@@ -31,6 +33,12 @@ for (let t = 0; t < ticks; t++) {
       steps[e.patch.techAge] = Math.min(steps[e.patch.techAge] ?? Infinity, w.year);
       if (w.year < need) bad.push(`country ${e.countryId} entered ${e.patch.techAge} in year ${w.year} (< ${need})`);
     }
+    if (e.type === 'satellite_lost') {
+      const a = w.countries[e.attacker]!, v = w.countries[e.victim]!;
+      if (ageIndex(a.techAge) < 4 || ageIndex(v.techAge) < 4) bad.push(`satellite shot down by a ${a.techAge} nation from a ${v.techAge} one`);
+      if ((v.satellites ?? 0) < 0) bad.push(`country ${e.victim} has negative satellites`);
+    }
+    if (e.type === 'chronicle' && /-satlost-/.test(e.entry.id)) strikes.push(`y${e.entry.year} ${e.entry.text}`);
     if (e.type === 'country_updated' && e.patch.satellites !== undefined) {
       const c = w.countries[e.countryId]!;
       const age = c.techAge ?? 'ancient';
@@ -63,6 +71,8 @@ for (let t = 0; t < ticks; t++) {
 console.log(`seed ${seed}, ${ticks} ticks, years ${startYear} to ${w.year}, satellites ${sats}`);
 console.log('first year each age was entered:', JSON.stringify(steps));
 console.log('first launch year by age of the launching nation:', JSON.stringify(firstSat));
+console.log(`satellites shot down: ${strikes.length}`);
+for (const l of strikes.slice(0, 5)) console.log('  ' + l);
 for (const b of bad.slice(0, 10)) console.log('  ' + b);
 console.log(bad.length ? 'AGE GATE FAILED' : 'AGE GATE OK');
 process.exit(bad.length ? 1 : 0);

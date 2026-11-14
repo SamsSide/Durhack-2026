@@ -169,6 +169,14 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   sides' generals, strength at the start and now, losses, and a battle grid whose front line
   thins and flanks fold in as the losses mount. To preview them without a war, add `?mockArmy=1`
   or `?mockBattle=1` to the URL.
+- **Satellites shot down:** in an all-out war between two nations of the modern age or later, now
+  and then one side knocks out a rival's satellite. A strike streaks up from its capital, a flash
+  and a burst of debris mark the hit, and the wreck tumbles off its ring; the chronicle tells it
+  ("A missile from the Tidemark Kingdom knocks a satellite of the Framwell Court out of the sky").
+  Rare: under one chance in a hundred a year, at most once in 80 years per nation. The nation
+  launches a replacement on its usual rhythm.
+
+![A strike from the ground knocks a satellite out of orbit in a burst of debris](docs/shots/satellite-strike.jpg)
 
 | | |
 | --- | --- |
@@ -272,6 +280,7 @@ star; speed presets; Hide HUD and Show HUD for clean screenshots.
 Dev helpers, run in the browser console:
 
 - `__launchDemo()`: launch a satellite rocket
+- `__shootDown(victim?, attacker?, slow?)`: shoot down a satellite (one is put up first if needed; `slow` 0..1 for slow motion)
 - `__warDemo()`: a scripted battle
 - `__firingDemo(age)`: armies firing the weapons of one age
 - `__decreeDemo(effect)`: play one decree effect

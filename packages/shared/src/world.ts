@@ -134,6 +134,12 @@ export function applyEvent(world: World, event: WorldEvent): void {
       }
       break;
     }
+    case 'satellite_lost': {
+      // #317 item 15: a rival knocked one of its satellites out of orbit
+      const c = world.countries[event.victim];
+      if (c) c.satellites = Math.max(0, (c.satellites ?? 0) - 1);
+      break;
+    }
     case 'country_fell': {
       const c = world.countries[event.countryId];
       if (c) c.alive = false;
