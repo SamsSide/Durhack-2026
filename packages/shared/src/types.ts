@@ -94,6 +94,9 @@ export interface World {
   agents: AgentStatus[];
 }
 
+/** Row A27 (X1): why money moved between two nations. */
+export type PaymentReason = 'trade' | 'reparations' | 'plunder' | 'seizure' | 'war_chest' | 'subsidy';
+
 export type Base = { id: string; tick: number; actor: number | 'world' | 'decree'; lamport: number };
 export type WorldEvent = Base & (
   | { type: 'tick'; year: number }
@@ -112,5 +115,31 @@ export type WorldEvent = Base & (
   | { type: 'country_founded'; country: Country; regionId?: number }    // a secession, or a nation created later; its tiles follow as tile_claimed
   | { type: 'region_updated'; regionId: number; patch: Partial<Pick<Region, 'name' | 'flag' | 'unrest'>> }
   | { type: 'chronicle'; entry: ChronicleEntry }
+  | { type: 'payment'; from: number; to: number; amount: number; reason: PaymentReason; note: string } // coins, 2 decimals; actor is the payer (plunder: the attacker)
 );
+
+// --- Row A27 (X2): the Solana mirror of the economy, server to client ---------------------------
+export type LedgerStatus = 'queued' | 'sent' | 'confirmed' | 'failed' | 'simulated';
+export interface LedgerEntry {
+  id: string; eventIds: string[]; tick: number; year: number;
+  from: number; to: number; amount: number; reason: PaymentReason; note: string;
+  status: LedgerStatus;
+  signature?: string;                                    // from `sent` on
+  url?: string | null;                                   // Explorer link; null in mock mode
+}
+export interface LedgerMessage { type: 'ledger'; entries: LedgerEntry[] }
+export type EconomyMode = 'off' | 'mock' | 'devnet';
+export interface EconomyMessage {
+  type: 'economy'; mode: EconomyMode; online: boolean; pending: number;
+  payments: number; volume: number; feesSol: number;
+}
+/** X3 `GET /api/economy`. */
+export interface EconomyState {
+  mode: EconomyMode; cluster: string;
+  currency: { name: string; symbol: string; mint: string; url: string | null; supply: number; mintAuthority: string | null };
+  commons: { address: string; url: string | null; balance: number };
+  nations: { countryId: number; address: string; url: string | null; onChain: number; sim: number; inSync: boolean }[];
+  totals: { payments: number; volume: number; transactions: number; feesSol: number };
+  recent: LedgerEntry[];
+}
 

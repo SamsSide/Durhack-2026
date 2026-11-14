@@ -396,6 +396,13 @@ export function* mockEvents(world: World): Generator<WorldEvent> {
     if (warA >= 0 && rel === 52) {
       yield mk(warA, { type: 'relation_changed', a: warA, b: warB, stance: 'neutral', reason: 'exhaustion' });
       yield say('peace', [warA, warB], `${nm(warA)} and ${nm(warB)} sign a weary peace.`);
+      // Row A27: the loser pays reparations, and the winner's raid on the border is paid for too.
+      const paid = Math.round(Math.min(w.countries[warB]!.treasury * 0.2, 120) * 100) / 100;
+      yield mk(warB, { type: 'payment', from: warB, to: warA, amount: paid, reason: 'reparations', note: `Peace of ${nm(warA).replace(/^The /, '')}` });
+    }
+    if (warA >= 0 && rel === 55) {
+      const paid = Math.round(Math.min(w.countries[warA]!.treasury * 0.05, 40) * 100) / 100;
+      yield mk(warA, { type: 'payment', from: warA, to: warB, amount: paid, reason: 'trade', note: 'grain for timber' });
     }
     // secession
     if (rel === 55) {
