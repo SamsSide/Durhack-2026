@@ -66,6 +66,11 @@ make these changes directly — still through a PR.
 glue files (a root `package.json`, `pyproject.toml`, a router file) are edited by the lane named
 for them in `docs/contracts.md`; others ask.
 
+**Keep the README current.** The repo will be public. Every PR that adds or changes something a
+user can see or run (a feature, a screen, a key binding, a command) updates `README.md` in the
+same PR: the feature list, a screenshot in `docs/shots/` for visual work, the controls table,
+Quick start. Tick "README updated" in the PR template, or write why it does not apply.
+
 **Tell the lanes that need it.** Every merge that finishes something another lane needs (a row
 in its *Needs* column, a contract going from mock to real, a delivered `agent-request`, a seed
 or shared file it builds on) is followed at once by a `ready` issue to each such lane

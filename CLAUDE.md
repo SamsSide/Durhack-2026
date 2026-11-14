@@ -50,6 +50,15 @@ the repo).
 5. Commit subjects: `type: plain sentence` (`feat: upload a photo and get its tags back`).
    Squash-merge PRs; delete the branch after.
 
+## The README is the public face
+
+The repo will be public. `README.md` describes the project to anyone browsing it: what it is,
+screenshots, features, controls and key bindings, and how to start the demo. **Every PR that adds
+or changes something a user can see or run updates `README.md` in the same PR**: a new feature
+gets a line (and a screenshot in `docs/shots/` if it is visual), a new key binding or control
+goes in the controls table, a new or changed command goes in Quick start. No secrets, emails or
+private paths in it. Reviewers and `durhack-pr` check this box before merging.
+
 ## Writing style
 
 **No emojis** in code comments, commit messages, PR titles and bodies, issue titles, bodies and
