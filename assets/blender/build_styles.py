@@ -94,7 +94,7 @@ def preview(objs, styles, path, margin=4.0, width=2000, sp_y=1.75, sp_x=1.55, pp
             bpy.context.object.data.materials.append(tile)
             extra.append(bpy.context.object)
             if r == rows - 1:  # kind names once, under the last row, so they never cover a model
-                label(kind, gx, gy - 0.98, 0.15 * text)
+                label(kind, gx, gy - 0.98 - 0.2 * (text - 1), 0.15 * text)
         label(style, -(cols / 2) * sp_x - 0.25, ((rows - 1) / 2 - r) * sp_y, 0.17 * text, align="RIGHT")
     cam_data = bpy.data.cameras.new("cam")
     cam_data.type = "ORTHO"
@@ -175,7 +175,7 @@ def main():
     else:
         preview(objs, list(STYLES), PREVIEW)
         preview(objs, list(IDENTITY_STYLES), PREVIEW_IDENTITY, margin=3.2, sp_y=2.3, team=TEAM_SAMPLE)
-        preview(objs, list(IDENTITY_STYLES), PREVIEW_IDENTITY_40, margin=4.4, sp_y=2.0, sp_x=1.45, ppu=40, text=2.1, team=TEAM_SAMPLE)
+        preview(objs, list(IDENTITY_STYLES), PREVIEW_IDENTITY_40, margin=4.8, sp_y=2.0, sp_x=1.45, ppu=40, text=2.1, team=TEAM_SAMPLE)
     print("done")
 
 

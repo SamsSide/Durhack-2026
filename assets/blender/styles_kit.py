@@ -237,16 +237,6 @@ class Builder:
         for k in range(1, 4):
             self.box(x, y, z0 + h * k / 3 - t, w + t, w + t, t, mat)
 
-    def vault(self, x, y, z, w, L, h, mat, seg=6, rz=0.0):
-        """Half-cylinder shed (hangar), axis along local y."""
-        m = self._m(x, y, z, (0, 0, rz))
-        pr = [(w / 2 * math.cos(PI * i / seg), h * math.sin(PI * i / seg)) for i in range(seg + 1)]
-        f = [(px, -L / 2, pz) for px, pz in pr]
-        k = [(px, L / 2, pz) for px, pz in pr]
-        faces = [[f[i], f[i + 1], k[i + 1], k[i]] for i in range(seg)]
-        faces += [list(f), list(reversed(k)), [f[0], f[seg], k[seg], k[0]]]
-        self._poly(faces, m, mat)
-
     def colonnade(self, x0, x1, y, z, n, h, r=0.015, mat="wall", seg=4):
         for k in range(n):
             self.cyl(x0 + (x1 - x0) * k / (n - 1), y, z, r, h, mat, seg=seg, rot=(0, 0, PI / 4))

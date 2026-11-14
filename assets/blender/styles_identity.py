@@ -38,15 +38,15 @@ class SovietBloc(Base):
                 b.box(banner, 0, top, L * 0.32, 0.016, 0.055, "team")
         return top
 
-    def cake(self, b, x, y, z, tiers, mat="trim", pinn=2):
+    def cake(self, b, x, y, z, tiers, mat="trim", pinn=1):
         """Setback (wedding-cake) tower: shrinking boxes with window strips, cornices, corner pinnacles."""
         for i, (w, d, h) in enumerate(tiers):
             b.box(x, y, z, w, d, h, mat)
             if w >= 0.1:
                 n = 4 if w > 0.26 else 3 if w > 0.15 else 2
                 b.strips(x, y, z + h * 0.12, w * 0.88, d, h * 0.72, n, "dark", sw=w * 0.88 / n * 0.42, proud=0.004)
-                m = max(2, n - 1)
-                b.strips(x, y, z + h * 0.12, d * 0.88, w, h * 0.72, m, "dark", sw=d * 0.88 / m * 0.42, proud=0.004, axis="y")
+                if i == 0:
+                    b.strips(x, y, z + h * 0.12, d * 0.88, w, h * 0.72, 3, "dark", sw=d * 0.88 / 3 * 0.42, proud=0.004, axis="y")
             b.box(x, y, z + h, w + 0.022, d + 0.022, 0.012, "stone")
             if i < pinn:
                 for sx in (-1, 1):
@@ -71,7 +71,7 @@ class SovietBloc(Base):
         b.box(0, 0, 0, 0.98, 0.98, 0.02, "stone")           # the square
         b.box(0, -0.3, 0.02, 0.56, 0.3, 0.004, "wall")      # parade ground
         for sx in (-1, 1):                                  # two identical housing slabs, end walls to the square
-            self.slab(b, sx * 0.425, 0.1, 0.62, rz=PI / 2)
+            self.slab(b, sx * 0.425, 0.1, 0.62, rz=PI / 2, sections=3)
         x, y = 0, 0.2
         for sx in (-1, 1):                                  # the wings of the high-rise
             b.box(x + sx * 0.235, y, 0.02, 0.19, 0.26, 0.22, "trim")
@@ -84,9 +84,9 @@ class SovietBloc(Base):
         b.box(0, -0.02, 0.02, 0.3, 0.09, 0.045, "trim")     # the tribune with its slogan
         b.box(0, -0.068, 0.028, 0.26, 0.008, 0.03, "team")
         self.statue(b, 0, -0.24, 0.02)
-        for fx in (-0.24, -0.08, 0.08, 0.24):               # parade banners
-            b.box(fx - 0.05, -0.42, 0.02, 0.014, 0.014, 0.24, "dark")
-            b.box(fx, -0.42, 0.1, 0.085, 0.012, 0.16, "team")
+        for fx in (-0.2, 0.0, 0.2):                         # parade banners
+            b.box(fx - 0.055, -0.42, 0.02, 0.014, 0.014, 0.25, "dark")
+            b.box(fx, -0.42, 0.1, 0.095, 0.012, 0.17, "team")
 
     def city(self, b):
         # microdistrict: three identical slabs in parallel rows, each with a roof slogan
@@ -187,8 +187,8 @@ class WesternModern(Base):
         if podium:
             b.box(x, y, 0, w + 0.07, d + 0.07, 0.03, "wall")
         b.box(x, y, 0, w, d, h, mat)
-        b.strips(x, y, 0.03, w, d, h - 0.03, ribs, rib, sw=0.012, proud=0.004)
-        b.strips(x, y, 0.03, d, w, h - 0.03, max(2, ribs - 1), rib, sw=0.012, proud=0.004, axis="y")
+        b.strips(x, y, 0.03, w, d, h - 0.03, ribs, rib, sw=0.009, proud=0.003)
+        b.strips(x, y, 0.03, d, w, h - 0.03, max(2, ribs - 1), rib, sw=0.009, proud=0.003, axis="y")
         if team:
             b.box(x, y, h - 0.05, w + 0.012, d + 0.012, 0.04, "team")
         b.box(x, y, h, w * 0.78, d * 0.78, 0.03, "dark")
@@ -216,37 +216,36 @@ class WesternModern(Base):
         b.box(x, y, z, 0.84, 0.3, 0.025, "wall")            # terrace and steps
         b.box(x, y - 0.17, z, 0.24, 0.08, 0.012, "wall")
         z += 0.025
-        b.box(x, y + 0.01, z, 0.36, 0.22, 0.13, "wall")     # centre block
-        b.box(x, y + 0.01, z + 0.13, 0.38, 0.24, 0.014, "wall")
+        b.box(x, y + 0.01, z, 0.38, 0.28, 0.13, "wall")     # centre block
+        b.box(x, y + 0.01, z + 0.13, 0.4, 0.3, 0.014, "roof")
         for sx in (-1, 1):                                  # the wings, with windows and grey roofs
             b.box(x + sx * 0.3, y + 0.01, z, 0.24, 0.17, 0.105, "wall")
             b.box(x + sx * 0.3, y - 0.077, z + 0.03, 0.2, 0.006, 0.05, "dark")
             b.box(x + sx * 0.3, y + 0.01, z + 0.105, 0.25, 0.18, 0.014, "roof")
-        b.colonnade(x - 0.09, x + 0.09, y - 0.125, z, 6, 0.115, r=0.016)   # the portico
-        b.box(x, y - 0.11, z + 0.115, 0.24, 0.07, 0.016, "wall")
-        b.gable(x, y - 0.11, z + 0.131, 0.07, 0.24, 0.05, "wall", rz=PI / 2, over=0.0)
-        zt = b.drum_dome(x, y + 0.02, z + 0.144, 0.105)
-        self.flag(b, x, y + 0.02, zt - 0.01, 0.13, w=0.1, fh=0.065)
+        b.colonnade(x - 0.09, x + 0.09, y - 0.155, z, 6, 0.115, r=0.016)   # the portico
+        b.box(x, y - 0.14, z + 0.115, 0.24, 0.07, 0.016, "wall")
+        b.gable(x, y - 0.14, z + 0.131, 0.07, 0.24, 0.05, "wall", rz=PI / 2, over=0.0)
+        zt = b.drum_dome(x, y + 0.03, z + 0.144, 0.125, cols=8, seg=8)
+        self.flag(b, x, y + 0.03, zt - 0.01, 0.13, w=0.1, fh=0.065)
 
     def capital(self, b):
         b.box(0, 0, 0, 0.98, 0.98, 0.02, "extra")           # lawn
         b.box(0, -0.4, 0.02, 0.1, 0.18, 0.004, "wall")      # the mall path
         self.capitol(b, 0, -0.14, 0.02)
         self.glass(b, -0.3, 0.32, 0.18, 0.14, 0.86)         # three towers, no two the same height
-        self.glass(b, 0.02, 0.34, 0.17, 0.13, 0.62, mat="dark", rib="trim")
+        self.glass(b, 0.02, 0.34, 0.17, 0.13, 0.64)
         self.glass(b, 0.32, 0.3, 0.16, 0.16, 0.48)
         for sx in (-1, 1):
-            tree(b, sx * 0.14, -0.4, 0.02, 0.9)
-            tree(b, sx * 0.3, -0.42, 0.02, 0.8)
+            tree(b, sx * 0.2, -0.42, 0.02, 0.9)
             self.flag(b, sx * 0.43, -0.4, 0.02, 0.2, w=0.09, fh=0.06)
 
     def city(self, b):
         b.box(0, 0.02, 0, 0.96, 0.045, 0.005, "dark")       # the street grid
         b.box(-0.03, 0, 0, 0.045, 0.96, 0.005, "dark")
         self.glass(b, -0.2, 0.22, 0.17, 0.13, 0.8)
-        self.glass(b, 0.13, 0.27, 0.16, 0.16, 0.6, mat="dark", rib="trim")
-        self.glass(b, 0.1, -0.13, 0.15, 0.12, 0.44)
-        self.glass(b, -0.38, 0.38, 0.14, 0.14, 0.34, podium=False)
+        self.glass(b, 0.13, 0.27, 0.16, 0.16, 0.6)
+        self.glass(b, 0.1, -0.13, 0.15, 0.12, 0.44, ribs=2)
+        self.glass(b, -0.38, 0.38, 0.14, 0.14, 0.34, podium=False, ribs=2)
         # the Art Deco tower: white setbacks and a spire
         x, y, z = 0.34, -0.2, 0.0
         for i, (w, h) in enumerate(((0.18, 0.34), (0.144, 0.12), (0.112, 0.09), (0.08, 0.07))):
@@ -260,8 +259,7 @@ class WesternModern(Base):
         self.midrise(b, 0.1, -0.38, 0.2, 0.14, 0.14)
         b.box(-0.3, -0.12, 0, 0.36, 0.18, 0.012, "extra")   # a park
         tree(b, -0.4, -0.12, 0.012, 0.9)
-        tree(b, -0.28, -0.1, 0.012, 1.0)
-        tree(b, -0.18, -0.14, 0.012, 0.8)
+        tree(b, -0.24, -0.1, 0.012, 1.0)
 
     def town(self, b):
         b.box(0, 0, 0, 0.92, 0.92, 0.012, "extra")          # lawns
@@ -391,8 +389,10 @@ class Egyptian(Base):
         """Columned hall: low battered box, a raised clerestory nave, lapis cornices, fat front columns."""
         b.battered(x, y, z, w, d, h, "stone", k=0.94)
         b.box(x, y, z + h, w * 0.96, d * 0.96, 0.02, "trim")
-        b.box(x, y, z + h + 0.02, nave, d * 0.86, h * 0.7, "wall")
-        b.box(x, y, z + h * 1.7 + 0.02, nave + 0.02, d * 0.9, 0.02, "trim")
+        b.box(x, y, z + h + 0.02, w * 0.9, d * 0.9, 0.012, "stone")
+        b.box(x, y, z + h + 0.02, nave, d * 0.8, h * 0.7, "wall")
+        b.box(x, y, z + h * 1.7 + 0.02, nave + 0.02, d * 0.84, 0.02, "trim")
+        b.box(x, y, z + h * 1.7 + 0.04, nave - 0.02, d * 0.78, 0.012, "wall")
         n = 5
         for k in range(n):
             b.cyl(x - w * 0.4 + k * w * 0.8 / (n - 1), y - d / 2 - 0.035, z, 0.024, h, "wall", seg=5)
@@ -402,29 +402,28 @@ class Egyptian(Base):
         b.box(0, 0, 0, 0.98, 0.98, 0.015, "stone")          # sand
         z = 0.015
         self.ring(b, 0.455, self.ring_h, with_gate=False, t=0.05)
-        b.box(-0.1, -0.455, 0, 0.14, 0.09, 0.1, "roof")     # the outer gate
-        b.box(-0.1, -0.5, 0, 0.07, 0.012, 0.07, "dark")
-        x = -0.1
-        self.pylon(b, x, -0.12, z, 0.56, 0.11, 0.34)
-        for sx in (-1, 1):                                  # the paired obelisks
-            b.obelisk(x + sx * 0.12, -0.31, z, 0.058, 0.4, caph=1.5)
+        b.box(-0.12, -0.455, 0, 0.14, 0.09, 0.1, "roof")    # the outer gate
+        b.box(-0.12, -0.5, 0, 0.07, 0.012, 0.07, "dark")
+        x = -0.12
+        self.pylon(b, x, -0.14, z, 0.62, 0.12, 0.38, mat="stone")
+        for sx in (-1, 1):                                  # the paired obelisks, taller than the pylon
+            b.obelisk(x + sx * 0.115, -0.33, z, 0.072, 0.5, caph=1.5)
         for sx in (-1, 1):                                  # the sphinx avenue
             for k in range(2):
-                b.box(x + sx * 0.05, -0.36 - k * 0.055, z, 0.03, 0.045, 0.03, "wall")
-        self.hypostyle(b, x, 0.2, z, 0.44, 0.3, 0.13, 0.18)
-        self.pyramid(b, 0.3, 0.24, z, 0.32, 0.27)
-        self.house(b, 0.31, -0.1, 0.16, 0.14, 0.09, 0, 1)
-        self.house(b, 0.31, -0.29, 0.16, 0.14, 0.08, 0, 0)
+                b.box(x + sx * 0.045, -0.38 - k * 0.05, z, 0.03, 0.04, 0.03, "wall")
+        self.hypostyle(b, x, 0.2, z, 0.42, 0.32, 0.14, 0.17)
+        self.pyramid(b, 0.27, 0.2, z, 0.36, 0.33, cap=0.3)
+        self.house(b, 0.32, -0.26, 0.17, 0.15, 0.09, 0, 0)
 
     def city(self, b):
         b.box(0, 0, 0, 0.98, 0.98, 0.012, "stone")
         self.ring(b, 0.46, self.ring_h)
-        spots = [(-0.32, 0.33), (-0.11, 0.33), (0.1, 0.33), (-0.32, -0.3), (0.32, -0.3), (-0.32, 0.03)]
+        spots = [(-0.32, 0.33), (-0.1, 0.33), (-0.32, -0.3), (0.32, -0.3), (-0.32, 0.03)]
         for i, (x, y) in enumerate(spots):
             self.house(b, x, y, 0.18, 0.17, 0.1 + 0.03 * (i % 3), 0, i)
         for x, y, r in ((0.31, 0.3, 0.07), (0.34, 0.14, 0.06), (0.22, 0.17, 0.05)):
             self.granary(b, x, y, r)
-        self.pylon(b, 0.02, -0.1, 0.012, 0.36, 0.08, 0.26, flags=1)
+        self.pylon(b, 0.02, -0.1, 0.012, 0.36, 0.08, 0.26, flags=1, mat="stone")
         self.hypostyle(b, 0.02, 0.07, 0.012, 0.28, 0.2, 0.1, 0.12)
         b.obelisk(0.02, -0.27, 0.012, 0.045, 0.3, caph=1.5)
 
@@ -434,7 +433,7 @@ class Egyptian(Base):
             self.house(b, x, y, 0.22, 0.19, 0.1 + 0.03 * (i % 2), 0, i + (1 if i < 2 else 0))
         b.box(0, 0.08, 0.012, 0.16, 0.16, 0.03, "wall")
         b.obelisk(0, 0.08, 0.042, 0.075, 0.5, band="team", plinth=None, caph=1.4)
-        self.pylon(b, 0, -0.26, 0.012, 0.22, 0.07, 0.15, flags=0)   # a wayside shrine
+        self.pylon(b, 0, -0.26, 0.012, 0.22, 0.07, 0.15, flags=0, mat="wall")   # a wayside shrine
 
     def temple(self, b):
         # true pyramid with a gold capstone, a causeway and a pylon chapel with banners
@@ -442,7 +441,7 @@ class Egyptian(Base):
         b.box(0, 0.1, 0.02, 0.76, 0.76, 0.015, "wall")
         self.pyramid(b, 0, 0.1, 0.035, 0.72, 0.52, cap=0.24)
         b.box(0, -0.36, 0.02, 0.07, 0.2, 0.012, "wall")
-        self.pylon(b, 0, -0.33, 0.02, 0.3, 0.07, 0.17, flags=1)
+        self.pylon(b, 0, -0.33, 0.02, 0.3, 0.07, 0.17, flags=1, mat="stone")
         self.pyramid(b, 0.35, -0.34, 0.02, 0.18, 0.14)
         b.obelisk(-0.33, -0.36, 0.02, 0.045, 0.24, caph=1.5)
 
@@ -462,8 +461,9 @@ class Egyptian(Base):
         self.pylon(b, 0, -half - 0.02, 0, 0.26, 0.11, 0.27, flags=1, mat="stone")
         b.battered(0, 0.08, 0, 0.3, 0.26, 0.2, "stone", k=0.88)   # the keep
         b.box(0, 0.08, 0.2, 0.28, 0.24, 0.02, "trim")
-        b.box(0.03, 0.1, 0.22, 0.15, 0.13, 0.05, "team")          # a cloth shelter on the roof
-        self.flag(b, -0.08, 0.04, 0.22, 0.26, w=0.13, fh=0.085)
+        b.box(0, 0.08, 0.22, 0.25, 0.21, 0.012, "wall")
+        b.box(0.03, 0.1, 0.232, 0.15, 0.13, 0.05, "team")         # a cloth shelter on the roof
+        self.flag(b, -0.08, 0.04, 0.232, 0.26, w=0.13, fh=0.085)
 
 
 # ------------------------------------------------------------------ highland
@@ -472,7 +472,7 @@ class Highland(Base):
 
     def rock(self, b, h, r=0.49, seed=0, sq=0.5):
         """The rock every highland model stands on. Returns its top z."""
-        return b.hill(0, 0, r, h, "stone", seg=9, jag=0.2, seed=seed, sq=sq, top=0.84, mid=0.96)
+        return b.hill(0, 0, r, h, "stone", seg=9, jag=0.22, seed=seed, sq=sq, top=0.8, mid=0.93)
 
     def crag(self, b, x, y, z, w, d, h, ox=0.0, oy=0.0, top=0.5, rz=0.0):
         b.frustum(x, y, z, w, d, w * top, d * top, h, "stone", rz=rz, ox=ox, oy=oy)
@@ -481,15 +481,14 @@ class Highland(Base):
         """Dzong block: battered whitewashed walls, an ochre-red band under the roof, a row of small
         windows below it; a flat dark roof, a gilded flared roof ("gold") or none. Returns the top z."""
         b.battered(x, y, z, w, d, h, "wall", k=k)
-        f = 1 - (1 - k) * 0.78
-        b.box(x, y, z + h * 0.78, w * f + 0.008, d * f + 0.008, h * 0.22, "trim")
+        b.box(x, y, z + h * 0.76, w * k + 0.036, d * k + 0.036, h * 0.24, "trim")   # the band, proud like a cornice
         g = 1 - (1 - k) * 0.55
         for i in range(wins):
             sx = (i - (wins - 1) / 2) * w * 0.7 / max(1, wins - 1) if wins > 1 else 0
             b.box(x + sx, y - d * g / 2 - 0.002, z + h * 0.5, 0.035, 0.014, h * 0.16, "dark")
-        if roof == "flat":
-            b.box(x, y, z + h, w * k + 0.045, d * k + 0.045, 0.016, "roof")
-            return z + h + 0.016
+        if roof == "flat":                                  # whitewashed roof terrace inside the red rim
+            b.box(x, y, z + h, w * k - 0.004, d * k - 0.004, 0.014, "wall")
+            return z + h + 0.014
         if roof == "gold":
             return b.flared_roof(x, y, z + h, w * k, d * k, rh)
         return z + h
@@ -504,42 +503,42 @@ class Highland(Base):
 
     def capital(self, b):
         # dzong: one great battered white block with a red band and a gold-roofed tower, on terraces
-        z0 = self.rock(b, 0.09)
-        z = b.terraces(0, 0.0, z0, 0.86, 0.84, 3, 0.1, 0.055, side=0.06)
+        z0 = self.rock(b, 0.11)
+        z = b.terraces(0, 0.02, z0, 0.76, 0.76, 3, 0.1, 0.055, side=0.04)
         for k in range(3):
-            self.stair(b, 0, -0.42 + k * 0.1 - 0.07, z0 + k * 0.055, 2)
-        top = self.block(b, 0, 0.13, z, 0.56, 0.44, 0.27, wins=5)
-        ut = self.block(b, 0, 0.15, top - 0.016, 0.22, 0.2, 0.21, k=0.88, roof="gold", rh=0.1)
-        b.cyl(0, 0.15, ut - 0.01, 0.014, 0.06, "extra", seg=4)
+            self.stair(b, 0, -0.37 + k * 0.1 - 0.07, z0 + k * 0.055, 2)
+        top = self.block(b, 0, 0.14, z, 0.52, 0.42, 0.27, wins=5)
+        ut = self.block(b, 0, 0.16, top - 0.014, 0.22, 0.2, 0.21, k=0.88, roof="gold", rh=0.1)
+        b.cyl(0, 0.16, ut - 0.01, 0.014, 0.06, "extra", seg=4)
         for sx in (-1, 1):                                  # corner turrets with gold roofs
-            b.box(sx * 0.2, -0.02, top, 0.1, 0.1, 0.05, "trim")
-            b.flared_roof(sx * 0.2, -0.02, top + 0.05, 0.09, 0.09, 0.06)
-        b.box(0, -0.085, z + 0.05, 0.1, 0.014, 0.15, "team")   # the great banner on the front wall
+            b.box(sx * 0.17, 0.0, top - 0.014, 0.1, 0.1, 0.06, "trim")
+            b.flared_roof(sx * 0.17, 0.0, top + 0.046, 0.09, 0.09, 0.06)
+        b.box(0, -0.06, z + 0.04, 0.1, 0.014, 0.16, "team")    # the great banner on the front wall
         for sx in (-1, 1):
-            b.prayer_flags((0, 0.15, ut + 0.03), (sx * 0.4, -0.36, z0 + 0.2), n=6, s=0.05)
-            b.box(sx * 0.4, -0.36, z0, 0.014, 0.014, 0.2, "dark")
-            self.house(b, sx * 0.3, -0.31, 0.15, 0.12, 0.09, 0, 0, z=z0 + 0.055)
+            b.prayer_flags((0, 0.16, ut + 0.03), (sx * 0.38, -0.33, z0 + 0.2), n=6, s=0.05)
+            b.box(sx * 0.38, -0.33, z0, 0.014, 0.014, 0.2, "dark")
+            self.house(b, sx * 0.27, -0.27, 0.17, 0.13, 0.1, 0, 0, z=z0 + 0.055)
 
     def city(self, b):
         # houses climbing four terraces to a watchtower and a gold-roofed monastery hall
-        z0 = self.rock(b, 0.07)
+        z0 = self.rock(b, 0.1)
         for i in range(4):
-            yf, z = -0.43 + i * 0.215, z0 + (i + 1) * 0.065
-            b.box(0, (yf + 0.43) / 2, z0, 0.86, 0.43 - yf, z - z0, "stone")
+            yf, z = -0.4 + i * 0.2, z0 + (i + 1) * 0.065
+            b.box(0, (yf + 0.4) / 2, z0, 0.78, 0.4 - yf, z - z0, "stone")
             if i < 3:
-                for j, x in enumerate((-0.29, 0.0, 0.29)):
-                    self.house(b, x + (0.03 if i % 2 else 0), yf + 0.1, 0.18, 0.12, 0.09 + 0.02 * ((i + j) % 2), 0, 0, z=z)
+                for j, x in enumerate((-0.27, 0.0, 0.27) if i != 1 else (-0.14, 0.16)):
+                    self.house(b, x, yf + 0.095, 0.21, 0.14, 0.11 + 0.02 * ((i + j) % 2), 0, 0, z=z)
             else:
-                self.block(b, -0.12, yf + 0.11, z, 0.3, 0.16, 0.14, roof="gold", wins=3, rh=0.08)
-                b.tower_house(0.28, yf + 0.11, z, 0.13, 0.36, band="trim", roof="extra")
-                b.box(-0.12, yf + 0.024, z + 0.02, 0.07, 0.012, 0.09, "team")
-        b.prayer_flags((0.28, 0.3, z0 + 0.6), (-0.4, -0.38, z0 + 0.24), n=7, s=0.05, sag=0.05)
-        b.box(-0.4, -0.38, z0, 0.014, 0.014, 0.24, "dark")
+                self.block(b, -0.12, yf + 0.1, z, 0.3, 0.16, 0.15, roof="gold", wins=3, rh=0.08)
+                b.tower_house(0.27, yf + 0.1, z, 0.13, 0.36, band="trim", roof="extra")
+                b.box(-0.12, yf + 0.014, z + 0.02, 0.07, 0.012, 0.09, "team")
+        b.prayer_flags((0.27, 0.3, z0 + 0.6), (-0.42, -0.2, z0 + 0.3), n=7, s=0.05, sag=0.05)
+        b.box(-0.42, -0.2, z0, 0.014, 0.014, 0.3, "dark")
 
     def town(self, b):
-        z0 = self.rock(b, 0.07, r=0.46)
-        b.box(0, 0, z0, 0.8, 0.8, 0.05, "stone")
-        b.box(0, 0.2, z0 + 0.05, 0.8, 0.4, 0.07, "stone")
+        z0 = self.rock(b, 0.1, r=0.46)
+        b.box(0, 0, z0, 0.72, 0.72, 0.05, "stone")
+        b.box(0, 0.18, z0 + 0.05, 0.72, 0.36, 0.07, "stone")
         z1, z2 = z0 + 0.05, z0 + 0.12
         self.stair(b, 0, -0.07, z1, 2, run=0.035, rise=0.035)
         self.house(b, -0.25, -0.22, 0.22, 0.17, 0.12, 0, 0, z=z1)
