@@ -85,7 +85,7 @@ export interface Region {                                // a fixed group of nei
 
 export type BuildingStyle = 'medieval' | 'classical' | 'desert' | 'east_asian' | 'mesoamerican' | 'scrap'
   | 'norse' | 'south_asian' | 'sahel' | 'industrial'
-  | 'soviet_bloc' | 'western_modern' | 'egyptian' | 'highland';
+  | 'soviet_bloc' | 'western_modern' | 'egyptian' | 'highland' | 'arcology';
 
 export interface Country {
   id: number;                                            // index into World.countries; new nations are appended
@@ -116,7 +116,7 @@ export type StructureKind = 'camp' | 'village' | 'town' | 'city' | 'capital'
 export interface Structure { id: string; tile: number; owner: number; kind: StructureKind; builtTick: number }
 
 export type UnitKind = 'army' | 'fleet' | 'settler' | 'trader';   // trader: a merchant ship crossing the ocean between trading nations
-export type TechAge = 'ancient' | 'medieval' | 'gunpowder' | 'industrial' | 'modern';
+export type TechAge = 'ancient' | 'medieval' | 'gunpowder' | 'industrial' | 'modern' | 'future' | 'stellar';
 export interface Unit { id: string; owner: number; kind: UnitKind; tile: number; strength: number; target?: number }
 
 export type Stance = 'war' | 'hostile' | 'neutral' | 'trade' | 'alliance';
@@ -323,14 +323,21 @@ export function flagSvg(spec: FlagSpec, width?: number, height?: number): string
   ancient (spearmen and archers; a galley; a trade galley), medieval (knights and crossbows; a
   longship or cog; a merchant cog), gunpowder (musketeers and a cannon; a galleon; a merchant
   galleon), industrial (riflemen and artillery; an ironclad; a steamer), modern (a tank; a
-  destroyer; a container ship). Lane b draws `ages[countries[unit.owner].techAge][unit.kind]`, then
+  destroyer; a container ship), and from 14 Nov two further ages so history keeps going past
+  the present: future (a drone swarm and a hover tank; a railgun stealth cruiser; an autonomous
+  maglev or hydrofoil freighter) and stellar (walker mechs; a starship; an orbital freighter).
+  Buildings: a nation in the future or stellar age builds in the `arcology` style (domes,
+  arcology towers, spires, a space elevator for the stellar capital) whatever its culture style:
+  lane b picks `styles.arcology[kind]` when `techAge` is `future` or `stellar`, else the culture
+  style. A stellar nation also gets satellites circling the globe above its capital (lane b; no
+  model needed beyond a small `satellite` key in `models`). Lane b draws `ages[countries[unit.owner].techAge][unit.kind]`, then
   `models[kind]`, then the cone. A nation's age advances during the run (a `country_updated` with
   `techAge` and a chronicle line), so every unit it owns changes look at once.
 
   **Building styles (owner decision #91):** the manifest also has
   `"styles": { "<style>": { "<kind>": { "file": "<style>/<kind>.glb", "footprint": n } } }` for six
   styles (`medieval`, `classical`, `desert`, `east_asian`, `mesoamerican`, `scrap`, and from #118
-  `soviet_bloc`, `western_modern`, `egyptian`, `highland`) and five kinds
+  `soviet_bloc`, `western_modern`, `egyptian`, `highland`, and the age style `arcology`) and five kinds
   (`capital`, `city`, `town`, `temple`, `fort`). Lane b picks `styles[country.buildingStyle][kind]`,
   then `styles[STYLE_FALLBACK[style]][kind]` (`norse` to medieval, `south_asian` and `sahel` to
   desert, `industrial` to scrap; exported from `@terra/shared`), then `models[kind]`, then the box.

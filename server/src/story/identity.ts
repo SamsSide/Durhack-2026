@@ -27,7 +27,7 @@ export function worldEraKey(world: Pick<World, 'era' | 'prompt' | 'name'>): EraK
   return ERA_RULES.find(([, re]) => re.test(text))?.[0] ?? 'medieval';
 }
 
-const AGE_ERA: Record<TechAge, EraKey> = { ancient: 'classical', medieval: 'medieval', gunpowder: 'gunpowder', industrial: 'industrial', modern: 'modern' };
+const AGE_ERA: Record<TechAge, EraKey> = { ancient: 'classical', medieval: 'medieval', gunpowder: 'gunpowder', industrial: 'industrial', modern: 'modern', future: 'future', stellar: 'future' };
 
 /** The nation's era now: a ruined or far-future setting wins; otherwise its tech age (it advances during a run).
  *  A nation with no tech age yet takes the world's own era; an explicit 'ancient' is bronze or classical. */

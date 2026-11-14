@@ -5,7 +5,7 @@ import type { BuildingStyle, Country } from '../types';
 export const BUILDING_STYLES: BuildingStyle[] = [
   'medieval', 'classical', 'desert', 'east_asian', 'mesoamerican', 'scrap',
   'norse', 'south_asian', 'sahel', 'industrial',
-  'soviet_bloc', 'western_modern', 'egyptian', 'highland',
+  'soviet_bloc', 'western_modern', 'egyptian', 'highland', 'arcology',
 ];
 
 /** Styles that have their own models (tier 1); the rest fall back to the nearest built one. */
@@ -15,6 +15,7 @@ export const STYLE_FALLBACK: Record<BuildingStyle, BuildingStyle> = {
   mesoamerican: 'mesoamerican', scrap: 'scrap', norse: 'medieval', south_asian: 'desert',
   sahel: 'desert', industrial: 'scrap',
   soviet_bloc: 'scrap', western_modern: 'classical', egyptian: 'desert', highland: 'medieval',
+  arcology: 'western_modern',
 };
 
 export const isBuildingStyle = (s: unknown): s is BuildingStyle =>

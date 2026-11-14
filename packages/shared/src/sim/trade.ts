@@ -15,6 +15,7 @@ const MAX_ROUTE = 120;
 
 const SHIP: Record<TechAge, string> = {
   ancient: 'trade galley', medieval: 'merchant cog', gunpowder: 'merchant galleon', industrial: 'steamer', modern: 'container ship',
+  future: 'maglev freighter', stellar: 'orbital freighter',
 };
 const CARGO: Record<TechAge, string[]> = {
   ancient: ['salt', 'amber', 'copper ingots', 'olive oil', 'cedar logs'],
@@ -22,6 +23,8 @@ const CARGO: Record<TechAge, string[]> = {
   gunpowder: ['silver', 'sugar', 'tobacco', 'saltpetre', 'silk'],
   industrial: ['coal', 'cotton bales', 'steel rails', 'tea', 'machine parts'],
   modern: ['containers of electronics', 'grain', 'crude oil', 'medicine', 'cars'],
+  future: ['fusion cells', 'lab-grown grain', 'quantum chips', 'desalinated water', 'medical nanites'],
+  stellar: ['helium-3', 'asteroid iron', 'starship hulls', 'terraforming seed', 'colonists'],
 };
 
 /** Bonus a docking brings to each side, from that side's own age. */
