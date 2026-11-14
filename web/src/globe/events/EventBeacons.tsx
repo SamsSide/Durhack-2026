@@ -11,6 +11,7 @@ import { useEventStream } from '../status/useEventStream';
 import { buildStructureCache, classify } from './classify';
 import type { StructureCache } from './classify';
 import { focusTile } from './focus';
+import { underHud } from '../status/hudCover';
 import { iconUrl } from './icons';
 import { KIND_META } from './kinds';
 import { PILLAR_MS, clearBeacons, pruneBeacons, pushStory, useBeacons } from './store';
@@ -18,6 +19,53 @@ import type { Beacon } from './store';
 import './events.css';
 
 const PILLAR_H = 0.16;
+const LABEL_MS = 4500;  // a caption shows this long (the ev-label animation)
+const MAX_LABELS = 2;   // never more captions than this on screen at once
+const GAP = 4;          // px kept between a caption and anything it would cover
+
+type Box = { l: number; t: number; r: number; b: number };
+const hit = (a: Box, b: Box) => a.l < b.r + GAP && a.r + GAP > b.l && a.t < b.b + GAP && a.b + GAP > b.t;
+
+/**
+ * Keep captions apart: the newest MAX_LABELS fresh captions in view are shown, each lifted clear of the
+ * captions placed before it and of the status tags (disputes, signal lost); anything that can't fit is hidden.
+ */
+function layoutLabels(): void {
+  const now = performance.now();
+  const labels = [...document.querySelectorAll<HTMLElement>('.ev-label')];
+  const live = labels.filter((el) => {
+    const born = Number(el.dataset.born);
+    return now - born < LABEL_MS && !el.closest('.ev-anchor.away');
+  }).sort((a, b) => Number(b.dataset.born) - Number(a.dataset.born));
+  const obstacles: Box[] = [];
+  for (const t of document.querySelectorAll<HTMLElement>('.gs-tag')) {
+    const a = t.closest<HTMLElement>('.gs-anchor');
+    if (a && a.style.opacity === '0') continue;
+    const r = t.getBoundingClientRect();
+    if (r.width > 0) obstacles.push({ l: r.left, t: r.top, r: r.right, b: r.bottom });
+  }
+  const shown = new Set<HTMLElement>();
+  for (const el of live) {
+    if (shown.size >= MAX_LABELS) break;
+    const lift = Number(el.dataset.lift ?? 0);
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || underHud(el, 0)) continue; // a caption never sits over a HUD panel (#175)
+    const box: Box = { l: r.left, t: r.top + lift, r: r.right, b: r.bottom + lift }; // as if not lifted
+    let up = 0;
+    for (let i = 0; i < 6; i++) {
+      const cur = { ...box, t: box.t - up, b: box.b - up };
+      const o = obstacles.find((x) => hit(cur, x));
+      if (!o) break;
+      up += cur.b - o.t + GAP; // move just above what it hits
+    }
+    const fin = { ...box, t: box.t - up, b: box.b - up };
+    if (obstacles.some((x) => hit(fin, x)) || fin.t < 70) continue; // no room: leave it hidden
+    obstacles.push(fin);
+    shown.add(el);
+    if (Number(el.dataset.lift ?? -1) !== up) { el.dataset.lift = String(up); el.style.setProperty('--ev-lift', `${up}px`); }
+  }
+  for (const el of labels) el.classList.toggle('ev-hide', !shown.has(el));
+}
 const pillarGeo = new THREE.CylinderGeometry(1, 1, 1, 18, 1, true).translate(0, 0.5, 0);
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -55,17 +103,19 @@ function BeaconView({ b, reduced }: { b: Beacon; reduced: boolean }) {
     const el = ref.current;
     if (!el) return;
     const facing = camera.position.dot(dir) / camera.position.length();
-    const show = facing > 0.2 && document.querySelector('.closing-veil') === null;
+    const pin = el.querySelector<HTMLElement>('.ev-pin');
+    // Below the HUD (#175): hidden while a panel (nation card, network, feed) covers it.
+    const show = facing > 0.2 && document.querySelector('.closing-veil') === null && !(pin && underHud(pin));
     if (el.classList.contains('away') === show) el.classList.toggle('away', !show);
   });
   const fresh = performance.now() - b.born < PILLAR_MS + 300;
   return (
     <>
       {fresh && !reduced && <Pillar key={`p${b.gen}`} b={b} />}
-      <Html position={b.pos} zIndexRange={[6, 0]} style={{ pointerEvents: 'none' }}>
+      <Html position={b.pos} zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}>
         <div ref={ref} className="ev-anchor away">
           <div key={b.gen} className={`ev-beacon${reduced ? ' still' : ''}`} style={{ ['--ev-color' as string]: KIND_META[b.kind].color }}>
-            <span className="ev-label">{b.title}</span>
+            <span className="ev-label ev-hide" data-born={b.born}>{b.title}</span>
             <button
               type="button"
               className="ev-pin"
@@ -110,6 +160,15 @@ export function EventBeacons() {
     const id = setInterval(pruneBeacons, 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Lay the captions out a few times a second (they move with the globe).
+  const lastLayout = useRef(0);
+  useFrame(() => {
+    const now = performance.now();
+    if (now - lastLayout.current < 120) return;
+    lastLayout.current = now;
+    layoutLabels();
+  });
 
   return <>{beacons.map((b) => <BeaconView key={b.key} b={b} reduced={reduced} />)}</>;
 }

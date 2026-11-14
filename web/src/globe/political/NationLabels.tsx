@@ -25,6 +25,7 @@ const LS_BASE = 0.35; // letter spacing (em) when the size is free
 const LS_MIN = 0.08, LS_MAX = 1.4;
 const MAX_ANGLE = (60 * Math.PI) / 180;
 const SIZES = { nation: { min: 13, max: 56 }, region: { min: 11, max: 20 } }; // px, cap height-ish
+const TINY = 9; // px: with little room (far zoom, near a panel) a name shrinks to this before it fades
 const LIMB = 0.9; // names stay inside this share of the visible disc
 const PANEL_GAP = 10; // px kept clear of the side panels
 
@@ -190,12 +191,16 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
     let f = W / (w0 + LS_BASE * n);
     f = Math.min(f, Math.max(0.55 * across, lim.min * wpp), lim.max * wpp);
     f = Math.max(f, lim.min * wpp);
+    const showFlag = d < FLAG_NEAR;
+    // Too little room at the usual minimum (far zoom, at the limb, beside a panel): tighten the
+    // spacing and shrink the name to fit, down to TINY px, before fading it.
+    const fit = (2 * halfMax) / (w0 + LS_MIN * n + (showFlag ? 3.2 : 0));
+    if (f > fit) f = Math.max(fit, TINY * wpp);
     const lsWanted = clamp((W / f - w0) / n, LS_MIN, LS_MAX);
     const ls = Math.round(lsWanted / 0.05) * 0.05;
-    // Too little room even at the smallest size (at the limb, under a panel): fade the name out.
-    const showFlag = d < FLAG_NEAR;
     const need = (f * (w0 + ls * n)) / 2 + (showFlag ? 1.6 * f : 0);
     alpha *= clamp01((1.25 - need / Math.max(1e-6, halfMax)) / 0.25);
+    alpha *= clamp01(0.8 + (f / wpp - TINY) / 8); // a tiny name dims a little, never vanishes for size alone
     if (roomPx < 0) alpha = 0;
     g.visible = alpha > 0.01;
     if (!g.visible) return;
@@ -214,8 +219,8 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
     const r = R / f;
     if (t) {
       t.curveRadius = -r;
-      t.fillOpacity = alpha * 0.8; // ink at 80%
-      t.outlineOpacity = alpha * 0.55;
+      t.fillOpacity = alpha; // solid ink: reads on red and gold land too
+      t.outlineOpacity = alpha * 0.92; // a strong parchment halo
     }
 
     const textW = m ? m.w + (applied.current.ls - m.ls) * n : w0 + ls * n;
@@ -263,7 +268,8 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
             anchorY="middle"
             fontSize={1}
             color={INK}
-            outlineWidth="7%"
+            outlineWidth="13%"
+            outlineBlur="6%"
             outlineColor={HALO}
             renderOrder={RENDER_ORDER}
             onSync={(t: any) => {

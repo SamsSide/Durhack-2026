@@ -11,7 +11,7 @@ const DARK = new THREE.Color('#8d8068');
 const TOWER_EVERY = 4;
 
 export function buildWall(world: World, mesh: ProvinceMesh, owner: number, fromTile: number, width: number, team: string): WallGeometry {
-  const H = width * 0.16, T = width * 0.07, TW = width * 0.16, TH = width * 0.3;
+  const H = width * 0.05, T = width * 0.026, TW = width * 0.06, TH = width * 0.09; // about a town wall's height
   const from = new THREE.Vector3(...world.tiles[fromTile]!.center).normalize();
   const own = (t: number) => (world.owner[t] ?? -1) === owner;
   const land = (t: number) => world.tiles[t]?.terrain !== 'ocean';

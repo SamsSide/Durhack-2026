@@ -47,6 +47,8 @@ export function CameraRig() {
     c.touches.three = NONE;
     const A = (c.constructor as unknown as { ACTION: Record<string, number> }).ACTION;
     c.touches.two = (A.TOUCH_DOLLY ?? 0) as typeof c.touches.two;
+    // Dev only: lets a browser review set the zoom exactly (window.__cam.dollyTo(3.5, false)).
+    if (import.meta.env.DEV) (window as unknown as { __cam?: unknown }).__cam = c;
   }, []);
 
   // Rotation speed scales with distance so close-up dragging is not twitchy.

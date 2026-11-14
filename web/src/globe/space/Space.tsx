@@ -44,7 +44,7 @@ varying float vA;
 void main() {
   float r = length(gl_PointCoord - 0.5) * 2.0;
   float core = smoothstep(1.0, 0.0, r);
-  float a = (core * core + 0.25 * smoothstep(1.0, 0.3, r)) * vA;
+  float a = min(1.0, (core * core * 1.3 + 0.35 * smoothstep(1.0, 0.3, r)) * vA);
   if (a < 0.01) discard;
   gl_FragColor = vec4(vColor, a);
 }`;
@@ -53,7 +53,7 @@ function Stars({ reduced }: { reduced: boolean }) {
   const dpr = useThree((s) => s.gl.getPixelRatio());
   const { geo, mat } = useMemo(() => {
     // layers: [count, min px, max px, min bright, max bright]
-    const layers = [[1300, 1.0, 1.6, 0.25, 0.55], [380, 1.6, 2.6, 0.45, 0.8], [42, 3.2, 5.2, 0.8, 1.0]];
+    const layers = [[3000, 1.0, 1.5, 0.3, 0.55], [2600, 1.4, 2.2, 0.5, 0.85], [760, 2.2, 3.4, 0.7, 1.0], [140, 3.8, 6.0, 0.95, 1.0]];
     const total = layers.reduce((n, l) => n + l[0], 0);
     const pos = new Float32Array(total * 3), size = new Float32Array(total), bright = new Float32Array(total);
     const phase = new Float32Array(total), col = new Float32Array(total * 3);
@@ -81,7 +81,7 @@ function Stars({ reduced }: { reduced: boolean }) {
     g.setAttribute('aPhase', new THREE.BufferAttribute(phase, 1));
     g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
     const m = new THREE.ShaderMaterial({
-      uniforms: { uTime: { value: 0 }, uAmp: { value: reduced ? 0 : 0.35 }, uPx: { value: dpr } },
+      uniforms: { uTime: { value: 0 }, uAmp: { value: reduced ? 0 : 0.25 }, uPx: { value: dpr } },
       vertexShader: STAR_VERT, fragmentShader: STAR_FRAG, transparent: true, depthWrite: false,
     });
     return { geo: g, mat: m };
@@ -115,23 +115,37 @@ void main() {
   vec3 n = normalize(vec3(0.35, 0.85, 0.4));
   float band = exp(-pow(dot(d, n) * 3.2, 2.0));
   float cloud = fbm(d * 3.0 + 4.0);
-  float patch = fbm(d * 1.4 - 9.0);
+  float blotch = fbm(d * 1.4 - 9.0); // not "patch": a reserved word in GLSL ES 3, it broke this shader
   float dust = smoothstep(0.35, 0.8, fbm(d * 6.0 + 1.0));
-  float k = band * smoothstep(0.25, 0.85, cloud) * (0.5 + dust * 0.6) + 0.35 * smoothstep(0.55, 0.8, patch) * (1.0 - band);
+  float k = band * smoothstep(0.2, 0.8, cloud) * (0.65 + dust * 0.7) + 0.45 * smoothstep(0.5, 0.8, blotch) * (1.0 - band);
   vec3 c = mix(uViolet, uCyan, smoothstep(0.35, 0.8, fbm(d * 2.0 + 20.0)) * 0.7);
   float a = k * uOpacity;
-  gl_FragColor = vec4(c * a, a);
+  vec3 col = c * a * 1.1; // premultiplied: added straight onto the sky
+  // Three faint clouds away from the band: soft violet, teal and warm rose, layered noise.
+  vec3 cen[3]; cen[0] = normalize(vec3(-0.7, 0.35, 0.6)); cen[1] = normalize(vec3(0.75, -0.3, -0.55)); cen[2] = normalize(vec3(-0.2, -0.75, -0.6));
+  vec3 tint[3]; tint[0] = vec3(0.55, 0.38, 0.85); tint[1] = vec3(0.25, 0.7, 0.72); tint[2] = vec3(0.9, 0.5, 0.55);
+  for (int i = 0; i < 3; i++) {
+    float r = 1.0 - dot(d, cen[i]);
+    float fall = exp(-r * 7.0);
+    float n1 = fbm(d * 2.4 + float(i) * 13.0);
+    float n2 = fbm(d * 5.5 - float(i) * 7.0);
+    float cl = fall * smoothstep(0.3, 0.8, n1) * (0.6 + 0.6 * n2);
+    col += tint[i] * cl * uOpacity * 0.32;
+  }
+  gl_FragColor = vec4(col, a);
 }`;
 
 function Nebula({ matRef }: { matRef: React.MutableRefObject<THREE.ShaderMaterial | null> }) {
   const mat = useMemo(() => new THREE.ShaderMaterial({
     uniforms: {
-      uCyan: { value: new THREE.Color(getPalette().holo).multiplyScalar(0.55) },
+      uCyan: { value: new THREE.Color(getPalette().holo).multiplyScalar(0.7) },
       uViolet: { value: new THREE.Color(VIOLET) },
-      uOpacity: { value: 0.3 },
+      uOpacity: { value: 0.45 },
     },
     vertexShader: NEB_VERT, fragmentShader: NEB_FRAG,
-    side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    side: THREE.BackSide, transparent: true, depthWrite: false,
+    // The shader writes premultiplied light, so add it as is (AdditiveBlending would scale it by alpha again).
+    blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor,
   }), []);
   matRef.current = mat;
   useEffect(() => () => mat.dispose(), [mat]);
@@ -179,7 +193,7 @@ void main() {
 
 function ShootingStars() {
   const camera = useThree((s) => s.camera);
-  const st = useRef({ next: 4, start: [-1, -1], dur: [1, 1] as number[] }).current;
+  const st = useRef({ next: 4, start: [-1, -1], dur: [1, 1] as number[], slow: 0 }).current;
   const { geo, mat } = useMemo(() => {
     const aStart = new Float32Array(SLOTS * 4 * 3), aDir = new Float32Array(SLOTS * 4 * 3);
     const corner = new Float32Array(SLOTS * 4 * 2), slot = new Float32Array(SLOTS * 4);
@@ -209,6 +223,13 @@ function ShootingStars() {
     return { geo: g, mat: m };
   }, []);
   useEffect(() => () => { geo.dispose(); mat.dispose(); }, [geo, mat]);
+  // Dev only: window.__shootingStar() fires the next one now (for a browser review).
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const w = window as unknown as { __shootingStar?: (slowS?: number) => void };
+    w.__shootingStar = (slowS?: number) => { st.next = 0; st.slow = slowS ?? 0; };
+    return () => { delete w.__shootingStar; };
+  }, [st]);
 
   const fwd = useMemo(() => new THREE.Vector3(), []);
   const up = useMemo(() => new THREE.Vector3(), []);
@@ -253,7 +274,8 @@ function ShootingStars() {
     }
     aStart.needsUpdate = aDir.needsUpdate = true;
     st.start[s] = t;
-    st.dur[s] = 0.8 + Math.random() * 0.5;
+    st.dur[s] = st.slow || 0.8 + Math.random() * 0.5;
+    st.slow = 0;
     prog[s] = 0;
   });
   return <mesh geometry={geo} material={mat} frustumCulled={false} renderOrder={-1} />;
@@ -264,7 +286,7 @@ export function Space() {
   const nebula = useRef<THREE.ShaderMaterial | null>(null);
   const camera = useThree((s) => s.camera);
   useFrame(() => {
-    if (nebula.current) nebula.current.uniforms.uOpacity.value = 0.18 + 0.17 * smooth(1.6, 3.4, camera.position.length());
+    if (nebula.current) nebula.current.uniforms.uOpacity.value = 0.4 + 0.3 * smooth(1.6, 3.4, camera.position.length());
   });
   return (
     <>

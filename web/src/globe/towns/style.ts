@@ -41,4 +41,4 @@ export const KIND_R: Record<string, number> = { town: 0.45, city: 0.55, capital:
 export const KIND_N: Record<string, number> = { town: 40, city: 120, capital: 200 };
 
 /** Camera distance: towns start to fade in below FADE_FAR and are full below FADE_NEAR. */
-export const FADE_FAR = 1.5, FADE_NEAR = 1.3;
+export const FADE_FAR = 1.85, FADE_NEAR = 1.55; // full well before the close-up (camera min is 1.12)

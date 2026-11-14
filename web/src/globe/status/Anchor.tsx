@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { P3 } from './geo';
+import { underHud } from './hudCover';
 
 export function Anchor({ pos, dx = 0, dy = 0, children }: { pos: P3; dx?: number; dy?: number; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -14,10 +15,10 @@ export function Anchor({ pos, dx = 0, dy = 0, children }: { pos: P3; dx?: number
     if (!el) return;
     const facing = camera.position.dot(dir) / camera.position.length();
     const covered = document.querySelector('.closing-veil') !== null;
-    el.style.opacity = facing > 0.15 && !covered ? '1' : '0';
+    el.style.opacity = facing > 0.15 && !covered && !underHud(el) ? '1' : '0'; // never over a HUD panel (#175)
   });
   return (
-    <Html position={pos} center zIndexRange={[4, 0]} style={{ pointerEvents: 'none' }}>
+    <Html position={pos} center zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}>
       <div ref={ref} className="gs-anchor" style={{ transform: `translate(${dx}px, ${dy}px)` }}>{children}</div>
     </Html>
   );
