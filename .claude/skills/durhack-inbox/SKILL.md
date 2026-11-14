@@ -41,6 +41,15 @@ sessions with no watcher on 14 Nov. (`--watch 30` still exists for a short manua
 `scripts/durhack/inbox.sh --list` (everything open that concerns you) or `--once` (just what's
 new since the last check).
 
+**The watcher alone is not enough: sweep with `--list` too.** The watcher reports *new* events
+only, so an issue that arrives while you are busy, or between an exit and a restart, can slip past
+(the owner's session missed a needs-owner issue for an hour on 14 Nov). Run
+`scripts/durhack/inbox.sh --list` and act on anything assigned to you that has no answer:
+- at session start (with starting the watcher),
+- after every merged PR,
+- before a handoff, and before telling the user a task or a batch is finished.
+Close your own `ready` and `agent-request` issues once the other lane has answered them.
+
 ## When an event arrives
 
 Finish the step you're on (don't abandon an edit mid-file), then:
