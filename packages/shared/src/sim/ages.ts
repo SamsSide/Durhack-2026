@@ -37,6 +37,16 @@ export function startAge(eraText: string | undefined): TechAge {
 /** Progress needed to reach each age (cumulative; ancient is the start). */
 export const AGE_AT = [0, 260, 1150, 2900, 4800, 8600, 13000] as const;
 
+/**
+ * The earliest calendar year (`world.year`) a nation may step up into each age, parallel to `AGES`
+ * (owner, #313). Progress keeps building, but the step waits for the year. A world whose starting era is
+ * already later keeps its age: the gate only blocks stepping up early.
+ */
+export const AGE_EARLIEST_YEAR = [-Infinity, 500, 1400, 1760, 1900, 2050, 2150] as const;
+
+/** Satellites need the stellar age and at least this calendar year (the first Sputnik). */
+export const SATELLITE_EARLIEST_YEAR = 1957;
+
 /** What a nation's agent remembers between turns for its age and its trade (kept outside the World). */
 export interface AgeMemory {
   /** Progress towards the next age; starts at the floor of its current age. */
@@ -96,6 +106,7 @@ export function ageTurn(
   if (i >= AGES.length - 1) return null;
   mem.progress += ageRate(view, me, structs, treasury);
   if (mem.progress < AGE_AT[i + 1]!) return null;
+  if (view.year < AGE_EARLIEST_YEAR[i + 1]!) return null;   // progress is banked; the step waits for the calendar
   const age = AGES[i + 1]!;
   return { age, kind: 'growth', text: AGE_LINES[age].replace('{n}', c.name) };
 }
@@ -110,7 +121,7 @@ const SAT_GAP = 60;
  */
 export function satelliteTurn(view: World, me: number, tick: number, mem: AgeMemory | undefined): string | null {
   const c = view.countries[me]!;
-  if (!mem || c.techAge !== 'stellar') return null;
+  if (!mem || c.techAge !== 'stellar' || view.year < SATELLITE_EARLIEST_YEAR) return null;
   mem.satNext ??= tick + 6;
   const n = mem.sats ?? 0;
   if (n >= MAX_SATELLITES || tick < mem.satNext) return null;
