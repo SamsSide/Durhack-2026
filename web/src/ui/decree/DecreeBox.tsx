@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ChronicleEntry } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import { blobToBase64, useRecorder, type Recording } from './useRecorder';
 import './decree.css';
@@ -7,6 +8,13 @@ const MAX_MS = 15000;
 const MIN_MS = 500;
 
 type Note = { kind: 'hint' | 'listen' | 'result' | 'fail'; transcript?: string; decree?: string };
+
+/** Lane a adds `decree` to the decree chronicle entries and the voice response; until then the `-b` line stands in. */
+type DecreeInfo = { effect?: string; severity?: number; target?: { countryId: number | null; tiles: number[] }; result?: string };
+const decreeOf = (e: ChronicleEntry): DecreeInfo | undefined => (e as ChronicleEntry & { decree?: DecreeInfo }).decree;
+
+const RESULT_WAIT_MS = 10_000;   // give up on a result after this long
+const RESULT_SHOW_MS = 6000;     // how long the result line stays
 
 /** The line shown when the voice route refuses a recording (for 'fail', carried in `transcript`). */
 function failText(status: number, error: string): string {
@@ -28,6 +36,10 @@ export function DecreeBox() {
   const [text, setText] = useState('');
   const [done, setDone] = useState(false);
   const [note, setNote] = useState<Note | null>(null);
+  const [outcome, setOutcome] = useState<{ effect: string; line: string } | null>(null);
+  const events = useWorld((s) => s.recentEvents);
+  const pending = useRef<{ at: number; seen: Set<string> } | null>(null);
+  const outcomeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alive = useRef(true);
@@ -37,8 +49,29 @@ export function DecreeBox() {
       alive.current = false;
       if (timer.current) clearTimeout(timer.current);
       if (noteTimer.current) clearTimeout(noteTimer.current);
+      if (outcomeTimer.current) clearTimeout(outcomeTimer.current);
     };
   }, []);
+
+  // After a typed decree, the next decree entry that carries a result replaces "Proclaimed." for a few seconds.
+  useEffect(() => {
+    const p = pending.current;
+    if (!p) return;
+    if (Date.now() - p.at > RESULT_WAIT_MS) { pending.current = null; return; }
+    for (const e of events) {
+      if (e.type !== 'chronicle' || e.entry.kind !== 'decree' || p.seen.has(e.id)) continue;
+      const info = decreeOf(e.entry);
+      const line = info?.result || (/-b$/.test(e.entry.id) ? e.entry.text : '');
+      if (!line) continue;
+      pending.current = null;
+      if (timer.current) clearTimeout(timer.current);
+      setDone(false);
+      setOutcome({ effect: info?.effect && info.effect !== 'none' ? info.effect : '', line });
+      if (outcomeTimer.current) clearTimeout(outcomeTimer.current);
+      outcomeTimer.current = setTimeout(() => setOutcome(null), RESULT_SHOW_MS);
+      return;
+    }
+  }, [events]);
 
   const showNote = useCallback((n: Note | null, ms = 4000) => {
     if (noteTimer.current) clearTimeout(noteTimer.current);
@@ -62,9 +95,9 @@ export function DecreeBox() {
         if (alive.current) showNote({ kind: 'fail', transcript: failText(res.status, err) });
         return;
       }
-      const data = (await res.json()) as { transcript?: string; decree?: { text?: string } };
+      const data = (await res.json()) as { transcript?: string; decree?: { text?: string } & DecreeInfo };
       if (!alive.current) return;
-      showNote({ kind: 'result', transcript: data.transcript ?? '', decree: data.decree?.text ?? '' });
+      showNote({ kind: 'result', transcript: data.transcript ?? '', decree: data.decree?.result || data.decree?.text || '' }, data.decree?.result ? 7000 : 4000);
     } catch {
       if (alive.current) showNote({ kind: 'fail' });
     }
@@ -80,8 +113,11 @@ export function DecreeBox() {
     send({ type: 'control', action: 'decree', text: t });
     setText('');
     setDone(true);
+    setOutcome(null);
+    pending.current = { at: Date.now(), seen: new Set(useWorld.getState().recentEvents.map((e) => e.id)) };
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setDone(false), 2000);
+    // "Proclaimed." stays until the result arrives; with none within the wait it clears quietly.
+    timer.current = setTimeout(() => { setDone(false); pending.current = null; }, RESULT_WAIT_MS);
   };
 
   const isPressKey = (k: string) => k === ' ' || k === 'Enter';
@@ -98,7 +134,13 @@ export function DecreeBox() {
           {note.decree ? <span className="tn-decree-proclaimed">Proclaimed: {note.decree}</span> : null}
         </span>
       )}
-      {!note && done && <span className="tn-decree-done" role="status">Proclaimed.</span>}
+      {!note && outcome && (
+        <span className="tn-decree-done" role="status">
+          {outcome.effect && <span className="tn-decree-effect">{outcome.effect}</span>}
+          {outcome.line}
+        </span>
+      )}
+      {!note && !outcome && done && <span className="tn-decree-done" role="status">Proclaimed.</span>}
       <span className="tn-decree-label">Decree</span>
       {recording ? (
         <span className="tn-decree-count" role="timer" aria-live="off">{clock(remainingMs)}</span>

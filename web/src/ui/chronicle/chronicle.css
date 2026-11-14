@@ -214,6 +214,8 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
 .tn-herald.tn-war { --k: var(--kind-war); }
 .tn-herald.tn-fall { --k: var(--kind-fall); }
 .tn-herald.tn-return { --k: var(--kind-return); }
+.tn-herald.tn-decree { --k: var(--kind-decree); }
+.tn-h-seal { flex: none; color: var(--gilt-hi); }
 .tn-herald:hover .tn-h-text { color: var(--gilt-hi); }
 .tn-herald:active { transform: translateY(1px); }
 .tn-herald.tn-leaving { opacity: 0; }
