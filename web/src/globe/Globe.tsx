@@ -27,7 +27,7 @@ import { Structures } from './structures/Structures';
 import { Units } from './units';
 import { Clouds } from './clouds';
 import { Towns } from './towns';
-import { EventBeacons, Spotlight } from './events';
+import { EventBeacons, Spotlight, WarFlash } from './events';
 import { Council } from './council';
 import { Wonders } from './wonders';
 import { registerCapture } from './capture';
@@ -167,6 +167,7 @@ function Scene({ world }: { world: World }) {
       <CoinBurst />
       <Towns />
       <EventBeacons />
+      <WarFlash />
       <Council />
       <Spotlight />
     </ProvinceMeshContext.Provider>
