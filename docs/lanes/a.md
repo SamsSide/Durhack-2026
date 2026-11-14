@@ -14,6 +14,11 @@ on this laptop, none sharing files: *engine* (A2, A3, A4, A5, A6, A7, A18, A9 in
 in `assets/` and `web/public/models/`) and *design* (A12, in Figma, `web/src/theme/` and
 `docs/design/`). At most four agents at once.
 
+**Model for UI work (owner, 14 Nov).** In lane a, every agent doing UI or design work (the
+`durhack-frontend` agent, Figma, `web/src/theme/`, `web/src/audio/` UI states, `docs/design/`, demo
+polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps the usual split
+(Opus to plan and design the system, Sonnet to implement).
+
 ## Rows
 
 | ID | Row | Needs (from other lanes) | Gives (to other lanes) | Checkpoint | Status | Notes |
