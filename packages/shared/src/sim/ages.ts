@@ -35,7 +35,7 @@ export function startAge(eraText: string | undefined): TechAge {
 }
 
 /** Progress needed to reach each age (cumulative; ancient is the start). */
-export const AGE_AT = [0, 260, 1150, 2900, 4800, 7400, 10500] as const;
+export const AGE_AT = [0, 260, 1150, 2900, 4800, 8600, 13000] as const;
 
 /** What a nation's agent remembers between turns for its age and its trade (kept outside the World). */
 export interface AgeMemory {
@@ -43,6 +43,9 @@ export interface AgeMemory {
   progress?: number;
   /** Foreign merchant ships already counted as docked at its ports. */
   docked: Set<string>;
+  /** Satellites a stellar nation has launched, and the tick of its next launch. */
+  sats?: number;
+  satNext?: number;
 }
 export const newAgeMemory = (): AgeMemory => ({ docked: new Set() });
 
@@ -74,7 +77,7 @@ const AGE_LINES: Record<TechAge, string> = {
   gunpowder: '{n} forges its first iron cannon: the age of gunpowder begins.',
   industrial: '{n} lays down its first ironclads and lays its first railway: the industrial age begins.',
   modern: '{n} rolls out its first tanks: the modern age begins.',
-  future: '{n} sends its first drone swarms aloft and raises its first arcology: the future age begins.',
+  future: '{n} sends its first drone swarms aloft, raises its first arcology and lifts its first ship beyond the sky: the future age begins.',
   stellar: '{n} launches its first starship from the top of its space elevator: the stellar age begins.',
 };
 
@@ -95,4 +98,25 @@ export function ageTurn(
   if (mem.progress < AGE_AT[i + 1]!) return null;
   const age = AGES[i + 1]!;
   return { age, kind: 'growth', text: AGE_LINES[age].replace('{n}', c.name) };
+}
+
+/** How many satellites a stellar nation launches over its first years in the age. */
+export const MAX_SATELLITES = 4;
+const SAT_GAP = 60;
+
+/**
+ * A stellar nation launches satellites now and then (the first a few years after it arrives, then one
+ * every `SAT_GAP` years, `MAX_SATELLITES` in all). Returns the chronicle text of a launch this year, or null.
+ */
+export function satelliteTurn(view: World, me: number, tick: number, mem: AgeMemory | undefined): string | null {
+  const c = view.countries[me]!;
+  if (!mem || c.techAge !== 'stellar') return null;
+  mem.satNext ??= tick + 6;
+  const n = mem.sats ?? 0;
+  if (n >= MAX_SATELLITES || tick < mem.satNext) return null;
+  mem.sats = n + 1;
+  mem.satNext = tick + SAT_GAP;
+  return n === 0
+    ? `${c.name} launches its first satellites into orbit above its capital.`
+    : `${c.name} launches another satellite: ${n + 1} now circle its sky.`;
 }
