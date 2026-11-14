@@ -36,7 +36,9 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 - **About 1,200 provinces** on a spherical Voronoi globe, each with terrain and a good; nations
   and places are named after Durham colleges and North East towns.
 - **Technology ages** from ancient through medieval, gunpowder, industrial and modern to the
-  future and stellar ages; units, buildings and ships change with each age.
+  future and stellar ages; units, buildings and ships change with each age. A nation cannot enter
+  an age before its calendar year (medieval 500, gunpowder 1400, industrial 1760, modern 1900,
+  future 2050, stellar 2150); a world's starting era wins.
 - **A living world:** boats, caravans, birds and smoke, volumetric clouds with drifting weather,
   rain and storms, a sun with a day and night cycle and a passing moon.
 - **Close up**, the camera tilts to a ground view of walled towns, rivers and buildings in one of
