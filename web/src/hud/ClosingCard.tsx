@@ -74,16 +74,16 @@ export function ClosingCard() {
   ];
   return (
     <div className="closing-veil" onClick={close}>
-      <div className="closing panel" role="dialog" aria-label="What this world cost" onClick={(e) => e.stopPropagation()}>
-        <div className="cap rub">{world.name} · years {a} to {b}</div>
-        <h1>This whole world cost</h1>
-        <div className="cl-hero"><span className="cl-num">{fmt(count)}</span><span className="cl-unit">tokens</span></div>
+      <div className="closing tn-lacquer tn-frame tn-frame--corners" role="dialog" aria-label="What this world cost" onClick={(e) => e.stopPropagation()}>
+        <div className="cap tn-cartouche">{world.name} · years {a} to {b}</div>
+        <h1 className="tn-gilt-text">This whole world cost</h1>
+        <div className="cl-hero"><span className="cl-num tn-gilt-text">{fmt(count)}</span><span className="cl-unit">tokens</span></div>
         <div className="cl-stats">
           {facts.map(([n, label]) => <div key={label}><b>{fmt(n)}</b><span>{label}</span></div>)}
         </div>
         <div className="cl-foot">
           <span className="muted">Every decision is in the event log, so this world replays exactly, offline.</span>
-          <button className="btn" autoFocus onClick={close}>Back to the world</button>
+          <button className="tn-button tn-button--lacquer" autoFocus onClick={close}>Back to the world</button>
         </div>
       </div>
     </div>

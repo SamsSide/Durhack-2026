@@ -5,53 +5,47 @@
   position: absolute; z-index: 6; left: 0; top: 0; right: 0; height: var(--topbar-height);
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
   padding: 0 var(--space-4);
-  background: linear-gradient(180deg, var(--color-surface-2) 0%, var(--color-surface) 100%);
-  border-bottom: 1px solid var(--color-accent);
-  box-shadow: 0 6px 20px var(--color-bg);
 }
+/* Surface, moulding and shadow come from tn-lacquer tn-lacquer--bar-top (theme/materials.css). */
+.topbar .tn-sep { margin: 10px 2px; }
 .tb-group { display: flex; align-items: center; gap: 10px; flex: none; }
 /* The left group gives way first: the era truncates, nothing else moves. */
 .tb-group.tb-left { flex: 0 1 auto; min-width: 0; }
 .tb-name, .tb-era, .wordmark, .conn { white-space: nowrap; }
-.wordmark { font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--color-accent); flex: none; }
-.vsep { width: 1px; height: 26px; background: var(--color-border); flex: none; }
-.tb-world { max-width: 138px; min-width: 0; overflow: hidden; flex: 0 1 auto; }
-.tb-name { font-family: var(--font-display); font-size: 17px; font-weight: 600; letter-spacing: 0.04em; color: var(--color-text); line-height: 20px; overflow: hidden; text-overflow: ellipsis; }
+.wordmark { font-family: var(--font-display); font-weight: 700; font-size: 14px; letter-spacing: 0.22em; text-transform: uppercase; flex: none; }
+.tb-world { max-width: 220px; min-width: 0; overflow: hidden; flex: 0 1 auto; }
+.tb-name { font-family: var(--font-display); font-size: 17px; font-weight: 600; letter-spacing: 0.04em; color: var(--color-text); line-height: 20px; overflow: hidden; text-overflow: ellipsis; text-shadow: var(--engrave-on-dark); }
 .tb-era { font-size: 13px; font-style: italic; color: var(--color-text-muted); line-height: 15px; overflow: hidden; text-overflow: ellipsis; }
-.tb-year { display: flex; align-items: baseline; gap: 7px; padding: 2px 10px; border: 1px solid var(--color-accent); border-radius: var(--radius-1); flex: none; }
+/* The year sits in a sunk dark well with a gilt hairline rim: something you read, not press. */
+.tb-year {
+  display: flex; align-items: baseline; gap: 7px; padding: 2px 12px 3px; flex: none;
+  border-radius: 3px; background: linear-gradient(180deg, #07090f, #0d1019);
+  box-shadow: var(--well-dark), 0 0 0 1px rgba(201,162,75,.4);
+}
 .tb-year .cap { font-family: var(--font-display); font-size: var(--text-cap); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
-.tb-year .num { font-family: var(--font-mono); font-size: 20px; font-weight: 600; color: var(--color-accent); line-height: 28px; }
+.tb-year .num { font-family: var(--font-mono); font-size: 21px; font-weight: 700; line-height: 28px; }
 .conn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--color-text-muted); flex: none; }
-.conn i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.conn { text-shadow: var(--engrave-on-dark); }
 .conn-live, .conn-reconnecting, .conn-offline { color: var(--color-text); }
-.conn-live i { background: var(--color-ok-bright); box-shadow: 0 0 6px var(--color-ok-bright); }
-.conn-reconnecting i { background: var(--color-warn); box-shadow: 0 0 6px var(--color-warn); }
-.conn-offline i { background: var(--color-danger); }
+/* The status lamp is a glass dot in a gilt bezel (tn-roundel--dot); the colour is its --dot. */
+.conn-live .tn-roundel--dot { --dot: var(--color-ok-bright); }
+.conn-reconnecting .tn-roundel--dot { --dot: var(--color-warn); }
+.conn-offline .tn-roundel--dot { --dot: var(--color-danger); }
 /* 1280 px and narrower: no era, no call count, no word "Live". */
 .topbar.compact .tb-era, .topbar.compact .tn-meter .calls, .topbar.compact .conn-live .conn-word { display: none; }
 .topbar.compact .tb-name { line-height: 28px; }
 .topbar.compact .tb-world { max-width: 170px; }
-.topbar.compact .seg { padding: 0 5px; letter-spacing: 0.03em; }
+.topbar.compact .seg { padding: 0 7px; letter-spacing: 0.03em; }
 .topbar.compact .wordmark { letter-spacing: 0.1em; }
 .topbar.compact .tb-group { gap: 7px; }
-.topbar.compact .seg.mono, .topbar.compact .seg.icon { padding: 0 8px; }
 
-.segs { display: flex; border: 1px solid var(--color-border); border-radius: var(--radius-1); background: var(--color-surface); }
-.seg {
-  appearance: none; border: 0; border-left: 1px solid var(--color-border); background: transparent; cursor: pointer;
-  font-family: var(--font-display); font-size: var(--text-cap); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--color-text-muted); padding: 0 9px; line-height: 28px; height: 28px; display: flex; align-items: center;
-}
-.seg:first-child { border-left: 0; }
-.seg:hover { color: var(--color-accent); }
-.seg.mono { font-family: var(--font-mono); letter-spacing: 0; font-size: 13px; padding: 0 8px; }
-.seg.icon { padding: 0 10px; }
-.seg.on, .seg.on:hover { background: var(--color-parchment); color: var(--color-ink); }
-.seg:disabled { opacity: 0.45; cursor: default; }
-
-
-.btn.primary-dark { background: transparent; color: var(--color-text); border-color: var(--color-text-muted); padding: 4px 10px; }
-.btn.primary-dark:hover { background: transparent; color: var(--color-accent); border-color: var(--color-accent); }
+/* The right-hand controls: wells (tn-well + tn-seg), lacquer plates and the one gilt button. */
+.topbar .tb-right { gap: 12px; }
+.topbar .segs { padding: 2px; }
+.topbar .seg { height: 26px; padding: 0 12px; }
+.topbar .onair { gap: 7px; }
+.topbar .onair .tn-roundel--dot { --size: 12px; --dot: var(--color-danger); }
+.topbar .tb-new { min-height: 30px; padding: 0 var(--space-4); }
 
 /* Decree slot: bottom right, 380 x 48, just above the ticker (design gap 12). Lane c's DecreeBox fills it. */
 .decree-slot {
@@ -62,69 +56,86 @@
 /* Bottom-right stack, card closed: decree, then the minimap above it, then the diplomacy legend.
    With a nation card docked (right column, top 64 down to the ticker) the minimap and legend move
    to the column left of the card, minimap at the decree's height, so they never cover the card. */
+/* The minimap sits in a slim gilt frame (tn-lacquer tn-frame tn-frame--slim); the two canvases fill
+   its padding box, with a sunk inner shadow so the map reads as set into the frame. */
 .minimap {
   right: var(--space-4); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 48px + var(--space-3));
-  width: 222px; height: 122px;
-  background: var(--color-night-inset); border: 1px solid var(--color-accent); border-radius: var(--radius-1);
-  box-shadow: var(--shadow-1); overflow: hidden;
+  width: 222px; height: 122px; overflow: hidden;
+  background: linear-gradient(var(--color-night-inset), var(--color-night-inset)) padding-box, var(--gilt-metal) border-box;
 }
-.minimap canvas { position: absolute; left: 0; top: 0; width: 220px; height: 120px; display: block; }
+.minimap canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+.hud.minimap { box-shadow: 0 0 0 1px var(--frame-line), inset 0 0 0 1px #000, var(--lift-2); }
+.minimap::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.6), inset 0 0 0 1px rgba(0,0,0,.55);
+}
 .minimap .mm-view { cursor: crosshair; touch-action: none; }
 .legend-box {
   right: var(--space-4); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 48px + var(--space-3));
-  width: 220px; padding: 12px 16px;
+  width: 220px; padding: 22px 16px 12px;
 }
+/* Legends are lacquer plates with a gilt frame and a cartouche title (tn-lacquer tn-frame, tn-cartouche). */
+.legend-box .muted { color: var(--color-text-muted); font-style: italic; text-shadow: var(--engrave-on-dark); }
+.legend-box .cap.tn-cartouche { font-size: var(--text-cap); }
 body:has(.minimap) .legend-box { bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 48px + var(--space-3) + 122px + var(--mm-strip) + var(--space-3)); }
 .minimap, .legend-box, .mm-modes { transition: right var(--dur-fast) var(--ease-out), bottom var(--dur-fast) var(--ease-out); }
 
 /* Map-mode strip (#245): icon-only buttons sitting on the top edge of the minimap, same width.
    It follows the minimap when a nation card is docked. Icons: mapModeIcons.tsx. */
-:root { --mm-strip: 32px; }
+:root { --mm-strip: 36px; }
+/* A slim gilt frame around a sunk dark well; each icon is a tn-seg, the active one a raised paper key. */
 .mm-modes {
-  right: var(--space-4); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 48px + var(--space-3) + 122px - 1px);
-  width: 222px; height: var(--mm-strip); display: flex;
-  background: linear-gradient(180deg, var(--color-surface-2) 0%, var(--color-surface) 100%);
-  border: 1px solid var(--color-accent); border-bottom-color: var(--color-border); border-radius: var(--radius-1) var(--radius-1) 0 0;
-  box-shadow: var(--shadow-1);
+  right: var(--space-4); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 48px + var(--space-3) + 122px - 2px);
+  width: 222px; height: var(--mm-strip); display: flex; gap: 2px; padding: 3px;
+  background: linear-gradient(180deg, #07090f, #0d1019) padding-box, var(--gilt-metal) border-box;
 }
+.hud.mm-modes { box-shadow: 0 0 0 1px var(--frame-line), var(--well-dark), var(--lift-1); border-radius: var(--radius-1) var(--radius-1) 0 0; }
 body:has(.mm-modes) .minimap { border-top-left-radius: 0; border-top-right-radius: 0; }
-.mm-mode {
-  position: relative; flex: 1 1 0; display: grid; place-items: center; padding: 0; cursor: pointer;
-  appearance: none; border: 0; border-left: 1px solid var(--color-border); background: transparent;
-  color: color-mix(in srgb, var(--color-accent) 70%, var(--color-text-muted));
+.mm-mode.tn-seg {
+  position: relative; flex: 1 1 0; display: grid; place-items: center; height: auto; padding: 0;
+  color: color-mix(in srgb, var(--color-accent) 75%, var(--color-text-muted));
 }
-.mm-mode:first-child { border-left: 0; }
-.mm-mode:hover { color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
-.mm-mode:focus-visible { outline: 1px solid var(--color-accent); outline-offset: -3px; }
-.mm-mode.on, .mm-mode.on:hover { background: var(--color-accent); color: var(--color-ink); }
+.mm-mode.tn-seg:hover { color: var(--gilt-hi); }
+.mm-mode svg { filter: drop-shadow(0 -1px 0 rgba(0,0,0,.85)); }
+.mm-mode.on svg { filter: drop-shadow(0 1px 0 rgba(255,250,235,.6)); }
 /* Tooltip: above the strip, right-aligned so the last buttons stay on screen. */
 .mm-mode::after {
   content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); right: 0; z-index: 2;
   padding: 4px 8px; white-space: nowrap; pointer-events: none;
   font-family: var(--font-display); font-size: var(--text-cap); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-accent); border-radius: var(--radius-1);
-  box-shadow: var(--shadow-1); opacity: 0; transform: translateY(3px); transition: opacity 120ms var(--ease-out), transform 120ms var(--ease-out);
+  color: var(--gilt-hi); text-shadow: var(--engrave-on-dark);
+  background: var(--lacquer-sheen), var(--lacquer-grain), #0f1320; border: 1px solid #000; border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(201,162,75,.55), inset 0 1px 0 rgba(255,255,255,.06), 0 6px 14px rgba(0,0,0,.6); opacity: 0; transform: translateY(3px); transition: opacity 120ms var(--ease-out), transform 120ms var(--ease-out);
 }
 .mm-mode:first-child::after, .mm-mode:nth-child(2)::after { right: auto; left: 0; }
 .mm-mode:hover::after, .mm-mode:focus-visible::after { opacity: 1; transform: none; transition-delay: 250ms; }
 .legend-box .muted { font-size: var(--text-sm); margin-bottom: 6px; }
 .lg-row { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 22px; }
-.lg-sw { width: 14px; height: 14px; border: 1px solid var(--color-ink); border-radius: var(--radius-1); flex: none; }
+.lg-sw {
+  width: 14px; height: 14px; border: 1px solid #000; border-radius: 2px; flex: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3), inset 0 -1px 0 rgba(0,0,0,.3), 0 0 0 1px rgba(201,162,75,.4);
+}
+.lg-row { text-shadow: var(--engrave-on-dark); }
 
 .belief-banner {
   position: absolute; z-index: 6; left: 50%; top: 64px; transform: translateX(-50%);
   display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 14px;
-  background: color-mix(in srgb, var(--color-bg) 92%, transparent); border: 1px solid var(--holo-tint); border-radius: var(--radius-1);
-  color: var(--color-text); font-size: 14px; box-shadow: 0 0 18px var(--holo-scanline);
+  color: var(--color-text); font-size: 14px; text-shadow: var(--engrave-on-dark);
 }
 /* a herald dispatch (lane c, .tn-herald) owns top 64 px centre; it publishes its bottom edge + 8px as --tn-herald-bottom on :root while it shows */
 .belief-banner { top: var(--tn-herald-bottom, 64px); transition: top 200ms var(--ease-out); }
 /* the news lower-third (.tn-news) covers the minimap: fade the minimap out while it is on screen */
 .minimap, .mm-modes { transition: right var(--dur-fast) var(--ease-out), bottom var(--dur-fast) var(--ease-out), opacity 200ms var(--ease-out); }
 body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes { opacity: 0; pointer-events: none; }
-.belief-banner .cap { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--holo-tint); }
-.belief-banner .btn { background: transparent; color: var(--holo-tint); border-color: var(--holo-tint); }
-.belief-banner .btn:hover { background: var(--holo-scanline); color: var(--holo-tint); }
+.belief-banner .cap {
+  font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--holo-tint);
+  padding: 2px 8px; border-radius: 2px; background: #07090f; box-shadow: var(--well-dark);
+}
+.belief-banner b { color: var(--gilt-hi); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .speed-thumb, .speed-fill, .mm-mode::after { transition: none; }
+}
 
 @media (max-width: 1280px) {
   .decree-slot, .legend-box, .minimap, .mm-modes { right: var(--space-3); }
@@ -142,7 +153,7 @@ body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes { opacity: 0; pointer-
 }
 .news-slot > * { pointer-events: auto; }
 .onair { display: inline-flex; align-items: center; gap: 6px; }
-.onair-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--color-danger); }
+
 
 
 /* Closing card: what the world cost (docs/design/reference.html) */
@@ -152,63 +163,70 @@ body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes { opacity: 0; pointer-
   animation: closing-fade var(--dur-slow) var(--ease-out) both;
 }
 @keyframes closing-fade { from { opacity: 0; } to { opacity: 1; } }
-.closing { width: 760px; max-width: calc(100vw - 2 * var(--space-4)); padding: 30px 40px 24px; text-align: center; }
-.closing .cap { font-family: var(--font-display); font-size: var(--text-cap); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
-.closing .rub { color: var(--color-rubric); }
+/* A framed lacquer panel with gilt corners, a cartouche title and gilt type (tn-lacquer tn-frame tn-frame--corners). */
+.closing { width: 760px; max-width: calc(100vw - 2 * var(--space-4)); padding: 40px 44px 28px; text-align: center; text-shadow: var(--engrave-on-dark); }
+.closing .cap.tn-cartouche { font-size: var(--text-xs); padding: 5px 26px 4px; }
 .closing h1 { font-family: var(--font-display); font-weight: 700; letter-spacing: var(--tracking-caps); font-size: 26px; line-height: 34px; margin: 6px 0 0; }
 .cl-hero { display: flex; align-items: baseline; justify-content: center; gap: 16px; margin-top: 2px; }
-.cl-num { font-family: var(--font-mono); font-size: var(--text-hero); line-height: 104px; font-weight: 600; letter-spacing: -0.06em; }
-.cl-unit { font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-rubric); }
-.cl-stats { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: var(--space-2); border-top: 1px solid var(--color-ink); border-bottom: 1px solid var(--color-ink); }
-.cl-stats div { display: flex; flex-direction: column; align-items: center; padding: 12px 10px 13px; border-left: 1px solid var(--color-ink-faint); }
-.cl-stats div:first-child { border-left: none; }
-.cl-stats b { font-family: var(--font-mono); font-size: 30px; line-height: 34px; font-weight: 600; }
-.cl-stats span { font-size: 15px; line-height: 19px; font-style: italic; color: var(--color-ink-muted); margin-top: 2px; }
+.cl-num { font-family: var(--font-mono); font-size: var(--text-hero); line-height: 104px; font-weight: 700; letter-spacing: -0.06em; }
+.cl-unit { font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gilt-hi); }
+/* The four facts sit in one sunk dark well, split by engraved rules. */
+.cl-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); margin-top: var(--space-3);
+  border-radius: 3px; background: linear-gradient(180deg, #07090f, #0d1019); box-shadow: var(--well-dark), 0 0 0 1px rgba(201,162,75,.35);
+}
+.cl-stats div { display: flex; flex-direction: column; align-items: center; padding: 14px 10px 15px; box-shadow: inset 1px 0 0 rgba(0,0,0,.75), inset 2px 0 0 rgba(255,255,255,.06); }
+.cl-stats div:first-child { box-shadow: none; }
+.cl-stats b { font-family: var(--font-mono); font-size: 30px; line-height: 34px; font-weight: 600; color: var(--gilt-hi); }
+.cl-stats span { font-size: 15px; line-height: 19px; font-style: italic; color: var(--color-text-muted); margin-top: 2px; }
 .cl-foot { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: var(--space-4); text-align: left; }
-.cl-foot .muted { font-size: 15px; }
+.cl-foot .muted { font-size: 15px; color: var(--color-text-muted); font-style: italic; }
 
 .meter-hit { display: inline-flex; cursor: pointer; border-radius: var(--radius-1); }
-.meter-hit:hover > * { border-color: var(--color-accent); }
+.meter-hit:hover > * { color: var(--color-text); box-shadow: var(--bevel-dark), 0 0 0 1px var(--gilt), 0 2px 3px rgba(0,0,0,.5); }
 .meter-hit:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 /* Speed: pause, the gear slider (1 month a second to 128 years a second), the readout, Auto.
    Eleven stops, evenly spaced; the labels are years of game time a second. */
 .speedctl { display: flex; align-items: center; gap: 8px; }
-.speed-pause {
-  width: 30px; height: 30px; flex: none; display: grid; place-items: center; padding: 0; cursor: pointer;
-  background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-1);
-}
-.speed-pause:hover { color: var(--color-accent); border-color: var(--color-accent); }
-.speed-pause.on { background: var(--color-accent); color: var(--color-ink); border-color: var(--color-accent); }
-.speed-pause:focus-visible, .speed-slider:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.speed-slider { width: 232px; height: 36px; padding: 0 6px; box-sizing: content-box; cursor: pointer; touch-action: none; user-select: none; }
-.speed-track { position: relative; width: 100%; height: 4px; margin-top: 9px; background: var(--color-border); border-radius: 2px; }
-.speed-fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--color-accent); border-radius: 2px; }
-.speed-stop { position: absolute; top: -3px; width: 2px; height: 10px; margin-left: -1px; background: var(--color-text-muted); border-radius: 1px; font-style: normal; }
-.speed-stop.lit { background: var(--color-accent); }
+/* Pause is a round lacquer medallion in a gilt bezel (tn-button--lacquer tn-button--round). */
+.speed-pause { flex: none; }
+.speed-pause.on { color: var(--gilt-hi); }
+.speed-pause svg { filter: drop-shadow(0 -1px 0 rgba(0,0,0,.85)); }
+.speed-slider:focus-visible { outline: 2px solid var(--gilt-hi); outline-offset: 2px; }
+/* The slider and its scale sit in a sunk dark well, like the other reading surfaces in the bar. */
+.speed-slider { border-radius: 3px; background: linear-gradient(180deg, #07090f, #0d1019); box-shadow: var(--well-dark), 0 0 0 1px rgba(201,162,75,.3); }
+.speed-slider { width: 232px; height: 38px; padding: 0 10px; box-sizing: content-box; cursor: pointer; touch-action: none; user-select: none; }
+/* The track is a sunk trough with a lit gilt fill; the thumb is a small gilt-bezelled knob. */
+.speed-track { position: relative; width: 100%; height: 6px; margin-top: 9px; background: #232a3d; border-radius: 3px; box-shadow: inset 0 1px 2px rgba(0,0,0,.85), 0 1px 0 rgba(255,255,255,.07); }
+.speed-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 3px; background: linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,0) 55%), var(--gilt); box-shadow: inset 0 -1px 0 rgba(0,0,0,.3); }
+.speed-stop { position: absolute; top: -3px; width: 2px; height: 12px; margin-left: -1px; background: var(--color-text-muted); border-radius: 1px; font-style: normal; box-shadow: 0 1px 0 rgba(0,0,0,.7); }
+.speed-stop.lit { background: var(--gilt-hi); }
 .speed-stop b {
   position: absolute; top: 15px; left: 50%; transform: translateX(-50%); white-space: nowrap;
-  font-family: var(--font-mono); font-size: 10px; font-weight: 500; line-height: 12px; color: var(--color-text-muted);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500; line-height: 12px; color: var(--color-text-muted); text-shadow: var(--engrave-on-dark);
 }
 .speed-stop b.first { left: -4px; transform: none; }
 .speed-stop b.last { left: auto; right: -5px; transform: none; }
-.speed-stop.on b { color: var(--color-accent); font-weight: 600; }
+.speed-stop.on b { color: var(--gilt-hi); font-weight: 600; }
 .speed-thumb {
-  position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; box-sizing: border-box;
-  background: var(--color-parchment); border: 2px solid var(--color-accent); transform: translate(-50%, -50%);
-  box-shadow: 0 0 0 3px var(--color-bg); transition: left var(--dur-fast, 120ms) var(--ease-out);
+  position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 50%; box-sizing: border-box;
+  border: 2px solid transparent; transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 50% 35%, var(--color-parchment-light), var(--color-parchment-dark)) padding-box, var(--gilt-ring) border-box;
+  box-shadow: 0 0 0 1px var(--frame-line), 0 2px 3px rgba(0,0,0,.6); transition: left var(--dur-fast, 120ms) var(--ease-out);
 }
-.speed-slider.dragging .speed-thumb { transition: none; box-shadow: 0 0 0 3px var(--color-bg), 0 0 0 5px rgba(201, 162, 75, 0.35); }
+.speed-slider.dragging .speed-thumb { transition: none; box-shadow: 0 0 0 1px var(--frame-line), 0 0 0 4px rgba(201, 162, 75, 0.3); }
 .speed-fill { transition: width var(--dur-fast, 120ms) var(--ease-out); }
 .speed-slider.dragging .speed-fill { transition: none; }
-.speed-slider.auto .speed-thumb { background: var(--color-accent); }
-.speedctl.paused .speed-fill, .speedctl.paused .speed-stop.lit { background: var(--color-text-muted); }
-.speed-val { display: flex; flex-direction: column; justify-content: center; width: 50px; flex: none; font-family: var(--font-mono); white-space: nowrap; }
-.speed-val b { font-size: 16px; font-weight: 600; line-height: 18px; color: var(--color-accent); }
-.speed-val small { font-size: 10px; line-height: 12px; color: var(--color-text-muted); }
+.speed-slider.auto .speed-thumb { background: var(--gilt-plate) padding-box, var(--gilt-ring) border-box; }
+.speedctl.paused .speed-fill { background: linear-gradient(180deg, rgba(255,255,255,.25), rgba(255,255,255,0) 55%), var(--color-text-muted); }
+.speedctl.paused .speed-stop.lit { background: var(--color-text-muted); }
+.speed-val { display: flex; flex-direction: column; justify-content: center; width: 54px; flex: none; font-family: var(--font-mono); white-space: nowrap; text-shadow: var(--engrave-on-dark); }
+.speed-val b { font-size: 17px; font-weight: 600; line-height: 18px; color: var(--gilt-hi); }
+.speed-val small { font-size: 11px; line-height: 13px; color: var(--color-text-muted); }
 .speed-val.slowed b { color: var(--color-warn); }
 .speedctl.paused .speed-val b { color: var(--color-text-muted); }
-.speedctl.paused .speed-val small { color: var(--color-accent); }
+.speedctl.paused .speed-val small { color: var(--gilt-hi); }
 /* Below 1800 px the bar has no room for the labelled scale: a short track with its eleven stops, and
    the readout names the gear. The 1280 px projector layout is tighter still. */
 @media (max-width: 1799px) {
@@ -229,9 +247,9 @@ body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes { opacity: 0; pointer-
 
 /* The year plate: the month (and the day at slow gears) beside the year, a hairline for the year so far */
 .tb-year { position: relative; }
-.tb-date { font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: var(--color-text); width: 3ch; white-space: nowrap; }
+.tb-date { font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: var(--color-text); width: 3ch; white-space: nowrap; text-shadow: var(--engrave-on-dark); }
 .tb-date.day { width: 6ch; text-align: right; }
-.tb-yearbar { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--color-accent); opacity: 0.75; }
+.tb-yearbar { position: absolute; left: 2px; bottom: 2px; height: 2px; max-width: calc(100% - 4px); border-radius: 1px; background: linear-gradient(90deg, var(--gilt-lo), var(--gilt-hi)); opacity: 0.85; }
 
 /* Terrain legend: wider than the diplomacy one to fit the effects line */
 .legend-box.legend-terrain { width: 420px; max-width: calc(100vw - 2 * var(--space-3)); box-sizing: border-box; }
@@ -257,13 +275,15 @@ body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes { opacity: 0; pointer-
 }
 
 /* Wealth legend (B12): a gold ramp with the poorest and richest treasuries at its ends */
-.legend-wealth .lg-ramp { height: 10px; border-radius: 2px; border: 1px solid var(--color-accent); margin: 4px 0 4px; }
+.legend-wealth .lg-ramp, .legend-politics .lg-ramp {
+  height: 10px; border-radius: 2px; border: 1px solid #000; margin: 4px 0 4px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 -1px 0 rgba(0,0,0,.35), 0 0 0 1px rgba(201,162,75,.45);
+}
 .legend-wealth .lg-ends { display: flex; justify-content: space-between; gap: 8px; font-family: var(--font-mono); font-size: 12px; }
-.legend-wealth .lg-ends b { font-weight: 600; }
+.legend-wealth .lg-ends b { font-weight: 600; color: var(--gilt-hi); }
 .legend-wealth .lg-names { font-family: inherit; font-size: 11px; color: var(--color-text-muted); margin-bottom: 6px; }
 .legend-wealth .lg-names span { max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .legend-wealth .lg-names span:last-child { text-align: right; }
 
 /* Politics legend (B11): red, grey, navy ramp */
-.legend-politics .lg-ramp { height: 10px; border-radius: 2px; border: 1px solid var(--color-accent); margin: 4px 0 4px; }
 .legend-politics .lg-ends { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--color-text-muted); margin-bottom: 6px; }

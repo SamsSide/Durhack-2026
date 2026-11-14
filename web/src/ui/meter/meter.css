@@ -1,18 +1,36 @@
-/* Token meter for the dark top bar, from the reference .meter rules. */
+/* Token meter for the dark top bar: a raised lacquer plate with a gilt hairline (the tn-button--lacquer
+   recipe from theme/materials.css), mono figures, and the mode as a small plate: sunk for Mock, gilt for
+   Live, claret for Capped. */
 .tn-meter {
-  display: flex; align-items: center; gap: 5px; padding: 0 10px; line-height: 26px; white-space: nowrap;
+  display: flex; align-items: center; gap: 5px; padding: 0 6px 0 11px; min-height: 28px; white-space: nowrap;
   font-family: var(--font-serif); font-size: 12px; color: var(--color-text-muted);
-  border: 1px solid var(--color-border); border-radius: var(--radius-1); background: var(--color-bg);
+  border: 1px solid #000; border-radius: var(--radius-1);
+  background: linear-gradient(180deg, var(--lacquer-hi), var(--lacquer));
+  box-shadow: var(--bevel-dark), 0 0 0 1px rgba(201,162,75,.3), 0 2px 3px rgba(0,0,0,.5);
+  text-shadow: var(--engrave-on-dark);
+  transition: color var(--dur-fast);
 }
-.tn-meter .num { font-family: var(--font-mono); font-size: 12px; color: var(--color-text); }
-.tn-meter .dot { color: var(--color-border); margin: 0 2px; }
+.tn-meter .num { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--gilt-hi); }
+.tn-meter .dot { color: var(--gilt-lo); margin: 0 2px; }
 .tn-meter .mode {
-  font-family: var(--font-display); font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
-  padding: 0 6px; line-height: 16px; border-radius: var(--radius-1);
+  font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 0 7px; line-height: 18px; border-radius: 2px; margin-left: 2px;
 }
-.tn-meter-mock .mode { color: var(--color-text-muted); border: 1px solid var(--color-border); }
-.tn-meter-live .mode { color: var(--color-ink); background: var(--color-accent); }
-.tn-meter-capped { border-color: color-mix(in srgb, var(--color-danger) 70%, transparent); }
-.tn-meter-capped .mode { color: var(--color-parchment-light); background: var(--color-danger); }
+.tn-meter-mock .mode { color: var(--color-text-muted); background: #07090f; box-shadow: var(--well-dark); }
+.tn-meter-live .mode {
+  color: var(--color-ink); text-shadow: 0 1px 0 rgba(255,240,200,.6);
+  background: var(--gilt-plate); border: 1px solid #5a4214; box-shadow: inset 0 1px 0 #fff3c4, 0 0 0 1px rgba(0,0,0,.5);
+}
+.tn-meter-capped { box-shadow: var(--bevel-dark), 0 0 0 1px color-mix(in srgb, var(--color-danger) 70%, transparent), 0 2px 3px rgba(0,0,0,.5); }
+.tn-meter-capped .mode {
+  color: #fbf3e2; text-shadow: 0 -1px 0 rgba(0,0,0,.4);
+  background: linear-gradient(180deg, rgba(255,255,255,.2) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,.18) 100%), #a42a1f;
+  box-shadow: inset 0 1px 0 rgba(255,235,210,.3), 0 0 0 1px rgba(0,0,0,.5);
+}
 /* "<n> calls ·" is one group so lane b can hide it in the compact top bar (#98). Keeps the meter's 5px gap inside it. */
 .tn-meter .calls { display: inline-flex; align-items: center; gap: 5px; }
+.meter-hit:active .tn-meter { transform: translateY(1px); box-shadow: var(--well-dark), 0 0 0 1px rgba(201,162,75,.55); }
+@media (prefers-reduced-motion: reduce) {
+  .tn-meter { transition: none; }
+  .meter-hit:active .tn-meter { transform: none; }
+}
