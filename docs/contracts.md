@@ -159,6 +159,7 @@ export type WorldEvent = Base & (
   | { type: 'unit_spawned'; unit: Unit }
   | { type: 'unit_moved'; unitId: string; from: number; to: number; arriveTick: number }
   | { type: 'unit_removed'; unitId: string; reason: 'battle' | 'disband' | 'collapse' }
+  | { type: 'unit_attrition'; unitId: string; loss: number; terrain: Terrain }   // strength lost to hunger, cold and thirst in hostile land; applyEvent subtracts loss
   | { type: 'battle'; tile: number; attacker: number; defender: number; attackerUnit: string; winner: number; losses: { attacker: number; defender: number } }
   | { type: 'relation_changed'; a: number; b: number; stance: Stance; reason: string }
   | { type: 'country_updated'; countryId: number; patch: Partial<Country> }
@@ -174,7 +175,36 @@ export function borderEdges(world: World, countryId: number): [Vec3, Vec3][]; //
 export function relationOf(world: World, a: number, b: number): Relation;
 export function regionOwner(world: World, regionId: number): number;   // the owner of its capital tile
 export function flagSvg(spec: FlagSpec, width?: number, height?: number): string; // a complete <svg> string, default 90 x 60
+
+// Terrain effects (owner decision on #135): the one table the sim, the rulers and the globe all read.
+export type TerrainEffect = {
+  defence: number;     // defender strength x (1 + defence); a fort multiplies on top
+  supply: number;      // 0..1; an army's upkeep on this tile is divided by supply
+  attrition: number;   // share of strength an army loses per year on this tile when it is outside its own land
+  move: number;        // years a land unit takes to enter this tile (arriveTick = tick + move)
+  income: number;      // treasury per year per owned province (was TILE_INCOME)
+  pop: number;         // population cap per owned province (was TILE_POP)
+  yields: string[];    // display labels, e.g. ['stone', 'forts']
+};
+export const TERRAIN_EFFECTS: Record<Terrain, TerrainEffect>;
+export const LANDING_PENALTY: number;  // 0.2: an army attacking from the sea fights at (1 - 0.2)
 ```
+
+| Terrain | defence | supply | attrition | move | yields |
+| --- | --- | --- | --- | --- | --- |
+| ocean | 0 | 1 | 0 | 1 | fish, trade |
+| coast | 0 (landings -20%) | 1 | 0 | 1 | trade, ports |
+| plains | 0 | 1 | 0 | 1 | food, growth |
+| forest | 0.25 | 0.8 | 0 | 2 | wood |
+| hills | 0.4 | 0.7 | 0.01 | 2 | stone, forts |
+| mountain | 0.75 | 0.5 | 0.03 | 3 | ore, mines |
+| desert | 0.1 | 0.5 | 0.04 | 2 | gold, salt |
+| ice | 0.2 | 0.4 | 0.05 | 3 | almost nothing |
+
+Income and pop keep today's values (coast 0.9/900, plains 0.9/900, forest 0.55/500, hills
+0.6/500, desert 0.25/250, mountain 0.35/150, ice 0.1/80, ocean 0/0). Fleets ignore move,
+supply and attrition. Lane b's terrain map mode, legend, tooltip and battle defence badge read
+this table from `@terra/shared`.
 
 - **Provinces, not hexagons.** The land is irregular provinces (a spherical Voronoi diagram of
   jittered points, about 500 cells). Every cell is convex, so it can be drawn as a triangle fan
