@@ -67,4 +67,4 @@ budget, run them one at a time in the order below, on Sonnet.
 - 14 Nov · #227 · C13 economy on the card: status chips, Economy tab, politics movement
 - 14 Nov · #281 · C16 presentation mode (P) and a collapsed screen on every reload; decree wider at 1800 px+
 - 14 Nov · #289 · C17 decree result in the decree box and as a dispatch tab
-- 14 Nov · this PR · C18 event feed by priority, full sentences, decade grouping (#279)
+- 14 Nov · #293 · C18 event feed by priority, full sentences, decade grouping (#279)
