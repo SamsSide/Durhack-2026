@@ -334,10 +334,12 @@ export interface WorldStore {
 export const useWorld: UseBoundStore<StoreApi<WorldStore>>;
 ```
 
-- **The hologram:** selecting a nation makes lane b project a hologram above its capital (a
-  light beam, scan lines, flicker). Inside it lane b mounts lane c's `NationCard` component
-  (`web/src/ui/index.ts`, props `{ countryId: number }`, plain DOM, 380 px wide, transparent
-  background, colours from X7). On a narrow screen the same card docks to the side instead.
+- **The nation card:** selecting a nation makes lane b slide lane c's `NationCard` component
+  (`web/src/ui/index.ts`, props `{ countryId: number }`, plain DOM, 380 px wide, colours from X7)
+  in, docked to the right side of the screen. No hologram (dropped by the owner on 14 Nov). The
+  `.holo` class and `--holo-*` variables stay defined but are no longer used.
+- **Map labels:** nation and region names on the globe are billboarded: they always face the
+  camera, stay upright and readable from any angle and zoom (lane b).
 - **Interface components (lane c gives to lane b):** `web/src/ui/index.ts` exports
   `CreateScreen` (no props), `NationCard` (`{ countryId: number; regionId?: number | null }`),
   `Chronicle` (no props), `NetworkPanel` (no props), `DecreeBox` (no props) and `TokenMeter` (no props). The decree box and token meter sit in the top-bar area per the design (lane b places them).
@@ -381,9 +383,9 @@ export const audio: {
 ## X7 · Design (lane a gives to lanes b and c)
 
 - **Kind:** files. `web/src/theme/tokens.css` (CSS variables: colours, fonts, spacing, radii,
-  the hologram tint and glow) and `docs/design/` (a screenshot of each designed screen and the
+  the hologram tint and glow, now unused) and `docs/design/` (a screenshot of each designed screen and the
   Figma link in `docs/design/README.md`).
-- **Screens designed:** the Create screen, the hologram nation card, the chronicle ticker and
+- **Screens designed:** the Create screen, the nation card (docked), the chronicle ticker and
   timeline, the network panel, the top bar with map modes and speed.
 - **Rule:** components use the variables, never hard-coded colours, so a redesign is one file.
 - **Mock:** row A1 ships a first `tokens.css` with a dark default so lane c can start at once;

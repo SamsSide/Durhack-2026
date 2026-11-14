@@ -22,7 +22,7 @@ they cannot talk to each other.**
    named and placed, each with a leader, an ideology and a founding myth. (15 seconds)
 2. Time runs at speed. Borders spread province by province, camps become villages become
    cities, low-poly buildings pop up, every nation flies its own flag. A chronicle ticker tells the story as it happens.
-3. Zoom into a nation and click it. Its border lights up and a hologram rises from its capital
+3. Zoom into a nation and click it. Its border lights up and its card slides in at the side,
    showing its culture, politics and its history with its neighbours. A voice narrates it; its
    anthem plays, with words written from what has actually happened to it.
 4. A war breaks out. Armies march, volleys fly, tiles change colour, and each side's war chant
@@ -139,8 +139,10 @@ world's audio is generated once and kept.
 
 **Look and feel.** The style is an old atlas: parchment panels, serif type, ink borders, the
 planet as a painted political map. The interface is designed in Figma by the owner (contract
-X7) and built by lane c from that design. Selecting a nation projects its card above its
-capital in a beam of light (the hologram), styled as a lit parchment page to match. From grand-strategy map games such as Age of History we
+X7) and built by lane c from that design. Selecting a nation lights its border and slides its card in at the side of the screen, a
+parchment page (the hologram was dropped by the owner on 14 Nov: it did not look good enough).
+Nation and region names on the globe always turn to face the camera, so they read the same from
+any angle. From grand-strategy map games such as Age of History we
 take the genre's conventions, not its art: the planet is a political map first, with map modes
 (political, terrain, diplomacy relative to the selected nation, army strength), army strength
 numbers on the map, wars fought tile by tile, peace treaties that hand over land, and a
@@ -230,4 +232,4 @@ Hacking ends Sunday 12:00 (confirmed by the owner).
 Cut order if behind: image input (A17), Tiger Data (A11), painted flags, the timeline
 scrubber (B9), secession (regions stay as names and flags), army strength and terrain map modes, beliefs view, war chants, anthem, decree
 box, fleets, atmosphere polish. Never cut: prompt to world, live growth, the click
-hologram with voice, one war, cut and restore.
+card with voice, one war, cut and restore.

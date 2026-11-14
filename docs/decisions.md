@@ -27,3 +27,4 @@
 2026-11-14 15:04 · owner · ElevenLabs Starter plan bought (music API for anthems, about 40k characters a month); Gemini image billing not enabled, drawn flags only · anthems are a demo highlight, painted flags are not
 2026-11-14 15:50 · owner · X5 gains DecreeBox and TokenMeter (no props), placed in the top-bar area per the design (#61) · additive, matches the merged code
 2026-11-14 16:05 · owner · Make the LLM side multimodal (MLH judge's tip): image prompt (A17, no longer a stretch), spoken decrees heard by Gemini (A20), and Terra Nova News, Gemini watching the map as a live news broadcast read by ElevenLabs (A21) · judge's advice for the Gemini prize
+2026-11-14 16:15 · owner · Drop the hologram: the nation card docks to the right side as a parchment panel; nation and region names on the globe always face the camera · the hologram did not look good enough; labels must read from any angle
