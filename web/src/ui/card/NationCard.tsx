@@ -11,7 +11,7 @@ import { Portrait } from './Portrait';
 import { RegionView } from './RegionView';
 import { useLore } from './useLore';
 import { EconomyTab, PoliticsBlock, StatusChips, useMarketPlan } from './Economy';
-import { CloseIcon, Lines, Meter, useCardClass, useShort } from './shared';
+import { CloseIcon, Lines, Meter, nameClass, useCardClass, useShort } from './shared';
 import './card.css';
 
 const STANCE_ORDER: Stance[] = ['war', 'hostile', 'alliance', 'trade', 'neutral'];
@@ -201,7 +201,7 @@ function Nation({ countryId }: { countryId: number }) {
         <header className="tn-head">
           <Flag countryId={countryId} spec={country.flag} />
           <div className="tn-head-text">
-            <h2 className="tn-name tn-engraved">{country.name}</h2>
+            <h2 className={nameClass(country.name)}>{country.name}</h2>
             {!country.alive && <div className="tn-fallen">{fallYear != null ? `Fallen in Y${fallYear}` : 'Fallen'}</div>}
           </div>
           <button type="button" className="tn-close tn-button tn-button--lacquer tn-button--round" aria-label="Close" onClick={() => select(null)}><CloseIcon /></button>

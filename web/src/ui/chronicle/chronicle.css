@@ -209,6 +209,8 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
   animation: tab-in 200ms var(--ease-out) both;
   transition: opacity 400ms ease-in, transform var(--dur-fast);
 }
+/* on the 1920 px projector two ordinary nation names fit without the ellipsis; narrower screens keep 344 px clear of the belief banner */
+@media (min-width: 1800px) { .tn-herald { width: 400px; } }
 .tn-herald.tn-war { --k: var(--kind-war); }
 .tn-herald.tn-fall { --k: var(--kind-fall); }
 .tn-herald.tn-return { --k: var(--kind-return); }
@@ -225,6 +227,8 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
 .tn-herald:nth-child(2):not(:hover) { opacity: 0.8; }
 .tn-herald:nth-child(3):not(:hover) { opacity: 0.55; }
 .tn-herald.tn-leaving:nth-child(n) { opacity: 0; }
+/* a short window: a third tab would reach the top of the tallest map legend (diplomacy) */
+@media (max-height: 820px) { .tn-herald:nth-child(3) { display: none; } }
 .tn-h-flags { display: flex; gap: 4px; flex: none; }
 .tn-h-flag.tn-flag-plate { width: 28px; height: 20px; line-height: 0; }
 .tn-h-text { flex: 1; min-width: 0; font-size: 15px; color: var(--color-text); text-shadow: var(--engrave-on-dark); transition: color var(--dur-fast); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -78,9 +78,10 @@
   color: var(--color-text);
   text-shadow: var(--engrave-on-dark);
   transition: color var(--dur-fast);
-  white-space: nowrap;
+  /* two lines: a one-line title lost the nation ("Captain Tullio of the E...") */
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 @keyframes tn-feed-in {
