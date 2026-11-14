@@ -4,8 +4,9 @@ Run (from the repo root):
   blender --background --factory-startup --python assets/blender/build_styles.py
 
 Output: web/public/models/<style>/<kind>.glb, the `styles` section of manifest.json (the existing
-`version` and `models` stay as they are), assets/preview-styles.png (all ten styles) and
-assets/preview-identity.png (the four nation-identity styles of row A24, larger).
+`version` and `models` stay as they are), assets/preview-styles.png (all ten styles),
+assets/preview-identity.png (the four nation-identity styles of row A24, larger) and
+assets/preview-identity-40px.png (the same four at globe scale: one model unit = 40 px).
 """
 import json
 import math
@@ -27,6 +28,10 @@ if "--" in sys.argv:
 OUT_DIR = os.path.join(ROOT, "web", "public", "models")
 PREVIEW = os.path.join(ROOT, "assets", "preview-styles.png")
 PREVIEW_IDENTITY = os.path.join(ROOT, "assets", "preview-identity.png")
+PREVIEW_IDENTITY_40 = os.path.join(ROOT, "assets", "preview-identity-40px.png")
+# Sample nation colours for the identity previews only (the GLBs keep the neutral `team`).
+TEAM_SAMPLE = {"soviet_bloc": (0.72, 0.1, 0.08), "western_modern": (0.13, 0.25, 0.62),
+               "egyptian": (0.75, 0.2, 0.12), "highland": (0.16, 0.36, 0.72)}
 STYLES.update(IDENTITY_STYLES)
 
 KINDS = ["capital", "city", "town", "temple", "fort"]
@@ -53,10 +58,11 @@ def export(obj, style, kind):
     )
 
 
-def preview(objs, styles, path, margin=4.0, width=2000, sp_y=1.75):
-    """Render a labelled grid (one row per style) to `path`. `margin` is the space left for labels."""
+def preview(objs, styles, path, margin=4.0, width=2000, sp_y=1.75, sp_x=1.55, ppu=None, text=1.0, team=None):
+    """Render a labelled grid (one row per style) to `path`. `margin` is the space left for labels.
+    ppu (pixels per model unit) sets the image width instead of `width`; `text` scales the labels;
+    `team` maps a style to a sample nation colour (default: one blue for every style)."""
     scene = bpy.context.scene
-    sp_x = 1.55
     ink = bpy.data.materials.get("ink") or bpy.data.materials.new("ink")
     ink.diffuse_color = (0.15, 0.1, 0.07, 1)
     tile = bpy.data.materials.get("tile") or bpy.data.materials.new("tile")
@@ -88,8 +94,8 @@ def preview(objs, styles, path, margin=4.0, width=2000, sp_y=1.75):
             bpy.context.object.data.materials.append(tile)
             extra.append(bpy.context.object)
             if r == rows - 1:  # kind names once, under the last row, so they never cover a model
-                label(kind, gx, gy - 0.98, 0.15)
-        label(style, -(cols / 2) * sp_x - 0.25, ((rows - 1) / 2 - r) * sp_y, 0.17, align="RIGHT")
+                label(kind, gx, gy - 0.98, 0.15 * text)
+        label(style, -(cols / 2) * sp_x - 0.25, ((rows - 1) / 2 - r) * sp_y, 0.17 * text, align="RIGHT")
     cam_data = bpy.data.cameras.new("cam")
     cam_data.type = "ORTHO"
     units_x = cols * sp_x + margin
@@ -103,9 +109,22 @@ def preview(objs, styles, path, margin=4.0, width=2000, sp_y=1.75):
     cam.location = Vector((0.5 - margin / 4, 0.3, 0.0)) + tilt.to_matrix() @ Vector((0, 0, 30))
     scene.camera = cam
     scene.render.engine = "BLENDER_WORKBENCH"
+    if ppu:
+        width = int(round(units_x * ppu))
     scene.render.resolution_x, scene.render.resolution_y = width, int(width * units_y / units_x)
     scene.view_settings.view_transform = "Standard"
-    bpy.data.materials["team"].diffuse_color = (0.2, 0.36, 0.78, 1)  # preview only: a nation blue
+    team_mat = bpy.data.materials["team"]
+    team_mat.diffuse_color = (0.2, 0.36, 0.78, 1)  # preview only: a nation blue
+    swapped = []
+    for style, col in (team or {}).items():  # preview only: a sample colour per style
+        pm = bpy.data.materials.get("pv_" + style) or bpy.data.materials.new("pv_" + style)
+        pm.diffuse_color = (col[0], col[1], col[2], 1)
+        for (s, _k), o in objs.items():
+            if s == style:
+                for i, m in enumerate(o.data.materials):
+                    if m == team_mat:
+                        o.data.materials[i] = pm
+                        swapped.append((o, i))
     sh = scene.display.shading
     sh.light = "STUDIO"
     sl = os.environ.get("PREVIEW_LIGHT")
@@ -124,19 +143,23 @@ def preview(objs, styles, path, margin=4.0, width=2000, sp_y=1.75):
         scene.world = bpy.data.worlds.new("w")
     scene.world.color = (0.94, 0.89, 0.76)
     bpy.ops.render.render(write_still=True)
+    for o, i in swapped:
+        o.data.materials[i] = team_mat
     for o in extra:
         bpy.data.objects.remove(o, do_unlink=True)
 
 
 def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    out = OUT_DIR if os.environ.get("EXPORT", "1") == "1" else None
     objs = {}
     for style in STYLES:
         for kind in KINDS:
             obj = build_one(style, kind)
             objs[(style, kind)] = obj
-            export(obj, style, kind)
-            print("exported", style, kind, len(obj.data.polygons), "faces")
+            if out:
+                export(obj, style, kind)
+            print("exported" if out else "built", style, kind, len(obj.data.polygons), "faces")
     mpath = os.path.join(OUT_DIR, "manifest.json")
     with open(mpath) as f:
         manifest = json.load(f)
@@ -146,10 +169,13 @@ def main():
         f.write("\n")
     only = os.environ.get("PREVIEW_STYLES")
     if only:  # a quick look at a few styles: PREVIEW_STYLES=egyptian PREVIEW_OUT=/tmp/x.png
-        preview(objs, only.split(","), os.environ.get("PREVIEW_OUT", PREVIEW), margin=float(os.environ.get("PREVIEW_MARGIN", "4.0")))
+        ppu = os.environ.get("PREVIEW_PPU")
+        preview(objs, only.split(","), os.environ.get("PREVIEW_OUT", PREVIEW), margin=float(os.environ.get("PREVIEW_MARGIN", "4.0")),
+                ppu=float(ppu) if ppu else None, team=TEAM_SAMPLE)
     else:
         preview(objs, list(STYLES), PREVIEW)
-        preview(objs, list(IDENTITY_STYLES), PREVIEW_IDENTITY, margin=3.2, sp_y=2.3)
+        preview(objs, list(IDENTITY_STYLES), PREVIEW_IDENTITY, margin=3.2, sp_y=2.3, team=TEAM_SAMPLE)
+        preview(objs, list(IDENTITY_STYLES), PREVIEW_IDENTITY_40, margin=4.4, sp_y=2.0, sp_x=1.45, ppu=40, text=2.1, team=TEAM_SAMPLE)
     print("done")
 
 
