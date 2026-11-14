@@ -4,3 +4,5 @@ export * from './flag';
 export * from './sphere';
 export * from './rng';
 export * from './mock';
+export * from './sim/bible';
+export * from './sim/worldgen';
