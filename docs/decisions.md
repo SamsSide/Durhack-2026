@@ -63,3 +63,5 @@
 
 - 2026-11-14 19:05 · Owner: on lane c's #203, build the strategic core now (terrain-aware army paths, zone of control, chokepoint forts; lane a) and cities that visibly grow walls by tier at close zoom (derived `cityTier`); about 1,000 provinces only if frame rate allows; resources and trade are already covered by B11; districts and farmers go to 'What's next'.
 - 2026-11-14 · Clarification to the A29 entries: the 0.85 cover factor (`COVER_STRENGTH`) scales only the attacker (`coverMultiplier` in `settleMove`), not a covered nation's defence.
+
+- 2026-11-14 19:45 · Owner: council members age (a `born` year; natural death rising from 50, nobody past 100; cause `old_age`), so rulers no longer reign for centuries; new worlds start at 1 month a second; Terra Nova News gets an animated anchor in a studio window (our own original character and set, not any broadcaster's branding).
