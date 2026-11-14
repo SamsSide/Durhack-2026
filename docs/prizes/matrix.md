@@ -20,7 +20,13 @@ forecast.
   briefs, one of them deliberately silly).
 - Two new sponsors with real prizes: **P&G** (AirPods Pro per challenge) and **Arduino with RS**
   (a VENTUNO Q board and kit for each member).
-- Still unknown: prizes for Marshall Wace, QRT, Accenture and Waterstons; whether item prizes
+- Update 14:20, from a second set of slides: Marshall Wace shows a Quest 3 and clothing;
+  Accenture a keyboard and mouse set, Sony headphones and a duffel; Waterstons a Raspberry Pi
+  Pico and Inventors Kit; Hackathons UK runs Hackiest Hack (a Blahaj). The RS/Arduino brief is
+  stricter than the Discord recap: the UNO Q **and a camera** are mandatory and the system must
+  sense, analyse, decide and act. Neptune North lists search drones, warehouse robots, teams of
+  AI agents and sensor networks as examples.
+- Still unknown: QRT's prizes; which Marshall Wace item goes with which challenge; whether item prizes
   are per person; the submission platform and deadline; whether one team may enter several
   sponsor challenges or submit two projects. **Ask at the help desk before 15:00.**
 
@@ -31,12 +37,12 @@ Sorted by rough expected value per hour. "Core" means the hours are the main pro
 | id | Prize | Value (team of 3, est.) | Added hours | Win chance | Stack group | Required tech | Submission needs | EV per hour |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | P18 | Neptune North: Actors work better together | 1,000 pounds stated (1st); keyboard (2nd, 3rd) | Core, plus 2 for a comms-failure demo | 10% | A | Several independent actors; a way to cut their links live | Show the four criteria; demo the failure | High (about 50) |
-| P11 | Marshall Wace: New Worlds | Unknown; if the Quest 3 rumour is true, about 1,300 | 1 (framing and pitch) | 4% | A | None | Open with the phrase "New Worlds"; talk to MW staff early | High if the rumour holds (about 50) |
-| P20 | Arduino / RS | About 600 to 900 (1st, 3 x VENTUNO Q and kit); about 300 (runners-up) | 4 to 6 | 12% (several runner-up places) | A | UNO Q from the lending library, sensors | Physical demo with the borrowed board | Medium (about 15 to 20) |
+| P11 | Marshall Wace: New Worlds | A Meta Quest 3 is on the MW prize slide (about 450 pounds; one or one each is not stated), plus clothing | 1 (framing and pitch) | 4% | A | None | Open with the phrase "New Worlds"; talk to MW staff early | High (about 20 to 50) |
+| P20 | Arduino / RS | About 600 to 900 (1st, 3 x VENTUNO Q and kit); about 300 (2nd, 3rd) | 5 to 7 | 12% (three places) | A | Mandatory: UNO Q, camera and USB hub from the loan library; must sense, analyse, decide and act | Physical demo with the borrowed board | Medium (about 15 to 20) |
 | P5 | MLH Tiger Data | About 180 (3 x Stream Deck Mini) | 2 | 12% | A or B | Tiger Cloud Postgres, hypertable, continuous aggregate | MLH prize tick on the submission | Medium (about 11) |
 | P9 | Overall 1st / 2nd | About 500 to 700 (1st), about 400 (2nd) | Core, plus 3 for polish | 3% each | A | None; the theme | Main submission; table demo | Medium (about 10) |
 | P3 | MLH Entire | About 200 (3 x mini projector) | 1, plus a small running tax | 10% | Any | Entire Sessions, Graph, Brain | Show token numbers and session history | Medium (about 10, already set up) |
-| P19 | Waterstons | Unknown; small last year (about 90) | 0.5 | 5% | A | None | One line on what is connected to what, and who benefits | Medium (about 9) |
+| P19 | Waterstons | Raspberry Pi Pico and Pico Inventors Kit (about 40 pounds a set) | 0.5 | 5% | A | None | One line on what is connected to what, and who benefits | Medium (about 9) |
 | P1 | MLH ElevenLabs | About 150 (3 x earbuds) | 1.5 | 5% | A or B | ElevenLabs voice as a core part | MLH prize tick | Low to medium (about 5) |
 | P16 | SGX FX 2: playful trading | About 60 if per team, 180 if each | 3 (a market mode) | 10% | A | None; their price data helps | Demo to SGX FX staff | Low to medium (2 to 6) |
 | P21 | P&G 1: receipts | About 690 if each (3 x AirPods Pro); 2nd poker sets; 3rd 100 pound voucher | 8 (own project) | 7% | C | Receipt data from P&G (not seen), Gemini | Demo to P&G | Low to medium (about 6) |
@@ -44,13 +50,14 @@ Sorted by rough expected value per hour. "Core" means the hours are the main pro
 | P13 | QRT: Tagged | Unknown; 2025 paid 500 / 250 / 150 pounds per person | 8 (own lane, one person) | 10% | D | OpenCV, offline; two machines; a printer or pens | Live test on unseen words | Unknown; high if cash returns |
 | P2 | MLH Gemini | About 60 (swag) | 0.5 | 4% | Any | Gemini API | MLH prize tick | Low (about 5) |
 | P15 | SGX FX 1: storm protection | About 220 if per team, 660 if each | 8 (own project) | 6% | B | Their FX data or any | Demo to SGX FX | Low (2 to 5) |
-| P17 | Accenture | Unknown; about 180 last year | 2 if the project is a process redesign, else no fit | 4% | B or C | An LLM; a responsible-AI note | Write-up hitting the six headings | Low (about 4) |
+| P17 | Accenture | Mechanical keyboard and mouse set, Sony headphones, duffel bag (about 50 to 100 pounds an item) | 2 if the project is a process redesign, else no fit | 4% | B or C | An LLM; a responsible-AI note | Write-up hitting the six headings | Low (about 4) |
 | P8 | MLH MongoDB Atlas | About 150 (3 x M5Stack) | 1.5 | 6% | Any | Atlas | MLH prize tick | Low (about 6) |
 | P6 | MLH Vultr | Unknown ("assorted") | 1 | 6% | Any | Deploy on Vultr | MLH prize tick | Low |
 | P12 | Marshall Wace meme | About 40 (duffel bag) | 0.2 | 2% | None | A meme | Post in #marshall-wace-memes | Free try |
+| P24 | Hackathons UK: Hackiest Hack | A Blahaj shark (about 25) | 0 | 3% | A, if the build is visibly janky | None | Not known | Free try |
 | P10 | Spirit of the Dino | About 35 | 0 | 2% | None | Be visible, help others, do guild challenges | None known | Free try |
 | P7 | DEV writing | 100 dollars | 1, after the event | 3% | Any | A DEV post | After the event | Low |
-| P23 | Marshall Wace: sentiment model from scratch | Unknown | 6 to 10 | 5% | None | Train a model from scratch; MW's GitHub materials | Not known | Unknown; skip unless the prize is large |
+| P23 | Marshall Wace: MicroGPT (tiny language model for movie reviews) | "Prizes to win"; possibly some of the MW slide items | 6 to 10 | 5% | None | Train a model from scratch; MW's GitHub materials | Not known | Unknown; skip unless the prize is large |
 | P14 | QRT CTF | Unknown | 8 or more | 3% | None | Hack The Box | Flags on the HTB platform | Low; skip |
 | P4 | MLH Solana | About 150 (3 x hardware wallet) | 3 | 6% | None natural | Solana | MLH prize tick | Low; skip |
 
