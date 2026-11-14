@@ -8,6 +8,8 @@ export type LlmMode = 'mock' | 'live';
 export interface NewWorldOptions {
   prompt: string; nations?: number; era?: string; seaLevel?: number; aggression?: number;
   seed?: number; imageBase64?: string | null;
+  /** Province count for the new world (clamped 200 to 2000); the worldgen default when absent. */
+  provinces?: number;
   /** Row A31: the world starts paused (the snapshot already says so), for prepare mode. */
   paused?: boolean;
 }

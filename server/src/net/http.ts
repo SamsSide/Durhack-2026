@@ -27,7 +27,8 @@ export function createApp(runner: WorldRunner, mode: LlmMode) {
     try {
       const world = await runner.newWorld({
         prompt: body.prompt, nations: body.nations, era: body.era, seaLevel: body.seaLevel,
-        aggression: body.aggression, seed: typeof body.seed === 'number' ? body.seed : undefined, imageBase64: body.imageBase64 ?? null,
+        aggression: body.aggression, seed: typeof body.seed === 'number' ? body.seed : undefined,
+        provinces: typeof body.provinces === 'number' ? body.provinces : undefined, imageBase64: body.imageBase64 ?? null,
         paused: prepare,
       });
       // Row A31: the world waits paused while its lore, voices and first decisions are made.
