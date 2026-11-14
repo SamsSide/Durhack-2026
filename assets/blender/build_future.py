@@ -71,7 +71,10 @@ def update_manifest():
     manifest["models"]["satellite"] = {"file": "satellite.glb", "footprint": SATELLITE_FOOTPRINT}
     manifest["styles"][STYLE] = {k: {"file": f"{STYLE}/{k}.glb", "footprint": BUILDING_FOOTPRINT[k]} for k in BUILDING_KINDS}
     for a in AGES:
+        old = manifest["ages"].get(a, {})
         manifest["ages"][a] = {k: {"file": f"ages/{a}/{k}.glb", "footprint": UNIT_FOOTPRINT[k]} for k in UNIT_KINDS}
+        if "formation" in old:                                            # build_formations.py owns it
+            manifest["ages"][a]["formation"] = old["formation"]
     with open(mpath, "w") as f:
         json.dump(manifest, f, indent=2)
         f.write("\n")

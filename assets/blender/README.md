@@ -139,6 +139,27 @@ renders `assets/preview-wonders.png`):
 - A quick look, nothing exported: `PREVIEW_ONLY=1 PREVIEW_OUT=/tmp/p.png` before the command;
   `PREVIEW_PX=70` renders at the size a wonder has from orbit, `PREVIEW_KINDS=pyramid,colossus` a subset.
 
+## Army formations (issue #287, contract X4 `ages.<age>.formation`)
+
+21 models: 7 ages x 3 roles (`front` infantry, `flank` mounted or vehicles, `back` ranged or support) in
+`web/public/models/ages/<age>/formation_<role>.glb`, built on their own so no other GLB is touched (also
+adds `ages.<age>.formation` to `manifest.json`, keeping everything else, and renders
+`assets/preview-formations.png` and `assets/preview-formations-40px.png`):
+
+    blender --background --factory-startup --python assets/blender/build_formations.py
+    python3 assets/blender/verify_formations.py   # under 800 triangles, bounds, one `team` material, under 40 KB
+
+- `formations_defs.py`: one function per model (`<role>_<age>`), drawn with the unit helpers in
+  `ages_defs.py` (`_hoplite`, `_knight`, `_musketeer`, `_cannon`, `_rifleman`, `_field_gun`, `_armoured_car`,
+  `_tank`, `_hover_tank`, `_limb`) and a few of its own (men-at-arms, archers with tall bows, a dragoon, a
+  trebuchet, a modern squaddie, a self-propelled gun, power-armour and walker troopers, a quad drone, a
+  humanoid mech, the beacon). Each is one small group facing +x with `team` on top.
+- Footprint = 0.32 x the model's longest side as drawn (`FOOT_PER_UNIT` in `build_formations.py`), so a
+  soldier is the same size in every role and age.
+- `build_ages.py` and `build_future.py` keep the `formation` entries when they rewrite `ages`.
+- A quick look, nothing exported: `PREVIEW_ONLY=1 PREVIEW_AGES=modern,future PREVIEW_OUT=/tmp/p.png` before
+  the blender command (`PREVIEW_PX=40` for globe scale, `PREVIEW_ROLES=back` a subset).
+
 ## Effect anchors and air escorts (contract X4 "Effect anchors")
 
 Every unit GLB (`ages/<age>/{army,fleet,trader}.glb`, `army.glb`, `fleet.glb`, `satellite.glb`) holds

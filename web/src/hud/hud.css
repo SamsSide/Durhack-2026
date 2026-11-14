@@ -136,6 +136,11 @@ body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes { opacity: 0; pointer-
   padding: 2px 8px; border-radius: 2px; background: #07090f; box-shadow: var(--well-dark);
 }
 .belief-banner b { color: var(--gilt-hi); font-weight: 600; }
+/* a long nation name is cut with an ellipsis so the banner never reaches the dispatch tabs (344 px wide, top right) */
+.belief-banner { box-sizing: border-box; max-width: calc(100vw - 2 * var(--space-4)); white-space: nowrap; }
+.belief-banner .cap, .belief-banner .tn-button { flex: none; }
+.belief-banner .belief-text { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@media (min-width: 1440px) { .belief-banner { max-width: calc(100vw - 2 * (344px + var(--space-4) + 12px)); } }
 
 @media (prefers-reduced-motion: reduce) {
   .speed-thumb, .speed-fill, .mm-mode::after { transition: none; }

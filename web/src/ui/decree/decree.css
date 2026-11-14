@@ -36,6 +36,10 @@
   min-height: 30px; display: flex; align-items: center; padding: 0 8px;
   border: 1px solid var(--color-danger); border-radius: var(--radius-1); box-shadow: var(--well-paper);
 }
+.tn-decree-effect {
+  margin-right: 8px; font-family: var(--font-display); font-style: normal; font-size: var(--text-cap); font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-rubric);
+}
 .tn-decree-proclaimed { font-style: normal; font-weight: 500; }
 
 /* Wide screens (#276): the decree field shows about 50 characters on a 1920 x 1080 projector.

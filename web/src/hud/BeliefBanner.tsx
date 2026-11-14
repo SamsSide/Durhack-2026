@@ -10,7 +10,7 @@ export function BeliefBanner() {
   return (
     <div className="belief-banner tn-lacquer tn-frame tn-frame--slim">
       <span className="cap">Beliefs</span>
-      <span>Showing what <b>{name}</b> believes</span>
+      <span className="belief-text" title={`Showing what ${name} believes`}>Showing what <b>{name}</b> believes</span>
       <button className="tn-button tn-button--lacquer tn-button--sm" onClick={() => showBelief(null)}>Show the truth</button>
     </div>
   );

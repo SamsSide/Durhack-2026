@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flagSvg } from '@terra/shared';
-import type { Country, WorldEvent } from '@terra/shared';
+import type { ChronicleEntry, Country, WorldEvent } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import type { CutPeriod } from './Timeline';
 import { fallenOf, ofName } from './kinds';
@@ -14,31 +14,53 @@ interface Stats { years: number; merged: number; settled: number }
 type Dispatch =
   | { key: string; kind: 'war'; year: number; a: Country; b: Country; title: string; line: string; by: string }
   | { key: string; kind: 'return'; year: number; c: Country; stats: Stats | null; line: string }
-  | { key: string; kind: 'fall'; year: number; c: Country; line: string };
+  | { key: string; kind: 'fall'; year: number; c: Country; line: string }
+  | { key: string; kind: 'decree'; year: number; c: Country | null; countryId: number | null; tileId: number | null; line: string };
+
+/** Lane a adds `decree` to the decree chronicle entries; until it lands the `-b` consequence line stands in. */
+type DecreeInfo = { effect?: string; severity?: number; target?: { countryId: number | null; tiles: number[] }; result?: string };
+const decreeOf = (e: ChronicleEntry): DecreeInfo | undefined => (e as ChronicleEntry & { decree?: DecreeInfo }).decree;
+
+/** A small seal, for a decree with no nation to show. */
+function Seal() {
+  return (
+    <svg className="tn-h-seal" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="10" r="6" />
+      <path d="M9.5 10l1.7 1.7L14.8 8" />
+      <path d="M8.5 15.2L7 21l5-2.6 5 2.6-1.5-5.8" />
+    </svg>
+  );
+}
 
 function Flag({ c }: { c: Country }) {
   return <span className="tn-h-flag tn-flag-plate" dangerouslySetInnerHTML={{ __html: flagSvg(c.flag, 24, 16) }} />;
 }
 
-function mainOf(d: Dispatch): Country { return d.kind === 'war' ? d.a : d.c; }
+function mainOf(d: Dispatch): Country | null { return d.kind === 'war' ? d.a : d.c; }
 
 /** One dispatch as a small tab; hover or focus opens the detail. */
 function Tab({ d, leaving }: { d: Dispatch; leaving: boolean }) {
   const cls = `tn-herald tn-lacquer tn-frame tn-frame--slim tn-${d.kind}${leaving ? ' tn-leaving' : ''}`;
   const brief = (n: string) => n.replace(/^The /, '');
   // A war is two flags and "A vs B" (calm UI, #245); the full line is in the hover detail.
-  const text = d.kind === 'war' ? `${brief(d.a.name)} vs ${brief(d.b.name)}` : d.kind === 'return' ? `${d.c.name} returns from the Silence` : `${d.c.name} falls`;
+  const text = d.kind === 'war' ? `${brief(d.a.name)} vs ${brief(d.b.name)}`
+    : d.kind === 'return' ? `${d.c.name} returns from the Silence`
+    : d.kind === 'decree' ? d.line
+    : `${d.c.name} falls`;
   const go = () => {
     const w = useWorld.getState();
-    const id = mainOf(d).id;
-    w.select(id);
-    w.flyTo(id);
+    const id = d.kind === 'decree' ? d.countryId : mainOf(d)?.id ?? null;
+    if (id != null) { w.select(id); w.flyTo(id); }
+    if (d.kind === 'decree' && d.tileId != null) {
+      window.dispatchEvent(new CustomEvent('terra:focus-tile', { detail: { tileId: d.tileId } }));
+    }
   };
+  const main = mainOf(d);
   return (
     <button type="button" className={cls} role="status" aria-live="polite" title={d.kind === 'war' ? d.title : text} onClick={go}>
       <span className="tn-h-row">
         <span className="tn-h-flags">
-          <Flag c={mainOf(d)} />
+          {main ? <Flag c={main} /> : <Seal />}
           {d.kind === 'war' && <Flag c={d.b} />}
         </span>
         <span className="tn-h-text">{text}</span>
@@ -59,6 +81,7 @@ function Tab({ d, leaving }: { d: Dispatch; leaving: boolean }) {
           </>
         )}
         {d.kind === 'fall' && <span className="tn-h-quote">{d.line}</span>}
+        {d.kind === 'decree' && <span className="tn-h-quote">{d.line}</span>}
       </span>
     </button>
   );
@@ -70,7 +93,6 @@ function Tab({ d, leaving }: { d: Dispatch; leaving: boolean }) {
  */
 export function Herald({ observed }: { observed: CutPeriod[] }) {
   const world = useWorld((s) => s.world);
-  const events = useWorld((s) => s.recentEvents);
   const [tabs, setTabs] = useState<{ d: Dispatch; id: number; leaving: boolean }[]>([]);
   const slotRef = useRef<HTMLDivElement | null>(null);
   const seen = useRef<Set<string>>(new Set());
@@ -96,8 +118,11 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
 
   useEffect(() => () => { timers.current.forEach((t) => window.clearTimeout(t)); }, []);
 
+  // B8: the events are read from a store subscription, not a selector, so the stack does not re-render on
+  // every batch of events (about 13 a second at the top gear), only when a dispatch is added or leaves.
   useEffect(() => {
     if (!world) return;
+    const take = (events: WorldEvent[]) => {
     if (worldId.current !== world.id) {
       worldId.current = world.id;
       seen.current = new Set();
@@ -161,6 +186,16 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
           key, kind: 'fall', year: world.year, c,
           line: by ? `Conquered by ${by.name}. Its lands are being divided.` : 'Deleted from the world. Its neighbours are carving up its lands.',
         });
+      } else if (e.type === 'chronicle' && e.entry.kind === 'decree') {
+        // One tab per decree: the entry that carries a result, or the "-b" consequence entry; never the bare decree text.
+        const info = decreeOf(e.entry);
+        const line = info?.result || (/-b$/.test(e.entry.id) ? e.entry.text : '');
+        if (!line) continue;
+        const key = `decree:${e.entry.id.replace(/-b$/, '')}`;
+        if (!accept(key, Infinity)) continue;
+        const cid = info?.target?.countryId ?? e.entry.countries[0] ?? null;
+        const tileId = info?.target?.tiles?.[0] ?? null;
+        enqueue({ key, kind: 'decree', year: e.entry.year, c: cid != null ? country(cid) ?? null : null, countryId: cid, tileId, line });
       } else if (e.type === 'chronicle' && e.entry.kind === 'return') {
         const c = e.entry.countries[0] != null ? country(e.entry.countries[0]) : undefined;
         if (!c) continue;
@@ -185,7 +220,10 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
         });
       }
     }
-  }, [events, world]);
+    };
+    take(useWorld.getState().recentEvents);
+    return useWorld.subscribe((st, prev) => { if (st.recentEvents !== prev.recentEvents) take(st.recentEvents); });
+  }, [world]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Publish the stack's bottom edge so other overlays (the belief banner) can sit below it.
   const any = tabs.length > 0;

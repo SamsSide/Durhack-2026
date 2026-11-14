@@ -214,12 +214,16 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
 .tn-herald.tn-war { --k: var(--kind-war); }
 .tn-herald.tn-fall { --k: var(--kind-fall); }
 .tn-herald.tn-return { --k: var(--kind-return); }
+.tn-herald.tn-decree { --k: var(--kind-decree); }
+.tn-h-seal { flex: none; color: var(--gilt-hi); }
 .tn-herald:hover .tn-h-text { color: var(--gilt-hi); }
 .tn-herald:active { transform: translateY(1px); }
 .tn-herald.tn-leaving { opacity: 0; }
 .tn-herald:focus-visible { outline: 2px solid var(--gilt-hi); outline-offset: 2px; }
 .tn-h-row {
   display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px 0 12px;
+  /* a button's content box sizes to its content, so pin the row to the tab: long decree lines then ellipsise */
+  width: 100%; box-sizing: border-box; min-width: 0;
   background: linear-gradient(90deg, var(--k) 0 4px, rgba(0,0,0,.6) 4px 5px, transparent 5px);
   box-shadow: inset 0 -1px 0 rgba(0,0,0,.35);
 }
@@ -231,7 +235,7 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
 @media (max-height: 820px) { .tn-herald:nth-child(3) { display: none; } }
 .tn-h-flags { display: flex; gap: 4px; flex: none; }
 .tn-h-flag.tn-flag-plate { width: 28px; height: 20px; line-height: 0; }
-.tn-h-text { flex: 1; min-width: 0; font-size: 15px; color: var(--color-text); text-shadow: var(--engrave-on-dark); transition: color var(--dur-fast); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tn-h-text { flex: 1 1 0; min-width: 0; font-size: 15px; color: var(--color-text); text-shadow: var(--engrave-on-dark); transition: color var(--dur-fast); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tn-h-year { flex: none; font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--gilt-hi); text-shadow: var(--engrave-on-dark); }
 .tn-h-more { display: none; padding: 0 12px 10px; border-top: 1px solid rgba(201,162,75,.3); }
 .tn-herald:hover .tn-h-more, .tn-herald:focus-visible .tn-h-more { display: block; }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useWorld } from '../../state/world';
+import { useSlowVersion } from '../../ui/useSlowVersion';
 import { useProvinceMesh } from '../mesh/context';
 
 const MIN_READINESS = 50;
@@ -53,7 +54,7 @@ function Pool({ rings }: { rings: Ring[] }) {
 export function Readiness() {
   const mesh = useProvinceMesh();
   const world = useWorld((s) => s.world);
-  const version = useWorld((s) => s.version);
+  const version = useSlowVersion();
   const rings = useMemo<Ring[]>(() => {
     if (!mesh || !world) return [];
     const out: Ring[] = [];

@@ -1,6 +1,6 @@
 // Beacons at the place each big event happens: icon disc + flag, a light pillar for 2 s, then a
 // small marker for ~25 s. Click one to fly there. Mount inside ProvinceMeshContext. Lane b.
-import { useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -94,7 +94,9 @@ function Pillar({ b }: { b: Beacon }) {
   );
 }
 
-function BeaconView({ b, reduced }: { b: Beacon; reduced: boolean }) {
+// B8: memoised, so a new story re-renders the one beacon it changes, not all twelve (each one is a drei
+// Html with its own React root). The light pillar takes itself down with a timer.
+const BeaconView = memo(function BeaconView({ b, reduced }: { b: Beacon; reduced: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const dir = useMemo(() => new THREE.Vector3(...b.pos).normalize(), [b.pos]);
   const flag = useWorld((s) => (b.countryId != null ? s.world?.countries[b.countryId]?.flag : undefined));
@@ -108,7 +110,14 @@ function BeaconView({ b, reduced }: { b: Beacon; reduced: boolean }) {
     const show = facing > 0.2 && document.querySelector('.closing-veil') === null && !(pin && underHud(pin));
     if (el.classList.contains('away') === show) el.classList.toggle('away', !show);
   });
-  const fresh = performance.now() - b.born < PILLAR_MS + 300;
+  const [spent, setSpent] = useState(-1); // the generation whose pillar has finished
+  useEffect(() => {
+    const left = b.born + PILLAR_MS + 300 - performance.now();
+    if (left <= 0) { setSpent(b.gen); return; }
+    const timer = window.setTimeout(() => setSpent(b.gen), left);
+    return () => window.clearTimeout(timer);
+  }, [b.gen, b.born]);
+  const fresh = spent !== b.gen && performance.now() - b.born < PILLAR_MS + 300;
   return (
     <>
       {fresh && !reduced && <Pillar key={`p${b.gen}`} b={b} />}
@@ -133,7 +142,7 @@ function BeaconView({ b, reduced }: { b: Beacon; reduced: boolean }) {
       </Html>
     </>
   );
-}
+});
 
 export function EventBeacons() {
   const mesh = useProvinceMesh();

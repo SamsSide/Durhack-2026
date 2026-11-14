@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useWorld } from '../state/world';
+import { useSlowVersion } from '../ui/useSlowVersion';
 import { PreparePill, TokenMeter } from '../ui';
 import { SpeedControl } from './SpeedControl';
 import { Calendar } from './Calendar';
@@ -24,7 +25,7 @@ const openClosing = () => window.dispatchEvent(new CustomEvent('terra:closing'))
 
 export function TopBar({ onCreate }: { onCreate: () => void }) {
   const world = useWorld((s) => s.world);
-  useWorld((s) => s.version);
+  useSlowVersion();
   const connected = useWorld((s) => s.connected);
   const compact = useCompact();
   const conn = connected ? 'live' : world ? 'reconnecting' : 'offline';

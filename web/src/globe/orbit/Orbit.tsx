@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useWorld } from '../../state/world';
+import { useSlowVersion } from '../../ui/useSlowVersion';
 
 const ORBIT_R = 1.24;
 const SAT = 0.03;
@@ -15,7 +16,7 @@ const hash = (n: number) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453
 
 export function Orbit() {
   const world = useWorld((s) => s.world);
-  const version = useWorld((s) => s.version);
+  const version = useSlowVersion();
   const geo = useMemo(() => {
     const body = new THREE.BoxGeometry(SAT, SAT * 0.7, SAT * 0.7);
     const panel = new THREE.BoxGeometry(SAT * 1.3, SAT * 0.04, SAT * 0.7);
