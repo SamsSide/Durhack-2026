@@ -3,10 +3,14 @@ ancient, medieval, gunpowder, industrial, modern, future and stellar ages (and t
 
 Reading rule: war ships carry `team` sails or a `team` hull stripe; merchants carry plain canvas
 with one `team` stripe, cargo on deck and a `team` flag.
+
+Effect anchors (contract X4): `b.fx(name, point, direction)` leaves an empty in the GLB where lane b
+starts an effect: fx_dust behind a marching army, fx_wake at a ship's stern on the waterline,
+fx_exhaust on top of a funnel, fx_thruster at an engine, fx_contrail behind a jet or the satellite.
 """
 import math
 
-from ages_kit import Hull, flag, funnel, horse, lateen, man, mast, sail, smoke
+from ages_kit import BACK, DOWN, UP, Hull, flag, funnel, horse, lateen, man, mast, sail, smoke
 
 PI = math.pi
 AGES = ["ancient", "medieval", "gunpowder", "industrial", "modern", "future", "stellar"]
@@ -44,6 +48,7 @@ def army_ancient(b):
     b.rod((-0.3, -0.085, 0.62), (-0.3, 0.085, 0.62), 0.008, "wood_dark", seg=3)
     b.box(-0.3, 0, 0.43, 0.012, 0.15, 0.19, "team")
     b.disc(-0.3, 0, 0.71, 0.04, 0.014, "bronze", axis="x")
+    b.fx("fx_dust", (-0.36, 0, 0.02))
 
 
 def _knight(b, coat, banner=False):
@@ -86,6 +91,7 @@ def army_medieval(b):
     for y in (-0.1, 0.1):
         with b.at(-0.33, y):
             _crossbowman(b)
+    b.fx("fx_dust", (-0.38, 0, 0.02))
 
 
 def _musketeer(b):
@@ -122,6 +128,7 @@ def army_gunpowder(b):
         b.ball(0.03, 0.08, 0.775, 0.018, "bronze")
     with b.at(0.0, -0.29):
         _cannon(b)
+    b.fx("fx_dust", (-0.2, 0.05, 0.02))
 
 
 def _rifleman(b, coat="khaki", hat="khaki_dark", kneel=False):
@@ -166,6 +173,7 @@ def _armoured_car(b):
     b.cyl(-0.06, 0, 0.255, 0.05, 0.006, "team", seg=8)                     # turret band
     b.rod((-0.01, 0, 0.225), (0.13, 0, 0.235), 0.01, "iron", seg=4)        # machine gun
     flag(b, -0.2, 0.0, 0.13, 0.34, w=0.15, fh=0.1)
+    b.fx("fx_exhaust", (-0.225, 0.05, 0.07), UP)
 
 
 def army_industrial(b):
@@ -179,6 +187,7 @@ def army_industrial(b):
         _rifleman(b)
     with b.at(-0.14, -0.02):
         _rifleman(b)
+    b.fx("fx_dust", (-0.3, 0, 0.02))
 
 
 def _tank(b):
@@ -200,6 +209,26 @@ def _tank(b):
     b.cyl(-0.07, 0.04, 0.265, 0.034, 0.024, "olive_dark", seg=6)          # cupola
     b.rod((-0.15, -0.06, 0.265), (-0.16, -0.06, 0.52), 0.004, "black", seg=3)
     b.box(-0.2, -0.06, 0.45, 0.08, 0.006, 0.05, "team")
+    b.fx("fx_exhaust", (-0.29, 0.06, 0.175), UP)
+    b.fx("fx_dust", (-0.31, 0, 0.02))
+
+
+def _jet(b):
+    """A jet fighter about 0.46 long, nose to +x, drawn round its own centre: swept wings, twin tail
+    fins, one engine nozzle. Anchors: the nozzle flame and a contrail from each wing tip. It is kept to
+    about 120 triangles and one new colour, so the model stays under 60 KB."""
+    b.loft([(-0.2, 0.04, 0.04, -0.032, 0.034), (-0.02, 0.048, 0.042, -0.036, 0.042), (0.12, 0.032, 0.024, -0.03, 0.034),
+            (0.25, 0.0, 0.0, -0.006, 0.0)], "navy_light")
+    b.loft([(0.02, 0.026, 0.018, 0.036, 0.07), (0.14, 0.014, 0.008, 0.024, 0.04)], "black")       # canopy
+    b.loft([(-0.17, 0.04, 0.04, -0.012, 0.006), (-0.13, 0.21, 0.21, -0.012, 0.006), (-0.075, 0.21, 0.21, -0.012, 0.006),
+            (0.075, 0.04, 0.04, -0.012, 0.006)], "navy_light")                                        # swept wings
+    for s in (-1, 1):                                                                              # twin tail fins
+        b.prism([(-0.21, 0.025), (-0.09, 0.025), (-0.165, 0.135), (-0.225, 0.135)], s * 0.052 - 0.008, s * 0.052 + 0.008, "team")
+    b.box(-0.09, 0, 0.006, 0.1, 0.3, 0.006, "team")                                                # wing band, seen from orbit
+    b.rod((-0.19, 0, 0.0), (-0.26, 0, 0.0), 0.038, "black", seg=6, r2=0.03)                        # the nozzle
+    b.fx("fx_thruster", (-0.26, 0, 0.0))
+    for s in (-1, 1):
+        b.fx("fx_contrail", (-0.13, s * 0.21, -0.004))
 
 
 def _jeep(b):
@@ -232,6 +261,8 @@ def army_modern(b):
     for x, y in ((0.1, -0.2), (0.2, -0.32), (0.3, -0.2)):
         with b.at(x, y):
             _soldier(b)
+    with b.lift(-0.13, 0.06, 0.71, 0.92, rot=(0.12, 0, 0)):                # the escort, above and behind
+        _jet(b)
 
 
 # ================================================================ war ships
@@ -260,6 +291,7 @@ def fleet_ancient(b):
         x = -0.22 + i * 0.095
         for s in (-1, 1):
             b.disc(x, s * 0.096, 0.075, 0.026, 0.01, "bronze", axis="y", seg=6)
+    b.fx("fx_wake", (-0.46, 0, 0))
 
 
 def _cog_hull(b, side="wood"):
@@ -298,6 +330,7 @@ def fleet_medieval(b):
     sail(b, 0.04, 0.27, 0.44, 0.34, "team")
     b.cyl(0.02, 0, 0.66, 0.035, 0.05, "wood_light", seg=6, r2=0.05)       # top castle
     flag(b, 0.02, 0, 0.8, 0.14, w=0.16, fh=0.06)
+    b.fx("fx_wake", (-0.42, 0, 0))
 
 
 def _galleon_rig(b, mat, stripes_main=(), top_mat=None):
@@ -331,6 +364,7 @@ def fleet_gunpowder(b):
     _galleon_rig(b, "team")
     flag(b, -0.02, 0, 0.93, 0.1, w=0.14, fh=0.06)
     flag(b, -0.49, 0, 0.36, 0.2, w=0.1, fh=0.08)
+    b.fx("fx_wake", (-0.45, 0, 0))
 
 
 def fleet_industrial(b):
@@ -345,6 +379,7 @@ def fleet_industrial(b):
     b.box(0.168, 0, 0.185, 0.006, 0.09, 0.015, "black")
     for x in (-0.07, 0.04):
         funnel(b, x, 0.155, 0.04, 0.24)
+        b.fx("fx_exhaust", (x, 0, 0.395), UP)
     smoke(b, -0.07, 0.4)
     for x, d in ((0.27, 1), (-0.28, -1)):
         b.cyl(x, 0, 0.1, 0.062, 0.05, "navy", seg=8)
@@ -359,6 +394,7 @@ def fleet_industrial(b):
         b.cyl(x, 0, 0.4, 0.028, 0.03, "white", seg=6)                      # fighting top
         b.rod((x, -0.07, 0.47), (x, 0.07, 0.47), 0.005, "dark", seg=3)
     flag(b, -0.46, 0, 0.1, 0.2, w=0.12, fh=0.08)
+    b.fx("fx_wake", (-0.48, 0, 0))
 
 
 def fleet_modern(b):
@@ -383,6 +419,8 @@ def fleet_modern(b):
     b.rod((0.31, 0, 0.125), (0.44, 0, 0.165), 0.008, "navy_dark", seg=4)
     b.box(0.23, 0, 0.09, 0.05, 0.08, 0.02, "navy_dark")                   # missile cells
     flag(b, -0.485, 0, 0.085, 0.16, w=0.1, fh=0.065)
+    b.fx("fx_exhaust", (-0.11, 0, 0.272), UP)
+    b.fx("fx_wake", (-0.49, 0, 0))
 
 
 # ================================================================ merchant ships
@@ -406,6 +444,7 @@ def trader_ancient(b):
     for s in (-1, 1):                                                     # steering oars
         b.rod((-0.27, s * 0.13, 0.2), (-0.36, s * 0.17, 0.004), 0.009, "wood_dark", seg=3)
         b.box(-0.35, s * 0.165, 0.0, 0.06, 0.01, 0.07, "wood_dark")
+    b.fx("fx_wake", (-0.4, 0, 0))
 
 
 def trader_medieval(b):
@@ -425,6 +464,7 @@ def trader_medieval(b):
     for x, y in ((0.14, -0.07), (-0.02, 0.09)):
         b.cyl(x, y, h.z(x), 0.035, 0.08, "wood_dark", seg=6)
         b.cyl(x, y, h.z(x) + 0.03, 0.038, 0.02, "ochre", seg=6)
+    b.fx("fx_wake", (-0.42, 0, 0))
 
 
 def trader_gunpowder(b):
@@ -441,6 +481,7 @@ def trader_gunpowder(b):
     flag(b, -0.48, 0, 0.3, 0.2, w=0.12, fh=0.09)
     for x, y in ((0.08, -0.05), (0.08, 0.04), (0.14, 0.0)):
         b.box(x, y, h.z(x), 0.06, 0.06, 0.055, "ochre", rot=(0, 0, 0.3))
+    b.fx("fx_wake", (-0.45, 0, 0))
 
 
 def trader_industrial(b):
@@ -461,6 +502,8 @@ def trader_industrial(b):
     for x, y, s in ((0.15, -0.045, 0.06), (0.15, 0.045, 0.05), (-0.19, 0.04, 0.06), (-0.4, 0.0, 0.05)):
         b.box(x, y, h.z(x) + (0.02 if abs(x) < 0.2 else 0.0), s, s, s, "wood_light")
     flag(b, -0.47, 0, 0.12, 0.17, w=0.12, fh=0.08)
+    b.fx("fx_exhaust", (-0.1, 0, 0.47), UP)
+    b.fx("fx_wake", (-0.48, 0, 0))
 
 
 def trader_modern(b):
@@ -488,6 +531,8 @@ def trader_modern(b):
                 c = "team" if (i, r, t) in team else cols[(k * 5 + i + 3 * t) % len(cols)]
                 b.box(x, y, h.z(x) + 0.004 + t * 0.046, 0.1, 0.052, 0.042, c)
     flag(b, -0.47, 0, 0.3, 0.13, w=0.1, fh=0.06)
+    b.fx("fx_exhaust", (-0.465, 0, 0.3), UP)
+    b.fx("fx_wake", (-0.5, 0, 0))
 
 
 # ================================================================ future and stellar (row A26)
@@ -513,16 +558,31 @@ def _wash(b, half_len, half_w, mat="wash"):
             (half_len * 0.55, half_w, half_w, 0.0, 0.005), (half_len, half_w * 0.3, half_w * 0.3, 0.0, 0.005)], mat)
 
 
-def _drone(b, x, y, z, s=1.0):
-    b.box(x, y, z, 0.075 * s, 0.075 * s, 0.024 * s, "stealth_dark", rot=(0, 0, PI / 4))
-    for sx in (-1, 1):
-        for sy in (-1, 1):
-            b.cyl(x + sx * 0.05 * s, y + sy * 0.05 * s, z + 0.014 * s, 0.03 * s, 0.008 * s, "glow", seg=6)
-    b.box(x, y, z + 0.024 * s, 0.04 * s, 0.04 * s, 0.008 * s, "team")
+def _rocket_bike(b):
+    """Our own design, about 0.34 long, nose to +x, drawn round its own centre: a slim hover-bike body,
+    a helmeted rider crouched forward, two short forward-swept delta wings low on the sides, one round
+    thruster ring at the back, a teal light strip on the nose. Anchor: the thruster."""
+    b.loft([(-0.13, 0.03, 0.036, -0.022, 0.03), (0.0, 0.04, 0.046, -0.032, 0.034), (0.1, 0.03, 0.032, -0.026, 0.03),
+            (0.19, 0.008, 0.008, -0.008, 0.01)], "stealth_light")
+    b.loft([(0.07, 0.016, 0.016, 0.03, 0.04), (0.185, 0.007, 0.007, 0.009, 0.019)], "teal")          # the light strip
+    b.box(-0.05, 0, 0.034, 0.12, 0.05, 0.012, "stealth_dark")                                      # saddle
+    b.loft([(-0.09, 0.042, 0.042, -0.034, -0.02), (0.075, 0.16, 0.16, -0.034, -0.02),
+            (0.105, 0.042, 0.042, -0.034, -0.02)], "stealth")                                       # forward-swept wings
+    for s in (-1, 1):
+        b.box(0.07, s * 0.15, -0.02, 0.05, 0.022, 0.006, "glow")                                   # wing-tip lights
+        b.box(-0.045, s * 0.052, -0.012, 0.1, 0.026, 0.034, "stealth_dark", rot=(0, 0.35, 0))      # the rider's legs
+        b.box(0.065, s * 0.036, 0.062, 0.075, 0.02, 0.02, "team", rot=(0, 0.5, 0))                 # arms to the grips
+    b.box(-0.01, 0, 0.05, 0.12, 0.078, 0.05, "team", rot=(0, 0.6, 0))                              # torso, leaning in
+    b.ball(0.065, 0, 0.115, 0.036, "hull", seg=6)                                                  # helmet
+    b.box(0.09, 0, 0.1, 0.02, 0.05, 0.022, "stealth_dark")                                         # visor
+    b.rod((0.06, -0.06, 0.05), (0.06, 0.06, 0.05), 0.007, "stealth_dark", seg=3)                   # handlebar
+    b.hoop(-0.16, 0, 0.004, 0.062, 0.04, 0.05, "stealth_dark", seg=10, rot=(0, PI / 2, 0))         # thruster ring
+    b.rod((-0.15, 0, 0.004), (-0.17, 0, 0.004), 0.04, "glow", seg=10)
+    b.fx("fx_thruster", (-0.185, 0, 0.004))
 
 
 def army_future(b):
-    """A hover tank on its lift field, a rail gun in a faceted turret, a drone swarm above."""
+    """A hover tank on its lift field, a rail gun in a faceted turret, two rocket bikes flying above."""
     for x in (-0.2, 0.18):                                                # the lift field on the ground
         for y in (-0.16, 0.16):
             b.cyl(x, y, 0.0, 0.085, 0.006, "glow", seg=8)
@@ -533,6 +593,7 @@ def army_future(b):
         with b.at(0, s * 0.235):
             b.loft([(-0.34, 0.03, 0.05, 0.045, 0.125), (0.24, 0.03, 0.05, 0.045, 0.125), (0.35, 0.015, 0.025, 0.07, 0.11)], "stealth")
         b.box(-0.05, s * 0.235, 0.033, 0.5, 0.04, 0.012, "glow")
+        b.fx("fx_thruster", (-0.05, s * 0.235, 0.033), DOWN)               # the lift fans blow down
         b.box(-0.06, s * 0.287, 0.07, 0.24, 0.008, 0.035, "team")
     zt = z + 0.13
     b.loft([(-0.17, 0.125, 0.09, zt, zt + 0.085), (0.08, 0.125, 0.09, zt, zt + 0.085), (0.2, 0.06, 0.035, zt, zt + 0.06)], "stealth")
@@ -542,8 +603,9 @@ def army_future(b):
     b.box(0.36, 0, zt + 0.03, 0.38, 0.026, 0.012, "glow")
     b.rod((-0.14, 0.07, zt + 0.085), (-0.14, 0.07, zt + 0.19), 0.006, "stealth_dark", seg=3)
     b.ball(-0.14, 0.07, zt + 0.2, 0.014, "glow", seg=4)
-    for x, y, zz in ((0.24, 0.0, 0.6), (0.0, 0.22, 0.63), (-0.26, 0.05, 0.7), (0.34, 0.2, 0.72), (-0.08, -0.12, 0.67)):
-        _drone(b, x, y, zz, 1.15)
+    for x, y, zz, roll in ((0.2, 0.14, 0.56, -0.18), (-0.17, -0.13, 0.7, 0.18)):   # the escort
+        with b.lift(x, y, zz, 1.2, rot=(roll, 0, 0)):
+            _rocket_bike(b)
 
 
 def fleet_future(b):
@@ -562,6 +624,7 @@ def fleet_future(b):
     for s in (-1, 1):                                                     # the rail gun
         b.box(0.42, s * 0.014, 0.103, 0.3, 0.01, 0.026, "stealth_dark")
     b.box(0.42, 0, 0.11, 0.28, 0.02, 0.01, "glow")
+    b.fx("fx_wake", (-0.5, 0, 0))
 
 
 def trader_future(b):
@@ -591,6 +654,7 @@ def trader_future(b):
     b.rod((-0.42, 0, z + 0.07), (-0.42, 0, z + 0.2), 0.008, "steel", seg=3)
     b.ball(-0.42, 0, z + 0.2, 0.016, "glow", seg=4)
     flag(b, -0.455, 0, z + 0.07, 0.19, w=0.1, fh=0.06)
+    b.fx("fx_wake", (-0.37, 0, 0))                                        # behind the aft foil
 
 
 def army_stellar(b):
@@ -617,6 +681,7 @@ def army_stellar(b):
         b.box(-0.185, y, 0.56, 0.01, 0.05, 0.1, "glow")
     b.rod((-0.12, 0.1, 0.68), (-0.14, 0.1, 0.86), 0.007, "iron", seg=3)
     b.ball(-0.14, 0.1, 0.865, 0.016, "glow", seg=4)
+    b.fx("fx_dust", (-0.1, 0, 0.02))                                      # it walks, so it kicks up dust
 
 
 def fleet_stellar(b):
@@ -633,6 +698,8 @@ def fleet_stellar(b):
     b.loft([(0.07, 0.036, 0.022, 0.39, 0.425), (0.13, 0.026, 0.014, 0.378, 0.402)], "glow")       # bridge windows
     for y in (-0.055, 0.055):
         _bell(b, -0.42, y, 0.305, r=0.055, L=0.1)
+        b.fx("fx_thruster", (-0.526, y, 0.305))
+    b.fx("fx_wake", (-0.4, 0, 0))
     for x in (-0.18, 0.14):                                               # lift emitters under the hull
         b.cyl(x, 0, 0.2, 0.05, 0.03, "glow", seg=6)
     b.cyl(0.27, 0, 0.335, 0.03, 0.022, "teal_dark", seg=6)                # the gun
@@ -662,6 +729,8 @@ def trader_stellar(b):
     b.box(-0.37, 0, zc + 0.07, 0.09, 0.13, 0.01, "team")
     for y in (-0.05, 0.05):
         _bell(b, -0.42, y, zc, r=0.05, L=0.09)
+        b.fx("fx_thruster", (-0.516, y, zc))
+    b.fx("fx_wake", (-0.34, 0, 0))
     for x in (-0.3, 0.3):                                                 # lift emitters
         b.cyl(x, 0, zc - 0.075, 0.035, 0.04, "glow", seg=6)
 
@@ -669,6 +738,8 @@ def trader_stellar(b):
 def satellite(b):
     """The `satellite` key of `models` (not an age unit): a foil-wrapped body, two solar panels, a dish."""
     b.cyl(0, 0, 0.0, 0.05, 0.05, "iron", seg=6, r2=0.03)                  # thruster
+    b.fx("fx_thruster", (0, 0, 0), DOWN)                                  # the nozzle opens downwards
+    b.fx("fx_contrail", (0, 0, 0), DOWN)
     b.box(0, 0, 0.05, 0.2, 0.2, 0.26, "buff")
     b.box(0, 0, 0.14, 0.212, 0.212, 0.06, "team")
     b.box(0, 0, 0.31, 0.14, 0.14, 0.012, "team")

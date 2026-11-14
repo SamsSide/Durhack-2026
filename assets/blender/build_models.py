@@ -69,6 +69,7 @@ class Builder:
         self.bm = bmesh.new()
         self.stack = [Matrix.Identity(4)]
         self.mats = []
+        self.anchors = []
 
     @contextmanager
     def at(self, x=0, y=0, rz=0.0):
@@ -161,7 +162,22 @@ class Builder:
             mesh.materials.append(get_mat(mat))
         obj = bpy.data.objects.new(name, mesh)
         bpy.context.scene.collection.objects.link(obj)
+        # effect anchors (contract X4): empties under the model, moved the way the mesh was. The exporter
+        # turns Blender's local +Y into glTF's local -Z, so +Y is aimed the way the effect streams.
+        for i, (fx, p, d) in enumerate(self.anchors):
+            e = bpy.data.objects.new(f"_{name}_fx{i}", None)   # its real name is set while it is exported
+            e["fx"] = fx
+            e.parent = obj
+            e.location = (Vector((p.x - cx, p.y - cy, p.z - zmin))) * k
+            e.rotation_mode = "QUATERNION"
+            e.rotation_quaternion = d.to_track_quat("Y", "Z")
+            bpy.context.scene.collection.objects.link(e)
         return obj
+
+    def fx(self, name, p, d=(-1, 0, 0)):
+        """An effect anchor at p (fx_dust, fx_wake, ...); the effect streams out along d."""
+        m = self.stack[-1]
+        self.anchors.append((name, m @ Vector(p), (m.to_3x3() @ Vector(d)).normalized()))
 
 
 # ---------------------------------------------------------------- models
@@ -401,6 +417,7 @@ def m_army():
     b.cyl(0.0, 0.0, 0.0, 0.014, 0.9, "timber", seg=4)
     b.box(0.0, 0.0, 0.62, 0.3, 0.018, 0.2, "team")
     b.box(0.17, 0.0, 0.0, 0.1, 0.1, 0.05, "dark")
+    b.fx("fx_dust", (-0.36, 0.0, 0.02))
     return b.build("army")
 
 
@@ -412,6 +429,7 @@ def ship(b, x, y, s=1.0, rz=0.0):
         b.cyl(0, 0.04 * s, 0.09 * s, 0.014 * s, 0.6 * s, "dark", seg=5)
         b.box(0, 0.04 * s, 0.22 * s, 0.01, 0.26 * s, 0.34 * s, "team")
         b.box(0, 0.2 * s, 0.09 * s, 0.01, 0.16 * s, 0.2 * s, "team")
+        b.fx("fx_wake", (0, -0.31 * s, 0), (0, -1, 0))                   # at the stern, away from the bow
 
 
 def m_fleet():
@@ -465,6 +483,13 @@ def export(obj, key):
         o.select_set(False)
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
+    keep, seen = {}, {}
+    for c in obj.children:                                               # the effect anchors
+        n = seen.get(c["fx"], 0)
+        seen[c["fx"]] = n + 1
+        keep[c] = c.name
+        c.name = c["fx"] if n == 0 else f"{c['fx']}.{n:03d}"
+        c.select_set(True)
     path = os.path.join(OUT_DIR, key + ".glb")
     bpy.ops.export_scene.gltf(
         filepath=path, export_format="GLB", use_selection=True, export_yup=True,
@@ -472,6 +497,8 @@ def export(obj, key):
         export_normals=True, export_materials="EXPORT", export_extras=False,
         export_animations=False,
     )
+    for c, name in keep.items():
+        c.name = name
     return path
 
 

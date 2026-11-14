@@ -23,7 +23,7 @@ from mathutils import Euler, Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from ages_defs import AGES, KINDS, MODELS  # noqa: E402
-from ages_kit import AgeBuilder  # noqa: E402
+from ages_kit import AgeBuilder, export_glb  # noqa: E402
 
 ROOT = os.getcwd()
 if "--" in sys.argv:
@@ -41,17 +41,8 @@ def build_one(age, kind):
 
 
 def export(obj, age, kind):
-    for o in bpy.context.scene.objects:
-        o.select_set(False)
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
     os.makedirs(os.path.join(OUT_DIR, "ages", age), exist_ok=True)
-    bpy.ops.export_scene.gltf(
-        filepath=os.path.join(OUT_DIR, "ages", age, kind + ".glb"), export_format="GLB", use_selection=True,
-        export_yup=True, export_apply=True, export_cameras=False, export_lights=False,
-        export_texcoords=False, export_normals=True, export_materials="EXPORT", export_extras=False,
-        export_animations=False,
-    )
+    export_glb(obj, os.path.join(OUT_DIR, "ages", age, kind + ".glb"))
 
 
 def flat(name, rgb):
