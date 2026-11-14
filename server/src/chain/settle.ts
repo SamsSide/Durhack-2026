@@ -14,7 +14,7 @@
 // - balances are read every 30 s with one getMultipleAccounts call.
 // Nothing here is awaited by the tick loop; the caller catches everything.
 import {
-  appendTransactionMessageInstructions, createClient, createTransactionMessage, devnet, flattenTransactionPlan,
+  appendTransactionMessageInstructions, createClient, generateKeyPairSigner, sequentialInstructionPlan, createTransactionMessage, devnet, flattenTransactionPlan,
   flattenTransactionPlanResult, getBase64EncodedWireTransaction, getSignatureFromTransaction, isSolanaError, pipe,
   setTransactionMessageComputeUnitLimit, setTransactionMessageFeePayerSigner, setTransactionMessageLifetimeUsingBlockhash,
   setTransactionMessageLoadedAccountsDataSizeLimit, signTransactionMessageWithSigners, SOLANA_ERROR__RPC__TRANSPORT_HTTP_ERROR,
@@ -22,7 +22,7 @@ import {
 } from '@solana/kit';
 import { solanaRpc } from '@solana/kit-plugin-rpc';
 import { signer } from '@solana/kit-plugin-signer';
-import { getTransferCheckedInstruction, token2022Program } from '@solana-program/token-2022';
+import { extension, getCreateTokenInstructionPlan, getTransferCheckedInstruction, token2022Program } from '@solana-program/token-2022';
 import { getAddMemoInstruction } from '@solana-program/memo';
 import type { World } from '@terra/shared';
 import { runGenesis, type GenesisResult } from './genesis';
@@ -82,14 +82,15 @@ function transientWait(e: unknown, attempt: number): number | null {
   return Math.min(BACKOFF_MAX_MS, Math.max(retryAfter, BACKOFF_BASE_MS * 2 ** Math.min(attempt, 5)));
 }
 
-/** The memo for a netted group: its first row id (so two identical payments never share a
+/** The memo for a netted group (`TN <id> y<year> <payer> pays <payee> <amount> TNC, <reason>: <note>`): its first row id (so two identical payments never share a
  *  signature), the year, any advance, then every distinct reason and note. Under 200 bytes. */
-export function memoFor(g: Pick<Group, 'rows' | 'year' | 'advance'>): string {
+export function memoFor(g: Pick<Group, 'rows' | 'year' | 'advance' | 'fromName' | 'toName' | 'amount'>): string {
   const parts: string[] = [];
   for (const r of g.rows) { const p = `${r.reason}: ${r.note}`; if (!parts.includes(p)) parts.push(p); }
   const head = `TN ${g.rows[0]?.id ?? '?'}${g.rows.length > 1 ? ` x${g.rows.length}` : ''} y${g.year}`;
   const adv = g.advance > 0 ? ` adv ${g.advance}` : '';
-  let s = `${head}${adv} ${parts.join('; ')}`.replace(/[^\x20-\x7e]/g, '?');
+  const who = g.fromName && g.toName ? ` ${g.fromName} pays ${g.toName} ${g.amount} TNC,` : '';
+  let s = `${head}${adv}${who} ${parts.join('; ')}`.replace(/[^\x20-\x7e]/g, '?');
   if (s.length > MEMO_MAX) s = s.slice(0, MEMO_MAX - 1) + '~';
   return s;
 }
@@ -130,6 +131,7 @@ export class DevnetBackend implements ChainBackend {
   addressOf(id: number): string | null { return this.wallets?.walletOf(id)?.address ?? null; }
   floats() { return { nations: new Map(this.gen?.minted ?? []), commons: this.gen?.commonsMinted ?? 0 }; }
   canMove(id: number): boolean { return this.tokenOf(id) !== null; }
+  needsAccount(id: number): boolean { return !!this.wallets?.walletOf(id) && this.tokenOf(id) === null; }
   balanceOf(id: number): number | null { return this.bal.get(id) ?? null; }
   commonsBalance(): number | null { return this.gen ? this.commonsBal : null; }
   stats() { return { transactions: this.txs, feesSol: this.lamports / LAMPORTS_PER_SOL }; }
@@ -214,6 +216,26 @@ export class DevnetBackend implements ChainBackend {
     this.readSlot = 0n;
     this.gen = res;
     this.lastRead = Date.now();
+  }
+
+  /** A nation founded after genesis: a Token-2022 account for its wallet, the Commons paying fee and
+   *  rent, in its own transaction with the memo `TN open <name>`, confirmed by polling. */
+  async openAccount(id: number, name: string): Promise<boolean> {
+    const wallet = this.wallets?.walletOf(id);
+    if (!wallet || !this.gen || !this.client) return false;
+    if (this.tokenOf(id)) return true;
+    const token = await generateKeyPairSigner();
+    const label = `TN open ${name}`.replace(/[^\x20-\x7e]/g, '?').slice(0, MEMO_MAX);
+    await this.sendPlan(sequentialInstructionPlan([
+      getAddMemoInstruction({ memo: label }),
+      await getCreateTokenInstructionPlan(this.client, {
+        payer: this.wallets!.commons, newToken: token, mint: this.gen.mint.address, owner: wallet,
+        extensions: [extension('MemoTransfer', { requireIncomingTransferMemos: true })],
+      }),
+    ]));
+    this.gen.tokenOf.set(wallet.address, token.address);
+    if (!this.bal.has(id)) this.bal.set(id, 0);
+    return true;
   }
 
   // --- payments ------------------------------------------------------------------------------

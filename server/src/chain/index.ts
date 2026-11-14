@@ -13,7 +13,7 @@ import { REPLAYS_DIR } from '../engine/replays';
 import type { WorldRunner } from '../runner';
 import { MockBackend } from './mock';
 import {
-  explorerAddress, explorerTx, floatSize, SUPPLY, SYMBOL, currencyName,
+  explorerAddress, explorerTx, floatSize, SUPPLY, SYMBOL, currencyName, plainName,
   type ChainBackend, type Group, type GroupResult, type Outcome,
 } from './types';
 import { fakeAddress } from './wallets';
@@ -75,6 +75,11 @@ class Chain {
   private saved: Sidecar | null = null;
   private lastSave = 0;
   private savedCount = -1;
+  /** Nations founded after genesis whose token account is not open yet, by country id. */
+  private opening = new Map<number, { name: string; tries: number; at: number }>();
+  private openRunning = false;
+  private noWallet = new Set<number>();
+  private names = new Map<number, string>();
 
   constructor(private runner: WorldRunner, readonly mode: Exclude<EconomyMode, 'off'>, private backend: ChainBackend,
     private settleMs: number, private maxTx: number) {}
@@ -132,6 +137,7 @@ class Chain {
     });
     setInterval(() => { void this.tickSettle(); }, this.settleMs).unref();
     setInterval(() => { void this.tickPoll(); }, POLL_MS).unref();
+    setInterval(() => { void this.tickOpen(); }, 2000).unref();
     setInterval(() => { try { this.flushEconomy(); void this.tickMaintain(); this.maybeSave(); } catch { /* never */ } }, 1000).unref();
   }
 
@@ -147,6 +153,7 @@ class Chain {
     this.rows.clear(); this.attempts.clear(); this.changed.clear(); this.flights.clear();
     this.payments = 0; this.volume = 0; this.savedCount = -1;
     this.ledger.clear(); this.commonsLedger = 0;
+    this.opening.clear(); this.noWallet.clear(); this.names.clear();
     this.saved = this.playback ? this.loadSidecar(w.id) : null;
     if (this.playback) this.seedPlaybackLedger(w);
     if (this.genesisTimer) { clearTimeout(this.genesisTimer); this.genesisTimer = null; }
@@ -199,8 +206,39 @@ class Chain {
     this.playback = !!this.runner.playback?.();
     for (const ev of events) {
       if (ev.type === 'tick') this.year = ev.year;
+      else if (ev.type === 'country_founded') this.onFounded(ev.country);
       else if (ev.type === 'payment') this.onPayment(ev, this.runner.getWorld()?.tick ?? ev.tick);
     }
+  }
+
+  /** A nation founded mid-game gets a token account (live runs only, never in a replay). */
+  private onFounded(c: { id: number; name: string }): void {
+    this.names.set(c.id, plainName(c.name));
+    if (this.playback || !this.backend.openAccount) return;
+    if (this.backend.canMove(c.id) || this.opening.has(c.id)) return;
+    this.opening.set(c.id, { name: plainName(c.name), tries: 0, at: 0 });
+  }
+
+  /** One account at a time, retried a few times; never blocks settlement. */
+  private async tickOpen(): Promise<void> {
+    if (this.openRunning || this.playback || !this.opening.size || !this.backend.ready() || !this.backend.openAccount) return;
+    if (Date.now() < this.breakerUntil || this.backend.backingOff?.()) return;
+    const now = Date.now();
+    const next = [...this.opening.entries()].find(([, j]) => now - j.at >= 10_000 * j.tries);
+    if (!next) return;
+    const [id, job] = next;
+    this.openRunning = true; job.tries++; job.at = now;
+    try {
+      const ok = await this.backend.openAccount(id, job.name);
+      if (ok) { this.opening.delete(id); log(`opened the token account of ${job.name} (nation ${id})`); }
+      else {
+        this.opening.delete(id);
+        if (!this.noWallet.has(id)) { this.noWallet.add(id); log(`nation ${id} has no wallet file`); }
+      }
+    } catch (e) {
+      log(`opening the account of ${job.name} failed (try ${job.tries}): ${msg(e).split('\n')[0]}`);
+      if (job.tries >= MAX_ATTEMPTS) { this.opening.delete(id); log(`giving up on the account of nation ${id}; its payments will not move on chain`); }
+    } finally { this.openRunning = false; }
   }
 
   private onPayment(ev: Extract<WorldEvent, { type: 'payment' }>, _tick: number): void {
@@ -256,8 +294,11 @@ class Chain {
     }
     const committed = new Map<number, number>();
     for (const g of this.flights.values()) committed.set(g.from, (committed.get(g.from) ?? 0) + g.amount - g.advance);
-    const out = [...by.values()];
+    const nameOf = (id: number) => this.names.get(id) ?? plainName(this.runner.getWorld()?.countries.find((c) => c.id === id)?.name ?? `Nation ${id}`);
+    // A nation whose token account is still opening: its payments wait, queued, until it exists.
+    const out = [...by.values()].filter((g) => !this.waitingForAccount(g.from) && !this.waitingForAccount(g.to));
     for (const g of out) {
+      g.fromName = nameOf(g.from); g.toName = nameOf(g.to);
       if (!this.backend.canMove(g.from) || !this.backend.canMove(g.to)) continue;
       const known = this.ledger.get(g.from) ?? 0;
       const read = this.backend.balanceOf(g.from);
@@ -266,6 +307,10 @@ class Chain {
       committed.set(g.from, (committed.get(g.from) ?? 0) + g.amount - g.advance);
     }
     return out;
+  }
+
+  private waitingForAccount(id: number): boolean {
+    return this.opening.has(id) && !!this.backend.needsAccount?.(id);
   }
 
   private async tickSettle(): Promise<void> {
