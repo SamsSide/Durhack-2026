@@ -34,7 +34,7 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 | A9 | Replays: save every run's event log, list and play them back with no API calls, `GET /api/world/log`; record the demo world | A14 to A16 (audio cached) | X3 replays and log | CP2 | todo | The backup plan |
 | A10 | Nation agents on other laptops over the socket | | | | cut | Owner, 14 Nov: it runs and demos on one device |
 | A11 | Stretch, prize: write events to a Tiger Data hypertable and serve one territory-over-time series | | | CP2 | todo | MLH Tiger Data |
-| A12 | Design the interface in Figma: the style, the Create screen, the hologram nation card, the chronicle, the network panel, the top bar; export the variables to `web/src/theme/tokens.css` and a screenshot of each screen to `docs/design/` | | X7 to b and c | Sat 18:00 | next | Owner's laptop has the Figma tools; lane c builds from this |
+| A12 | Design the interface in Figma: the style, the Create screen, the hologram nation card, the chronicle, the network panel, the top bar; export the variables to `web/src/theme/tokens.css` and a screenshot of each screen to `docs/design/` | | X7 to b and c | Sat 18:00 | done | Figma: https://www.figma.com/design/7cKEqNpTmvmNd9CUSlxrA6 |
 | A13 | Lore route: Gemini writes culture, politics, history, relations and anthem lyrics from the nation's real chronicle; cached; a template version for mock mode | | X3 lore | CP1 | done | |
 | A14 | Narration: ElevenLabs speaks the lore in a voice chosen from `voiceStyle`, cached on disk; the real `web/src/audio/` module (X6) | A13 | X3 narration, X6 | CP1.5 | done | MLH ElevenLabs |
 | A15 | Anthem: the music model sings the lyrics from A13 in the nation's style, cached; regenerated only when the lyrics change | A13 | X3 anthem | CP1.5 | todo | ElevenLabs Music API needs a paid plan (402 on free) |
@@ -59,5 +59,6 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 - 14:58 · A14 and A19 route: ElevenLabs narration in a voice chosen from voiceStyle, cached on disk, character cap; painted-flag route (off until Gemini billing)
 
 
+- 14:59 · A12: Figma design (6 screens, 77 variables), designed tokens.css, screenshots and an HTML/CSS reference in docs/design
 
 Mocks: `npm run mock` (MockRunner behind the `WorldRunner` interface in `server/src/runner.ts`) stands in for the engine until A3; lore, audio and replays are mocked until A13 to A16 and A9.
