@@ -635,6 +635,50 @@ export const useWorld: UseBoundStore<StoreApi<WorldStore>>;
 - **Spoken decrees (row A20):** lane c adds a hold-to-speak mic button to `DecreeBox` (MediaRecorder, webm/opus, up to 15 s) that posts to `POST /api/decree/voice` and shows the transcript.
 - **Image prompt (row A17):** lane c adds an optional picture drop zone to `CreateScreen`, sent as `imageBase64` in `POST /api/world`. The seed ships a working placeholder for
   each, already placed in `App.tsx`, so the names and props never change.
+- **Army and battle cards (proposed, #311):** the store adds `selectedUnitId: string | null` and
+  `selectedBattleTile: number | null` with `selectUnit(id | null)` and `selectBattle(tile | null)`.
+  Picking either clears the nation selection and the other; selecting a nation, clicking empty
+  ground or Escape clears them. Clicking an army's counter or formation selects it; clicking a
+  battle badge (both flags and "12.0k (crossed swords) 21.0k") selects the battle. `App.tsx` mounts
+  `ArmyBattleDock` (`web/src/hud/`), which slides a `left-dock` in and renders lane a's `ArmyCard`
+  (`{ unitId: string }`) or `BattleCard` (`{ tile: number }`) once `web/src/ui/index.ts` exports them
+  (a dev-only debug card stands in until then). Soldiers are `strength * 250`
+  (`SOLDIERS_PER_STRENGTH`); `formatSoldiers(n)` prints "12.0k".
+
+```ts
+// web/src/state/armyInfo.ts
+export function useArmyInfo(unitId: string | null): ArmyInfo | null;   // null: gone, or not an army or fleet
+interface TroopGroup { role: 'front' | 'flank' | 'back'; name: string; figures: number; soldiers: number }
+type ArmyStatus = { kind: 'marching' | 'fighting' | 'garrisoned'; tile: number; province: string; text: string };
+interface ArmyInfo {
+  unitId: string; countryId: number; nation: string; color: string; flag: FlagSpec; techAge: TechAge;
+  strength: number; soldiers: number;
+  composition: TroopGroup[];        // front, flank, back; names per age (Spearmen, Horsemen, Archers ... Walkers, Mechs, Orbital strike)
+  general: CouncilMember | null;    // the nation's council general
+  status: ArmyStatus;               // "Marching to X", "Fighting at Y", "Garrisoned in Z"
+  readiness: number; readinessBand: ReadinessBand;
+}
+// web/src/state/battleInfo.ts
+export function useBattleInfo(tile: number | null): BattleInfo | null; // null: no battle seen on that tile
+interface LineBlock { role: 'front' | 'flank' | 'back'; name: string; soldiers: number; max: number; fill: number; cells: number; maxCells: number }
+interface LineSide { front: LineBlock; flankLeft: LineBlock; flankRight: LineBlock; back: LineBlock } // losses empty the front, then the flanks, then the back
+interface BattleSide {
+  countryId: number; nation: string; color: string; flag: FlagSpec; techAge: TechAge; general: CouncilMember | null;
+  startStrength: number; strength: number; losses: number;
+  startSoldiers: number; soldiers: number; lostSoldiers: number;
+  troops: TroopGroup[];
+}
+interface BattleInfo {
+  tile: number; province: string; active: boolean;
+  startYear: number; durationMonths: number; durationText: string;   // "2 years 3 months"
+  attacker: BattleSide; defender: BattleSide;
+  line: { attacker: LineSide; defender: LineSide };
+  clashes: { tick: number; month: number; attackerLoss: number; defenderLoss: number; winner: number }[];  // the last 12
+  leader: 'attacker' | 'defender' | 'even';
+}
+```
+
+  Status of this addition: proposed (#311) by lane b; the owner approves.
 - **Mock:** none needed: the seed (row A1) ships the real store, working against
   `npm run mock`. Lane a writes it; lane b owns it from then on.
 - **Real by:** CP0 (row A1).
