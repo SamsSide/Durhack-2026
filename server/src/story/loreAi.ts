@@ -1,4 +1,7 @@
 // Gemini-written lore (X3), cached per nation and region, with the template as the fallback.
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { relationOf, type World } from '@terra/shared';
 import { llmJson, loreModel, LlmUnavailable, type Schema } from '../llm';
 import type { WorldRunner } from '../runner';
@@ -82,6 +85,58 @@ function regionPrompt(world: World, id: number): string {
   ].join('\n');
 }
 
+// --- disk store: every generated lore is kept per world so a replay can reuse it -------
+const LORE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.cache', 'lore');
+const safeId = (s: string) => s.replace(/[^A-Za-z0-9_-]/g, '_');
+const dirOf = (worldId: string) => path.join(LORE_DIR, safeId(worldId));
+
+/** Writes `<kind>-<id>-t<tick>.json` (kept per version) and `<kind>-<id>.json` (the newest). */
+function saveLore(worldId: string, kind: 'country' | 'region', id: number, value: { asOfTick: number }): void {
+  try {
+    const dir = dirOf(worldId);
+    fs.mkdirSync(dir, { recursive: true });
+    const body = JSON.stringify(value);
+    for (const name of [`${kind}-${id}-t${value.asOfTick}.json`, `${kind}-${id}.json`]) {
+      const file = path.join(dir, name);
+      const tmp = `${file}.${process.pid}.tmp`;
+      fs.writeFileSync(tmp, body);
+      fs.renameSync(tmp, file);
+    }
+  } catch (e) {
+    console.warn('could not save lore:', e instanceof Error ? e.message : e);
+  }
+}
+
+/** All stored versions of one nation's or region's lore for a world, oldest first. */
+function loadVersions<T extends { asOfTick: number }>(worldId: string, kind: 'country' | 'region', id: number): T[] {
+  const out: T[] = [];
+  try {
+    const re = new RegExp(`^${kind}-${id}-t\\d+\\.json$`);
+    for (const f of fs.readdirSync(dirOf(worldId))) {
+      if (!re.test(f)) continue;
+      try {
+        const v = JSON.parse(fs.readFileSync(path.join(dirOf(worldId), f), 'utf8')) as T;
+        if (typeof v.asOfTick === 'number') out.push(v);
+      } catch { /* a half-written or corrupt file is skipped */ }
+    }
+  } catch { /* no directory yet */ }
+  return out.sort((a, b) => a.asOfTick - b.asOfTick);
+}
+
+/** Newest stored version at or before the tick (playback), or null. */
+function storedAtOrBefore<T extends { asOfTick: number }>(worldId: string, kind: 'country' | 'region', id: number, tick: number): T | null {
+  const vs = loadVersions<T>(worldId, kind, id).filter((v) => v.asOfTick <= tick);
+  return vs.length ? vs[vs.length - 1]! : null;
+}
+
+/** Stored version within the refresh window of the tick (live play), or null. */
+function storedFresh<T extends { asOfTick: number }>(worldId: string, kind: 'country' | 'region', id: number, tick: number): T | null {
+  const vs = loadVersions<T>(worldId, kind, id).filter((v) => Math.abs(tick - v.asOfTick) <= STALE_TICKS);
+  return vs.length ? vs[vs.length - 1]! : null;
+}
+
+const playing = () => runner?.playback?.() === true;
+
 // --- cache -------------------------------------------------------------------
 interface Entry<T> { world: string; value: T; failedAt?: number }
 const countryCache = new Map<number, Entry<CountryLore>>();
@@ -114,16 +169,22 @@ export function bindLore(r: WorldRunner): void {
 
 async function cached<T extends { asOfTick?: number }>(
   key: string, store: Map<number, Entry<T>>, id: number, world: World,
-  tickOf: (v: T) => number, make: () => Promise<T>,
+  tickOf: (v: T) => number, make: () => Promise<T>, kind: 'country' | 'region',
 ): Promise<T> {
   const hit = store.get(id);
   const fresh = hit && hit.world === world.id && Math.abs(world.tick - tickOf(hit.value)) <= STALE_TICKS;
   if (fresh) return hit.value;
   const usable = hit && hit.world === world.id ? hit.value : null;
   if (usable && Date.now() - (failedAt.get(key) ?? 0) < RETRY_AFTER_MS) return usable;
+  const onDisk = storedFresh<T & { asOfTick: number }>(world.id, kind, id, world.tick);
+  if (onDisk) { store.set(id, { world: world.id, value: onDisk }); return onDisk; }
   let p = inflight.get(key) as Promise<T> | undefined;
   if (!p) {
-    p = make().then((v) => { store.set(id, { world: world.id, value: v }); failedAt.delete(key); return v; })
+    p = make().then((v) => {
+      store.set(id, { world: world.id, value: v }); failedAt.delete(key);
+      saveLore(world.id, kind, id, v as T & { asOfTick: number });
+      return v;
+    })
       .finally(() => inflight.delete(key));
     inflight.set(key, p);
   }
@@ -157,8 +218,9 @@ export async function getLore(countryId: number, worldArg?: World): Promise<Coun
   const world = worldArg ?? runner?.getWorld();
   if (!world || !world.countries[countryId]) return null;
   const template = () => countryLore(world, countryId);
+  if (playing()) return storedAtOrBefore<CountryLore & { asOfTick: number }>(world.id, 'country', countryId, world.tick) ?? template();
   try {
-    const out = await cached(`c${countryId}`, countryCache, countryId, world, (v) => v.asOfTick, () => generateCountry(world, countryId));
+    const out = await cached(`c${countryId}`, countryCache, countryId, world, (v) => v.asOfTick, () => generateCountry(world, countryId), 'country');
     return out ?? template();
   } catch (e) {
     if (!(e instanceof LlmUnavailable)) console.warn('lore failed:', e instanceof Error ? e.message : e);
@@ -171,6 +233,12 @@ export async function getRegionLore(regionId: number, worldArg?: World): Promise
   if (!world) return null;
   const base = regionLore(world, regionId);
   if (!base || !world.regions[regionId]?.name) return base; // unnamed regions have nothing to write about
+  if (playing()) {
+    const st = storedAtOrBefore<RegionLore & { asOfTick: number }>(world.id, 'region', regionId, world.tick);
+    if (!st) return base;
+    const { asOfTick: _s, ...rest } = st;
+    return { ...rest, owner: base.owner, name: base.name };
+  }
   const wrap: RegionLore & { asOfTick: number } = { ...base, asOfTick: world.tick };
   try {
     const out = await cached(`r${regionId}`, regionCache as Map<number, Entry<typeof wrap>>, regionId, world, (v) => v.asOfTick, async () => {
@@ -179,7 +247,7 @@ export async function getRegionLore(regionId: number, worldArg?: World): Promise
         maxOutputTokens: 300, purpose: 'region-lore',
       });
       return { ...base, summary: gen.summary, history: gen.history, asOfTick: world.tick };
-    });
+    }, 'region');
     if (!out) return base;
     const { asOfTick: _t, ...rest } = out;
     return { ...rest, owner: base.owner, name: base.name };

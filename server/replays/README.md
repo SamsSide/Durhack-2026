@@ -25,6 +25,9 @@ no API calls. `GET /api/replays` lists them (demo worlds first, then newest firs
    `server/.cache/` keyed on the world id and the lyrics.
 3. Compact it into one file: in a node REPL or script, `loadReplay('<worldId>')` then `saveCompact({ ...f, id: 'demo-2', name: '...' })`
    (both from `server/src/engine/replays.ts`).
-4. Cached audio is keyed on the lore text, which Gemini writes per run and which the lore route keeps in memory only.
-   To play the audio offline, copy `server/.cache/` to the demo laptop too, and see NEEDS_OWNER in the row A9 report
-   about persisting lore per world.
+4. Lore is kept on disk per world: every lore Gemini writes lands in `server/.cache/lore/<worldId>/` as
+   `country-<id>-t<tick>.json` (one per version) and `country-<id>.json` (newest), likewise `region-`.
+   During playback the lore route never calls Gemini: it serves the newest stored version at or before the
+   replay's tick (else the template). Narration, anthem, chant and broadcast audio are keyed on that text, so they
+   hit `server/.cache/` too; a missing mp3 during playback serves the bundled sample, never ElevenLabs.
+   To play offline, copy the whole `server/.cache/` to the demo laptop (lore, narration, anthem, chant).

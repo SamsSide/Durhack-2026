@@ -38,6 +38,7 @@ const SAMPLES = path.join(path.dirname(fileURLToPath(import.meta.url)), 'samples
 
 export function storyRoutes(runner: WorldRunner): Router {
   const r = Router();
+  const playing = () => runner.playback?.() === true;
   const countryId = (s: string | undefined) => {
     const id = Number(s);
     const w = runner.getWorld();
@@ -64,7 +65,9 @@ export function storyRoutes(runner: WorldRunner): Router {
       const text = `${lore.summary} ${lore.history}`.replace(/\s+/g, ' ').trim();
       const voice = chooseVoice(w.countries[id]!.voiceStyle);
       const file = path.join(CACHE, 'narration', `${sha(`${voice.id}\n${text}`)}.mp3`);
-      await ensure(file, () => speak(text, voice.id));
+      if (playing()) {
+        if (!(await exists(file))) return void res.type('audio/mpeg').sendFile(path.join(SAMPLES, 'narration.mp3'));
+      } else await ensure(file, () => speak(text, voice.id));
       res.type('audio/mpeg').sendFile(file);
     } catch {
       res.status(503).json({ error: 'voice unavailable' });
@@ -79,8 +82,9 @@ export function storyRoutes(runner: WorldRunner): Router {
     try {
       const lore = await getLore(id, w);
       if (!lore) return void res.status(404).json({ error: 'no such country' });
-      res.type('audio/mpeg').sendFile(await anthemFile(w.countries[id]!, lore.anthemLyrics));
+      res.type('audio/mpeg').sendFile(await anthemFile(w.countries[id]!, lore.anthemLyrics, playing()));
     } catch {
+      if (playing()) return void res.type('audio/mpeg').sendFile(path.join(SAMPLES, 'anthem.mp3'));
       res.status(503).json({ error: 'voice unavailable' });
     }
   });
@@ -91,8 +95,9 @@ export function storyRoutes(runner: WorldRunner): Router {
     if (id === null || !w) return void res.status(404).json({ error: 'no such country' });
     if (currentMode() !== 'live') return void res.type('audio/mpeg').sendFile(path.join(SAMPLES, 'chant.mp3'));
     try {
-      res.type('audio/mpeg').sendFile(await ensureChant(w, id));
+      res.type('audio/mpeg').sendFile(await ensureChant(w, id, playing()));
     } catch {
+      if (playing()) return void res.type('audio/mpeg').sendFile(path.join(SAMPLES, 'chant.mp3'));
       res.status(503).json({ error: 'voice unavailable' });
     }
   });
@@ -123,7 +128,7 @@ export function storyRoutes(runner: WorldRunner): Router {
     }
     const mime = typeof mimeType === 'string' && /^image\/(jpeg|png|webp)$/.test(mimeType) ? mimeType : 'image/jpeg';
     try {
-      const r = await makeBroadcast(w, imageBase64.replace(/^data:[^,]*,/, ''), mime);
+      const r = await makeBroadcast(w, imageBase64.replace(/^data:[^,]*,/, ''), mime, playing());
       console.log(`broadcast ${r.bulletin.id} via ${r.source} in ${r.ms} ms (${r.tokensIn} in, ${r.tokensOut} out)`);
       res.json(r.bulletin);
     } catch (e) {
@@ -137,8 +142,9 @@ export function storyRoutes(runner: WorldRunner): Router {
     if (!b) return void res.status(404).json({ error: 'no such bulletin' });
     if (currentMode() !== 'live') return void res.type('audio/mpeg').sendFile(path.join(SAMPLES, 'narration.mp3'));
     try {
-      res.type('audio/mpeg').sendFile(await ensureAudio(b));
+      res.type('audio/mpeg').sendFile(await ensureAudio(b, playing()));
     } catch {
+      if (playing()) return void res.type('audio/mpeg').sendFile(path.join(SAMPLES, 'narration.mp3'));
       res.status(503).json({ error: 'voice unavailable' });
     }
   });
