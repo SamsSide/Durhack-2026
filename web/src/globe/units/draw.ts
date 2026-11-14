@@ -160,11 +160,14 @@ export interface CounterLook {
 export const COUNTER_W = 216;
 export const COUNTER_H = 88;
 const BODY_TOP = 16;
+const GILT_HI = '#f4e2a6'; // matches --gilt-hi / --gilt-lo in theme/tokens.css
+const GILT_LO = '#7a5a1e';
 
 /** An HOI-style counter chip: flag, era icon, strength in bold mono, owner-colour border. */
 export function drawCounter(look: CounterLook): HTMLCanvasElement {
   const [c, ctx] = canvas2d(COUNTER_W, COUNTER_H);
   const x0 = 4, y0 = BODY_TOP, w = COUNTER_W - 8, h = COUNTER_H - BODY_TOP - 4;
+  // lacquer plate: dark body with a vertical sheen, a gilt rim, the owner colour as an inner band
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.65)';
   ctx.shadowBlur = 6;
@@ -174,29 +177,58 @@ export function drawCounter(look: CounterLook): HTMLCanvasElement {
   ctx.roundRect(x0, y0, w, h, 8);
   ctx.fill();
   ctx.restore();
-  ctx.lineWidth = 5;
+  const sheen = ctx.createLinearGradient(0, y0, 0, y0 + h);
+  sheen.addColorStop(0, 'rgba(255,255,255,0.16)');
+  sheen.addColorStop(0.45, 'rgba(255,255,255,0.02)');
+  sheen.addColorStop(1, 'rgba(0,0,0,0.38)');
+  ctx.fillStyle = sheen;
+  ctx.beginPath();
+  ctx.roundRect(x0, y0, w, h, 8);
+  ctx.fill();
+  ctx.lineWidth = 4;
   ctx.strokeStyle = look.color;
   ctx.beginPath();
-  ctx.roundRect(x0 + 2.5, y0 + 2.5, w - 5, h - 5, 6);
+  ctx.roundRect(x0 + 4, y0 + 4, w - 8, h - 8, 5);
+  ctx.stroke();
+  const rim = ctx.createLinearGradient(0, y0, 0, y0 + h);
+  rim.addColorStop(0, GILT_HI);
+  rim.addColorStop(0.5, look.accent);
+  rim.addColorStop(1, GILT_LO);
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = rim;
+  ctx.beginPath();
+  ctx.roundRect(x0 + 1.25, y0 + 1.25, w - 2.5, h - 2.5, 7);
   ctx.stroke();
 
-  // flag
-  const fx = x0 + 10, fy = y0 + 13, fw = 63, fh = 42;
+  // flag, framed in gilt
+  const fx = x0 + 12, fy = y0 + 14, fw = 61, fh = 40;
   if (look.flag) ctx.drawImage(look.flag, fx, fy, fw, fh);
   else { ctx.fillStyle = look.color; ctx.fillRect(fx, fy, fw, fh); }
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.5;
   ctx.strokeStyle = look.ink;
-  ctx.strokeRect(fx, fy, fw, fh);
+  ctx.strokeRect(fx - 0.5, fy - 0.5, fw + 1, fh + 1);
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = rim;
+  ctx.strokeRect(fx - 2.5, fy - 2.5, fw + 5, fh + 5);
 
   // era icon
   drawIcon(ctx, look.icon, fx + fw + 22, y0 + h / 2, 36, look.parchment, look.night);
 
-  // strength
-  ctx.fillStyle = look.parchment;
+  // strength: gilt numerals on the lacquer
+  const num = ctx.createLinearGradient(0, y0 + h / 2 - 20, 0, y0 + h / 2 + 22);
+  num.addColorStop(0, GILT_HI);
+  num.addColorStop(0.55, look.accent);
+  num.addColorStop(1, GILT_LO);
   ctx.font = 'bold 40px "IBM Plex Mono", ui-monospace, Menlo, monospace';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
-  ctx.fillText(String(Math.round(look.strength)), x0 + w - 12, y0 + h / 2 + 2);
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  const sx = x0 + w - 14, sy = y0 + h / 2 + 2, st = String(Math.round(look.strength));
+  ctx.strokeText(st, sx, sy);
+  ctx.fillStyle = num;
+  ctx.fillText(st, sx, sy);
 
   if (look.count > 1) {
     const label = `x${look.count}`;

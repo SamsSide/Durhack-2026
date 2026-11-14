@@ -28,6 +28,8 @@ const MAX_ANGLE = (60 * Math.PI) / 180;
 const SIZES = { nation: { min: 13, max: 56 }, region: { min: 11, max: 20 } }; // px, cap height-ish
 const TINY = 9; // px: with little room (far zoom, near a panel) a name shrinks to this before it fades
 const LIMB = 0.9; // names stay inside this share of the visible disc
+const ENGRAVE_FILL = '#f1e3bd'; // warm parchment lettering
+const ENGRAVE_EDGE = '#1a120a'; // thin dark engraved edge
 const PANEL_GAP = 10; // px kept clear of the side panels
 
 /** The free screen band between the network panel (left) and the nation card (also left), in px. */
@@ -90,7 +92,7 @@ const clamp01 = (x: number): number => clamp(x, 0, 1);
 
 function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }) {
   const INK = getPalette().ink;
-  const HALO = getPalette().parchment;
+  const HALO = getPalette().ink;
   const groupRef = useRef<THREE.Group>(null);
   const innerRef = useRef<THREE.Group>(null);
   const textRef = useRef<any>(null); // troika Text instance
@@ -222,8 +224,9 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
     const r = R / f;
     if (t) {
       t.curveRadius = -r;
-      t.fillOpacity = alpha; // solid ink: reads on red and gold land too
-      t.outlineOpacity = alpha * 0.92; // a strong parchment halo
+      t.fillOpacity = alpha; // warm parchment fill with a dark engraved edge: reads on light and dark land
+      t.outlineOpacity = alpha * 0.85; // soft ink halo
+      t.strokeOpacity = alpha;
     }
 
     const textW = m ? m.w + (applied.current.ls - m.ls) * n : w0 + ls * n;
@@ -270,10 +273,12 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
             anchorX="center"
             anchorY="middle"
             fontSize={1}
-            color={INK}
-            outlineWidth="13%"
-            outlineBlur="6%"
+            color={ENGRAVE_FILL}
+            outlineWidth="9%"
+            outlineBlur="14%"
             outlineColor={HALO}
+            strokeWidth="2.5%"
+            strokeColor={ENGRAVE_EDGE}
             renderOrder={RENDER_ORDER}
             onSync={(t: any) => {
               const b = t.textRenderInfo?.blockBounds;
