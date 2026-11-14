@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import './theme/tokens.css';
 import { App } from './App';
 import { connect } from './state/world';
+import { installEconDemo } from './globe/economy/econDemo';
+installEconDemo();
 
 // ?gallery or #gallery opens the model gallery instead of the app (its own chunk, no server needed).
 const wantsGallery = () => new URLSearchParams(location.search).has('gallery') || location.hash === '#gallery';

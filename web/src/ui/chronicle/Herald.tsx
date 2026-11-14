@@ -5,10 +5,12 @@ import { useWorld } from '../../state/world';
 import type { CutPeriod } from './Timeline';
 import { ofName } from './kinds';
 
-const SHOW_MS = 8000;   // each tab fades out about 8 s after it appears
-const LEAVE_MS = 400;   // the tab-out fade
+const SHOW_MS = 6000;   // about six seconds on screen
+const LEAVE_MS = 500;   // the herald-out keyframes
 const WAR_WINDOW_MS = 60_000;
-const MAX_TABS = 3;     // a busy world must not bury the globe
+const QUEUE_CAP = 2;       // a busy world must not pile dispatches up
+const STALE_MS = 20_000;   // a dispatch that waited this long is old news
+const RANK = { war: 0, return: 1, fall: 2 } as const;   // drop the lowest first
 
 interface Stats { years: number; merged: number; settled: number }
 type Dispatch =
@@ -17,78 +19,97 @@ type Dispatch =
   | { key: string; kind: 'fall'; year: number; c: Country; line: string };
 
 function Flag({ c }: { c: Country }) {
-  return <span className="tn-h-flag" dangerouslySetInnerHTML={{ __html: flagSvg(c.flag, 24, 16) }} />;
+  return <span className="tn-h-flag" dangerouslySetInnerHTML={{ __html: flagSvg(c.flag, 54, 36) }} />;
 }
 
-function mainOf(d: Dispatch): Country { return d.kind === 'war' ? d.a : d.c; }
-
-/** One dispatch as a small tab; hover or focus opens the detail. */
-function Tab({ d, leaving }: { d: Dispatch; leaving: boolean }) {
+/** One dispatch: a band over a centred body (docs/design README, "Dispatches"). */
+function Card({ d, leaving }: { d: Dispatch; leaving: boolean }) {
   const cls = `tn-herald tn-${d.kind}${leaving ? ' tn-leaving' : ''}`;
-  const text = d.kind === 'war' ? d.title : d.kind === 'return' ? `${d.c.name} returns from the Silence` : `${d.c.name} falls`;
-  const go = () => {
-    const w = useWorld.getState();
-    const id = mainOf(d).id;
-    w.select(id);
-    w.flyTo(id);
-  };
+  const band = d.kind === 'war' ? 'War declared' : d.kind === 'return' ? 'The Silence ends' : 'A nation falls';
   return (
-    <button type="button" className={cls} role="status" aria-live="polite" onClick={go}>
-      <span className="tn-h-row">
-        <span className="tn-h-flags">
-          <Flag c={mainOf(d)} />
-          {d.kind === 'war' && <Flag c={d.b} />}
-        </span>
-        <span className="tn-h-text">{text}</span>
-        <span className="tn-h-year">Y{d.year}</span>
-      </span>
-      <span className="tn-h-more">
-        {d.kind === 'war' && d.line && <span className="tn-h-quote">{d.line}{d.by && <span>{d.by}</span>}</span>}
-        {d.kind === 'return' && (
+    <div className={cls} role="status" aria-live="polite">
+      <div className="tn-h-band"><span>{band}</span><span className="tn-h-year">Y{d.year}</span></div>
+      <div className="tn-h-body">
+        {d.kind === 'war' && (
           <>
-            {d.stats && (
-              <span className="tn-h-stats">
-                <span><b>{d.stats.years}</b> years silent</span>
-                <span><b>{d.stats.merged}</b> events merged</span>
-                <span><b>{d.stats.settled}</b> disputes settled</span>
-              </span>
-            )}
-            <span className="tn-h-quote">{d.line}</span>
+            <div className="tn-h-vs"><Flag c={d.a} /><span className="tn-h-x">against</span><Flag c={d.b} /></div>
+            <div className="tn-h-title">{d.title}</div>
+            {d.line && <div className="tn-h-quote">{d.line}{d.by && <span>{d.by}</span>}</div>}
           </>
         )}
-        {d.kind === 'fall' && <span className="tn-h-quote">{d.line}</span>}
-      </span>
-    </button>
+        {d.kind === 'return' && (
+          <>
+            <div className="tn-h-vs"><Flag c={d.c} /></div>
+            <div className="tn-h-title">{d.c.name} returns</div>
+            {d.stats && (
+              <div className="tn-h-stats">
+                <div><b>{d.stats.years}</b><span>years silent</span></div>
+                <div><b>{d.stats.merged}</b><span>events merged</span></div>
+                <div><b>{d.stats.settled}</b><span>disputes settled</span></div>
+              </div>
+            )}
+            <div className="tn-h-quote">{d.line}</div>
+          </>
+        )}
+        {d.kind === 'fall' && (
+          <>
+            <div className="tn-h-vs tn-gone"><Flag c={d.c} /></div>
+            <div className="tn-h-title">{d.c.name} are no more</div>
+            <div className="tn-h-quote">{d.line}</div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
 /**
  * Dispatches for the three moments the demo needs: war declared, a nation's return, a nation's fall.
- * Watches recentEvents, shows a stack of small tabs (top right, about 8 s each, newest on top), skips duplicates.
+ * Watches recentEvents, shows one at a time (top centre, about 6 s, queued), skips duplicates.
  */
 export function Herald({ observed }: { observed: CutPeriod[] }) {
   const world = useWorld((s) => s.world);
   const events = useWorld((s) => s.recentEvents);
-  const [tabs, setTabs] = useState<{ d: Dispatch; id: number; leaving: boolean }[]>([]);
+  const [current, setCurrent] = useState<Dispatch | null>(null);
+  const [leaving, setLeaving] = useState(false);
+  const queue = useRef<{ d: Dispatch; at: number }[]>([]);
   const slotRef = useRef<HTMLDivElement | null>(null);
   const seen = useRef<Set<string>>(new Set());
   const shown = useRef<Map<string, number>>(new Map());
   const worldId = useRef<string | null>(null);
   const primed = useRef(false);
+  const busy = useRef(false);
   const timers = useRef<number[]>([]);
-  const nextId = useRef(1);
   const obs = useRef(observed);
   obs.current = observed;
 
-  // Newest on top, at most MAX_TABS; each one fades out on its own clock.
   const enqueue = (d: Dispatch) => {
-    const id = nextId.current++;
-    setTabs((prev) => [{ d, id, leaving: false }, ...prev].slice(0, MAX_TABS));
+    queue.current.push({ d, at: Date.now() });
+    while (queue.current.length > QUEUE_CAP) {
+      // Lowest priority goes (fall > return > war); between equals the oldest (first in line).
+      let drop = 0;
+      for (let i = 1; i < queue.current.length; i++) {
+        if (RANK[queue.current[i]!.d.kind] < RANK[queue.current[drop]!.d.kind]) drop = i;
+      }
+      queue.current.splice(drop, 1);
+    }
+  };
+
+  const pump = () => {
+    if (busy.current) return;
+    const t = Date.now();
+    queue.current = queue.current.filter((q) => t - q.at <= STALE_MS);
+    const next = queue.current.shift()?.d;
+    if (!next) return;
+    busy.current = true;
+    setLeaving(false);
+    setCurrent(next);
+    timers.current.push(window.setTimeout(() => setLeaving(true), SHOW_MS - LEAVE_MS));
     timers.current.push(window.setTimeout(() => {
-      setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, leaving: true } : t)));
-    }, SHOW_MS - LEAVE_MS));
-    timers.current.push(window.setTimeout(() => {
-      setTabs((prev) => prev.filter((t) => t.id !== id));
+      setCurrent(null);
+      setLeaving(false);
+      busy.current = false;
+      pump();
     }, SHOW_MS));
   };
 
@@ -100,10 +121,13 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
       worldId.current = world.id;
       seen.current = new Set();
       shown.current = new Map();
+      queue.current = [];
       primed.current = false;
       timers.current.forEach((t) => window.clearTimeout(t));
       timers.current = [];
-      setTabs([]);
+      busy.current = false;
+      setCurrent(null);
+      setLeaving(false);
     }
     // The first look only learns what is already there, so a remount never replays old news.
     const fresh: WorldEvent[] = [];
@@ -183,14 +207,14 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
         });
       }
     }
+    pump();
   }, [events, world]);
 
-  // Publish the stack's bottom edge so other overlays (the belief banner) can sit below it.
-  const any = tabs.length > 0;
+  // Publish the dispatch's bottom edge so other overlays (the belief banner) can sit below it.
   useLayoutEffect(() => {
     const root = document.documentElement;
     const el = slotRef.current;
-    if (!any || !el) {
+    if (!current || !el) {
       root.style.removeProperty('--tn-herald-bottom');
       return;
     }
@@ -199,12 +223,12 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
     const ro = new ResizeObserver(publish);
     ro.observe(el);
     return () => { ro.disconnect(); root.style.removeProperty('--tn-herald-bottom'); };
-  }, [any]);
+  }, [current]);
 
-  if (!any) return null;
+  if (!current) return null;
   return (
     <div className="tn-herald-slot" ref={slotRef}>
-      {tabs.map((t) => <Tab key={t.id} d={t.d} leaving={t.leaving} />)}
+      <Card d={current} leaving={leaving} />
     </div>
   );
 }
