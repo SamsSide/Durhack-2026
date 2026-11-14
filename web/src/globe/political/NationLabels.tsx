@@ -30,7 +30,7 @@ const TINY = 9; // px: with little room (far zoom, near a panel) a name shrinks 
 const LIMB = 0.9; // names stay inside this share of the visible disc
 const PANEL_GAP = 10; // px kept clear of the side panels
 
-/** The free screen band between the network panel (left) and the nation card (right), in px. */
+/** The free screen band between the network panel (left) and the nation card (also left), in px. */
 const band = { left: 0, right: Infinity, t: 0 };
 function freeBand(width: number): { left: number; right: number } {
   const now = performance.now();
@@ -39,8 +39,8 @@ function freeBand(width: number): { left: number; right: number } {
     let left = 0, right = width;
     const net = document.querySelector('.tn-net');
     if (net) { const r = net.getBoundingClientRect(); if (r.width > 0 && r.left < width / 2) left = Math.max(left, r.right); }
-    const card = document.querySelector('.card-dock:not(.out)');
-    if (card) { const r = card.getBoundingClientRect(); if (r.width > 0) right = Math.min(right, r.left); }
+    const card = document.querySelector('.left-dock:not(.out)');
+    if (card) { const r = card.getBoundingClientRect(); if (r.width > 0 && r.left < width / 2) left = Math.max(left, r.right); }
     band.left = left + PANEL_GAP; band.right = right - PANEL_GAP;
   }
   return { left: band.left, right: Math.min(band.right, width) };

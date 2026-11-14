@@ -3,7 +3,7 @@
 
 type Rect = { l: number; t: number; r: number; b: number };
 
-const SELECTORS = ['.card-dock:not(.out)', '.tn-net', '.event-feed-slot .tn-feed-card', '.ledger-slot', '.news-slot'];
+const SELECTORS = ['.left-dock:not(.out)', '.tn-net', '.event-feed-slot .tn-feed-card', '.ledger-slot', '.news-slot'];
 const EVERY = 200;
 let rects: Rect[] = [];
 let at = -1e9;
