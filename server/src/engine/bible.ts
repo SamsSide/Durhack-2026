@@ -3,6 +3,7 @@
 import { diversifyStyles, isNomadic, pickBuildingStyle } from '@terra/shared';
 import { mulberry32, pick, type BibleNation, type FlagSpec, type Rng, type WorldBible } from '@terra/shared';
 import type { NewWorldOptions } from '../runner';
+import { governmentKeyOf, steerFlag, worldEraKey } from '../story/identity';
 
 interface EraKit {
   key: string; match: RegExp; name: string; startYear: number; tone: string;
@@ -66,42 +67,42 @@ const ARCHETYPES: Archetype[] = [
     culture: ['ledger-keepers', 'sealed contracts', 'harbour feasts', 'distrust of kings', 'weighing-scale oaths'],
     myth: 'When the old capital burned, the guild-masters signed the first charter on a table of cooling embers and swore never to rule alone.',
     t: [0.3, 0.5, 0.9, 0.3], anthem: 'brass fanfare and low drums, mercantile and proud', voice: 'warm, measured, an old merchant',
-    leaders: ['Speaker Maren Voss', 'Factor Dalia Orn', 'Syndic Benedek Hale'], layouts: ['horizontal3', 'border', 'canton'], emblems: ['gear', 'anchor', 'crown'] },
+    leaders: ['Speaker Maren Voss', 'Factor Dalia Orn', 'Syndic Benedek Hale'], layouts: ['horizontal2', 'border', 'horizontal3'], emblems: ['anchor', 'wheat', 'wave'] },
   { noun: 'Kingdom', adj: '', government: 'elective monarchy', ideology: 'The land chooses its stewards; the crown only holds it in trust.',
     culture: ['forest oaths', 'harvest festivals', 'long-bow guilds', 'tree burials', 'ancestral banners'],
     myth: 'A girl planted an acorn on a battlefield, and the army that left it unburned became the first court.',
     t: [0.4, 0.7, 0.4, 0.6], anthem: 'folk strings and a hunting horn, hopeful and rooted', voice: 'gentle, storytelling, a village elder',
-    leaders: ['Queen Illaria the Green', 'King Aldous Wren', 'Regent Maeve Thorn'], layouts: ['vertical2', 'plain', 'cross'], emblems: ['tree', 'wheat', 'crown'] },
+    leaders: ['Queen Illaria the Green', 'King Aldous Wren', 'Regent Maeve Thorn'], layouts: ['border', 'plain', 'vertical2'], emblems: ['crown', 'tree', 'tower'] },
   { noun: 'League', adj: '', government: 'naval oligarchy', ideology: 'Whoever reads the tide may write the law.',
     culture: ['salt-rope knots', 'lantern fleets', 'shanty duels', 'drowned-saint shrines'],
     myth: 'Their first ships were built from the doors of a flooded city, and every captain still carries one splinter of it.',
     t: [0.5, 0.6, 0.7, 0.4], anthem: 'sea shanty with accordion and stomping, rolling and bold', voice: 'gruff, sea-worn, a ship captain',
-    leaders: ['Admiral Osric Kell', 'Tidemaster Yara Pell', 'Commodore Hesk Duran'], layouts: ['horizontal2', 'diagonal', 'horizontal3'], emblems: ['anchor', 'wave', 'star'] },
+    leaders: ['Admiral Osric Kell', 'Tidemaster Yara Pell', 'Commodore Hesk Duran'], layouts: ['horizontal2', 'border', 'horizontal3'], emblems: ['anchor', 'wave', 'wheat'] },
   { noun: 'Dominion', adj: '', government: 'theocracy', ideology: 'Light is order; the faithful will be made to see it.',
     culture: ['dawn processions', 'gilded shrines', 'fasting seasons', 'mirror-prayer'],
     myth: 'A shepherd stared at the sun until it spoke, and the first tower was raised where his shadow fell.',
     t: [0.7, 0.6, 0.3, 0.95], anthem: 'choral voices and bright trumpets, solemn and triumphant', voice: 'resonant, ceremonial, a priest',
-    leaders: ['High Solarch Teodar', 'Matriarch Soleil Ravn', 'Prelate Imre Dusk'], layouts: ['cross', 'saltire', 'plain'], emblems: ['sun', 'flame', 'tower'] },
+    leaders: ['High Solarch Teodar', 'Matriarch Soleil Ravn', 'Prelate Imre Dusk'], layouts: ['cross', 'saltire', 'plain'], emblems: ['sun', 'eye', 'flame'] },
   { noun: 'Court', adj: '', government: 'conspiratorial court', ideology: 'Everything is a bargain, and every bargain has a second page.',
     culture: ['masked audiences', 'whispered treaties', 'night markets', 'candle-ciphers'],
     myth: 'The court was founded in a mine after the king died, and no one agrees on who first lit the lamp.',
     t: [0.6, 0.4, 0.5, 0.5], anthem: 'low strings, a sombre waltz and a distant bell', voice: 'quiet, silky, a spymaster',
-    leaders: ['The Veiled Regent', 'Chancellor Isolde Marr', 'Lord Cassian Vey'], layouts: ['diagonal', 'canton', 'saltire'], emblems: ['eye', 'moon', 'skull'] },
+    leaders: ['The Veiled Regent', 'Chancellor Isolde Marr', 'Lord Cassian Vey'], layouts: ['border', 'plain', 'vertical2'], emblems: ['crown', 'eye', 'tower'] },
   { noun: 'Horde', adj: '', government: 'war-band confederacy', ideology: 'Strength is the only honest treaty.',
     culture: ['drum-calls', 'horse-oaths', 'scar-tallies', 'feast-after-battle'],
     myth: 'Twelve exiled clans shared one fire through a winter, and the fire never went out.',
     t: [0.95, 0.85, 0.2, 0.35], anthem: 'war drums and throat-song, relentless and fierce', voice: 'booming, rough, a war chief',
-    leaders: ['Warchief Brakka Dun', 'Khan Torvald Esk', 'Matron Ushi Karr'], layouts: ['vertical3', 'diagonal', 'horizontal2'], emblems: ['sword', 'skull', 'flame'] },
+    leaders: ['Warchief Brakka Dun', 'Khan Torvald Esk', 'Matron Ushi Karr'], layouts: ['plain', 'diagonal', 'vertical2'], emblems: ['sword', 'skull', 'sun'] },
   { noun: 'Union', adj: '', government: 'technocratic council', ideology: 'Every problem is a machine waiting to be understood.',
     culture: ['guild-engineers', 'numbered streets', 'public workshops', 'patent-songs'],
     myth: 'The founders rebuilt a ruined clockwork tower and, when it struck noon, declared the hour belonged to everyone.',
-    t: [0.35, 0.65, 0.75, 0.15], anthem: 'rhythmic percussion and synth pulses, precise and bright', voice: 'crisp, curious, a lecturer',
-    leaders: ['Chair Odile Brandt', 'Architect Pavo Linn', 'Director Sela Quill'], layouts: ['border', 'horizontal3', 'canton'], emblems: ['gear', 'tower', 'star'] },
+    t: [0.35, 0.65, 0.75, 0.15], anthem: 'rhythmic percussion and pulsing drones, precise and bright', voice: 'crisp, curious, a lecturer',
+    leaders: ['Chair Odile Brandt', 'Architect Pavo Linn', 'Director Sela Quill'], layouts: ['diagonal', 'horizontal3', 'border'], emblems: ['gear', 'eye', 'tower'] },
   { noun: 'Pact', adj: '', government: 'council of elders', ideology: 'What the mountain remembers, the people must not forget.',
     culture: ['stone-carved law', 'echo choirs', 'grain vaults', 'cairn pilgrimages'],
     myth: 'The elders sealed the first pact inside a cave and the echo of it has never faded.',
     t: [0.4, 0.35, 0.45, 0.7], anthem: 'deep horns and slow chanting, ancient and steady', voice: 'low, patient, a mountain guide',
-    leaders: ['Eldest Gorm Halvar', 'Speaker Brenna Holt', 'Warden Ivo Stane'], layouts: ['plain', 'vertical2', 'cross'], emblems: ['mountain', 'moon', 'tower'] },
+    leaders: ['Eldest Gorm Halvar', 'Speaker Brenna Holt', 'Warden Ivo Stane'], layouts: ['plain', 'diagonal', 'vertical2'], emblems: ['mountain', 'moon', 'tree'] },
 ];
 
 const FLAG_NEUTRALS = ['#f1ead2', '#1d1d24', '#16324f'];
@@ -166,6 +167,10 @@ export function mockBible(opts: NewWorldOptions, seed: number): WorldBible {
       regionNames,
     });
   }
+  // Flags (A24): layout and emblem follow the government (a ruined era leans on skulls and flames), at most two alike.
+  const eraKey = worldEraKey({ era: opts.era ?? kit.name, prompt: opts.prompt, name: worldName });
+  const used = new Map<string, number>();
+  nations.forEach((nat, i) => { nat.flag = steerFlag(nat.flag, governmentKeyOf({ ...nat, nomadic: undefined }), eraKey, used, seed + i); });
   // Building styles (#91): rules from the prompt and each nation, then at most two per style.
   const styles = diversifyStyles(nations.map((n) => pickBuildingStyle(text, n)));
   nations.forEach((n, i) => { n.buildingStyle = styles[i]; n.nomadic = isNomadic(n); });

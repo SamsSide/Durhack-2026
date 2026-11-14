@@ -1,5 +1,6 @@
 // ElevenLabs text to speech (A14): plain fetch, voice choice from voiceStyle, a character meter and cap.
 import { currentMode } from '../llm';
+import { GOV_VOICE, type GovKey } from './identity';
 
 const API = 'https://api.elevenlabs.io/v1';
 /** Stable, natural long-form model; set ELEVEN_MODEL to try eleven_v3 or eleven_flash_v2_5. */
@@ -15,7 +16,7 @@ export class VoiceUnavailable extends Error {
 
 // --- voice table: the one place that maps a voiceStyle to a premade voice ----------------------
 export interface VoiceChoice { id: string; name: string }
-const V = {
+export const V = {
   george: { id: 'JBFqnCBsd6RMkjVDRZzb', name: 'George' },   // warm storyteller, british, the default narrator
   daniel: { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel' },   // formal broadcaster, british
   bill: { id: 'pqHfZKP75CvOlQylNhV4', name: 'Bill' },       // old, wise
@@ -35,12 +36,18 @@ const FEMALE = ['woman', 'female', 'lady', 'queen', 'empress', 'matron', 'priest
 const MALE = ['man', 'male', 'king', 'emperor', 'father', 'priest', 'boy', 'he', 'his', 'lord', 'duke', 'general'];
 const OLD = ['old', 'elder', 'aged', 'ancient', 'grave', 'weathered', 'wise', 'patriarch', 'venerable', 'grey', 'gray'];
 const YOUNG = ['young', 'youthful', 'brisk', 'herald', 'teen', 'boy', 'girl', 'eager', 'bright', 'lively', 'energetic'];
-const FIERCE = ['fierce', 'war', 'warrior', 'soldier', 'rebel', 'revolutionary', 'rough', 'gruff', 'harsh', 'commander', 'blunt'];
+const FIERCE = ['fierce', 'war(?!m)', 'warrior', 'soldier', 'rebel', 'revolutionary', 'rough', 'gruff', 'harsh', 'commander', 'blunt'];
 const SMOOTH = ['smooth', 'merchant', 'trader', 'silken', 'charming', 'cunning', 'sly', 'trickster', 'sly'];
 const FORMAL = ['formal', 'stern', 'official', 'bureaucrat', 'broadcaster', 'cold', 'precise', 'clerk', 'scholar'];
 
-/** Deterministic: the same voiceStyle always gives the same voice. */
-export function chooseVoice(voiceStyle: string | undefined): VoiceChoice {
+/** Deterministic: the same voiceStyle always gives the same voice. When the style names nothing decisive
+ *  (it would fall to the default George) the government, if given, breaks the tie (A24). */
+export function chooseVoice(voiceStyle: string | undefined, governmentKey?: GovKey): VoiceChoice {
+  const v = chooseByStyle(voiceStyle);
+  return v === V.george && governmentKey ? V[GOV_VOICE[governmentKey]] : v;
+}
+
+function chooseByStyle(voiceStyle: string | undefined): VoiceChoice {
   const s = (voiceStyle ?? '').toLowerCase();
   if (!s.trim()) return V.george;
   const female = has(s, FEMALE) && !has(s, ['man', 'male', 'king', 'father', 'priest', 'he', 'his']);

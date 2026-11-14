@@ -4,7 +4,8 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Country } from '@terra/shared';
+import type { Country, World } from '@terra/shared';
+import { nationIdentity } from './identity';
 import { currentMode } from '../llm';
 import { VoiceUnavailable } from './eleven';
 
@@ -27,32 +28,31 @@ type Plan = {
   sections: { section_name: string; positive_local_styles: string[]; negative_local_styles: string[]; duration_ms: number; lines: string[] }[];
 };
 
-/** Style words from government and temperament, so a theocracy sings a hymn and an empire marches. */
-function moodStyles(c: Pick<Country, 'government' | 'culture' | 'temperament'>): string[] {
-  const g = c.government.toLowerCase(), t = c.temperament;
-  const s: string[] = [];
-  if (/theocra|church|faith|priest|holy|temple/.test(g) || t.faith > 0.7) s.push('solemn hymn', 'choir', 'organ');
-  if (/empire|military|junta|warlord|kingdom|dictator/.test(g) || t.aggression > 0.7) s.push('brass march', 'war drums', 'defiant');
-  if (/republic|merchant|trade|guild/.test(g) || t.trade > 0.7) s.push('proud fanfare', 'strings');
-  if (t.aggression < 0.3 && t.faith < 0.5) s.push('hopeful', 'folk');
-  s.push(...c.culture.slice(0, 2));
-  return [...new Set(s)].slice(0, 6);
-}
-
 /** The music filter rejects prompts that name a (national) anthem, so the bible's wording is softened. */
 const safeStyle = (p: string) => p.replace(/national\s+anthems?/gi, 'patriotic hymn').replace(/anthems?/gi, 'hymn');
 
-/** The composition plan: the anthemPrompt as global style, the lyrics split across two sung sections. */
-export function buildPlan(c: Pick<Country, 'name' | 'government' | 'culture' | 'temperament' | 'anthemPrompt'>, lyrics: string[]): Plan {
+/** The composition plan (A24): the era's instruments and production, the government's form, tempo and voices,
+ *  then the nation's own anthemPrompt; the lyrics are split across two sung sections. */
+export function buildPlan(world: Parameters<typeof nationIdentity>[0], c: Pick<Country, 'id' | 'capitalTile' | 'name' | 'government' | 'ideology' | 'culture' | 'temperament' | 'anthemPrompt' | 'techAge' | 'buildingStyle' | 'nomadic'>, lyrics: string[]): Plan {
   const lines = lyrics.map((l) => l.replace(/\s+/g, ' ').trim().slice(0, 190)).filter(Boolean).slice(0, 8);
   const half = Math.ceil(lines.length / 2);
   const parts = [lines.slice(0, half), lines.slice(half)].filter((p) => p.length);
+  const m = nationIdentity(world, c).music;
+  const styles = [
+    safeStyle(c.anthemPrompt),
+    `${m.form}, ${m.tempo}`,
+    m.instruments,
+    `${m.production}, ${m.mood}`,
+    [m.voices, m.language].filter(Boolean).join(', '),
+    'sung vocals', 'sung lyrics',
+    ...c.culture.slice(0, 2),
+  ];
   return {
-    positive_global_styles: [safeStyle(c.anthemPrompt), 'sung vocals', 'sung lyrics', ...moodStyles(c)].map((s) => s.slice(0, 200)),
-    negative_global_styles: ['instrumental only', 'spoken word', 'rap'],
+    positive_global_styles: styles.map((s) => safeStyle(s).slice(0, 200)),
+    negative_global_styles: ['instrumental only', 'spoken word', 'rap', ...m.negative.split(', ')],
     sections: parts.map((p, i) => ({
       section_name: i === 0 ? 'Verse' : 'Chorus',
-      positive_local_styles: i === 0 ? ['steady, building'] : ['full, rousing, memorable melody'],
+      positive_local_styles: [i === 0 ? m.verse : m.chorus],
       negative_local_styles: [],
       duration_ms: SECTION_MS,
       lines: p,
@@ -89,9 +89,9 @@ const exists = (p: string) => fs.access(p).then(() => true, () => false);
 const inflight = new Map<string, Promise<void>>();
 
 /** Path of the cached anthem for these lyrics, generating it once (concurrent callers share one call). */
-export async function anthemFile(country: Country, lyrics: string[], cachedOnly = false): Promise<string> {
+export async function anthemFile(world: World, country: Country, lyrics: string[], cachedOnly = false): Promise<string> {
   if (!anthemLive()) throw new VoiceUnavailable('music off');
-  const plan = buildPlan(country, lyrics);
+  const plan = buildPlan(world, country, lyrics);
   const hash = crypto.createHash('sha256').update(`${model()}\n${JSON.stringify(plan)}`).digest('hex');
   const file = path.join(CACHE_DIR, `${hash}.mp3`);
   if (cachedOnly && !(await exists(file))) throw new VoiceUnavailable('not recorded');

@@ -6,6 +6,7 @@ import { llmJson, bibleModel, currentMode, type Schema } from '../llm';
 import { createHash } from 'node:crypto';
 import type { NewWorldOptions } from '../runner';
 import { mockBible } from './bible';
+import { FLAG_PROMPT, governmentKeyOf, steerFlag, worldEraKey } from '../story/identity';
 
 /** The sync template bible, re-exported for clarity: the fallback for makeBible. */
 export const bibleFallback = mockBible;
@@ -182,6 +183,10 @@ export function repairBible(raw: RawBible, fallback: WorldBible, n: number, extr
       nomadic: typeof r.nomadic === 'boolean' ? r.nomadic : undefined,
     });
   }
+  // Flags (A24): steer layout and emblem to each nation's government and the era, at most two alike.
+  const eraKey = worldEraKey({ era: `${raw.era ?? ''} ${fallback.era}`, prompt: raw.name ?? '', name: '' });
+  const used = new Map<string, number>();
+  nations.forEach((nat, i) => { nat.flag = steerFlag(nat.flag, governmentKeyOf({ ...nat, nomadic: nat.nomadic }), eraKey, used, i); });
   // Building styles (#91): Gemini's pick, else the rules; then at most two nations per style.
   const worldText = `${raw.era ?? ''} ${raw.name ?? ''} ${fallback.era}`;
   const styles = diversifyStyles(nations.map((n) => n.buildingStyle ?? pickBuildingStyle(worldText, n)));
@@ -242,6 +247,8 @@ export async function makeBible(opts: NewWorldOptions, seed: number): Promise<Wo
         'Give each nation a distinct hex colour (far apart in hue, bright enough to read on a dark globe),',
         'a different flag layout and emblem, 3 to 5 culture traits, temperaments 0 to 1, and 6 to 8 region names in its own culture\'s naming style.',
         'Flag colours: 2 to 4 hex colours, the first being the nation colour. Keep every text short.',
+        FLAG_PROMPT,
+        'The anthemPrompt names instruments, tempo and mood that fit the nation\'s era and government (a hymn for a theocracy, a march for a junta or a people\'s state); never use the word anthem.',
         LOCAL_INSTRUCTION,
       ].filter(Boolean).join('\n'),
     });

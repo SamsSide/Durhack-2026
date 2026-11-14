@@ -3,6 +3,7 @@
 // It never retries. RulerScheduler decides when each nation is next due, spreading calls under the cap.
 import { relationOf, type Stance, type World, type WorldEvent } from '@terra/shared';
 import { getBudget, llmJson, rulerModel, type Schema } from '../llm';
+import { chronicleToneOf, governmentKeyOf } from '../story/identity';
 
 export type Focus = 'expand' | 'develop' | 'fortify' | 'attack';
 const FOCUSES: Focus[] = ['expand', 'develop', 'fortify', 'attack'];
@@ -73,6 +74,12 @@ const SYSTEM = [
   'The proclamation is one sentence in your own voice for the chronicle. Plain words, no emojis. Reply with JSON only.',
 ].join(' ');
 
+/** The system prompt plus the government's chronicle voice for the proclamation (A24). */
+function systemFor(digest: RulerDigest): string {
+  const tone = chronicleToneOf(governmentKeyOf({ government: digest.government, ideology: digest.ideology, temperament: digest.temperament }));
+  return `${SYSTEM} Proclamation voice: ${tone}`;
+}
+
 const decisionSchema: Schema = {
   type: 'object',
   required: ['focus', 'stances', 'proclamation'],
@@ -108,7 +115,7 @@ export function checkDecision(raw: RulerDecision, digest: RulerDigest): RulerDec
 export async function decide(digest: RulerDigest): Promise<RulerDecision> {
   try {
     const raw = await llmJson<RulerDecision>({
-      model: rulerModel(), system: SYSTEM, purpose: 'ruler', schema: decisionSchema, maxOutputTokens: 220,
+      model: rulerModel(), system: systemFor(digest), purpose: 'ruler', schema: decisionSchema, maxOutputTokens: 220,
       prompt: `Digest (JSON):\n${JSON.stringify(digest)}\nDecide for ${digest.name} now.`,
     });
     return checkDecision(raw, digest);
