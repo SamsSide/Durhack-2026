@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import { useFrame } from '@react-three/fiber';
 import { Billboard, Text } from '@react-three/drei';
 import * as THREE from 'three';
+import { usePipHidden } from '../pip/pipLod';
 import { flagSvg, regionOwner } from '@terra/shared';
 import type { FlagSpec } from '@terra/shared';
 import { useWorld } from '../../state/world';
@@ -94,6 +95,7 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
   const INK = getPalette().ink;
   const HALO = getPalette().ink;
   const groupRef = useRef<THREE.Group>(null);
+  usePipHidden(groupRef); // laid out for the main camera: not in the news PiP
   const innerRef = useRef<THREE.Group>(null);
   const textRef = useRef<any>(null); // troika Text instance
   const flagRef = useRef<THREE.Mesh>(null);

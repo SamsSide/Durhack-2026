@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { onPipPass } from '../pip/pipLod';
 import { useWorld } from '../../state/world';
 import { tileHeight } from '../mesh/buildProvinceMesh';
 import { SUN_DIST, advanceSun, holdSun, setSunAngle, radialTexture, reducedMotion, rimFade, smooth, sunDir } from './sun';
@@ -203,6 +204,17 @@ function Shells() {
     };
   }, []);
   useEffect(() => () => { terminator.dispose(); rim.dispose(); }, [terminator, rim]);
+  // The news PiP films from inside these shells: fade them for its camera during its pass only.
+  useEffect(() => {
+    let t = 1, r = 1;
+    return onPipPass((on, cam) => {
+      if (on) {
+        t = terminator.uniforms.uFade.value as number; r = rim.uniforms.uFade.value as number;
+        terminator.uniforms.uFade.value = 0;
+        rim.uniforms.uFade.value = rimFade(cam.position.length());
+      } else { terminator.uniforms.uFade.value = t; rim.uniforms.uFade.value = r; }
+    });
+  }, [terminator, rim]);
   useFrame(({ camera }) => {
     terminator.uniforms.uFade.value = smooth(1.3, 1.8, camera.position.length()); // the shell sits above the terrain: hide it close up
     (rim.uniforms.uSunV.value as THREE.Vector3).copy(sunDir).transformDirection(camera.matrixWorldInverse);

@@ -38,6 +38,7 @@ import { CutVeil } from './show/CutVeil';
 import { RulerScrolls } from './show/RulerScrolls';
 import { registerCapture } from './capture';
 import { setStatuses } from './status/statusTint';
+import { NewsPip } from './pip/NewsPip';
 
 const SPACE = '#0b0f14';
 
@@ -183,6 +184,8 @@ function Scene({ world }: { world: World }) {
       <CutVeil />
       <RulerScrolls />
       <Spotlight />
+      {/* last: its frame callback runs after every layer's, just before the main render */}
+      <NewsPip />
     </ProvinceMeshContext.Provider>
   );
 }
