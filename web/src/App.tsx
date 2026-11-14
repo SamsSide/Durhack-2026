@@ -49,6 +49,7 @@ export function App() {
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
       <Globe />
+      <div className="tn-scrim" />
       <TopBar onCreate={() => setCreating(true)} />
       <BeliefBanner />
       {world && <div className="left-net" style={{ ...overlay, top: 64, left: 'var(--space-4)', bottom: 'calc(var(--space-4) + var(--ticker-height) + var(--space-3))' }}><NetworkPanel key={epoch} /></div>}

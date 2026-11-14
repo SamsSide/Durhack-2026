@@ -133,6 +133,61 @@
 
   --topbar-height: 52px;
   --ticker-height: 40px;
+
+  /* ---- Materials (docs/research/ui-depth.md section 2; the classes are in theme/materials.css) ---- */
+  /* Gilt: a metal edge, lit from the top left. Only ever on dark grounds or as a thin band. */
+  --gilt-hi: #f4e2a6;
+  --gilt: #c9a24b;                 /* = --color-accent */
+  --gilt-lo: #7a5a1e;
+  --gilt-deep: #3a2b10;
+  --gilt-metal: linear-gradient(135deg, #7a5a1e 0%, #e9cf86 22%, #b38a3a 45%, #f4e2a6 58%, #a07a2e 78%, #6b4e18 100%);
+  --gilt-ring: conic-gradient(from 200deg, #7a5a1e, #f4e2a6, #b38a3a, #fff0c0, #8a6524, #e9cf86, #7a5a1e);
+  --gilt-plate: linear-gradient(180deg, #f3dc95 0%, #d8b25a 46%, #b88e38 54%, #cda24a 100%);
+  --frame-line: #140e08;           /* the hard dark outer line round every frame */
+
+  /* Lacquer: the night enamel for the top bar, strips, plates and tooltips. */
+  --lacquer: #121623;
+  --lacquer-hi: #20263a;
+  --lacquer-lo: #0b0e17;
+  --lacquer-claret: #5a1f18;       /* rubric-family plate for section headers */
+  --lacquer-claret-hi: #74291f;
+  --lacquer-sheen: linear-gradient(180deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,0) 42%, rgba(0,0,0,.28) 100%);
+
+  /* Depth: three static layers (contact, short, ambient). Never animate these. */
+  --lift-1: 0 1px 0 rgba(0,0,0,.55), 0 3px 6px -1px rgba(0,0,0,.45);
+  --lift-2: 0 1px 0 rgba(0,0,0,.6), 0 6px 12px -2px rgba(0,0,0,.45), 0 22px 44px -10px rgba(0,0,0,.65);
+  --bevel-paper: inset 0 1px 0 rgba(255,250,235,.75), inset 0 -1px 0 rgba(120,90,50,.30);
+  --bevel-dark: inset 0 1px 0 rgba(255,255,255,.08), inset 0 -1px 0 rgba(0,0,0,.5);
+  --well-paper: inset 0 1px 2px rgba(42,31,20,.28), inset 0 -1px 0 rgba(255,250,235,.55);
+  --well-dark: inset 0 2px 4px rgba(0,0,0,.65), inset 0 0 0 1px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.06);
+  --recess-paper: inset 0 0 16px rgba(80,52,18,.28);      /* paper sunk inside its frame */
+
+  /* Text */
+  --engrave-on-paper: 0 1px 0 rgba(255,250,235,.65);      /* light below = cut into the paper */
+  --engrave-on-dark: 0 -1px 0 rgba(0,0,0,.85), 0 1px 0 rgba(255,255,255,.06);
+
+  /* Grain: static SVG noise tiles, rasterised once (never use filter: url() on live elements). */
+  --paper-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .17  0 0 0 0 .12  0 0 0 0 .07  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23g)' opacity='.22'/></svg>");
+  --paper-mottle: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><filter id='m'><feTurbulence type='fractalNoise' baseFrequency='.012' numOctaves='2' seed='7' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .45  0 0 0 0 .32  0 0 0 0 .16  0 0 0 1.2 -.35'/></filter><rect width='100%' height='100%' filter='url(%23m)' opacity='.25'/></svg>");
+  --lacquer-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='l'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 .95  0 0 0 0 .85  0 0 0 .5 0'/></filter><rect width='100%' height='100%' filter='url(%23l)' opacity='.06'/></svg>");
+
+  /* Whole surfaces as background layer lists. Every layer is clipped to the padding box, so a
+     .tn-frame can paint its gilt band in the transparent border underneath. The vignette is
+     capped so --color-ink-muted keeps about 4.9:1 at the darkest edge. */
+  --paper-surface:
+    radial-gradient(ellipse 120% 90% at 50% 38%, rgba(0,0,0,0) 58%, rgba(110,78,36,.14) 100%) padding-box,
+    var(--paper-mottle) padding-box,
+    var(--paper-grain) padding-box,
+    linear-gradient(180deg, #f3e8cd 0%, var(--color-parchment) 45%, #e8d9b4 100%) padding-box;
+  --lacquer-surface:
+    var(--lacquer-sheen) padding-box,
+    var(--lacquer-grain) padding-box,
+    linear-gradient(180deg, #171b2a, #0d1019) padding-box;
+
+  /* Ornaments: small SVG data URIs (one decode, cached). Original designs. */
+  --frame-corners: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><defs><linearGradient id='a' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23f4e2a6'/><stop offset='.5' stop-color='%23c9a24b'/><stop offset='1' stop-color='%237a5a1e'/></linearGradient></defs><g fill='none' stroke-linecap='square'><path stroke='%23140e08' stroke-width='4' d='M6 15V6H15M33 6H42V15M42 33V42H33M15 42H6V33'/><path stroke='url(%23a)' stroke-width='2' d='M6 15V6H15M33 6H42V15M42 33V42H33M15 42H6V33'/></g><g fill='url(%23a)' stroke='%23140e08' stroke-width='.9'><rect x='.5' y='.5' width='8' height='8'/><rect x='39.5' y='.5' width='8' height='8'/><rect x='39.5' y='39.5' width='8' height='8'/><rect x='.5' y='39.5' width='8' height='8'/><path d='M12 9L14.5 11.5L12 14L9.5 11.5Z'/><path d='M36 9L38.5 11.5L36 14L33.5 11.5Z'/><path d='M36 34L38.5 36.5L36 39L33.5 36.5Z'/><path d='M12 34L14.5 36.5L12 39L9.5 36.5Z'/></g></svg>");
+  --diamond: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path d='M6 1L11 6L6 11L1 6Z' fill='%239c2f22'/><path d='M6 3.5L8.5 6L6 8.5L3.5 6Z' fill='%23ecdfc0'/></svg>");
+  --diamond-gilt: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path d='M6 .8L11.2 6L6 11.2L.8 6Z' fill='%23c9a24b' stroke='%23140e08' stroke-width='.8'/><path d='M6 3.6L8.4 6L6 8.4L3.6 6Z' fill='%23f4e2a6'/></svg>");
 }
 
 * { box-sizing: border-box; }
