@@ -1,112 +1,118 @@
-// Placeholder globe (lane b replaces it): one merged BufferGeometry, a triangle fan per province.
+// The 3D globe: one province mesh, live colours, click-to-select, fly-to. Lane b.
 import { useEffect, useMemo, useRef } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import type { ThreeEvent } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
-import { relationOf } from '@terra/shared';
-import type { Stance, Terrain, World } from '@terra/shared';
+import type { World } from '@terra/shared';
 import { useWorld } from '../state/world';
-import type { WorldStore } from '../state/world';
 import { useBelief } from '../state/belief';
 import { useCamera } from '../state/camera';
+import { CAM_MAX, CAM_MIN } from './constants';
+import { buildProvinceMesh } from './mesh/buildProvinceMesh';
+import type { ProvinceMesh } from './mesh/buildProvinceMesh';
+import { writeColors } from './mesh/colors';
+import { ProvinceMeshContext } from './mesh/context';
 
-const TERRAIN: Record<Terrain, string> = {
-  ocean: '#1c3a52', coast: '#2c5b73', plains: '#9aa465', forest: '#4f7a45', desert: '#cfb277',
-  hills: '#8a8a5a', mountain: '#7d756b', ice: '#e3eef2',
-};
-const STANCE: Record<Stance, string> = {
-  war: '#c0392b', hostile: '#d98a3a', neutral: '#8a8a8a', trade: '#4f9bb5', alliance: '#4f9f5a',
-};
-const UNCLAIMED = new THREE.Color('#3a3328');
+const SPACE = '#0b0f14';
 
-function tileColor(world: World, t: number, owner: number, mode: WorldStore['mapMode'], sel: number | null, out: THREE.Color): void {
-  const tile = world.tiles[t]!;
-  if (tile.terrain === 'ocean') { out.set(TERRAIN.ocean); return; }
-  if (mode === 'terrain' || owner < 0) {
-    out.set(owner < 0 && mode !== 'terrain' ? '#5a5240' : TERRAIN[tile.terrain]);
-    if (owner < 0 && mode !== 'terrain') out.lerp(UNCLAIMED, 0.3);
-    return;
-  }
-  const country = world.countries[owner];
-  if (!country) { out.copy(UNCLAIMED); return; }
-  if (mode === 'diplomacy' && sel != null) {
-    if (owner === sel) out.set('#f0e6c8');
-    else out.set(STANCE[relationOf(world, sel, owner).stance]);
-  } else if (mode === 'strength') {
-    const maxPop = Math.max(1, ...world.countries.map((c) => c.population));
-    out.set(country.color).multiplyScalar(0.35 + 0.65 * (country.population / maxPop));
-  } else {
-    out.set(country.color);
-  }
-  out.multiplyScalar(0.8 + 0.2 * tile.elevation);
+/** Directional light that stays at the camera's upper left so the lit side faces the viewer. */
+function CameraLight() {
+  const ref = useRef<THREE.DirectionalLight>(null);
+  const offset = useMemo(() => new THREE.Vector3(), []);
+  useFrame(({ camera }) => {
+    const l = ref.current;
+    if (!l) return;
+    offset.set(-1.2, 1.0, 0.8).applyQuaternion(camera.quaternion);
+    l.position.copy(camera.position).add(offset);
+  });
+  return <directionalLight ref={ref} intensity={1.1} />;
 }
 
-function buildGeometry(world: World): { geometry: THREE.BufferGeometry; faceTile: Uint32Array } {
-  let tris = 0;
-  for (const t of world.tiles) tris += t.boundary.length;
-  const pos = new Float32Array(tris * 9);
-  const faceTile = new Uint32Array(tris);
-  let p = 0, f = 0;
-  for (const tile of world.tiles) {
-    const r = tile.terrain === 'ocean' ? 1 : 1 + 0.03 * tile.elevation;
-    const c = tile.center;
-    const n = tile.boundary.length;
-    for (let i = 0; i < n; i++) {
-      const a = tile.boundary[i]!, b = tile.boundary[(i + 1) % n]!;
-      for (const v of [c, a, b]) { pos[p++] = v[0] * r; pos[p++] = v[1] * r; pos[p++] = v[2] * r; }
-      faceTile[f++] = tile.id;
-    }
-  }
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(tris * 9), 3));
-  return { geometry, faceTile };
-}
-
-function Planet({ world }: { world: World }) {
-  const { geometry, faceTile } = useMemo(() => buildGeometry(world), [world]);
+function Planet({ world, mesh }: { world: World; mesh: ProvinceMesh }) {
   const lastPaint = useRef(0);
 
   useEffect(() => {
-    const color = new THREE.Color();
-    const paint = () => {
+    const ownerFn = (): ((t: number) => number) => {
       const s = useWorld.getState();
-      const w = s.world;
-      if (!w || w !== world) return;
       const belief = s.beliefOf != null ? useBelief.getState().owner : null;
-      const attr = geometry.getAttribute('color') as THREE.BufferAttribute;
-      let f = 0;
-      for (const tile of w.tiles) {
-        tileColor(w, tile.id, belief ? (belief[tile.id] ?? -1) : (w.owner[tile.id] ?? -1), s.mapMode, s.selectedCountryId, color);
-        for (let i = 0; i < tile.boundary.length * 3; i++) attr.setXYZ(f * 3 + i, color.r, color.g, color.b);
-        f += tile.boundary.length;
-      }
-      attr.needsUpdate = true;
+      return belief ? (t) => belief[t] ?? -1 : (t) => world.owner[t] ?? -1;
+    };
+    let seenVersion = -1;
+    let lastEventId: string | null = null;
+    let lastMode = useWorld.getState().mapMode;
+    let lastSel = useWorld.getState().selectedCountryId;
+
+    const paintAll = () => {
+      const s = useWorld.getState();
+      writeColors(mesh, world, ownerFn(), s.mapMode, s.selectedCountryId);
       lastPaint.current = performance.now();
     };
-    paint();
+
+    // Work out which tiles changed since the last paint; null means repaint everything.
+    const diff = (events: ReadonlyArray<{ id: string; type: string; tile?: number }>): Set<number> | null => {
+      let start = 0;
+      if (lastEventId != null) {
+        const idx = events.findIndex((e) => e.id === lastEventId);
+        if (idx < 0) return events.length === 0 ? new Set() : null;
+        start = idx + 1;
+      }
+      const tiles = new Set<number>();
+      for (let i = start; i < events.length; i++) {
+        const e = events[i]!;
+        if (e.type === 'country_founded' || e.type === 'country_fell') return null;
+        if (e.type === 'tile_claimed' && e.tile != null) tiles.add(e.tile);
+      }
+      return tiles;
+    };
+
+    const paint = () => {
+      const s = useWorld.getState();
+      if (s.world !== world) return;
+      const events = s.recentEvents;
+      const modeChanged = s.mapMode !== lastMode || s.selectedCountryId !== lastSel;
+      lastMode = s.mapMode;
+      lastSel = s.selectedCountryId;
+      const changed = s.version !== seenVersion ? diff(events) : new Set<number>();
+      seenVersion = s.version;
+      lastEventId = events.length ? events[events.length - 1]!.id : lastEventId;
+      if (modeChanged || changed === null || seenVersion < 0) paintAll();
+      else if (changed.size > 0) {
+        writeColors(mesh, world, ownerFn(), s.mapMode, s.selectedCountryId, changed);
+        lastPaint.current = performance.now();
+      }
+    };
+
+    // initial paint
+    {
+      const s = useWorld.getState();
+      seenVersion = s.version;
+      lastEventId = s.recentEvents.length ? s.recentEvents[s.recentEvents.length - 1]!.id : null;
+      paintAll();
+    }
+
     let timer: ReturnType<typeof setTimeout> | null = null;
     const unsub = useWorld.subscribe(() => {
       if (timer) return;
-      const wait = Math.max(0, 250 - (performance.now() - lastPaint.current));
-      timer = setTimeout(() => { timer = null; paint(); }, wait);   // ~4 Hz
+      const wait = Math.max(0, 250 - (performance.now() - lastPaint.current)); // ~4 Hz
+      timer = setTimeout(() => { timer = null; paint(); }, wait);
     });
-    const unsubBelief = useBelief.subscribe(() => paint());
+    const unsubBelief = useBelief.subscribe(() => paintAll());
     return () => { unsub(); unsubBelief(); if (timer) clearTimeout(timer); };
-  }, [geometry, world]);
+  }, [mesh, world]);
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     if (e.faceIndex == null) return;
     e.stopPropagation();
-    const tile = faceTile[e.faceIndex]!;
+    const tile = mesh.triangleToTile[e.faceIndex];
+    if (tile == null || tile < 0) return;
     const owner = world.owner[tile] ?? -1;
     useWorld.getState().select(owner >= 0 ? owner : null, tile);
   };
 
   return (
-    <mesh geometry={geometry} onClick={onClick}>
-      <meshBasicMaterial vertexColors side={THREE.FrontSide} />
+    <mesh geometry={mesh.geometry} onClick={onClick}>
+      <meshStandardMaterial vertexColors flatShading roughness={0.95} metalness={0} />
     </mesh>
   );
 }
@@ -120,19 +126,36 @@ function FlyTo() {
     const country = target != null ? w?.countries[target] : undefined;
     if (!w || !country) return;
     const c = w.tiles[country.capitalTile]?.center;
-    if (c) camera.position.set(c[0], c[1], c[2]).multiplyScalar(2.2);
+    if (c) camera.position.set(c[0], c[1], c[2]).multiplyScalar(1.6);
   }, [nonce, camera]);
   return null;
 }
 
+function Scene({ world }: { world: World }) {
+  // Rebuild only when the world id or its tiles array changes; dispose the old geometry.
+  const mesh = useMemo(() => buildProvinceMesh(world), [world.id, world.tiles]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => mesh.geometry.dispose(), [mesh]);
+  return (
+    <ProvinceMeshContext.Provider value={mesh}>
+      <Planet world={world} mesh={mesh} />
+      {/* lane b overlays: CameraRig, SelectionGlow, Political */}
+    </ProvinceMeshContext.Provider>
+  );
+}
+
 export function Globe() {
   const world = useWorld((s) => s.world);
+  const space = typeof document !== 'undefined'
+    ? getComputedStyle(document.documentElement).getPropertyValue('--globe-space').trim() || SPACE
+    : SPACE;
   return (
-    <Canvas camera={{ position: [0, 0.8, 2.8], fov: 45 }} onPointerMissed={() => useWorld.getState().select(null)}>
-      <color attach="background" args={['#0b0a08']} />
-      {world && <Planet world={world} />}
+    <Canvas dpr={[1, 2]} camera={{ position: [0, 0.8, 2.48], fov: 45 }} onPointerMissed={() => useWorld.getState().select(null)}>
+      <color attach="background" args={[space]} />
+      <hemisphereLight args={['#fff6e0', '#33414a', 0.6]} />
+      <CameraLight />
+      {world && <Scene world={world} />}
       <FlyTo />
-      <OrbitControls makeDefault enablePan={false} minDistance={1.3} maxDistance={5} />
+      <OrbitControls makeDefault enablePan={false} minDistance={CAM_MIN} maxDistance={CAM_MAX} />
     </Canvas>
   );
 }

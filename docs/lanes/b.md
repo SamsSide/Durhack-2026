@@ -24,7 +24,7 @@ pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
 
 | ID | Row | Needs (from other lanes) | Gives (to other lanes) | Checkpoint | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| B1 | The first globe, in the slot the seed's `App.tsx` provides and reading the seed's X5 store: every province (an irregular convex polygon, drawn as a triangle fan) coloured by terrain with an owner tint; take over `App.tsx` and `web/src/state/` | A1 only | | CP0 | wip | Plan: `docs/plans/b-globe.md` (Tasks 1-2). Starts the moment A1 merges |
+| B1 | The first globe, in the slot the seed's `App.tsx` provides and reading the seed's X5 store: every province (an irregular convex polygon, drawn as a triangle fan) coloured by terrain with an owner tint; take over `App.tsx` and `web/src/state/` | A1 only | | CP0 | testing | Raised terraced provinces, live recolour, beliefs kept. Human test issue to follow |
 | B2 | Camera and selection: orbit, smooth zoom from whole planet to a few tiles, click a tile to select its nation, a glowing border round the selected nation, `flyTo` | | selection to c | CP1 | next | Plan: `docs/plans/b-globe.md` (Task 3) |
 | B3 | The political map: borders for every nation, thinner region borders inside them when zoomed in, each nation's flag (`flagSvg`) by its name label, labels that fade with zoom, a colour pulse when a tile changes owner, and the map modes in X5 (political and diplomacy first; terrain and strength after) | | | CP1 | next | Plan: `docs/plans/b-globe.md` (Tasks 4-6). Grand-strategy map conventions |
 | B4 | Structures: instanced models from the X4 manifest (box fallback), a pop-up build animation, upgrades, trees, detail only when zoomed in | nothing (boxes until A8's models land) | | CP1 | todo | City-builder feel |
@@ -41,3 +41,4 @@ pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
 ## Log
 
 <!-- One line per merged PR: time · PR # · what. Newest last. -->
+- 14 Nov · B1 · the first globe: one mesh, raised provinces with cliffs, live owner colours
