@@ -16,6 +16,8 @@ const HOLD_OPACITY = 0.5, HOVER_OPACITY = 0.95;
 /** How close (in CSS pixels) the pointer must be to an arc to hover or click it. */
 const HIT_PX = 10;
 const DRAG_PX = 5;
+/** Lowest a label's anchor may sit from the canvas top, so it clears the top bar (64 px) and its own height. */
+const LABEL_MIN_Y = 100, LABEL_STEP = 24;
 const GOLD = new THREE.Color('#ffc940'), RED_GOLD = new THREE.Color('#ff6a2a');
 const HOT = new THREE.Color('#fff4c4');
 
@@ -255,6 +257,7 @@ export function Trade() {
       }
     }
 
+    const placed: [number, number][] = [];
     for (const s of pool.slots) {
       if (!s.active) { if (s.shown) { s.label.style.opacity = '0'; s.label.style.visibility = 'hidden'; s.shown = false; } continue; }
       const age = now - s.start;
@@ -290,7 +293,16 @@ export function Trade() {
       // label at the arc's top, once it has landed and while it faces the camera
       const lab = age > TRAVEL_MS * 0.8 && horizon > 0.5 ? Math.min(1, (age - TRAVEL_MS * 0.8) / 300) * out : 0;
       if (lab > 0.01) {
-        const [x, y] = toScreen(s.mid);
+        // a long arc can top out off screen: keep its label below the top bar and inside the view
+        const [mx, my] = toScreen(s.mid);
+        const x = Math.min(size.width - 150, Math.max(150, mx));
+        let y = Math.min(size.height - 20, Math.max(LABEL_MIN_Y, my));
+        // two arcs between the same capitals would share a spot: stack them downwards
+        for (let k = 0; k < placed.length; k++) {
+          const o = placed[k]!;
+          if (Math.abs(o[0] - x) < 220 && Math.abs(o[1] - y) < LABEL_STEP) { y = o[1] + LABEL_STEP; k = -1; }
+        }
+        placed.push([x, y]);
         s.label.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, calc(-100% - 6px))`;
         s.label.style.opacity = (isHover ? 1 : 0.85 * lab).toFixed(3);
         s.label.classList.toggle('hover', isHover);

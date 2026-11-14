@@ -12,7 +12,7 @@ import { tileHeight } from '../mesh/buildProvinceMesh';
 
 const BURSTS = 3, COINS = 20, MIN_COINS = 12;
 const LIFE_S = 1.2, FLASH_S = 0.6;
-const COIN_R = 0.0055, COIN_H = 0.0013;
+const COIN_R = 0.009, COIN_H = 0.002;
 const GOLD = '#ffc940';
 
 interface Coin { side: THREE.Vector3; speed: number; up: number; g: number; axis: THREE.Vector3; spin: number }
@@ -125,8 +125,8 @@ export function CoinBurst() {
         const c = b.coins[i]!;
         const a = Math.random() * Math.PI * 2;
         c.side.copy(t1).multiplyScalar(Math.cos(a)).addScaledVector(t2, Math.sin(a)).addScaledVector(toward, 0.6).normalize();
-        c.speed = 0.018 + Math.random() * 0.03;
-        const peak = 0.03 + Math.random() * 0.03;
+        c.speed = 0.025 + Math.random() * 0.045;
+        const peak = 0.045 + Math.random() * 0.05;
         const land = LIFE_S * (0.75 + Math.random() * 0.2);
         // peak = up^2 / 2g and the coin lands at 2 up / g = land
         c.g = (8 * peak) / (land * land);
@@ -177,7 +177,7 @@ export function CoinBurst() {
       // the flash: a quick gold pop at the source (the whole effect under reduced motion)
       const fa = still ? Math.sin(Math.PI * (age / FLASH_S)) : Math.max(0, 1 - age / 0.45);
       (b.flash.material as THREE.SpriteMaterial).opacity = 0.9 * fa;
-      b.flash.scale.setScalar(still ? 0.06 : 0.035 + 0.05 * Math.min(1, age / 0.3));
+      b.flash.scale.setScalar(still ? 0.09 : 0.05 + 0.07 * Math.min(1, age / 0.3));
       if (still) return;
       up.setFromUnitVectors(yAxis, b.normal);
       for (let i = 0; i < COINS; i++) {
