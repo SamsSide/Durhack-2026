@@ -118,6 +118,7 @@ export function HelpScreen() {
               <Row key={m} icon={<Round><MapModeIcon mode={m} size={16} /></Round>} label={`Key ${i + 1}`}>{text}.</Row>
             ))}
             <Row icon={<span className="tn-help-council" />} label="Council marker">a nation's seat on the globe. Click to select it.</Row>
+            <Row icon={<Chip>12.0k</Chip>} label="Armies and battles">click an army's counter for its troops and general, or a battle's badge for both sides and their losses.</Row>
             <Row icon={<span className="tn-help-arc" />} label="Payment arc">money moving between nations. Click for the Solana Explorer.</Row>
             <Row icon={<span className="tn-help-seal" />} label="Wax seal">a payment confirmed on Solana. Click it to see the transaction.</Row>
           </Section>
