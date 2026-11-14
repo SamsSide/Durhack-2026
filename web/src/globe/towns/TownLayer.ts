@@ -1,6 +1,7 @@
 // Lane b: every close-up town on the globe in a dozen draw calls (ground, flats, houses, the wall parts, river).
 // City walls (row A33) are part of the town: they are rebuilt only when its wall tier changes.
 // Towns are built once per structure id and rebuilt only when what they look like changes.
+// When a nation steps up a tech age its towns switch style one by one, a wave out from the capital (#317 item 12).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { cityTiers } from '@terra/shared';
@@ -9,7 +10,8 @@ import type { TileGeos } from '../structures/placement';
 import { clamp01, easeOutBack, smoothstep } from '../structures/placement';
 import { makeRiverMaterial } from '../rivers/buildRivers';
 import { getPalette } from '../palette';
-import { PART_NAMES, TOWN_KINDS, WALL_PARTS, buildTown, townKey } from './buildTown';
+import { PART_NAMES, TOWN_KINDS, WALL_PARTS, ageOnly, buildTown, townKey } from './buildTown';
+import { ageSwapDelay } from './ageStyle';
 import type { PartBuf, PartName, TownParts } from './buildTown';
 import { FADE_FAR, FADE_NEAR, PLASTER } from './style';
 import { isRuinedTile, updateRuins } from '../war/ruins';
@@ -23,8 +25,9 @@ interface Town {
   id: string;
   key: string;
   parts: TownParts;
-  anim: { type: 'build' | 'destroy'; t0: number } | null;
+  anim: { type: 'build' | 'restyle' | 'destroy'; t0: number } | null; // restyle: an age step, the ground stays
   wallT0: number | null;
+  next: { key: string; parts: TownParts; at: number } | null; // an age step waiting for its turn in the wave
   at?: Record<PartName, number>; // first instance of each part, as of the last full write
 }
 
@@ -91,6 +94,7 @@ export class TownLayer {
   private dirty = true;
   private layout = true; // the set of towns or a town's parts changed: every instance must be packed again
   private riverDirty = true;
+  private nextAt = Infinity; // earliest waiting age step
   private f = 0;
   private m = new THREE.Matrix4();
   private p = new THREE.Vector3();
@@ -181,12 +185,23 @@ export class TownLayer {
       const tier: CityTier = tiers.get(s.id) ?? 0;
       const key = townKey(world, s, tier);
       const have = this.towns.get(s.id);
-      if (have && have.key === key && have.anim?.type !== 'destroy') continue;
+      if (have && have.anim?.type !== 'destroy') {
+        if (have.key === key) { have.next = null; continue; }
+        if (have.next?.key === key) continue;
+        if (!initial && ageOnly(have.key, key)) {
+          // An age step: build the new look now, show it when the wave reaches this town.
+          const at = Math.min(have.next?.at ?? Infinity, now + ageSwapDelay(world, s.owner, s.tile));
+          have.next = { key, parts: buildTown(world, s, this.tileGeos.get(s.tile), tier), at };
+          this.nextAt = Math.min(this.nextAt, at);
+          continue;
+        }
+      }
       const parts = buildTown(world, s, this.tileGeos.get(s.tile), tier);
       if (!have) {
-        this.towns.set(s.id, { id: s.id, key, parts, anim: initial ? null : { type: 'build', t0: now }, wallT0: null });
+        this.towns.set(s.id, { id: s.id, key, parts, anim: initial ? null : { type: 'build', t0: now }, wallT0: null, next: null });
       } else {
         const wallsNew = parts.tier > have.parts.tier; // the new works rise; a lower tier just swaps
+        have.next = null;
         have.key = key;
         have.parts = parts;
         if (have.anim?.type === 'destroy') have.anim = { type: 'build', t0: now };
@@ -197,6 +212,7 @@ export class TownLayer {
     for (const t of this.towns.values()) {
       if (!seen.has(t.id) && t.anim?.type !== 'destroy') {
         t.anim = { type: 'destroy', t0: now };
+        t.next = null;
         this.dirty = this.riverDirty = true;
       }
     }
@@ -213,23 +229,41 @@ export class TownLayer {
     (this.mats.grounds as THREE.MeshStandardMaterial).opacity = f;
     this.riverMat.uniforms.uTime!.value = now;
     this.riverMat.uniforms.uWide!.value = f;
+    if (now >= this.nextAt) this.swapAges(now);
     // B8: out of sight (the orbit view) nothing here is drawn, so the buffers wait until the towns fade in.
     if (!this.group.visible) return;
     if (this.dirty) this.write(now);
     if (this.riverDirty) this.writeRiver(now);
   }
 
-  /** Scale of a town's pop-up or sink animation, and of its walls. */
-  private animOf(t: Town, now: number): { k: number; kw: number; busy: boolean; done: boolean } {
-    let k = 1, kw = 1, busy = false, done = false;
+  /** Show every age step whose turn has come: the town's new look pops up in place of the old one. */
+  private swapAges(now: number): void {
+    let nextAt = Infinity;
+    for (const t of this.towns.values()) {
+      const n = t.next;
+      if (!n) continue;
+      if (n.at > now) { nextAt = Math.min(nextAt, n.at); continue; }
+      t.key = n.key;
+      t.parts = n.parts;
+      t.next = null;
+      if (t.anim?.type !== 'build') t.anim = { type: 'restyle', t0: now };
+      this.dirty = this.layout = this.riverDirty = true;
+    }
+    this.nextAt = nextAt;
+  }
+
+  /** Scale of a town's pop-up or sink animation (`kg` for its ground and yards), and of its walls. */
+  private animOf(t: Town, now: number): { k: number; kg: number; kw: number; busy: boolean; done: boolean } {
+    let k = 1, kg = 1, kw = 1, busy = false, done = false;
     if (t.anim) {
-      const dur = t.anim.type === 'build' ? BUILD_S : DESTROY_S;
+      const dur = t.anim.type === 'destroy' ? DESTROY_S : BUILD_S;
       const raw = (now - t.anim.t0) / dur;
       if (raw >= 1) {
-        if (t.anim.type === 'destroy') { done = true; k = 0; } else t.anim = null;
+        if (t.anim.type === 'destroy') { done = true; k = kg = 0; } else t.anim = null;
       } else {
         busy = true;
-        k = t.anim.type === 'build' ? Math.max(0, easeOutBack(clamp01(raw))) : 1 - raw * raw;
+        k = t.anim.type === 'destroy' ? 1 - raw * raw : Math.max(0, easeOutBack(clamp01(raw)));
+        if (t.anim.type !== 'restyle') kg = k;
       }
     }
     if (t.wallT0 != null) {
@@ -237,7 +271,7 @@ export class TownLayer {
       if (raw >= 1) t.wallT0 = null;
       else { busy = true; kw = Math.max(0, easeOutBack(clamp01(raw))); }
     }
-    return { k, kw, busy, done };
+    return { k, kg, kw, busy, done };
   }
 
   /**
@@ -256,7 +290,8 @@ export class TownLayer {
         const n = t.parts[k].count;
         if (n === 0) continue;
         const mesh = this.meshes[k];
-        this.writePart(mesh, t.parts[k], t.at[k], a.k, WALL_PARTS.has(k) ? a.k * a.kw : a.k, false);
+        const kk = k === 'grounds' || k === 'flats' ? a.kg : a.k;
+        this.writePart(mesh, t.parts[k], t.at[k], kk, WALL_PARTS.has(k) ? kk * a.kw : kk, false);
         mesh.instanceMatrix.addUpdateRange(t.at[k] * 16, n * 16);
         mesh.instanceMatrix.needsUpdate = true;
       }
@@ -271,7 +306,7 @@ export class TownLayer {
     const counts = zeroes();
     const done: string[] = [];
     let busy = false;
-    const anims = new Map<string, { k: number; kw: number }>();
+    const anims = new Map<string, { k: number; kg: number; kw: number }>();
     for (const t of this.towns.values()) {
       const a = this.animOf(t, now);
       if (a.done) { done.push(t.id); continue; }
@@ -290,8 +325,8 @@ export class TownLayer {
       if (!a) continue;
       t.at = { ...at };
       for (const k of PARTS) {
-        const ky = WALL_PARTS.has(k) ? a.k * a.kw : a.k;
-        at[k] = this.writePart(this.meshes[k], t.parts[k], at[k], a.k, ky);
+        const kk = k === 'grounds' || k === 'flats' ? a.kg : a.k;
+        at[k] = this.writePart(this.meshes[k], t.parts[k], at[k], kk, WALL_PARTS.has(k) ? kk * a.kw : kk);
       }
     }
     for (const k of PARTS) {
@@ -360,7 +395,7 @@ export class TownLayer {
 
   /** The animation scale without advancing or clearing anything. */
   private animPeek(t: Town, now: number): { k: number } {
-    if (!t.anim) return { k: 1 };
+    if (!t.anim || t.anim.type === 'restyle') return { k: 1 }; // the river stays through an age step
     const dur = t.anim.type === 'build' ? BUILD_S : DESTROY_S;
     const raw = (now - t.anim.t0) / dur;
     if (raw >= 1) return { k: t.anim.type === 'destroy' ? 0 : 1 };

@@ -14,6 +14,7 @@ import type { EraLook } from '../identity/look';
 import { disposePropSet, makePropSet, propsFor } from '../identity/props';
 import type { PropKind, PropSet, Smoke } from '../identity/props';
 import { shownKind, updateRuins } from '../war/ruins';
+import { ageStyle, ageSwapDelay } from '../towns/ageStyle';
 
 const BIG = new Set<string>(['capital', 'city', 'town']);
 const SETTLEMENT = new Set<string>(['camp', 'village', 'town', 'city', 'capital']);
@@ -43,6 +44,7 @@ interface Rec {
   off: [number, number];    // offset from the tile centre along the tangent axes
   lift: number;             // raised on a stone platform (mountain, hills)
   props: PropRec[];
+  style: string;            // the building style it is drawn in (towns/ageStyle); changes in a wave on an age step
 }
 interface PropRec {
   kind: PropKind; parent: Rec; pos: THREE.Vector3; quat: THREE.Quaternion; w: number; h: number; smoke?: Smoke; seed: number;
@@ -74,6 +76,8 @@ export class StructureField {
   private smokeMesh: THREE.InstancedMesh;
   private shore = new Map<number, [number, number] | null>();
   private propsDirty = true;
+  private swaps: Array<{ r: Rec; at: number }> = []; // age steps waiting for their turn in the wave
+  private swapAt = Infinity;
   private tmpC = new THREE.Color();
   private m = new THREE.Matrix4();
   private v = new THREE.Vector3();
@@ -102,9 +106,12 @@ export class StructureField {
     this.group.add(this.smokeMesh);
   }
 
+  /** The style a nation builds in now, by its tech age. */
+  private styleOf(owner: number): string { return ageStyle(this.world.countries[owner]); }
+
   /** The instanced group for (model file, kind): one per distinct model, made on first use. */
-  private poolFor(kind: string, owner: number): Pool {
-    const m = modelFor(this.models, kind, this.world.countries[owner]);
+  private poolFor(kind: string, owner: number, style: string): Pool {
+    const m = modelFor(this.models, kind, this.world.countries[owner], style);
     let pool = this.pools.get(m.key);
     if (!pool) {
       pool = { key: m.key, kind, parts: m.parts, meshes: [], cap: 0, list: [], dirty: false, moving: false };
@@ -116,7 +123,7 @@ export class StructureField {
 
   /** Move a record to the group its (kind, owner) now resolves to. */
   private repool(r: Rec): void {
-    const to = this.poolFor(r.kind, r.owner);
+    const to = this.poolFor(r.kind, r.owner, r.style);
     if (to === r.pool) return;
     const i = r.pool.list.indexOf(r);
     if (i >= 0) r.pool.list.splice(i, 1);
@@ -147,22 +154,53 @@ export class StructureField {
       const c = this.world.countries[owner];
       const id = nationIdentity(this.world, owner);
       const css = c?.color ?? '#b8b0a0';
-      l = { id, css, style: c?.buildingStyle, nomadic: !!c?.nomadic, tint: wallTint(id, owner), team: bannerColor(css, id), era: eraLook(id.era) };
+      l = { id, css, style: ageStyle(c), nomadic: !!c?.nomadic, tint: wallTint(id, owner), team: bannerColor(css, id), era: eraLook(id.era) };
       this.looks.set(owner, l);
     }
     return l;
   }
 
-  /** Re-derive identities (one pass over the map) and restyle the nations whose look changed. */
-  private refreshLooks(): void {
+  /**
+   * Re-derive identities (one pass over the map) and restyle the nations whose look changed. A nation whose
+   * only change is its age style switches in a wave out from its capital, each settlement with its pop-up.
+   */
+  private refreshLooks(now: number): void {
     refreshIdentities(this.world);
     for (const [owner, l] of [...this.looks]) {
       const c = this.world.countries[owner];
       if (!c) continue;
-      if (nationIdentity(this.world, owner) === l.id && c.color === l.css && c.buildingStyle === l.style && !!c.nomadic === l.nomadic) continue;
+      const same = nationIdentity(this.world, owner) === l.id && c.color === l.css && !!c.nomadic === l.nomadic;
+      const style = ageStyle(c);
+      if (same && style === l.style) continue;
+      if (same) { l.style = style; this.queueAgeStep(owner, now); continue; }
       this.looks.delete(owner);
       this.restyle(owner);
     }
+  }
+
+  private queueAgeStep(owner: number, now: number): void {
+    for (const r of this.recs.values()) {
+      if (r.owner !== owner || r.anim?.type === 'destroy') continue;
+      const at = now + ageSwapDelay(this.world, owner, r.tile);
+      this.swaps.push({ r, at });
+      this.swapAt = Math.min(this.swapAt, at);
+    }
+  }
+
+  /** Switch every settlement whose turn in an age wave has come; runs only when one is due. */
+  private runSwaps(now: number): void {
+    let next = Infinity;
+    const keep: Array<{ r: Rec; at: number }> = [];
+    for (const w of this.swaps) {
+      if (w.at > now) { keep.push(w); next = Math.min(next, w.at); continue; }
+      const r = w.r;
+      if (this.recs.get(r.id) !== r || r.anim?.type === 'destroy' || r.style === this.styleOf(r.owner)) continue;
+      this.rebuild(r);
+      if (r.anim?.type !== 'build') r.anim = { type: 'upgrade', t0: now };
+      this.puff(r, now + 0.05);
+    }
+    this.swaps = keep;
+    this.swapAt = next;
   }
 
   private restyle(owner: number): void {
@@ -173,7 +211,8 @@ export class StructureField {
   private rebuild(r: Rec): void {
     this.dropSats(r);
     this.dropProps(r);
-    r.size = this.sizeOf(r.tile, r.g, r.kind, r.slot, r.id, r.owner);
+    r.style = this.styleOf(r.owner);
+    r.size = this.sizeOf(r.tile, r.g, r.kind, r.slot, r.id, r.owner, r.style);
     r.hy = this.hyOf(r);
     r.quat = this.orient(r);
     this.repool(r);
@@ -185,10 +224,10 @@ export class StructureField {
   /** The models in use changed (a new style finished loading): move every structure to the group it now resolves to. */
   refreshModels(): void {
     for (const r of this.recs.values()) {
-      r.size = this.sizeOf(r.tile, r.g, r.kind, r.slot, r.id, r.owner);
+      r.size = this.sizeOf(r.tile, r.g, r.kind, r.slot, r.id, r.owner, r.style);
       this.repool(r);
       r.pool.dirty = true;
-      for (const q of r.sats) { q.size = this.sizeOf(q.tile, q.g, q.kind, 0, q.id, q.owner) * this.satScale(q); this.repool(q); q.pool.dirty = true; }
+      for (const q of r.sats) { q.size = this.sizeOf(q.tile, q.g, q.kind, 0, q.id, q.owner, q.style) * this.satScale(q); this.repool(q); q.pool.dirty = true; }
       this.dropProps(r);
       this.addProps(r);
     }
@@ -304,7 +343,7 @@ export class StructureField {
 
   /** Compare world.structures with what is drawn; animate what is new, changed or gone. */
   sync(now: number): void {
-    this.refreshLooks();
+    this.refreshLooks(now);
     updateRuins(this.world); // B14: devastated or sacked provinces draw their buildings as ruins
     const seen = new Set<string>();
     let fresh = 0;
@@ -347,7 +386,8 @@ export class StructureField {
     let slot = 0;
     while (here.some((x) => x.slot === slot)) slot++;
     const terr = this.terrOf(tile);
-    const size = this.sizeOf(tile, g, kind, slot, id, owner);
+    const style = this.styleOf(owner);
+    const size = this.sizeOf(tile, g, kind, slot, id, owner, style);
     const lift = (LIFT0[terr] ?? 0) * size;
     const pos = new THREE.Vector3();
     let off: [number, number] = [0, 0];
@@ -357,10 +397,10 @@ export class StructureField {
       const rad = Math.max(SAT_MIN_RAD, (0.27 + 0.05 * hash01(id, 6)) * (TIGHT[terr] ?? 1));
       off = this.spot(tile, g, ang, rad, 0.0004 + lift, pos);
     }
-    const pool = this.poolFor(kind, owner);
+    const pool = this.poolFor(kind, owner, style);
     const rec: Rec = {
       id, tile, owner, kind, slot, pool, g, pos, quat: new THREE.Quaternion(), size, anim: { type: 'build', t0 },
-      hy: 1, parent: null, sats: [], terr, off, lift, props: [],
+      hy: 1, parent: null, sats: [], terr, off, lift, props: [], style,
     };
     rec.hy = this.hyOf(rec);
     rec.quat = this.orient(rec);
@@ -375,13 +415,13 @@ export class StructureField {
     this.updateTrees(tile);
   }
 
-  private sizeOf(tile: number, g: TileGeo, kind: string, slot: number, id: string, owner: number): number {
+  private sizeOf(tile: number, g: TileGeo, kind: string, slot: number, id: string, owner: number, style: string): number {
     const jit = 0.88 + 0.24 * hash01(id, 11);
     const look = this.lookOf(owner);
     let k = (REL[kind] ?? REL_OTHER) * (slot > 0 ? 0.8 : 1);
     if (kind === 'temple' && look.id.gov === 'theocracy') k *= 1.25;
     if (this.terrOf(tile) === 'ice') k *= 0.8;
-    const s = g.width * modelFor(this.models, kind, this.world.countries[owner]).footprint * k * jit;
+    const s = g.width * modelFor(this.models, kind, this.world.countries[owner], style).footprint * k * jit;
     return Math.min(s, MAX_SIZE * g.h);
   }
 
@@ -392,8 +432,8 @@ export class StructureField {
     const n = r.kind === 'capital' ? era.capitalSats : era.citySats;
     const kinds: string[] = [];
     if (r.kind === 'capital') {
-      if (n >= 2 && hasModel(this.models, 'temple', this.world.countries[r.owner])) kinds.push('temple');
-      if (n >= 3 && hasModel(this.models, 'fort', this.world.countries[r.owner])) kinds.push('fort');
+      if (n >= 2 && hasModel(this.models, 'temple', this.world.countries[r.owner], r.style)) kinds.push('temple');
+      if (n >= 3 && hasModel(this.models, 'fort', this.world.countries[r.owner], r.style)) kinds.push('fort');
     }
     for (let i = kinds.length; i < n; i++) kinds.push(hash01(r.id, 14 + i) < 0.5 ? 'town' : 'village');
     const terr = r.terr;
@@ -401,7 +441,7 @@ export class StructureField {
     const step = RING_LIFT[terr] ?? 0;
     const base = hash01(r.tile, 5) * Math.PI * 2 + 2.4 + Math.PI; // opposite the first extra building
     kinds.forEach((kind, i) => {
-      const pool = this.poolFor(kind, r.owner);
+      const pool = this.poolFor(kind, r.owner, r.style);
       const id = `${r.id}#${i}`;
       const ang = base + (i - (kinds.length - 1) / 2) * (Math.PI * 1.5 / kinds.length) + (hash01(id, 15) - 0.5) * 0.4;
       const ring = step ? i % 2 : (n > 4 ? i % 2 : 0);   // two rings: terraces on slopes, a second row in dense eras
@@ -409,9 +449,9 @@ export class StructureField {
       const pos = new THREE.Vector3();
       const sat: Rec = {
         id, tile: r.tile, owner: r.owner, kind, slot: -1, pool, g: r.g, pos, quat: new THREE.Quaternion(),
-        size: 0, anim: null, hy: 1, parent: r, sats: [], terr, off: [0, 0], lift: 0, props: [],
+        size: 0, anim: null, hy: 1, parent: r, sats: [], terr, off: [0, 0], lift: 0, props: [], style: r.style,
       };
-      sat.size = this.sizeOf(r.tile, r.g, kind, 0, id, r.owner) * this.satScale(sat);
+      sat.size = this.sizeOf(r.tile, r.g, kind, 0, id, r.owner, r.style) * this.satScale(sat);
       sat.lift = (LIFT0[terr] ?? 0) * sat.size + step * ring * r.g.width;
       sat.off = this.spot(r.tile, r.g, ang, Math.max(SAT_MIN_RAD, frac), 0.0004 + sat.lift, pos);
       sat.quat = this.orient(sat);
@@ -436,14 +476,14 @@ export class StructureField {
 
   private upgrade(r: Rec, kind: string, now: number): void {
     const from = r.pool;
-    const to = this.poolFor(kind, r.owner);
+    const to = this.poolFor(kind, r.owner, r.style);
     const i = from.list.indexOf(r);
     if (i >= 0) from.list.splice(i, 1);
     from.dirty = true;
     this.dropSats(r);
     this.dropProps(r);
     r.kind = kind;
-    r.size = this.sizeOf(r.tile, r.g, kind, r.slot, r.id, r.owner);
+    r.size = this.sizeOf(r.tile, r.g, kind, r.slot, r.id, r.owner, r.style);
     r.hy = this.hyOf(r);
     r.pool = to;
     r.anim = { type: 'upgrade', t0: now };
@@ -493,6 +533,7 @@ export class StructureField {
     this.f += (target - this.f) * Math.min(1, dt * 7);
     if (Math.abs(target - this.f) < 0.003) this.f = target;
     // the ends count exactly: at 0 the small kinds and the props stop being drawn at all
+    if (now >= this.swapAt) this.runSwaps(now);
     const fChanged = Math.abs(this.f - this.writtenF) > 0.0015 || (this.f !== this.writtenF && (this.f === 0 || this.f === 1));
     let wrote = false;
     for (const pool of this.pools.values()) {

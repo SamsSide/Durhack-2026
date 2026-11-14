@@ -44,12 +44,21 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   shows while the sun is in view or peeking past the planet's edge.
 - **Close up**, the camera tilts to a ground view of walled towns, rivers and buildings in one of
   several identity styles; city walls grow from palisades to walled cores as cities grow.
+- **Towns modernise through the ages:** a nation keeps its own building style up to the
+  gunpowder age, moves to concrete blocks (eastern or authoritarian nations) or glass towers
+  (everyone else) at the industrial age, and builds shielded arcologies in the future and stellar
+  ages. Each age step sweeps out from the capital, town by town, over about three seconds.
 - **Wonders** from the Great Wall to a space elevator.
 
 | | | |
 | --- | --- | --- |
 | ![The Found a World screen: prompt, picture, presets, era, nations, sea level and aggression](docs/shots/depth-create-after.jpg) | ![A walled capital seen from the ground view](docs/shots/ground-view-2.jpg) | ![A busy coast with boats, birds and a walled town](docs/shots/living-world-1.jpg) |
 | Found a world | The ground view | A living world |
+
+| | | |
+| --- | --- | --- |
+| ![A medieval capital with its castle, red-roofed houses and a palisade](docs/shots/town-ages-1.jpg) | ![The same capital in the industrial age: glass towers and pale modern blocks](docs/shots/town-ages-2.jpg) | ![The same capital in the future age: arcology spires inside an energy shield](docs/shots/town-ages-3.jpg) |
+| One capital, medieval | Industrial | Future |
 
 ### AI nations, and the network cut
 
@@ -250,6 +259,7 @@ Dev helpers, run in the browser console:
 - `__decreeDemo(effect)`: play one decree effect
 - `__sealDemo()`: stamp the on-chain seal on a payment
 - `__econDemo()`: the economy demo
+- `__townAge(countryId, age)`: set a nation's tech age locally and watch its towns modernise
 
 ### Keys
 

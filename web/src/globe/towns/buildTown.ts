@@ -9,6 +9,7 @@ import type { TileGeo } from '../structures/placement';
 import { nationIdentity } from '../identity/identity';
 import { wallTint } from '../identity/look';
 import * as S from './style';
+import { ageStyle } from './ageStyle';
 
 /** World-space instances of one kind: 10 floats each (pos 3, quat 4, scale 3) and an RGB colour. */
 export class PartBuf {
@@ -47,8 +48,9 @@ export const WALL_PARTS: ReadonlySet<PartName> = new Set(['walls', 'towers', 'cr
 export const TOWN_KINDS = new Set(['town', 'city', 'capital']);
 const REL: Record<string, number> = { town: 0.75, city: 0.9, capital: 1.0 };
 
+/** The style the nation's towns are drawn in now: its own, then a modern one, then arcology as it moves through the ages. */
 export function styleOf(world: World, owner: number): BuildingStyle {
-  return world.countries[owner]?.buildingStyle ?? 'medieval';
+  return ageStyle(world.countries[owner]);
 }
 
 /** Energy shields instead of masonry: arcology builders, and any nation in the future or stellar age. */
@@ -57,9 +59,16 @@ export function wantsShield(world: World, owner: number): boolean {
   return styleOf(world, owner) === 'arcology' || age === 'future' || age === 'stellar';
 }
 
-/** What a town's look depends on; a change rebuilds it. `tier` is its wall tier (cityTier in @terra/shared). */
+/**
+ * What a town's look depends on; a change rebuilds it. `tier` is its wall tier (cityTier in @terra/shared).
+ * The part after '#' is the age look (style and shields): a change there alone is an age step, shown as a wave.
+ */
 export function townKey(world: World, s: Structure, tier: CityTier = cityTier(world, s.id)): string {
-  return `${s.kind}|${s.owner}|${tier}|${styleOf(world, s.owner)}|${wantsShield(world, s.owner) ? 1 : 0}`;
+  return `${s.kind}|${s.owner}|${tier}#${styleOf(world, s.owner)}|${wantsShield(world, s.owner) ? 1 : 0}`;
+}
+/** True when two town keys differ only in the age look. */
+export function ageOnly(a: string, b: string): boolean {
+  return a !== b && a.slice(0, a.indexOf('#')) === b.slice(0, b.indexOf('#'));
 }
 
 const tmpM = new THREE.Matrix4();
@@ -174,8 +183,8 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
   }
 
   // ---- street grid: houses, courtyards, parks ------------------------------------------------
-  const roofs = S.ROOFS[styleOf(world, s.owner)] ?? S.ROOFS.medieval;
   const style = styleOf(world, s.owner);
+  const roofs = S.ROOFS[style] ?? S.ROOFS.medieval;
   const tint = wallTint(nationIdentity(world, s.owner), s.owner);
   const roofCols = roofs.map((r) => new THREE.Color(r).multiply(tint));
   const heightK = S.HEIGHT_K[style] ?? 1;
