@@ -583,6 +583,7 @@ export const audio: {
   playNarration(countryId: number): Promise<void>;   // fetches X3 narration, ducks everything else
   playAnthem(countryId: number): Promise<void>;
   playBroadcast(audioUrl: string): Promise<void>;     // a news bulletin (row A21); ducks chants, stops narration and anthem
+  broadcastAnalyser(): AnalyserNode | null;          // the playing bulletin's analyser for the anchor's lip-sync (C14), null when none plays or Web Audio is unavailable
   stop(): void;
   setMuted(muted: boolean): void;
   getState(): { state: AudioState; countryId: number | null; muted: boolean };
