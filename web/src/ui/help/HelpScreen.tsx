@@ -98,6 +98,7 @@ export function HelpScreen() {
             <Row icon={<Chip>1w to 10y</Chip>} label="Speed gears">drag the slider: a week to ten years per second.</Row>
             <Row icon={<Chip>Auto</Chip>} label="Auto">the director slows time for big moments.</Row>
             <Row icon={<Chip><Dot cls="onair" />On air</Chip>} label="On air">play the Terra Nova News broadcast.</Row>
+            <Row icon={<Round><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M6 2.5 14 1v9.6a2.2 2.2 0 1 1-1.4-2V4L7.4 5v7.1A2.2 2.2 0 1 1 6 10.1z" /></svg></Round>} label="Music">turn the soundtrack on or off.</Row>
             <Row icon={<span className="tn-meter tn-help-meter"><span className="num">12</span> calls<span className="dot">·</span><span className="mode">Mock</span></span>} label="Calls and tokens">how much AI the world has used. Mock is scripted, Live is real. Click it for the closing card.</Row>
             <Row icon={<Chip>New world</Chip>} label="New world">found another world.</Row>
           </Section>
@@ -118,7 +119,7 @@ export function HelpScreen() {
             ))}
             <Row icon={<span className="tn-help-council" />} label="Council marker">a nation's seat on the globe. Click to select it.</Row>
             <Row icon={<span className="tn-help-arc" />} label="Payment arc">money moving between nations. Click for the Solana Explorer.</Row>
-            <Row icon={<span className="tn-help-seal" />} label="Wax seal">a signed treaty or decree.</Row>
+            <Row icon={<span className="tn-help-seal" />} label="Wax seal">a payment confirmed on Solana. Click it to see the transaction.</Row>
           </Section>
 
           <Section title="Panels">
