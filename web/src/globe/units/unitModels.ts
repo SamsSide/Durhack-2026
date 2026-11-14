@@ -7,9 +7,13 @@ import type { ModelPart, ModelSet } from '../structures/models';
 
 export type ModelKind = 'army' | 'fleet' | 'trader';
 export const MODEL_KINDS: readonly ModelKind[] = ['army', 'fleet', 'trader'];
+/** X4 "Army formations" (#287): infantry in front, mounted or vehicles on the flanks, ranged behind. */
+export type FormationRole = 'front' | 'flank' | 'back';
+export const FORMATION_ROLES: readonly FormationRole[] = ['front', 'flank', 'back'];
 
 interface Entry { file: string; footprint: number }
-type Manifest = { models?: Record<string, Entry>; ages?: Record<string, Record<string, Entry>> };
+type AgeEntry = Record<string, Entry> & { formation?: Partial<Record<FormationRole, Entry>> };
+type Manifest = { models?: Record<string, Entry>; ages?: Record<string, AgeEntry> };
 
 export type AnchorKind = 'thruster' | 'wake' | 'exhaust' | 'contrail' | 'dust';
 /** An X4 effect anchor: where an effect starts and the way it streams out (local -Z of the node). */
@@ -116,6 +120,7 @@ export class UnitModels {
   private set: ModelSet | null = null;
   private readonly ages = new Map<string, Map<string, Entry>>();
   private readonly shared = new Map<string, Entry>();
+  private readonly formations = new Map<string, Map<FormationRole, Entry>>();
   private readonly made = new Map<string, UnitModel>();
   private readonly fallbacks: Record<ModelKind, UnitModel>;
   private disposed = false;
@@ -151,11 +156,18 @@ export class UnitModels {
         if (e?.file) m.set(kind, { file: e.file, footprint: e.footprint || DEFAULT_FOOTPRINT });
       }
       if (m.size) this.ages.set(age, m);
+      const f = new Map<FormationRole, Entry>();
+      for (const role of FORMATION_ROLES) {
+        const e = kinds?.formation?.[role];
+        if (e?.file) f.set(role, { file: e.file, footprint: e.footprint || DEFAULT_FOOTPRINT });
+      }
+      if (f.size) this.formations.set(age, f);
     }
-    // all ages up front (15 small files), so an age change never flashes a fallback
+    // all ages up front (36 small files), so an age change never flashes a fallback
     const files = new Set<string>();
     for (const e of this.shared.values()) files.add(e.file);
     for (const m of this.ages.values()) for (const e of m.values()) files.add(e.file);
+    for (const m of this.formations.values()) for (const e of m.values()) files.add(e.file);
     await Promise.all([...files].map((f) => loadParts(set, f)));
   }
 
@@ -178,6 +190,11 @@ export class UnitModels {
   /** ages[age][kind], then models[kind], then the code-built one. */
   resolve(age: TechAge, kind: ModelKind): UnitModel {
     return this.fromFile(this.ages.get(age)?.get(kind), kind) ?? this.fromFile(this.shared.get(kind), kind) ?? this.fallbacks[kind];
+  }
+
+  /** One formation figure: ages[age].formation[role], else null (the caller draws the army model). */
+  resolveFigure(age: TechAge, role: FormationRole): UnitModel | null {
+    return this.fromFile(this.formations.get(age)?.get(role), 'army');
   }
 
   dispose(): void {
