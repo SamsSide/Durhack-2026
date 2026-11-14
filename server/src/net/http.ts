@@ -1,4 +1,5 @@
 // X3 HTTP routes.
+import { parseImage } from '../engine/bibleAi';
 import express from 'express';
 import type { LlmMode, WorldRunner } from '../runner';
 import { storyRoutes } from '../story/routes';
@@ -16,6 +17,9 @@ export function createApp(runner: WorldRunner, mode: LlmMode) {
   app.post('/api/world', async (req, res) => {
     const body = req.body ?? {};
     if (typeof body.prompt !== 'string' || !body.prompt.trim()) return void res.status(400).json({ error: 'prompt is required' });
+    if (body.imageBase64 != null && body.imageBase64 !== '' && !parseImage(body.imageBase64)) {
+      return void res.status(400).json({ error: 'unsupported image' });
+    }
     try {
       const world = await runner.newWorld({
         prompt: body.prompt, nations: body.nations, era: body.era, seaLevel: body.seaLevel,

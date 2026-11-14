@@ -1,7 +1,8 @@
 // The world bible written by Gemini (row A5): one call to the lore model at world creation, strictly
 // validated and repaired, with the template bible (mockBible) as the fallback on any failure.
 import type { BibleNation, FlagEmblem, FlagLayout, FlagSpec, WorldBible } from '@terra/shared';
-import { llmJson, bibleModel, type Schema } from '../llm';
+import { llmJson, bibleModel, currentMode, type Schema } from '../llm';
+import { createHash } from 'node:crypto';
 import type { NewWorldOptions } from '../runner';
 import { mockBible } from './bible';
 
@@ -47,13 +48,61 @@ const bibleSchema: Schema = {
     nations: { type: 'array', items: nationSchema },
   },
 };
+const imageReadingSchema: Schema = {
+  type: 'object',
+  required: ['mood', 'palette', 'setting'],
+  description: 'What the picture shows',
+  properties: {
+    mood: str('The mood of the picture, 2 to 6 words'),
+    palette: { type: 'array', items: str('hex colour'), description: '3 to 6 dominant hex colours of the picture' },
+    setting: str('The setting and era the picture suggests, under 12 words'),
+    seaLevelHint: { type: 'number', description: '0.3 (mostly land) to 0.75 (mostly ocean), how watery the scene feels' },
+  },
+};
+const imageBibleSchema: Schema = {
+  ...(bibleSchema as Extract<Schema, { type: 'object' }>),
+  required: ['name', 'era', 'startYear', 'nations', 'imageReading'],
+  properties: { ...(bibleSchema as Extract<Schema, { type: 'object' }>).properties, imageReading: imageReadingSchema },
+};
+
+export interface ImageReading { mood: string; palette: string[]; setting: string; seaLevelHint?: number }
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
+/** Validates an uploaded picture (JPEG, PNG or WebP, under about 4 MB decoded); null if unsupported. */
+export function parseImage(input: unknown): { data: string; mimeType: string } | null {
+  if (typeof input !== 'string' || !input) return null;
+  const m = /^data:([\w/+.-]+);base64,/.exec(input);
+  const data = (m ? input.slice(m[0].length) : input).replace(/\s+/g, '');
+  if (!data || data.length > MAX_IMAGE_BYTES * 1.4 || !/^[A-Za-z0-9+/]+={0,2}$/.test(data)) return null;
+  const buf = Buffer.from(data, 'base64');
+  if (buf.length < 12 || buf.length > MAX_IMAGE_BYTES) return null;
+  let mimeType: string | null = null;
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) mimeType = 'image/jpeg';
+  else if (buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) mimeType = 'image/png';
+  else if (buf.subarray(0, 4).toString('latin1') === 'RIFF' && buf.subarray(8, 12).toString('latin1') === 'WEBP') mimeType = 'image/webp';
+  return mimeType ? { data, mimeType } : null;
+}
+
+/** Mock mode: a deterministic palette from the picture's bytes, so colours visibly change without API calls. */
+function hashPalette(data: string, n: number): string[] {
+  const h = createHash('sha256').update(data).digest();
+  const base = (h[0]! / 255) * 360;
+  const out: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const hue = (base + (i * 360) / n + (h[1 + i]! % 20)) % 360;
+    const s = 0.6 + (h[10 + i]! % 30) / 100, l = 0.55;
+    const f = (k: number) => { const a = s * Math.min(l, 1 - l); const kk = (k + hue / 30) % 12; return l - a * Math.max(-1, Math.min(kk - 3, 9 - kk, 1)); };
+    out.push('#' + [f(0), f(8), f(4)].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join(''));
+  }
+  return out;
+}
 
 interface RawNation {
   name: string; adjective: string; color: string; leader: string; government: string; ideology: string;
   culture: string[]; foundingMyth: string; aggression: number; expansion: number; trade: number; faith: number;
   anthemPrompt: string; voiceStyle: string; flagLayout: FlagLayout; flagColors: string[]; flagEmblem: FlagEmblem; regionNames: string[];
 }
-interface RawBible { name: string; era: string; startYear: number; nations: RawNation[] }
+interface RawBible { name: string; era: string; startYear: number; nations: RawNation[]; imageReading?: ImageReading }
 
 const SYSTEM = [
   'You design the nations of a fictional world for a strategy simulation. Be vivid and specific, but compact:',
@@ -76,7 +125,7 @@ const dist = (a: string, b: string): number => {
 const readable = (hex: string): boolean => HEX.test(hex) && luma(hex) >= 70 && luma(hex) <= 235;
 
 /** Turns what Gemini wrote into a WorldBible that is safe to build a world from. Throws if unusable. */
-export function repairBible(raw: RawBible, fallback: WorldBible, n: number): WorldBible {
+export function repairBible(raw: RawBible, fallback: WorldBible, n: number, extraPalette: string[] = []): WorldBible {
   const usedNames = new Set<string>();
   const usedColors: string[] = [];
   const nations: BibleNation[] = [];
@@ -90,7 +139,7 @@ export function repairBible(raw: RawBible, fallback: WorldBible, n: number): Wor
 
     let color = r.color.trim().toLowerCase();
     if (!readable(color) || usedColors.some((c) => dist(c, color) < 70)) {
-      color = PALETTE.find((p) => !usedColors.some((c) => dist(c, p) < 70)) ?? fb.color;
+      color = [...extraPalette, ...PALETTE].find((p) => !usedColors.some((c) => dist(c, p) < 70)) ?? fb.color;
     }
     usedColors.push(color);
 
@@ -125,33 +174,79 @@ export function repairBible(raw: RawBible, fallback: WorldBible, n: number): Wor
   };
 }
 
-/** Gemini writes the bible; on mock mode or any failure the template bible is returned instead. */
+const IMAGE_INSTRUCTION = 'A picture is attached. Read the picture for mood, palette, setting and era; let it shape the world\'s name, the nations\' cultures, colours (draw nation colours from the picture\'s palette, still distinct and readable on a dark globe), flags and region names. Also fill imageReading: mood, palette (3 to 6 hex colours from the picture), setting, and seaLevelHint (0.3 to 0.75, how watery the scene feels).';
+
+function cleanReading(r: ImageReading | undefined): ImageReading | undefined {
+  if (!r) return undefined;
+  const palette = (r.palette ?? []).map((c) => c.trim().toLowerCase()).filter((c) => HEX.test(c)).slice(0, 6);
+  const hint = typeof r.seaLevelHint === 'number' && Number.isFinite(r.seaLevelHint) ? Math.max(0.3, Math.min(0.75, r.seaLevelHint)) : undefined;
+  return { mood: clean(r.mood ?? '', 60), palette, setting: clean(r.setting ?? '', 100), seaLevelHint: hint };
+}
+
+/** One line in the first founding myth so the chronicle shows the picture shaped the world. */
+function stampVision(bible: WorldBible, reading: ImageReading | undefined): void {
+  const first = bible.nations[0];
+  if (!first || !reading || !(reading.mood || reading.setting)) return;
+  const vision = [reading.mood, reading.setting].filter(Boolean).join(', ');
+  first.foundingMyth = `The world was shaped from a vision of ${vision}. ${first.foundingMyth}`.slice(0, 400);
+}
+
+/** Gemini writes the bible; on mock mode or any failure the template bible is returned instead.
+ *  With a picture, the same call sees it (one call); if that fails, the text-only bible is tried. */
 export async function makeBible(opts: NewWorldOptions, seed: number): Promise<WorldBible> {
   const fallback = mockBible(opts, seed); // also tells us the clamped nation count
   const n = fallback.nations.length;
-  const t0 = Date.now();
-  try {
-    const aggr = opts.aggression ?? 0.5;
+  const image = parseImage(opts.imageBase64);
+  const live = currentMode() === 'live';
+  const aggr = opts.aggression ?? 0.5;
+
+  if (image && !live) { // mock: ignore the picture but let its bytes pick the colours
+    const pal = hashPalette(image.data, n);
+    fallback.nations.forEach((nat, i) => { nat.color = pal[i]!; nat.flag.colors[0] = pal[i]!; });
+    return fallback;
+  }
+
+  const ask = async (withImage: boolean): Promise<WorldBible> => {
+    const t0 = Date.now();
+    const model = withImage ? (process.env.GEMINI_MODEL_BIBLE_IMAGE || bibleModel()) : bibleModel();
     const raw = await llmJson<RawBible>({
-      model: bibleModel(), system: SYSTEM, purpose: 'bible', schema: bibleSchema,
-      maxOutputTokens: Math.min(5000, 700 + 380 * n),
+      model, system: SYSTEM, purpose: withImage ? 'bible-image' : 'bible',
+      schema: withImage ? imageBibleSchema : bibleSchema,
+      maxOutputTokens: Math.min(5000, 700 + 380 * n + (withImage ? 300 : 0)),
+      images: withImage ? [image!] : undefined,
       prompt: [
         `World prompt from the user: "${opts.prompt.trim().slice(0, 500)}"`,
+        withImage ? IMAGE_INSTRUCTION : '',
         opts.era ? `Era: ${opts.era}.` : 'Choose a fitting era.',
         `Write exactly ${n} nations. World aggression level ${aggr.toFixed(2)} of 1: higher means more warlike temperaments overall.`,
         'Give each nation a distinct hex colour (far apart in hue, bright enough to read on a dark globe),',
         'a different flag layout and emblem, 3 to 5 culture traits, temperaments 0 to 1, and 6 to 8 region names in its own culture\'s naming style.',
         'Flag colours: 2 to 4 hex colours, the first being the nation colour. Keep every text short.',
-      ].join('\n'),
+      ].filter(Boolean).join('\n'),
     });
-    const bible = repairBible(raw, fallback, n);
-    console.log(`bible written by ${bibleModel()} in ${Date.now() - t0} ms (${n} nations)`);
+    const reading = withImage ? cleanReading(raw.imageReading) : undefined;
+    const bible = repairBible(raw, fallback, n, reading?.palette.filter(readable));
+    if (withImage) {
+      stampVision(bible, reading);
+      if (opts.seaLevel === undefined && reading?.seaLevelHint !== undefined) opts.seaLevel = reading.seaLevelHint; // runner reads opts.seaLevel after prepareWorld
+      console.log(`bible written by ${model} from a picture in ${Date.now() - t0} ms (${n} nations); reading: ${JSON.stringify(reading)}`);
+      lastImageReading = reading;
+    } else {
+      console.log(`bible written by ${model} in ${Date.now() - t0} ms (${n} nations)`);
+    }
     return bible;
-  } catch (e) {
-    console.warn(`bible: using the template (${e instanceof Error ? e.message : String(e)})`);
-    return fallback;
+  };
+
+  for (const withImage of image ? [true, false] : [false]) {
+    try { return await ask(withImage); } catch (e) {
+      console.warn(`bible${withImage ? ' (with picture)' : ''}: ${withImage ? 'trying text only' : 'using the template'} (${e instanceof Error ? e.message : String(e)})`);
+    }
   }
+  return fallback;
 }
+
+/** The last picture reading, for the live check script and logs. */
+export let lastImageReading: ImageReading | undefined;
 
 /** For POST /api/world: pick the seed, write the bible. Row A4 awaits this before generateWorld(bible, { seed }). */
 export async function prepareWorld(opts: NewWorldOptions): Promise<{ bible: WorldBible; seed: number }> {
