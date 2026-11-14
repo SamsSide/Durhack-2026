@@ -160,6 +160,22 @@ adds `ages.<age>.formation` to `manifest.json`, keeping everything else, and ren
 - A quick look, nothing exported: `PREVIEW_ONLY=1 PREVIEW_AGES=modern,future PREVIEW_OUT=/tmp/p.png` before
   the blender command (`PREVIEW_PX=40` for globe scale, `PREVIEW_ROLES=back` a subset).
 
+## Launch sequence (issue #291, contract X4 `models.rocket`, `models.booster`, `models.satellite`)
+
+4 models, built on their own so no other GLB is touched (also adds their manifest entries, keeping
+everything else, and renders `assets/preview-launch.png`):
+
+    blender --background --factory-startup --python assets/blender/build_launch.py
+    python3 assets/blender/verify_ages.py       # also checks rocket, booster, satellite and ages/modern/rocket
+
+- `launch_defs.py`: `rocket` (booster plus upper stage and fairing), `booster` (the same `_booster` alone)
+  and `rocket_modern` (`ages.modern.rocket`, a 1960s moon rocket). They stand along z (+Y in the GLB) with
+  the bell bottom at the origin, so rocket and booster line up; the booster's footprint is the rocket's
+  times its share of the height. `satellite()` stays in `ages_defs.py` (`build_future.py` builds it too).
+- Named empties: `fx_thruster` at each bell (down) and `sep_point` at the stage join. `b.fx("sep_point", ...)`
+  works because the kit lists it in `MARKS` beside the `fx_*` names.
+- `build_ages.py` and `build_future.py` keep any extra keys under `ages.<age>` (`formation`, `rocket`).
+
 ## Effect anchors and air escorts (contract X4 "Effect anchors")
 
 Every unit GLB (`ages/<age>/{army,fleet,trader}.glb`, `army.glb`, `fleet.glb`, `satellite.glb`) holds

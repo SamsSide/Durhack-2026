@@ -17,6 +17,8 @@ PI = math.pi
 # Effect anchors (contract X4): the way an effect streams out, in drawing space (+x is forward).
 BACK, UP, DOWN = (-1, 0, 0), (0, 0, 1), (0, 0, -1)
 FX_NAMES = ("fx_thruster", "fx_wake", "fx_exhaust", "fx_contrail", "fx_dust")
+# Other named empties (contract X4): `sep_point` marks where a rocket's booster comes away.
+MARKS = ("sep_point",)
 
 # One palette for every age. `team` is added by the kit (lane b recolours it).
 PALETTES["ages"] = dict(
@@ -49,7 +51,7 @@ class AgeBuilder(Builder):
 
     def fx(self, name, p, d=BACK):
         """An effect anchor (an empty in the GLB) at p; the effect streams out along d."""
-        assert name in FX_NAMES, name
+        assert name in FX_NAMES + MARKS, name
         m = self.stack[-1]
         self.anchors.append((name, m @ Vector(p), (m.to_3x3() @ Vector(d)).normalized()))
 

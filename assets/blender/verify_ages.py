@@ -1,4 +1,4 @@
-"""Verify the exported technology-age unit GLBs without Blender: triangles, bounds, materials, size,
+"""Verify the exported technology-age unit GLBs (and the launch models: rocket, booster, satellite) without Blender: triangles, bounds, materials, size,
 and the effect anchors (contract X4: empty nodes named fx_*, local -Z along the effect's stream).
 
   python3 assets/blender/verify_ages.py
@@ -13,7 +13,10 @@ import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 MODELS = os.path.join(ROOT, "web", "public", "models")
-FX = ("fx_thruster", "fx_wake", "fx_exhaust", "fx_contrail", "fx_dust")
+FX = ("fx_thruster", "fx_wake", "fx_exhaust", "fx_contrail", "fx_dust", "sep_point")
+# the launch models (issue #291) must carry these empties
+REQUIRED = {"rocket.glb": {"fx_thruster", "sep_point"}, "booster.glb": {"fx_thruster"},
+            "ages/modern/rocket.glb": {"fx_thruster", "sep_point"}, "satellite.glb": {"fx_thruster"}}
 WAYS = {(-1, 0, 0): "back", (1, 0, 0): "fwd", (0, 1, 0): "up", (0, -1, 0): "down", (0, 0, 1): "right", (0, 0, -1): "left"}
 
 
@@ -72,7 +75,7 @@ def main():
     bad = 0
     groups = dict(manifest["ages"])
     # the top-level units: the first two are built by build_models.py, the satellite with the ages kit
-    groups["models"] = {k: manifest["models"][k] for k in ("army", "fleet", "satellite") if k in manifest["models"]}
+    groups["models"] = {k: manifest["models"][k] for k in ("army", "fleet", "satellite", "rocket", "booster") if k in manifest["models"]}
     for style, kinds in groups.items():
         for kind, ent in kinds.items():
             if kind == "formation":                      # checked by verify_formations.py
@@ -91,6 +94,7 @@ def main():
             ext = [mx[i] - mn[i] for i in range(3)]
             fx, meshes = anchors(j)                      # empties are anchors, not meshes
             fx_ok = all(n.split(".")[0] in FX and (n.count(".") == 0 or n.split(".")[1].isdigit()) for n, _, _ in fx)
+            fx_ok = fx_ok and REQUIRED.get(ent["file"], set()) <= {n for n, _, _ in fx}
             ok = (tris < 1500 and max(ext) <= 1.0005 and abs(mn[1]) < 1e-3 and names.count("team") == 1
                   and meshes == 1 and len(j["meshes"]) == 1 and size < 60000 and "images" not in j
                   and not j.get("cameras") and abs(mn[0] + mx[0]) < 2e-3 and abs(mn[2] + mx[2]) < 2e-3 and fx_ok)

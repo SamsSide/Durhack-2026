@@ -741,21 +741,33 @@ def trader_stellar(b):
 
 
 def satellite(b):
-    """The `satellite` key of `models` (not an age unit): a foil-wrapped body, two solar panels, a dish."""
-    b.cyl(0, 0, 0.0, 0.05, 0.05, "iron", seg=6, r2=0.03)                  # thruster
-    b.fx("fx_thruster", (0, 0, 0), DOWN)                                  # the nozzle opens downwards
+    """The `satellite` key of `models` (not an age unit; issue #291 made it nicer): a gold-foil bus with
+    a `team` band and roof, two long wings of three solar panels on booms, a big dish on a mast, a
+    camera and a whip antenna. Panels along y (z in the GLB); the nozzle opens downwards."""
+    b.rod((0, 0, 0.055), (0, 0, 0.0), 0.028, "iron", seg=8, r2=0.045)    # the nozzle
+    b.cyl(0, 0, 0.0, 0.034, 0.004, "glow", seg=8)
+    b.fx("fx_thruster", (0, 0, 0), DOWN)
     b.fx("fx_contrail", (0, 0, 0), DOWN)
-    b.box(0, 0, 0.05, 0.2, 0.2, 0.26, "buff")
-    b.box(0, 0, 0.14, 0.212, 0.212, 0.06, "team")
-    b.box(0, 0, 0.31, 0.14, 0.14, 0.012, "team")
-    for s in (-1, 1):                                                     # the solar panels
-        b.rod((0, s * 0.1, 0.18), (0, s * 0.19, 0.18), 0.012, "steel", seg=4)
-        b.box(0, s * 0.35, 0.174, 0.2, 0.32, 0.012, "solar", rot=(0, 0.45, 0))
-        for k in (-1, 0, 1):
-            b.box(0, s * (0.35 + k * 0.105), 0.176, 0.204, 0.012, 0.014, "white", rot=(0, 0.45, 0))
-    b.dish(0.03, 0.0, 0.335, 0.09, tilt=0.55, mat="white", rz=PI / 2)
-    b.rod((-0.06, -0.06, 0.31), (-0.08, -0.08, 0.5), 0.006, "steel", seg=3)
-    b.ball(-0.08, -0.08, 0.5, 0.014, "glow", seg=4)
+    b.box(0, 0, 0.05, 0.2, 0.2, 0.24, "buff")                             # the bus in gold foil
+    b.box(0, 0, 0.12, 0.212, 0.212, 0.05, "team")                         # band
+    b.box(0, 0, 0.29, 0.21, 0.21, 0.016, "white")                         # top deck
+    b.box(0, 0, 0.306, 0.13, 0.13, 0.006, "team")                         # roof, seen from above
+    b.box(0.105, 0.04, 0.07, 0.03, 0.05, 0.05, "iron")                    # camera
+    b.cyl(0.12, 0.04, 0.083, 0.016, 0.024, "glass", seg=6, rot=(0, PI / 2, 0))
+    tilt = (0, 0.3, 0)
+    for s in (-1, 1):                                                     # the solar wings
+        b.rod((0, s * 0.1, 0.17), (0, s * 0.68, 0.17), 0.007, "steel", seg=4)
+        b.box(0, s * 0.2, 0.15, 0.03, 0.03, 0.04, "steel")                # the hinge
+        for k in range(3):
+            y = s * (0.29 + k * 0.16)
+            b.box(0, y, 0.165, 0.22, 0.15, 0.01, "solar", rot=tilt)
+            b.box(0, y, 0.166, 0.224, 0.006, 0.012, "white", rot=tilt)   # cell line
+    b.rod((0, 0, 0.3), (0, 0, 0.34), 0.012, "steel", seg=4)               # the dish on its mast
+    b.dish(0, 0, 0.335, 0.11, tilt=0.35, mat="white", rz=PI / 2)
+    b.rod((0.0, 0, 0.345), (0.05, 0, 0.47), 0.005, "steel", seg=3)        # the feed
+    b.ball(0.05, 0, 0.47, 0.012, "glow", seg=4)
+    b.rod((-0.08, -0.08, 0.31), (-0.1, -0.1, 0.43), 0.004, "steel", seg=3)   # whip antenna
+    b.ball(-0.1, -0.1, 0.435, 0.01, "glow", seg=4)
 
 
 MODELS = {

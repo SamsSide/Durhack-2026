@@ -513,6 +513,18 @@ this table from `@terra/shared`.
   gun; modern an infantry squad, a tank, a self-propelled gun; future power-armour troopers, a hover
   tank, a drone launcher; stellar walker infantry, a mech, an orbital-strike beacon.
 
+  **Launch sequence (owner decision #291):** `models.rocket` (`rocket.glb`, the full stack: a
+  reusable booster under an upper stage and a payload fairing), `models.booster` (`booster.glb`, the
+  lower stage alone) and `models.satellite` (same key and file, now with two three-panel solar wings
+  and a big dish). Rockets stand along +Y, nose up, the bottom of the engine bell at the origin. Empty
+  nodes: `fx_thruster` at the bell (local -Z points down) on both, and `sep_point` at the stage join
+  on the rocket. The rocket and the booster share their origin and axis, and `booster.footprint` is
+  `rocket.footprint` times the booster's share of the rocket's height (0.272 against 0.5), so drawn at
+  the same scale the booster covers the rocket's lower stage exactly at separation. Optional
+  `ages.modern.rocket` (`ages/modern/rocket.glb`): a 1960s moon rocket with the same empties
+  (`sep_point` at the first stage join). Same rules as the unit models (one `team` material, fits
+  1 x 1 x 1, under 800 triangles).
+
   **Building styles (owner decision #91):** the manifest also has
   `"styles": { "<style>": { "<kind>": { "file": "<style>/<kind>.glb", "footprint": n } } }` for six
   styles (`medieval`, `classical`, `desert`, `east_asian`, `mesoamerican`, `scrap`, and from #118
