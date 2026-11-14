@@ -7,12 +7,42 @@ import { useWorld } from '../state/world';
 import { tileColor } from '../globe/mesh/colors';
 import { getPalette } from '../globe/palette';
 import { globeCamera, lookAtLonLat } from '../globe/hover/cameraBridge';
+import { useWonders } from '../globe/wonders/store';
 import './hud.css';
 
 const CSS_W = 220, CSS_H = 120;
 const SCALE = 2; // canvas pixels per CSS pixel
 const W = CSS_W * SCALE, H = CSS_H * SCALE;
 const REDRAW_MS = 1000;
+const GILT = '#e8c45a';
+
+/** A five-pointed gilt star at each wonder (row A30). */
+function drawWonders(ctx: CanvasRenderingContext2D, w: World): void {
+  const list = useWonders.getState().list;
+  if (!list.length) return;
+  ctx.save();
+  ctx.fillStyle = GILT;
+  ctx.strokeStyle = 'rgba(20, 14, 4, 0.85)';
+  ctx.lineWidth = SCALE;
+  for (const r of list) {
+    const c = w.tiles[r.tile]?.center;
+    if (!c) continue;
+    const l = Math.hypot(c[0], c[1], c[2]) || 1;
+    const lon = Math.atan2(c[0] / l, c[2] / l), lat = Math.asin(Math.max(-1, Math.min(1, c[1] / l)));
+    const x = ((lon + Math.PI) / (2 * Math.PI)) * W, y = ((Math.PI / 2 - lat) / Math.PI) * H;
+    const R = 5 * SCALE, rIn = R * 0.45;
+    ctx.globalAlpha = r.complete ? 1 : 0.6;
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? rIn : R;
+      if (i) ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); else ctx.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fill();
+  }
+  ctx.restore();
+}
 
 /** For every minimap pixel, the tile under it (nearest centre, found by a greedy walk). */
 function pixelTiles(world: World): Int32Array {
@@ -95,13 +125,18 @@ export function Minimap({ hidden = false }: { hidden?: boolean }) {
         }
       }
       ctx.putImageData(img, 0, 0);
+      drawWonders(ctx, w);
     };
     draw();
     const unsub = useWorld.subscribe(() => {
       if (timer) return;
       timer = setTimeout(draw, Math.max(0, REDRAW_MS - (performance.now() - last)));
     });
-    return () => { unsub(); if (timer) clearTimeout(timer); };
+    const unsubW = useWonders.subscribe(() => {
+      if (timer) return;
+      timer = setTimeout(draw, Math.max(0, REDRAW_MS - (performance.now() - last)));
+    });
+    return () => { unsub(); unsubW(); if (timer) clearTimeout(timer); };
   }, [world, hidden]);
 
   // The view frame: redrawn only when the camera moves.

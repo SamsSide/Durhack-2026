@@ -7,7 +7,8 @@ import { flagSvg } from '@terra/shared';
 import type { TechAge, UnitKind, World, WorldEvent } from '@terra/shared';
 import type { MeshEdge, ProvinceMesh } from '../mesh/buildProvinceMesh';
 import { getPalette } from '../palette';
-import { COUNTER_H, COUNTER_W, drawClash, drawCounter, drawLoss, drawScroll, drawSettler, toTexture } from './draw';
+import { COUNTER_H, COUNTER_W, drawAttrition, drawClash, drawCounter, drawLoss, drawScroll, drawSettler, drawShield, toTexture } from './draw';
+import { terrainEffects } from '../terrain/effects';
 import { unitIcon } from './era';
 import { ModelField, standMatrix } from './ModelField';
 import { Traders } from './traders';
@@ -49,6 +50,7 @@ interface UState {
   id: string; owner: number; kind: UnitKind; strength: number;
   from: number; to: number; t0: number; t1: number;
   hopAt: number;
+  flickAt?: number;
   arrow: Arrow | null;
   head: THREE.Vector3;          // march direction (world space), kept after the march ends
 }
@@ -110,6 +112,8 @@ export class UnitLayer {
   private readonly clashTex: THREE.CanvasTexture;
   private readonly scrollTex: THREE.CanvasTexture;
   private readonly lossTex = new Map<string, THREE.CanvasTexture>();
+  private readonly attTex = new Map<string, THREE.CanvasTexture>();
+  private readonly shieldTex = new Map<string, THREE.CanvasTexture>();
 
   private readonly models = new UnitModels();
   private readonly field = new ModelField();
@@ -451,6 +455,9 @@ export class UnitLayer {
         case 'battle':
           this.onBattle(e, now);
           break;
+        case 'unit_attrition':
+          this.onAttrition(e, now);
+          break;
         case 'tile_claimed':
           if (e.cause === 'conquest') this.onConquest(e.tile, e.owner, e.from, now);
           break;
@@ -522,6 +529,15 @@ export class UnitLayer {
     }
 
     this.pops.show(now, 'clash', this.clashTex, P, 0.036, 1, CLASH_MS);
+    // terrain defence bonus: a small shield beside the clash badge
+    const ter = this.world.tiles[e.tile]?.terrain;
+    const def = ter ? terrainEffects(ter).defence : 0;
+    if (ter && (ter === 'hills' || ter === 'mountain' || ter === 'forest') && def > 0) {
+      const text = `+${Math.round(def * 100)}%`;
+      let tex = this.shieldTex.get(text);
+      if (!tex) { tex = toTexture(drawShield(text, this.pal.parchment, this.pal.accent, this.pal.ink)); this.shieldTex.set(text, tex); }
+      this.pops.show(now, 'clash', tex, P, 0.03, 120 / 128, CLASH_MS, 1.0);
+    }
     // muzzle flashes: short warm flickers over ~0.8s, then a few gilt sparks
     this.sparks.burst(now, P, 18, 0.013, this.col.flash, 200, 0.01, 750);
     this.sparks.burst(now, P, 8, 0.01, this.col.accent, 450, 0.05, 300);
@@ -545,6 +561,28 @@ export class UnitLayer {
     const hopAt = now + 320;
     if (e.winner === e.attacker && st) st.hopAt = hopAt;
     else for (const u of this.states.values()) if (u.owner === e.winner && u.to === e.tile) u.hopAt = hopAt;
+  }
+
+  /** Slow wear on a unit outside its land: a small grey "-N", a dim flicker, dust on harsh ground. */
+  private onAttrition(e: Extract<WorldEvent, { type: 'unit_attrition' }>, now: number): void {
+    const st = this.states.get(e.unitId);
+    const tile = st ? st.to : -1;
+    if (!st || tile < 0) return;
+    const P = this.surf(tile, CHIP_LIFT, new THREE.Vector3());
+    if (P.lengthSq() === 0) return;
+    st.flickAt = now;
+    const text = `-${Math.max(1, Math.round(e.loss))}`;
+    let tex = this.attTex.get(text);
+    if (!tex) { tex = toTexture(drawAttrition(text, this.pal.ink)); this.attTex.set(text, tex); }
+    this.pops.show(now, 'attrition', tex, P, 0.014, 112 / 56, 1400);
+    const dust = e.terrain === 'desert' ? 0xd9bf82 : e.terrain === 'ice' ? 0xeaf2f6 : e.terrain === 'mountain' ? 0x8b8680 : -1;
+    if (dust < 0) return;
+    const n = P.clone().normalize();
+    for (let i = 0; i < 2; i++) {
+      tangentJitter(_j, n, 0.006);
+      const drift = tangentJitter(new THREE.Vector3(), n, 0.008).addScaledVector(n, 0.004);
+      this.smoke.emit(now, P.clone().add(_j), drift, 0.005, 0.018, 1100, 0.5, new THREE.Color(dust), i * 120);
+    }
   }
 
   private onConquest(tile: number, owner: number, from: number, now: number): void {
@@ -787,6 +825,14 @@ export class UnitLayer {
     const base = chip.kind === 'settler' ? 0.5 : -0.18 - 0.85 * this.near - 0.25 * (1 - zoom / 1.25);
     chip.sprite.center.set(0.5, base - stack * 0.92 - hop);
     chip.mat.opacity = f;
+    // attrition flicker: a brief dim, greyish pulse
+    let fl = 0;
+    for (const u of chip.units) {
+      const t = (now - (u.flickAt ?? -1e9)) / 600;
+      if (t >= 0 && t < 1) fl = Math.max(fl, Math.abs(Math.sin(t * Math.PI * 3)) * (1 - t));
+    }
+    const c = 1 - 0.5 * fl;
+    chip.mat.color.setRGB(c, c, c);
   }
 
   /** The age model under a counter, standing where the counter is and facing its march. */
@@ -839,6 +885,10 @@ export class UnitLayer {
     this.scrollTex.dispose();
     for (const t of this.lossTex.values()) t.dispose();
     this.lossTex.clear();
+    for (const t of this.attTex.values()) t.dispose();
+    this.attTex.clear();
+    for (const t of this.shieldTex.values()) t.dispose();
+    this.shieldTex.clear();
     for (const f of this.flags.values()) f.img.onload = null;
     this.flags.clear();
   }
