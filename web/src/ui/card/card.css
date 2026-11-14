@@ -1,0 +1,104 @@
+/* Nation card: an old atlas page floating in the hologram. Variables from tokens.css only. */
+.tn-card {
+  --c-serif: var(--font-serif);
+  --c-ink-faint: color-mix(in srgb, var(--color-parchment) 60%, transparent);
+  --c-rule: color-mix(in srgb, var(--color-parchment) 28%, transparent);
+  --c-chip: color-mix(in srgb, var(--color-parchment) 45%, transparent);
+  --c-shimmer-a: color-mix(in srgb, var(--color-parchment) 10%, transparent);
+  --c-shimmer-b: color-mix(in srgb, var(--color-parchment) 26%, transparent);
+  --c-war: var(--color-danger);
+  --c-hostile: color-mix(in srgb, var(--color-danger) 55%, var(--color-accent));
+  --c-alliance: var(--color-ok);
+  --c-trade: var(--color-accent);
+  --c-neutral: var(--c-ink-faint);
+
+  width: 380px;
+  max-width: 100%;
+  max-height: 72vh;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  color: var(--color-parchment);
+  font-family: var(--c-serif);
+  line-height: 1.45;
+}
+.tn-card-body {
+  overflow-y: auto;
+  padding: var(--space-4);
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-chip) transparent;
+}
+.tn-head { display: flex; gap: var(--space-3); align-items: center; }
+.tn-head-text { min-width: 0; }
+.tn-flag { position: relative; width: 90px; height: 60px; flex: none; border: 1px solid var(--c-chip); line-height: 0; }
+.tn-flag-drawn, .tn-flag-painted { position: absolute; inset: 0; }
+.tn-flag-painted { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 250ms ease; }
+.tn-flag-painted.tn-on { opacity: 1; }
+.tn-name { margin: 0; font-size: 24px; font-weight: 600; line-height: 1.15; letter-spacing: 0.01em; }
+.tn-sub { color: var(--c-ink-faint); font-size: 13px; margin-top: var(--space-1); }
+.tn-badges { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-3); }
+.tn-badge {
+  font-size: 11px; font-variant: small-caps; letter-spacing: 0.06em;
+  color: var(--c-war); border: 1px solid var(--c-war); border-radius: var(--radius-1); padding: 0 var(--space-2);
+}
+.tn-ideology { font-style: italic; margin: var(--space-3) 0 var(--space-2); color: var(--color-parchment); }
+.tn-chips { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.tn-chip { font-size: 12px; border: 1px solid var(--c-chip); border-radius: var(--radius-3); padding: 0 var(--space-2); color: var(--c-ink-faint); }
+.tn-figures { display: flex; gap: var(--space-5); margin-top: var(--space-3); }
+.tn-fig-n { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+.tn-fig-l { display: block; font-size: 11px; font-variant: small-caps; letter-spacing: 0.08em; color: var(--c-ink-faint); }
+
+.tn-sound { display: flex; gap: var(--space-2); margin-top: var(--space-4); }
+.tn-btn {
+  flex: 1; background: transparent; color: var(--color-parchment); cursor: pointer;
+  border: 1px solid var(--color-accent); border-radius: var(--radius-1); padding: var(--space-1) var(--space-2);
+  font-family: var(--c-serif); font-size: 13px; transition: background 150ms ease, color 150ms ease;
+}
+.tn-btn:hover { background: var(--color-accent); color: var(--color-ink); }
+.tn-lyrics { margin-top: var(--space-3); font-style: italic; font-size: 14px; color: var(--color-parchment); border-left: 2px solid var(--color-accent); padding-left: var(--space-3); }
+
+.tn-section { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--c-rule); }
+.tn-h { margin: 0 0 var(--space-2); font-size: 13px; font-weight: 600; font-variant: small-caps; letter-spacing: 0.1em; color: var(--color-accent); }
+.tn-p { margin: 0; font-size: 14px; }
+.tn-muted { margin: 0; font-size: 14px; color: var(--c-ink-faint); font-style: italic; }
+.tn-link { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: var(--color-accent); text-decoration: underline; }
+.tn-link:hover { color: var(--color-parchment); }
+
+.tn-bar { height: 6px; border: 1px solid var(--c-chip); border-radius: var(--radius-1); overflow: hidden; }
+.tn-bar-fill { height: 100%; background: var(--color-danger); transition: width 250ms ease; }
+
+.tn-card-lines { display: grid; gap: var(--space-2); }
+.tn-shimmer {
+  display: block; height: 10px; border-radius: var(--radius-1);
+  background: linear-gradient(90deg, var(--c-shimmer-a) 0%, var(--c-shimmer-b) 50%, var(--c-shimmer-a) 100%);
+  background-size: 200% 100%; animation: tn-shimmer 1.4s linear infinite;
+}
+.tn-shimmer.tn-short { width: 60%; }
+@keyframes tn-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.tn-fade { animation: tn-fade 250ms ease both; }
+@keyframes tn-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.tn-rels { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.tn-rel {
+  width: 100%; display: flex; gap: var(--space-2); align-items: flex-start; text-align: left;
+  background: transparent; color: inherit; font: inherit; cursor: pointer;
+  border: 1px solid transparent; border-bottom-color: var(--c-rule); border-radius: var(--radius-1); padding: var(--space-2);
+  transition: border-color 150ms ease, background 150ms ease;
+}
+.tn-rel:hover, .tn-rel:focus-visible { border-color: var(--color-accent); background: var(--c-shimmer-a); outline: none; }
+.tn-rel-flag { flex: none; width: 24px; height: 16px; line-height: 0; border: 1px solid var(--c-chip); margin-top: 3px; }
+.tn-rel-main { display: grid; gap: var(--space-1); min-width: 0; flex: 1; }
+.tn-rel-top { display: flex; justify-content: space-between; gap: var(--space-2); align-items: baseline; }
+.tn-rel-name { font-size: 14px; }
+.tn-stance { font-size: 11px; font-variant: small-caps; letter-spacing: 0.08em; border: 1px solid currentColor; border-radius: var(--radius-1); padding: 0 var(--space-1); flex: none; }
+.tn-stance-war { color: var(--c-war); }
+.tn-stance-hostile { color: var(--c-hostile); }
+.tn-stance-alliance { color: var(--c-alliance); }
+.tn-stance-trade { color: var(--c-trade); }
+.tn-stance-neutral { color: var(--c-neutral); }
+.tn-rel-story { font-size: 12.5px; color: var(--c-ink-faint); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tn-shimmer { animation: none; }
+  .tn-fade { animation: none; }
+}
