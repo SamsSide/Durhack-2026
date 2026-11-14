@@ -1,10 +1,11 @@
-"""Build the 30 building-style models (6 styles x 5 kinds), update the manifest, render the preview.
+"""Build the 50 building-style models (10 styles x 5 kinds), update the manifest, render the preview.
 
 Run (from the repo root):
   blender --background --factory-startup --python assets/blender/build_styles.py
 
 Output: web/public/models/<style>/<kind>.glb, the `styles` section of manifest.json (the existing
-`version` and `models` stay as they are) and assets/preview-styles.png.
+`version` and `models` stay as they are), assets/preview-styles.png (all ten styles) and
+assets/preview-identity.png (the four nation-identity styles of row A24, larger).
 """
 import json
 import math
@@ -17,6 +18,7 @@ from mathutils import Euler, Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from styles_defs import STYLES  # noqa: E402
+from styles_identity import IDENTITY_STYLES  # noqa: E402
 from styles_kit import Builder  # noqa: E402
 
 ROOT = os.getcwd()
@@ -24,6 +26,8 @@ if "--" in sys.argv:
     ROOT = sys.argv[sys.argv.index("--") + 1]
 OUT_DIR = os.path.join(ROOT, "web", "public", "models")
 PREVIEW = os.path.join(ROOT, "assets", "preview-styles.png")
+PREVIEW_IDENTITY = os.path.join(ROOT, "assets", "preview-identity.png")
+STYLES.update(IDENTITY_STYLES)
 
 KINDS = ["capital", "city", "town", "temple", "fort"]
 FOOTPRINT = {"capital": 1.0, "city": 1.0, "town": 0.9, "temple": 0.7, "fort": 0.7}
@@ -49,18 +53,19 @@ def export(obj, style, kind):
     )
 
 
-def preview(objs):
+def preview(objs, styles, path, margin=4.0, width=2000, sp_y=1.75):
+    """Render a labelled grid (one row per style) to `path`. `margin` is the space left for labels."""
     scene = bpy.context.scene
-    sp_x, sp_y = 1.55, 1.75
-    ink = bpy.data.materials.new("ink")
+    sp_x = 1.55
+    ink = bpy.data.materials.get("ink") or bpy.data.materials.new("ink")
     ink.diffuse_color = (0.15, 0.1, 0.07, 1)
-    tile = bpy.data.materials.new("tile")
+    tile = bpy.data.materials.get("tile") or bpy.data.materials.new("tile")
     tile.diffuse_color = (0.96, 0.90, 0.74, 1)
-    styles = [x for x in os.environ.get("PREVIEW_STYLES", ",".join(STYLES)).split(",")]
     kinds = [x for x in os.environ.get("PREVIEW_KINDS", ",".join(KINDS)).split(",")]
     rows = len(styles)
     cols = len(kinds)
     tilt = Euler((math.radians(48), 0, 0.0), "XYZ")
+    extra = []
 
     def label(text, x, y, size, align="CENTER"):
         bpy.ops.object.text_add(location=(x, y, 0.0))
@@ -70,10 +75,10 @@ def preview(objs):
         t.data.size = size
         t.data.materials.append(ink)
         t.rotation_euler = tilt
+        extra.append(t)
 
     for key, o in objs.items():
-        if key[0] not in styles or key[1] not in kinds:
-            o.hide_render = True
+        o.hide_render = key[0] not in styles or key[1] not in kinds
     for r, style in enumerate(styles):
         for c, kind in enumerate(kinds):
             gx = (c - (cols - 1) / 2) * sp_x + 0.5
@@ -81,18 +86,24 @@ def preview(objs):
             objs[(style, kind)].location = (gx, gy, 0.0)
             bpy.ops.mesh.primitive_plane_add(size=1.35, location=(gx, gy, -0.004))
             bpy.context.object.data.materials.append(tile)
-            label(kind, gx, gy - 0.98, 0.15)
+            extra.append(bpy.context.object)
+            if r == rows - 1:  # kind names once, under the last row, so they never cover a model
+                label(kind, gx, gy - 0.98, 0.15)
         label(style, -(cols / 2) * sp_x - 0.25, ((rows - 1) / 2 - r) * sp_y, 0.17, align="RIGHT")
     cam_data = bpy.data.cameras.new("cam")
     cam_data.type = "ORTHO"
-    cam_data.ortho_scale = cols * 1.55 + 4.0
+    units_x = cols * sp_x + margin
+    # a row is sp_y * cos(tilt) tall on screen; leave room for the tallest model and the kind names
+    units_y = rows * sp_y * math.cos(math.radians(48)) + 1.8
+    cam_data.ortho_scale = max(units_x, units_y)  # ortho_scale spans the longer side of the image
     cam = bpy.data.objects.new("cam", cam_data)
     scene.collection.objects.link(cam)
+    extra.append(cam)
     cam.rotation_euler = tilt
-    cam.location = Vector((-0.5, 0.3, 0.0)) + tilt.to_matrix() @ Vector((0, 0, 30))
+    cam.location = Vector((0.5 - margin / 4, 0.3, 0.0)) + tilt.to_matrix() @ Vector((0, 0, 30))
     scene.camera = cam
     scene.render.engine = "BLENDER_WORKBENCH"
-    scene.render.resolution_x, scene.render.resolution_y = 2000, int(2000 * (rows * 1.55 + 3.4) / (cols * 1.55 + 4.0))
+    scene.render.resolution_x, scene.render.resolution_y = width, int(width * units_y / units_x)
     scene.view_settings.view_transform = "Standard"
     bpy.data.materials["team"].diffuse_color = (0.2, 0.36, 0.78, 1)  # preview only: a nation blue
     sh = scene.display.shading
@@ -100,7 +111,7 @@ def preview(objs):
     sl = os.environ.get("PREVIEW_LIGHT")
     if sl:
         sh.studio_light = sl
-    sh.use_world_space_lighting = True
+    sh.use_world_space_lighting = os.environ.get("PREVIEW_WORLD", "0") == "1"  # camera-space light keeps roofs bright
     sh.show_specular_highlight = False
     sh.color_type = "MATERIAL"
     sh.show_object_outline = True
@@ -108,10 +119,13 @@ def preview(objs):
     sh.show_cavity = False
     scene.render.resolution_percentage = int(os.environ.get("PREVIEW_PCT", "100"))
     scene.render.image_settings.file_format = "PNG"
-    scene.render.filepath = PREVIEW
-    scene.world = bpy.data.worlds.new("w")
+    scene.render.filepath = path
+    if not scene.world:
+        scene.world = bpy.data.worlds.new("w")
     scene.world.color = (0.94, 0.89, 0.76)
     bpy.ops.render.render(write_still=True)
+    for o in extra:
+        bpy.data.objects.remove(o, do_unlink=True)
 
 
 def main():
@@ -130,7 +144,12 @@ def main():
     with open(mpath, "w") as f:
         json.dump(manifest, f, indent=2)
         f.write("\n")
-    preview(objs)
+    only = os.environ.get("PREVIEW_STYLES")
+    if only:  # a quick look at a few styles: PREVIEW_STYLES=egyptian PREVIEW_OUT=/tmp/x.png
+        preview(objs, only.split(","), os.environ.get("PREVIEW_OUT", PREVIEW), margin=float(os.environ.get("PREVIEW_MARGIN", "4.0")))
+    else:
+        preview(objs, list(STYLES), PREVIEW)
+        preview(objs, list(IDENTITY_STYLES), PREVIEW_IDENTITY, margin=3.2, sp_y=2.3)
     print("done")
 
 
