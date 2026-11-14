@@ -32,6 +32,8 @@ import { Living } from './living';
 import { EventBeacons, Spotlight, WarFlash } from './events';
 import { Council } from './council';
 import { Wonders } from './wonders';
+import { CutVeil } from './show/CutVeil';
+import { RulerScrolls } from './show/RulerScrolls';
 import { registerCapture } from './capture';
 import { setStatuses } from './status/statusTint';
 
@@ -175,6 +177,8 @@ function Scene({ world }: { world: World }) {
       <EventBeacons />
       <WarFlash />
       <Council />
+      <CutVeil />
+      <RulerScrolls />
       <Spotlight />
     </ProvinceMeshContext.Provider>
   );

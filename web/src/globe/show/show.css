@@ -1,0 +1,98 @@
+/* "Show, don't tell" on the globe (B14): ruler scrolls and the queued-letter count. Colours and fonts come
+   from theme/tokens.css; the paper is tn-sheet and the count is tn-plate (theme/materials.css). Lane b. */
+
+/* --- the ruler's scroll ------------------------------------------------------------------------------ */
+.rs-scroll {
+  width: 236px;
+  animation: rs-life 4.6s ease forwards;
+  will-change: transform, opacity;
+}
+.rs-paper {
+  padding: 6px 12px 8px;
+  border-radius: 0;
+}
+/* the two rolled ends: dark wooden rods with gilt caps (gilt only on dark) */
+.rs-rod {
+  position: relative;
+  height: 7px;
+  margin: 0 -7px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #5a412a 0%, #2a1f14 60%, #140e08 100%);
+  box-shadow: 0 0 0 1px #000, 0 2px 4px rgba(0, 0, 0, 0.55);
+}
+.rs-rod::before,
+.rs-rod::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  width: 7px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--gilt-plate);
+  box-shadow: 0 0 0 1px #000;
+}
+.rs-rod::before { left: -4px; }
+.rs-rod::after { right: -4px; }
+.rs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 3px;
+  margin-bottom: 3px;
+  border-bottom: 1px solid var(--color-ink-faint);
+}
+.rs-nation {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+}
+.rs-tag {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+/* AI: rubric red on paper; AUTOPILOT: muted ink outline */
+.rs-tag.ai { color: #f6ead0; background: #8f1f17; box-shadow: 0 0 0 1px #4a0f0b; }
+.rs-tag.auto { color: var(--color-ink-muted); box-shadow: inset 0 0 0 1px var(--color-ink-muted); }
+.rs-text {
+  margin: 0;
+  white-space: normal;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 15px;
+  line-height: 18px;
+  color: var(--color-ink);
+}
+@keyframes rs-life {
+  0% { opacity: 0; transform: translateY(14px) scaleY(0.4); }
+  8% { opacity: 1; transform: translateY(0) scaleY(1); }
+  82% { opacity: 1; transform: translateY(-8px); }
+  100% { opacity: 0; transform: translateY(-16px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rs-scroll { animation-name: rs-life-still; }
+  @keyframes rs-life-still { 0%, 100% { opacity: 0; } 6%, 90% { opacity: 1; } }
+}
+
+/* --- "x14": more queued moves than the 8 letters drawn --------------------------------------------- */
+.sv-count {
+  --edge: var(--holo-tint);
+  padding: 2px 7px 3px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gilt-hi);
+}
