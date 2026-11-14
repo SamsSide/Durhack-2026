@@ -38,6 +38,12 @@ export const smooth = (a: number, b: number, x: number): number => {
   return t * t * (3 - 2 * t);
 };
 
+/**
+ * Fade for the additive BackSide rim shells (radius 1.14). The camera can zoom to CAM_MIN (1.12), inside
+ * them, where their back faces turn into a bright fan across the view: fade them out before it gets there.
+ */
+export const rimFade = (camDist: number): number => smooth(1.17, 1.32, camDist);
+
 /** A soft radial sprite texture drawn once on a canvas. `stops` are [offset, rgba] pairs. */
 export function radialTexture(stops: [number, string][], size = 128): THREE.Texture {
   const c = document.createElement('canvas');
