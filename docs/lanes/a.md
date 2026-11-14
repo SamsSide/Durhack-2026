@@ -104,5 +104,6 @@ default of 4 still applies to the other lanes).
 - 16:58 · A27 devnet: first live run, genesis and payments confirmed on Explorer; true-up per nation, inSync with tolerance
 - 17:14 · A27 devnet: the chain records every coin moving between nations; no treasury mirroring; HTTP polling, fixed CU, backoff
 - 17:50 · A27 handed to lane b (owner, 14 Nov): `server/src/chain/`, `sim/payments.ts`, `sim/trade.ts`, the keys script and check-money now belong to lane b; lane a keeps contracts and the demo recording. A26 and A30 to testing (sim and models on main; lane b draws them).
+- 17:30 · docs: `docs/documentation.md` rebuilt for judges from the code: architecture, the demo path, algorithms (Voronoi provinces, determinism, battles, terrain, ages, council, wonders, payments and money conservation, the Solana ledger, resilience, pacing, Gemini and ElevenLabs), problems we hit, limitations, where code and plan differ, judge Q&A per prize
 
 Mocks: `npm run mock` (MockRunner behind the `WorldRunner` interface in `server/src/runner.ts`) stands in for the engine until A3; lore, audio and replays are mocked until A13 to A16 and A9.
