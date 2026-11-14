@@ -94,3 +94,5 @@
 }
 .tn-net-tabbtn:hover { color: var(--color-ink); }
 .tn-net-tabbtn.tn-on { color: var(--color-ink); border-bottom-color: var(--color-rubric); }
+
+.tn-sw-hint { margin: -4px 0 6px; font-size: var(--text-sm); font-style: italic; color: var(--color-ink-muted); }
