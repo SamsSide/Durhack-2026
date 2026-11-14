@@ -170,12 +170,6 @@ export class UnitModels {
     const anchors: ModelAnchor[] = (rawAnchors.get(e.file) ?? []).map((a) => ({
       kind: a.kind, pos: a.pos.clone().applyMatrix4(norm), dir: a.dir.clone().transformDirection(norm),
     }));
-    // until a model carries its own anchors (X4), ships get a wake and armies dust at the stern
-    if (!anchors.length) {
-      const back = new THREE.Vector3(0, 0, -1);
-      if (kind === 'fleet' || kind === 'trader') anchors.push({ kind: 'wake', pos: new THREE.Vector3(0, 0.03, -0.45), dir: back });
-      else anchors.push({ kind: 'dust', pos: new THREE.Vector3(0, 0.05, -0.4), dir: back });
-    }
     const m: UnitModel = { key: e.file, parts, norm, footprint: e.footprint, real: true, anchors };
     this.made.set(e.file, m);
     return m;

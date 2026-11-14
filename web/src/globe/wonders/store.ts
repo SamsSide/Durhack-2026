@@ -2,8 +2,8 @@
 // events, and from the dev helper window.__wonderDemo. Read by the 3D layer, the tooltip and the minimap. Lane b.
 import { create } from 'zustand';
 import type { World, WorldEvent } from '@terra/shared';
-import { isWonderKind, WONDER_LABEL } from './types';
-import type { WonderKind, WonderStructureLike } from './types';
+import { WONDER_LABEL } from './types';
+import type { WonderKind } from './types';
 
 export interface WonderRec {
   id: string;
@@ -12,6 +12,7 @@ export interface WonderRec {
   kind: WonderKind;
   name: string;
   complete: boolean;
+  ruined: boolean;            // razed: the structure is now a ruin that still carries its wonder
   startTick: number | null;   // world tick the build started (null: unknown)
   startMs: number;            // performance.now() when we first saw it being built
   builtMs: number | null;     // performance.now() of the reveal (null: none to play)
@@ -60,16 +61,17 @@ export function syncWonders(world: World | null): void {
   let changed = false;
   const seen = new Set<string>();
   const first = prev.every((r) => r.demo);
-  for (const raw of world.structures as unknown as WonderStructureLike[]) {
-    if (!raw || raw.kind !== 'wonder' || !isWonderKind(raw.wonder)) continue;
+  for (const raw of world.structures) {
+    if (!raw || (raw.kind !== 'wonder' && raw.kind !== 'ruin') || !raw.wonder) continue;
+    const ruined = raw.kind === 'ruin';
     if (raw.tile < 0 || raw.tile >= world.tiles.length) continue;
     seen.add(raw.id);
-    const complete = raw.complete !== false; // missing means finished (an old snapshot)
+    const complete = ruined || raw.complete !== false; // missing means finished (an old snapshot)
     const name = typeof raw.name === 'string' && raw.name ? raw.name : fallbackName(world, raw.owner, raw.wonder);
     const i = byId.get(raw.id);
     if (i == null) {
       list = [...list, {
-        id: raw.id, tile: raw.tile, owner: raw.owner, kind: raw.wonder, name, complete,
+        id: raw.id, tile: raw.tile, owner: raw.owner, kind: raw.wonder, name, complete, ruined,
         startTick: typeof raw.builtTick === 'number' ? raw.builtTick : null, startMs: performance.now(), builtMs: null, demo: false,
       }];
       changed = true;
@@ -77,14 +79,14 @@ export function syncWonders(world: World | null): void {
     }
     const r = list[i]!;
     if (r.demo) continue;
-    if (r.owner !== raw.owner || r.name !== name || r.tile !== raw.tile) {
-      list = list.slice(); list[i] = { ...r, owner: raw.owner, name, tile: raw.tile }; changed = true;
+    if (r.owner !== raw.owner || r.name !== name || r.tile !== raw.tile || r.ruined !== ruined) {
+      list = list.slice(); list[i] = { ...r, owner: raw.owner, name, tile: raw.tile, ruined }; changed = true;
     }
     if (complete && !r.complete) { list = finish(list, i, !first); changed = true; }
   }
   // A wonder that left world.structures was razed (now a ruin). Keep event-only ones until the world catches up
   // with them: those have no structure yet when A30 is not on the server.
-  const hasAny = (world.structures as unknown as WonderStructureLike[]).some((s) => s?.kind === 'wonder');
+  const hasAny = world.structures.some((s) => s?.kind === 'wonder' || (s?.kind === 'ruin' && s.wonder));
   if (hasAny) {
     const kept = list.filter((r) => r.demo || seen.has(r.id));
     if (kept.length !== list.length) { list = kept; changed = true; }
@@ -92,24 +94,21 @@ export function syncWonders(world: World | null): void {
   if (changed) put(list);
 }
 
-/** Apply wonder_started / wonder_built events (read by type string; the union does not have them yet). */
+/** Apply wonder_started / wonder_built events. */
 export function wonderEvents(world: World | null, events: WorldEvent[]): void {
   let list = useWonders.getState().list;
   let changed = false;
-  for (const e of events as unknown as Array<Record<string, unknown>>) {
+  for (const e of events) {
     if (e.type === 'wonder_started') {
-      const id = String(e.structureId ?? '');
-      const tile = Number(e.tile), owner = Number(e.countryId);
-      if (!id || !isWonderKind(e.wonder) || !Number.isFinite(tile) || !Number.isFinite(owner)) continue;
-      if (list.some((r) => r.id === id)) continue;
-      const name = typeof e.name === 'string' && e.name ? e.name : fallbackName(world, owner, e.wonder);
+      if (list.some((r) => r.id === e.structureId)) continue;
+      const name = e.name || fallbackName(world, e.countryId, e.wonder);
       list = [...list, {
-        id, tile, owner, kind: e.wonder, name, complete: false,
-        startTick: typeof e.tick === 'number' ? e.tick : null, startMs: performance.now(), builtMs: null, demo: false,
+        id: e.structureId, tile: e.tile, owner: e.countryId, kind: e.wonder, name, complete: false, ruined: false,
+        startTick: e.tick ?? world?.tick ?? null, startMs: performance.now(), builtMs: null, demo: false,
       }];
       changed = true;
     } else if (e.type === 'wonder_built') {
-      const i = list.findIndex((r) => r.id === String(e.structureId ?? ''));
+      const i = list.findIndex((r) => r.id === e.structureId);
       if (i < 0) continue;
       list = finish(list, i, true);
       changed = true;
@@ -140,7 +139,7 @@ export function demoWonder(world: World | null, countryId: number, kind: WonderK
   if (nb != null && kind !== 'great_wall') tile = nb;
   const id = `demo-wonder-${++demoSeq}`;
   const rec: WonderRec = {
-    id, tile, owner: countryId, kind, name: fallbackName(world, countryId, kind), complete: false,
+    id, tile, owner: countryId, kind, name: fallbackName(world, countryId, kind), complete: false, ruined: false,
     startTick: null, startMs: performance.now(), builtMs: null, demo: true, demoMs: ms,
   };
   put([...useWonders.getState().list.filter((r) => !(r.demo && r.tile === tile)), rec]);
