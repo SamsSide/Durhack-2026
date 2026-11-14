@@ -55,6 +55,9 @@ uniform vec4 uSysP[NSYS];     // intensity, storm, spin, rain
 uniform vec4 uFlash[NSYS];    // position, brightness
 uniform vec4 uClear;          // selected nation: centre, radius
 uniform float uClearK;
+uniform vec4 uPartA;          // the parting round a close camera: camera position, strength (0 from orbit)
+uniform vec4 uPartB;          // unit axis from the camera to its look target on the ground, its length
+uniform vec2 uPartR;          // clear radius at the camera, growth per unit along the axis
 
 vec3 rotY(vec3 p, float a) { float c = cos(a), s = sin(a); return vec3(c * p.x + s * p.z, p.y, -s * p.x + c * p.z); }
 vec3 rotAxis(vec3 p, vec3 k, float a) { float c = cos(a), s = sin(a); return p * c + cross(k, p) * s + k * dot(k, p) * (1.0 - c); }
@@ -88,6 +91,17 @@ vec4 weather(inout vec3 dir) {
   return w;
 }
 
+// 1 inside the clear zone round a close camera and along its line of sight to the ground (a sphere
+// at the camera that opens into a cone, capped at the look target), feathering out to 0 at three
+// times the clear radius. A storm closes it in a little.
+float parting(vec3 p, float storm) {
+  if (uPartA.w <= 0.001) return 0.0;
+  vec3 v = p - uPartA.xyz;
+  float s = clamp(dot(v, uPartB.xyz), 0.0, uPartB.w);
+  float rad = (uPartR.x + uPartR.y * s) * (1.0 - 0.3 * storm);
+  return uPartA.w * smoothstep(rad * 3.0, rad, length(v - uPartB.xyz * s));
+}
+
 float density(vec3 p, bool fine, out vec4 w) {
   float r = length(p);
   vec3 dir = p / r;
@@ -101,12 +115,15 @@ float density(vec3 p, bool fine, out vec4 w) {
   float dw = mix(0.24, 0.4, w.y);
   float cov = n * (1.0 - dw) + det * dw;
   float clear = uClearK * smoothstep(1.3, 0.5, length(dir - uClear.xyz) / max(uClear.w, 0.01)) * (1.0 - w.y);
-  float thr = uCover - mix(0.17, 0.42, w.y) * w.x - 0.03 * w.y + 0.16 * clear + 0.7 * w.w;
+  // The parting raises the threshold first (the cloud edges erode, so it reads as drifting apart)
+  // and scales the rest away, so the middle of the clear zone is exactly empty.
+  float part = parting(p, w.y);
+  float thr = uCover - mix(0.17, 0.42, w.y) * w.x - 0.03 * w.y + 0.16 * clear + 0.7 * w.w + 0.25 * part;
   float top = mix(0.6, 1.0, max(w.x, w.y));           // fair-weather clouds are shallow, storms tower
   float hh = h / top;
   float prof = smoothstep(0.0, 0.14, hh) * smoothstep(1.0, 0.6, hh);
   float d = cov - thr - 0.09 * hh * hh;               // tops are narrower than bases: puffs
-  return clamp(d * (mix(10.0, 15.0, w.x) + 9.0 * w.y), 0.0, 1.0) * prof;
+  return clamp(d * (mix(10.0, 15.0, w.x) + 9.0 * w.y), 0.0, 1.0) * prof * (1.0 - part);
 }
 
 void main() {
@@ -175,7 +192,7 @@ void main() {
     float sa = sh * 0.30 * day * mix(0.45, 1.0, far);
     col += T * sa * vec3(0.03, 0.045, 0.08);
     T *= 1.0 - sa;
-    float ra = wr.z * mix(0.16, 0.34, far);
+    float ra = wr.z * mix(0.16, 0.34, far) * (1.0 - 0.55 * parting(o + d * ground, wr.y)); // thinner haze where the view is parted
     col += T * ra * vec3(0.36, 0.42, 0.5) * (0.12 + 0.88 * day);
     T *= 1.0 - ra;
   }
@@ -234,6 +251,7 @@ void main() {
   float on = step(fract(aSeed.x * 91.7 + aSeed.y * 13.3), p.w * (1.0 - 0.75 * rr * rr));
   float day = smoothstep(-0.2, 0.25, dot(dir, uSun));
   vAlpha = on * uFade * (0.3 + 0.7 * day) * mix(0.95, 0.2, aEnd) * smoothstep(1.0, 0.9, ph) * (s.w > 0.0 ? 1.0 : 0.0);
+  vAlpha *= smoothstep(0.025, 0.1, distance(pos, cameraPosition)); // no streaks right in front of the lens
   gl_Position = projectionMatrix * viewMatrix * vec4(pos, 1.0);
 }`;
 

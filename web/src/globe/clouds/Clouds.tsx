@@ -10,8 +10,9 @@ import * as THREE from 'three';
 import { countryTiles } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import { reducedMotion, sunDir } from '../celestial/sun';
+import { groundView } from '../camera/groundView';
 import { makeNoiseCube } from './noise';
-import { COMPOSITE_FRAG, FS_VERT, MARCH_FRAG } from './shaders';
+import { COMPOSITE_FRAG, FS_VERT, MARCH_FRAG, R_BASE, R_TOP } from './shaders';
 import { MAX_SYS, raiseStorm, systems, updateWeather, watchDecrees } from './weather';
 import { Rain } from './Rain';
 
@@ -27,10 +28,22 @@ const LEVELS = [
 const SLOW_MS = 19.5;   // average frame time that means we are missing 60 fps
 const WINDOW_S = 2.5;   // how long it must stay slow before stepping down
 
+// The parting: zoomed in close, the clouds clear from a zone round the camera and along its line of
+// sight to the ground, so they never block the view (numbers in world units, planet radius 1).
+const PART_START = 0.55;  // camera height above the ground where the parting starts to open
+const PART_FULL = 0.32;   // and where it is fully open
+const PART_R_HIGH = 0.02; // clear radius at the camera as the parting starts
+const PART_R_LOW = 0.06;  // and at the lowest zoom: wider when lower
+const PART_SLOPE = 0.16;  // the cone: clear radius gained per unit of distance toward the look target
+const PART_UNDER = 0.4;   // share of the cone kept once the camera is under the cloud base
+const PART_REACH = 0.7;   // the look target is never taken to be further than this
+const fwd = new THREE.Vector3();
+const smooth01 = (x: number): number => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
+
 const vec4s = (): THREE.Vector4[] => Array.from({ length: MAX_SYS }, () => new THREE.Vector4());
 
 export function Clouds() {
-  const quality = useRef({ level: 0, off: false, repeat: 1, flash: 0 }).current; // `off` is dev switches for measuring: `off` gives the baseline, `repeat` runs the march several times
+  const quality = useRef({ level: 0, off: false, repeat: 1, flash: 0, noPart: false }).current; // dev switches for measuring: `off` gives the baseline, `repeat` runs the march several times, `noPart` keeps the clouds closed round a close camera
   const frozen = useMemo(reducedMotion, []);
 
   const parts = useMemo(() => {
@@ -44,6 +57,7 @@ export function Clouds() {
         ...cam, uNoise: { value: noise }, uSun: { value: sunDir }, uTime: { value: 0 }, uSteps: { value: LEVELS[0].steps },
         uCover: { value: COVER }, uSys: { value: vec4s() }, uSysP: { value: vec4s() }, uFlash: { value: vec4s() },
         uClear: { value: new THREE.Vector4(0, 1, 0, 0.2) }, uClearK: { value: 0 },
+        uPartA: { value: new THREE.Vector4() }, uPartB: { value: new THREE.Vector4(0, 0, -1, 0) }, uPartR: { value: new THREE.Vector2() },
       },
       depthTest: false, depthWrite: false, blending: THREE.NoBlending, toneMapped: false,
     });
@@ -148,6 +162,22 @@ export function Clouds() {
     parts.cam.uCamWorld.value.copy(camera.matrixWorld);
     parts.cam.uCamPos.value.setFromMatrixPosition(camera.matrixWorld);
     (parts.composite.uniforms.uViewProj!.value as THREE.Matrix4).multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+
+    // The parting round a close camera (see parting() in shaders.ts). Strength 0 from orbit.
+    const eye = parts.cam.uCamPos.value;
+    const partK = quality.noPart ? 0 : smooth01((PART_START - groundView.height) / (PART_START - PART_FULL));
+    (u.uPartA!.value as THREE.Vector4).set(eye.x, eye.y, eye.z, partK);
+    if (partK > 0) {
+      camera.getWorldDirection(fwd);
+      // Where the middle of the view meets the ground: the far end of the clear cone.
+      const eyeR = eye.length(), rg = Math.max(1, eyeR - groundView.height);
+      const b = eye.dot(fwd), disc = b * b - (eyeR * eyeR - rg * rg);
+      const reach = disc > 0 && -b - Math.sqrt(disc) > 0 ? Math.min(PART_REACH, -b - Math.sqrt(disc)) : 0.25;
+      (u.uPartB!.value as THREE.Vector4).set(fwd.x, fwd.y, fwd.z, reach);
+      const low = smooth01((0.3 - groundView.height) / 0.25);
+      const above = smooth01((eyeR - (R_BASE - 0.02)) / (R_TOP + 0.03 - (R_BASE - 0.02)));
+      (u.uPartR!.value as THREE.Vector2).set(PART_R_HIGH + (PART_R_LOW - PART_R_HIGH) * low, PART_SLOPE * (PART_UNDER + (1 - PART_UNDER) * above));
+    }
 
     // March into the small target, then the composite quad draws it in the main pass.
     gl.getDrawingBufferSize(parts.size);
