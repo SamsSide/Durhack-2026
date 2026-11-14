@@ -31,6 +31,8 @@ budget, run them one at a time in the order below, on Sonnet.
 | C6 | Image prompt: an optional picture drop zone on the Create screen, sent as `imageBase64` (downscaled under about 4 MB) | A17 for the real reading (mocked) | | CP1.5 | testing | Asked by lane a in #73 |
 | C7 | Spoken decrees: a hold-to-speak mic on `DecreeBox` (MediaRecorder, up to 15 s) posting to `POST /api/decree/voice` and showing the transcript | A20 (mocked) | | CP2 | testing | #73 |
 | C8 | `NewsBroadcast`: the "Terra Nova News" lower-third, every 2 minutes and on lane b's button: capture, `POST /api/broadcast`, play, scroll the script | A21 (mocked); lane b `captureGlobe` (real, #74) | `NewsBroadcast` to b | CP1.5 | testing | #73 |
+| C9 | Solana: `LedgerPanel` and `EconomyCounter` (exported, and shown as a "Treasury" tab in the network panel), and "Treasury on Solana" on `NationCard`; polls `GET /api/economy` | A27 (mocked) | | CP2 | testing | Owner request #144, MLH Best Use of Solana |
+| C10 | Visual event feed: picture cards with globe thumbnails for big moments | lane b `captureGlobe` | | CP2 | todo | Lane b's #148; owner asked in #151 |
 
 ## Waiting on
 
@@ -49,4 +51,5 @@ budget, run them one at a time in the order below, on Sonnet.
 - 14 Nov · #105 · C7 on the real A20: the voice route's own error lines, mimeType sent with codecs
 - 14 Nov · #110 · Network rows never overflow; the deleted stamp freezes at the year of deletion (#108)
 - 14 Nov · #119 · News lower-third names its anchor (#111); secession is a real kind (A18)
-- 14 Nov · this PR · Browser QA at 1280 x 709: Create fits under the top bar, all timeline lanes fit, herald publishes --tn-herald-bottom, news clears the network panel, herald queue capped, war bands end at a fall
+- 14 Nov · #150 · Browser QA at 1280 x 709: Create fits under the top bar, all timeline lanes fit, herald publishes --tn-herald-bottom, news clears the network panel, herald queue capped, war bands end at a fall
+- 14 Nov · this PR · C9 Solana: Treasury tab with the ledger and counter, treasury link on the card

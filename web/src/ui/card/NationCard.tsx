@@ -4,6 +4,8 @@ import type { Stance } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import { audio } from '../../audio';
 import { useAudio } from '../../audio/useAudio';
+import { useEconomy } from '../economy/useEconomy';
+import '../economy/economy.css';
 import { RegionView } from './RegionView';
 import { useLore } from './useLore';
 import { CloseIcon, Lines, useCardClass, useShort } from './shared';
@@ -89,6 +91,7 @@ function Nation({ countryId }: { countryId: number }) {
   const speaking = mine && (state === 'narration' || state === 'anthem');
   const isShort = useShort();
   const agent = useWorld((st) => st.agents.find((a) => a.countryId === countryId));
+  const economy = useEconomy();
 
   const country = world?.countries[countryId];
   if (!world || !country) return null;
@@ -103,6 +106,7 @@ function Nation({ countryId }: { countryId: number }) {
       if (e.kind === 'fall' && e.countries.includes(countryId)) { fallYear = e.year; break; }
     }
   }
+  const treasury = economy.status === 'ok' ? economy.data?.nations.find((n) => n.countryId === countryId) : undefined;
   let provinces = 0;
   for (const o of world.owner) if (o === countryId) provinces++;
 
@@ -168,6 +172,15 @@ function Nation({ countryId }: { countryId: number }) {
           <div><span className="tn-cap">Population</span><span className="tn-v">{short(country.population)}</span></div>
           <div><span className="tn-cap">Treasury</span><span className="tn-v">{fmt(country.treasury)}</span></div>
         </div>
+        {treasury && (
+          <div className="tn-treasury">
+            {treasury.url
+              ? <a href={treasury.url} target="_blank" rel="noopener noreferrer">Treasury on Solana</a>
+              : <span>Treasury on Solana</span>}
+            <span className="tn-treasury-bal">{fmt(treasury.onChain)} {economy.data!.currency.symbol}</span>
+            <span className={`tn-treasury-sync${treasury.inSync ? '' : ' no'}`}>{treasury.inSync ? '\u2713 in sync' : 'syncing'}</span>
+          </div>
+        )}
 
         {!isShort && (
           <section className="tn-sec">
