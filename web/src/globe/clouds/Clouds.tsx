@@ -15,6 +15,7 @@ import { makeNoiseCube } from './noise';
 import { COMPOSITE_FRAG, FS_VERT, MARCH_FRAG, R_BASE, R_TOP } from './shaders';
 import { MAX_SYS, raiseStorm, systems, updateWeather, watchDecrees } from './weather';
 import { Rain } from './Rain';
+import { usePipHidden } from '../pip/pipLod';
 
 const RENDER_ORDER = 900; // before the names (1000) so the clouds never veil them
 const COVER = 0.61;       // noise threshold: higher means fewer, smaller clouds
@@ -43,6 +44,9 @@ const smooth01 = (x: number): number => { const t = Math.min(1, Math.max(0, x));
 const vec4s = (): THREE.Vector4[] => Array.from({ length: MAX_SYS }, () => new THREE.Vector4());
 
 export function Clouds() {
+  // Clouds and rain are marched for the main camera and pasted over its picture: never in the news PiP (owner, 14 Nov).
+  const weatherRef = useRef<THREE.Group>(null);
+  usePipHidden(weatherRef);
   const quality = useRef({ level: 0, off: false, repeat: 1, flash: 0, noPart: false }).current; // dev switches for measuring: `off` gives the baseline, `repeat` runs the march several times, `noPart` keeps the clouds closed round a close camera
   const frozen = useMemo(reducedMotion, []);
 
@@ -192,7 +196,7 @@ export function Clouds() {
   });
 
   return (
-    <group>
+    <group ref={weatherRef}>
       <primitive object={parts.quad} />
       <Rain quality={quality} />
     </group>

@@ -5,6 +5,7 @@ import { useWorld } from '../../state/world';
 import { useProvinceMesh } from '../mesh/context';
 import { TileGeos } from '../structures/placement';
 import { TownLayer } from './TownLayer';
+import { lodCamera, pipDetail } from '../pip/pipLod';
 
 export function Towns() {
   const mesh = useProvinceMesh();
@@ -25,7 +26,8 @@ export function Towns() {
     stale.current = true;
     setGroup(l.group);
     const unsub = useWorld.subscribe((s, prev) => { if (s.version !== prev.version || s.world !== prev.world) stale.current = true; });
-    return () => { unsub(); l.dispose(); layer.current = null; setGroup(null); };
+    const offPip = pipDetail(l.group); // the news PiP may show the towns while the main view is in orbit
+    return () => { offPip(); unsub(); l.dispose(); layer.current = null; setGroup(null); };
   }, [mesh, worldKey]);
 
   useFrame(({ camera, clock }, dt) => {
@@ -37,7 +39,7 @@ export function Towns() {
       const w = useWorld.getState().world;
       if (w) { l.sync(w, now, initial.current); initial.current = false; }
     }
-    l.update(now, Math.min(dt, 0.1), camera.position.length());
+    l.update(now, Math.min(dt, 0.1), lodCamera(camera).position.length());
   });
 
   return group ? <primitive object={group} /> : null;

@@ -34,11 +34,13 @@ import { EventBeacons, Spotlight, WarFlash } from './events';
 import { Council } from './council';
 import { WarFx } from './war/WarFx';
 import { DecreeFx } from './decree';
+import { Firing } from './war/Firing';
 import { Wonders } from './wonders';
 import { CutVeil } from './show/CutVeil';
 import { RulerScrolls } from './show/RulerScrolls';
 import { registerCapture } from './capture';
 import { setStatuses } from './status/statusTint';
+import { NewsPip } from './pip/NewsPip';
 
 const SPACE = '#0b0f14';
 
@@ -181,10 +183,13 @@ function Scene({ world }: { world: World }) {
       <WarFlash />
       <WarFx />
       <DecreeFx />
+      <Firing />
       <Council />
       <CutVeil />
       <RulerScrolls />
       <Spotlight />
+      {/* last: its frame callback runs after every layer's, just before the main render */}
+      <NewsPip />
     </ProvinceMeshContext.Provider>
   );
 }

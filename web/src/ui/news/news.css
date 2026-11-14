@@ -133,3 +133,70 @@
   .tn-newscast-in .tn-anchorwin, .tn-newscast-out .tn-anchorwin { animation: none; }
   .tn-anchorwin-speaking { display: inline-flex; }
 }
+
+/* The live picture-in-picture (a/news-pip): while the bulletin talks about a place, the canvas shows a
+   second camera filming it. This layer is the broadcast dressing over that picture: glass (vignette
+   and scanlines, static gradients only), a gilt hairline, the LIVE bug and the caption strap.
+   Tokens for another lane to match: 7px inset (the window's padding), strap 40px, bug 18px high. */
+.tn-pip {
+  position: absolute; inset: 7px;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: 1px;
+  pointer-events: none;
+  animation: tn-pip-in 260ms var(--ease-out) 140ms both;
+}
+.tn-pip-out { animation: tn-pip-off 260ms ease-in both; }
+.tn-pip-glass {
+  position: absolute; inset: 0;
+  background:
+    repeating-linear-gradient(180deg, rgba(0,0,0,.11) 0 1px, rgba(0,0,0,0) 1px 3px),
+    radial-gradient(120% 95% at 50% 42%, rgba(0,0,0,0) 55%, rgba(4,6,12,.5) 100%),
+    linear-gradient(180deg, rgba(4,6,12,.34) 0, rgba(4,6,12,0) 22%, rgba(4,6,12,0) 58%, rgba(4,6,12,.78) 100%);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.7), inset 0 0 0 2px rgba(201,162,75,.55);
+}
+.tn-pip-live {
+  position: absolute; left: 10px; top: 10px;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 18px; padding: 0 8px 0 7px;
+  background: linear-gradient(180deg, var(--lacquer-claret-hi), var(--lacquer-claret));
+  color: #f6e7c4;
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px #000, 0 0 0 2px rgba(201,162,75,.6);
+  font-family: var(--font-display); font-size: 10px; font-weight: 700; line-height: 1;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  text-shadow: var(--engrave-on-dark);
+}
+.tn-pip-live-dot {
+  width: 6px; height: 6px; border-radius: var(--radius-pill);
+  background: #ff5a45;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.55);
+  animation: tn-news-pulse 1.2s ease-in-out infinite;
+}
+.tn-pip-strap {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  min-height: 40px; padding: 6px 12px 7px 14px;
+  background: linear-gradient(90deg, rgba(9,11,18,.94) 0, rgba(9,11,18,.9) 62%, rgba(9,11,18,.62) 100%);
+  border-top: 1px solid var(--gilt);
+  box-shadow: 0 -1px 0 rgba(0,0,0,.8), inset 3px 0 0 var(--lacquer-claret-hi);
+  animation: tn-pip-strap 320ms var(--ease-out) 260ms both;
+}
+.tn-pip-place {
+  font-family: var(--font-display); font-weight: 700; font-size: 11px; line-height: 1.15;
+  letter-spacing: var(--tracking-caps); text-transform: uppercase;
+  color: var(--gilt-hi); text-shadow: var(--engrave-on-dark);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tn-pip-caption {
+  font-family: var(--font-serif); font-size: 13px; line-height: 1.2;
+  color: var(--color-text); text-shadow: var(--engrave-on-dark);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+@keyframes tn-pip-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tn-pip-off { from { opacity: 1; } to { opacity: 0; } }
+@keyframes tn-pip-strap { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .tn-pip, .tn-pip-out, .tn-pip-strap, .tn-pip-live-dot { animation: none; }
+  /* the reduced-motion "Speaking" label sits top right, clear of the LIVE bug */
+}

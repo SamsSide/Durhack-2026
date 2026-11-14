@@ -1,10 +1,11 @@
 // The sky seen from ground view: a band of air that glows along the horizon and thins towards the
 // zenith, blue by day and dark by night. Invisible in the normal orbit (the rim shells cover that).
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { sunDir } from '../celestial/sun';
 import { groundView } from './groundView';
+import { onPipPass } from '../pip/pipLod';
 
 const VERT = /* glsl */ `
 varying vec3 vWorld;
@@ -49,6 +50,16 @@ export function GroundSky() {
     transparent: true,
     depthWrite: false,
   }), []);
+  // The news PiP films from the ground whatever the main camera does: full sky for its pass only.
+  useEffect(() => {
+    let was = false, fade = 0;
+    return onPipPass((on) => {
+      const m = ref.current;
+      if (!m) return;
+      if (on) { was = m.visible; fade = mat.uniforms.uFade!.value as number; m.visible = true; mat.uniforms.uFade!.value = 1; }
+      else { m.visible = was; mat.uniforms.uFade!.value = fade; }
+    });
+  }, [mat]);
   useFrame(() => {
     const m = ref.current;
     if (!m) return;

@@ -13,9 +13,17 @@
 .tn-decree .tn-decree-input:not(:placeholder-shown) { font-style: normal; }
 .tn-decree .tn-decree-input:disabled { opacity: .6; }
 .tn-decree-go { flex: none; padding: 0 10px; }
+/* Notes and the decree's result sit to the LEFT of the box, not above it: the minimap sits right above
+   the decree slot, and a two-line result on top of it was unreadable (#303 check). Dark backing so the
+   line reads over the globe; at most two lines, the full text is in the dispatch tab and the feed. */
 .tn-decree-done {
-  position: absolute; left: 12px; bottom: calc(100% + 6px); font-family: var(--font-serif); font-style: italic; font-size: var(--text-sm);
-  color: var(--color-text); text-shadow: 0 1px 2px var(--color-bg), 0 0 1px var(--color-bg);
+  position: absolute; right: calc(100% + var(--space-3)); top: 50%; transform: translateY(-50%);
+  width: max-content; max-width: min(520px, 40vw); box-sizing: border-box; padding: 6px 12px;
+  background: rgba(9, 11, 18, 0.82); border: 1px solid var(--color-border); border-radius: var(--radius-2);
+  box-shadow: var(--shadow-1); text-align: left; pointer-events: none;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  font-family: var(--font-serif); font-style: italic; font-size: var(--text-sm); line-height: 1.35;
+  color: var(--color-text); text-shadow: 0 1px 2px var(--color-bg);
 }
 
 /* Hold-to-speak mic (row C7): a round paper medallion. */
@@ -38,7 +46,7 @@
 }
 .tn-decree-effect {
   margin-right: 8px; font-family: var(--font-display); font-style: normal; font-size: var(--text-cap); font-weight: 700;
-  letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-rubric);
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-accent);
 }
 .tn-decree-proclaimed { font-style: normal; font-weight: 500; }
 

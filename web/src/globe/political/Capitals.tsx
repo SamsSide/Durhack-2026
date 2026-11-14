@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { usePipHidden } from '../pip/pipLod';
 import { useWorld } from '../../state/world';
 import { getPalette } from '../palette';
 import { useProvinceMesh } from '../mesh/context';
@@ -25,6 +26,7 @@ function surfaceQuat(pos: THREE.Vector3): THREE.Quaternion {
 
 function Marker({ pos }: { pos: [number, number, number] }) {
   const ref = useRef<THREE.Group>(null);
+  usePipHidden(ref); // sized for the main camera: not in the news PiP
   const v = useMemo(() => new THREE.Vector3(...pos), [pos]);
   const quat = useMemo(() => surfaceQuat(v), [v]);
   const dir = useMemo(() => v.clone().normalize(), [v]);

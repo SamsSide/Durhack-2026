@@ -3,6 +3,7 @@ import { audio } from '../../audio';
 import { useAudio } from '../../audio/useAudio';
 import { useWorld } from '../../state/world';
 import { captureGlobe } from '../../globe/capture';
+import { beatsEnd, beatsFor, type FocusBeat } from './focus';
 
 export interface Bulletin {
   id: string;
@@ -11,6 +12,8 @@ export interface Bulletin {
   script: string;
   year: number;
   audio: string;
+  /** The places the bulletin talks about, 0 to 3 (#288); older servers send none. */
+  focus?: FocusBeat[];
 }
 
 const EVERY_MS = 120_000;
@@ -18,6 +21,8 @@ const RETRY_MS = 20_000;
 const HIDE_AFTER_MS = 1_500;
 const MAX_PLAY_MS = 90_000;
 const NO_SOUND_MS = 25_000;
+/** The anchor window counts beats from the voice's start; allow this much for it to start. */
+const BEATS_LEAD_S = 0.8;
 
 const EVENT = 'terra:news-broadcast';
 
@@ -88,12 +93,17 @@ export function useBroadcast(): { bulletin: Bulletin | null; visible: boolean; d
         setDuration(25);
         setBulletin(b);
         setPreparing(false);
+        const startedAt = performance.now();
         const sounded = await playBulletin(b.audio);
         if (!sounded && alive.current) {
           // No sound: keep the text up and scroll it over 25 s.
           setNoSound(true);
           await sleep(NO_SOUND_MS);
         }
+        // The live shots are timed to the script, not to the clip: stay up until the last one is over
+        // (plus the ident's lead-in), at most MAX_PLAY_MS in all.
+        const shotsUntil = startedAt + Math.min(MAX_PLAY_MS, (beatsEnd(beatsFor(b)) + BEATS_LEAD_S) * 1000);
+        if (alive.current && shotsUntil > performance.now()) await sleep(shotsUntil - performance.now());
         await sleep(HIDE_AFTER_MS);
       } catch (err) {
         console.warn('news broadcast failed', err);
