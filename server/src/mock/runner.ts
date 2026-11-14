@@ -6,6 +6,7 @@ import type { ControlMessage, NewWorldOptions, RunnerListener, WorldRunner } fro
 import { Clock, START_SPEED, TickLoop, clampSpeed, type ClockState } from '../engine/clock';
 import { anyBigMoment } from '../engine/bigMoments';
 import { loadReplay } from '../engine/replays';
+import { decreeEvents, decreeOutcomeOf, interpretDecreeMock, type Decree, type DecreeOutcome } from '../engine/decrees';
 
 export class MockRunner implements WorldRunner {
   private world: World | null = null;
@@ -35,7 +36,7 @@ export class MockRunner implements WorldRunner {
     this.gen = mockEvents(w);
     this.pending = null;
     this.clock.setPaused(paused);                // row A31: prepare mode starts the world paused
-    this.clock.setTarget(START_SPEED);           // every new world starts at one month a second
+    this.clock.setTarget(START_SPEED);           // every new world starts at three months a second
     w.speed = this.clock.target;
     w.paused = paused;
     this.lamport = 0;
@@ -157,16 +158,20 @@ export class MockRunner implements WorldRunner {
         }
         return;
       }
-      case 'decree': {
-        const n = ++this.decrees;
-        this.emit([{
-          id: `e-decree-${n}`, tick: w.tick, actor: 'decree', lamport: this.lamport + 1, type: 'chronicle',
-          entry: { id: `c-decree-${n}`, tick: w.tick, year: w.year, kind: 'decree', countries: [], text: msg.text },
-        }]);
-        return;
-      }
+      case 'decree': this.applyDecree(interpretDecreeMock(msg.text, w)); return;
     }
     this.pushAgents(true);
+  }
+
+  /** Owner #288: decrees have their real, severity-scaled effects under `npm run mock` too (keyword matcher). */
+  applyDecree(decree: Decree): DecreeOutcome | null {
+    const w = this.world;
+    if (!w) return null;
+    let lam = this.lamport;
+    const events = decreeEvents(w, decree, w.tick, { n: ++this.decrees, lamport: () => ++lam });
+    this.emit(events);
+    this.pushAgents(true);
+    return decreeOutcomeOf(events);
   }
 
   /** A cut nation keeps the map it last saw (row A7's belief view under `npm run mock`, #230). */

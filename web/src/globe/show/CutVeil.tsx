@@ -1,11 +1,13 @@
-// "Show, don't tell" (B14): a cut nation sits under a drifting grey mist with its queued moves stacked as
-// sealed letters over its capital; on restore the letters fly to the other capitals and the mist lifts
-// in a ripple; a deleted nation goes under a dark veil that fades as it falls. Lane b.
+// "Show, don't tell" (B14): a cut nation sits under a drifting grey mist; on restore its queued moves fly
+// out as sealed letters to the other capitals and the mist lifts in a ripple; a deleted nation goes under a
+// dark veil that fades as it falls, and its letters sink. While cut, the queued letters are a small HTML
+// pile beside the "signal lost" tag (LetterPile.tsx, drawn by status/StatusMarkers.tsx), so they keep a
+// fixed pixel size and one marker per nation.
 //
 // Cost: one overlay mesh built once per world (land fans only), a per-vertex nation id rewritten at most
-// every 400 ms when owners change, a few uniform floats per frame, and a fixed pool of letter sprites.
-// No scene traversal. The "signal lost" tag, the dotted ring and the cyan return ripple stay in status/.
-import { useEffect, useMemo, useState } from 'react';
+// every 400 ms when owners change, a few uniform floats per frame, and a fixed pool of flying letter
+// sprites (screen-constant size, sizeAttenuation off). No scene traversal. Lane b.
+import { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { World } from '@terra/shared';
@@ -14,9 +16,7 @@ import { getPalette } from '../palette';
 import { useProvinceMesh } from '../mesh/context';
 import { tileHeight } from '../mesh/buildProvinceMesh';
 import type { ProvinceMesh } from '../mesh/buildProvinceMesh';
-import { Anchor } from '../status/Anchor';
 import { capitalPoint } from '../status/geo';
-import type { P3 } from '../status/geo';
 import './show.css';
 
 const MAX_NATIONS = 64;       // uniform slots; ids past this get no veil
@@ -25,11 +25,11 @@ const REBUILD_MS = 400;
 const MIST_IN = 0.8;          // seconds for the mist to settle
 const LIFT_S = 1.1;           // seconds for the restore ripple to clear the land
 const FALL_S = 4.5;           // seconds for the dark veil of a deleted nation to fade
-const STACK_MAX = 8;          // letters shown per cut nation
-const POOL = 40;              // letter sprites in the pool (stacks and fliers)
-const LETTER = 0.075;         // sprite width in world units (globe radius 1)
+const FLY_MAX = 6;            // letters that fly out per nation on restore (or sink on delete)
+const POOL = 36;              // flying letter sprites in the pool
+const LETTER_PX = 24;         // letter height on screen in pixels, at any zoom (4:3 envelope)
 const FLY_S = 1.1;            // one letter's flight
-const FLY_STAGGER = 0.06;     // gap between letters leaving (8 letters: about 1.5 s in all)
+const FLY_STAGGER = 0.08;     // gap between letters leaving (6 letters: about 1.5 s in all)
 
 // --- the mist shader -------------------------------------------------------------------------------
 
@@ -149,10 +149,10 @@ function letterTexture(): THREE.CanvasTexture {
 interface Slot {
   sprite: THREE.Sprite;
   mat: THREE.SpriteMaterial;
-  mode: 'free' | 'stack' | 'fly';
+  mode: 'free' | 'fly';
   country: number;
-  index: number;       // place in the stack
-  from: THREE.Vector3; // capital (stack base, or flight start)
+  index: number;       // place in the volley
+  from: THREE.Vector3; // capital (flight start)
   to: THREE.Vector3;   // flight target capital
   t0: number;          // flight start time (s)
   drop: boolean;       // a flight that falls into the ground (deleted nation)
@@ -161,7 +161,7 @@ interface Slot {
 interface Nation { amt: number; target: number; dark: number; lift: number; fallAt: number }
 
 const tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3(), tmpC = new THREE.Vector3();
-const camUp = new THREE.Vector3(), camRight = new THREE.Vector3();
+const camUp = new THREE.Vector3();
 
 function Inner({ mesh, world }: { mesh: ProvinceMesh; world: World }) {
   const pal = getPalette();
@@ -187,9 +187,10 @@ function Inner({ mesh, world }: { mesh: ProvinceMesh; world: World }) {
     const tex = letterTexture();
     const out: Slot[] = [];
     for (let i = 0; i < POOL; i++) {
-      const m = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false });
+      // sizeAttenuation off: the scale is a share of the view height, set each frame from LETTER_PX
+      const m = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false, sizeAttenuation: false });
       const s = new THREE.Sprite(m);
-      s.scale.set(LETTER, LETTER * 0.75, 1);
+      s.frustumCulled = false;
       s.visible = false;
       s.renderOrder = 30;
       group.add(s);
@@ -199,7 +200,6 @@ function Inner({ mesh, world }: { mesh: ProvinceMesh; world: World }) {
   }, [group]);
 
   const nations = useMemo(() => new Map<number, Nation>(), [world]);
-  const [extra, setExtra] = useState<{ id: number; n: number; pos: P3 }[]>([]);
 
   // Owners to the per-vertex nation id (stored as id + 1; 0 is nobody), at most every 400 ms.
   useEffect(() => {
@@ -228,7 +228,7 @@ function Inner({ mesh, world }: { mesh: ProvinceMesh; world: World }) {
     return () => { unsub(); if (timer) clearTimeout(timer); };
   }, [geo, tiles]);
 
-  // Agent status changes drive the mist targets, the letter stacks and the restore flights.
+  // Agent status changes drive the mist targets and the restore and delete flights.
   useEffect(() => {
     const prev = new Map<number, { st: 'up' | 'cut' | 'deleted'; pending: number }>();
     let sig = '';
@@ -236,9 +236,6 @@ function Inner({ mesh, world }: { mesh: ProvinceMesh; world: World }) {
       const w = useWorld.getState().world;
       const p = w ? capitalPoint(mesh, w, id, 0.004) : null;
       return p ? new THREE.Vector3(...p) : null;
-    };
-    const freeSlots = (country: number) => {
-      for (const s of slots) if (s.mode === 'stack' && s.country === country) { s.mode = 'free'; s.sprite.visible = false; }
     };
     const launch = (from: THREE.Vector3, to: THREE.Vector3, country: number, k: number, drop: boolean, now: number) => {
       const s = slots.find((x) => x.mode === 'free');
@@ -251,15 +248,11 @@ function Inner({ mesh, world }: { mesh: ProvinceMesh; world: World }) {
     const onAgents = () => {
       const s = useWorld.getState();
       let next = '';
-      for (const a of s.agents) next += `${a.countryId}:${a.deleted ? 'd' : a.link}:${Math.min(a.pendingEvents, STACK_MAX + 1)}|`;
-      // the exact pending count only matters for the label past 8
-      const labels = s.agents.filter((a) => !a.deleted && a.link === 'cut' && a.pendingEvents > STACK_MAX);
-      next += labels.map((a) => a.pendingEvents).join(',');
+      // the pending count only matters up to the letters that fly
+      for (const a of s.agents) next += `${a.countryId}:${a.deleted ? 'd' : a.link}:${Math.min(a.pendingEvents, FLY_MAX)}|`;
       if (next === sig) return;
       sig = next;
       const now = performance.now() / 1000;
-      const living = s.agents.filter((a) => !a.deleted && a.link === 'up');
-      const extraOut: { id: number; n: number; pos: P3 }[] = [];
 
       for (const a of s.agents) {
         const id = a.countryId;
@@ -273,40 +266,27 @@ function Inner({ mesh, world }: { mesh: ProvinceMesh; world: World }) {
 
         if (st === 'cut') {
           n.target = 1; n.dark = 0; n.lift = -1;
-          // the stack: one sprite per queued move, up to 8
-          const want = Math.min(a.pendingEvents, STACK_MAX);
-          let have = 0;
-          for (const sl of slots) if (sl.mode === 'stack' && sl.country === id) have++;
-          if (cap) {
-            for (let k = have; k < want; k++) {
-              const sl = slots.find((x) => x.mode === 'free');
-              if (!sl) break;
-              sl.mode = 'stack'; sl.country = id; sl.index = k; sl.from.copy(cap); sl.t0 = now;
-            }
-          }
-          for (const sl of slots) if (sl.mode === 'stack' && sl.country === id && sl.index >= want) { sl.mode = 'free'; sl.sprite.visible = false; }
-          if (a.pendingEvents > STACK_MAX && cap) extraOut.push({ id, n: a.pendingEvents, pos: cap.toArray() as P3 });
         } else if (st === 'up' && was?.st === 'cut') {
-          // restore: lift the mist from the capital outwards and send the letters to the other capitals
+          // restore: lift the mist from the capital outwards and send the queued letters to the other
+          // capitals. Every other living capital is a target, cut or not: in a blackout restored one
+          // nation at a time, none of the others is up yet.
           n.target = 0; n.lift = 0;
-          const stacked = slots.filter((x) => x.mode === 'stack' && x.country === id).sort((x, y) => x.index - y.index);
-          freeSlots(id);
-          const targets = living.filter((x) => x.countryId !== id).map((x) => capDir(x.countryId)).filter((v): v is THREE.Vector3 => v != null);
-          const count = Math.max(stacked.length, Math.min(was.pending, STACK_MAX));
+          const targets = s.agents
+            .filter((x) => !x.deleted && x.countryId !== id)
+            .map((x) => capDir(x.countryId))
+            .filter((v): v is THREE.Vector3 => v != null);
+          const count = Math.min(was.pending, FLY_MAX);
           if (cap && targets.length) for (let k = 0; k < count; k++) launch(cap, targets[k % targets.length]!, id, k, false, now);
         } else if (st === 'deleted' && was && was.st !== 'deleted') {
-          // deleted: a dark veil drops at once and fades as the land falls away; any letters sink
+          // deleted: a dark veil drops at once and fades as the land falls away; any queued letters sink
           n.amt = 1; n.target = 0; n.dark = 1; n.lift = -1; n.fallAt = now;
-          const stacked = slots.filter((x) => x.mode === 'stack' && x.country === id).length;
-          freeSlots(id);
-          if (cap) for (let k = 0; k < stacked; k++) launch(cap, cap, id, k, true, now);
+          const count = was.st === 'cut' ? Math.min(was.pending, 3) : 0;
+          if (cap) for (let k = 0; k < count; k++) launch(cap, cap, id, k, true, now);
         } else if (st === 'up') {
           if (n.lift < 0) n.target = 0;
-          freeSlots(id);
         }
         prev.set(id, { st, pending: a.pendingEvents });
       }
-      setExtra(extraOut);
     };
     onAgents();
     const unsub = useWorld.subscribe(onAgents);
@@ -317,7 +297,7 @@ function Inner({ mesh, world }: { mesh: ProvinceMesh; world: World }) {
   useEffect(() => () => { mat.dispose(); }, [mat]);
   useEffect(() => () => { for (const s of slots) s.mat.dispose(); }, [slots]);
 
-  useFrame(({ clock, camera }, dt) => {
+  useFrame(({ clock, camera, size }, dt) => {
     const t = clock.elapsedTime;
     const now = performance.now() / 1000;
     const u = mat.uniforms;
@@ -339,30 +319,22 @@ function Inner({ mesh, world }: { mesh: ProvinceMesh; world: World }) {
       state[id]!.set(n.lift >= 0 ? 1 : n.amt, n.dark, n.lift, 0);
     }
 
-    // letters: stacks rise in screen-up from the capital; fliers arc between capitals
+    // fliers arc between capitals (or sink into a deleted capital) at a fixed pixel size
+    const p11 = camera.projectionMatrix.elements[5]!;
+    const sy = (2 * LETTER_PX) / (p11 * Math.max(1, size.height));
     camUp.set(0, 1, 0).applyQuaternion(camera.quaternion);
-    camRight.set(1, 0, 0).applyQuaternion(camera.quaternion);
+    const dist = camera.position.length();
     for (const s of slots) {
       if (s.mode === 'free') continue;
       const sp = s.sprite;
-      if (s.mode === 'stack') {
-        const bob = Math.sin(t * 2 + s.index * 0.8) * 0.002;
-        const appear = Math.min(1, (now - s.t0) / 0.35);
-        sp.position.copy(s.from)
-          .addScaledVector(camUp, 0.05 + s.index * 0.026 + bob)
-          .addScaledVector(camRight, (s.index % 2 ? 1 : -1) * 0.006);
-        sp.material.opacity = appear;
-        sp.material.rotation = (s.index % 2 ? 1 : -1) * 0.09;
-        sp.visible = true;
-        continue;
-      }
       const k = (now - s.t0) / FLY_S;
       if (k < 0) { sp.visible = false; continue; }
       if (k >= 1) { s.mode = 'free'; sp.visible = false; continue; }
       const e = k * k * (3 - 2 * k);
+      sp.scale.set(sy * 4 / 3, sy, 1);
       if (s.drop) {
-        // sink straight down into the falling land
-        sp.position.copy(s.from).addScaledVector(camUp, (0.05 + s.index * 0.026) * (1 - e));
+        // sink a little way down the screen into the falling land
+        sp.position.copy(s.from).addScaledVector(camUp, dist * 0.02 * (1 - e) - dist * 0.01 * s.index);
         sp.material.opacity = 1 - e;
       } else {
         tmpA.copy(s.from).normalize();
@@ -372,8 +344,7 @@ function Inner({ mesh, world }: { mesh: ProvinceMesh; world: World }) {
         const r0 = s.from.length() * (1 - e) + s.to.length() * e;
         const h = Math.sin(Math.PI * e) * (0.08 + 0.22 * ang);
         sp.position.copy(tmpC).multiplyScalar(r0 + h);
-        if (k < 0.12) sp.position.addScaledVector(camUp, (0.05 + s.index * 0.026) * (1 - k / 0.12));
-        sp.material.opacity = k > 0.85 ? (1 - k) / 0.15 : 1;
+        sp.material.opacity = k < 0.08 ? k / 0.08 : k > 0.85 ? (1 - k) / 0.15 : 1;
       }
       sp.material.rotation = Math.sin(t * 6 + s.index) * 0.15;
       sp.visible = true;
@@ -384,11 +355,6 @@ function Inner({ mesh, world }: { mesh: ProvinceMesh; world: World }) {
     <>
       <mesh geometry={geo} material={mat} renderOrder={6} frustumCulled={false} />
       <primitive object={group} />
-      {extra.map((x) => (
-        <Anchor key={x.id} pos={x.pos} dx={34} dy={-58}>
-          <div className="tn-plate sv-count">x{x.n}</div>
-        </Anchor>
-      ))}
     </>
   );
 }

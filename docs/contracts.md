@@ -152,7 +152,26 @@ export interface Relation { a: number; b: number; stance: Stance; since: number;
 export type ChronicleKind = 'founding' | 'proclamation' | 'growth' | 'war' | 'battle' | 'peace'
   | 'alliance' | 'betrayal' | 'fall' | 'silence' | 'return' | 'dispute' | 'decree' | 'secession'
   | 'death' | 'succession' | 'wonder';
-export interface ChronicleEntry { id: string; tick: number; year: number; kind: ChronicleKind; countries: number[]; text: string }
+export interface ChronicleEntry {
+  id: string; tick: number; year: number; kind: ChronicleKind; countries: number[]; text: string;
+  decree?: DecreeOutcome;                                // owner #288: only on a decree's own line, what it did
+}
+
+// Owner #288 (14 Nov): what a decree did. Decided once when it is applied and recorded in the
+// decree's own chronicle entry, so replays and applyEvent stay deterministic.
+export type DecreeEffect = 'plague' | 'famine' | 'storm' | 'meteor' | 'prophet' | 'goldrush' | 'rebellion' | 'flood' | 'none';
+export interface DecreeOutcome {
+  effect: DecreeEffect;
+  severity: number;            // 0 to 0.8, from the words ("half the population dies" 0.5, "a mild fever" 0.1,
+                               // no measure 0.3; "everyone dies" is capped at 0.8 so the world survives)
+  target: { countryId: number | null; tiles: number[] }; // the nation struck and the provinces actually hit
+  result: string;              // one human line with real numbers: "Plague in Hatfield: 41,000 dead",
+                               // "Meteor strikes the capital of the Hollow Court: 3 provinces scorched, 2 structures lost, 4,629 dead",
+                               // "The world shrugs." (effect 'none')
+}
+
+// Owner #288: one beat of a news bulletin's picture (POST /api/broadcast `focus`).
+export interface NewsFocus { countryId: number | null; tile: number; atSecond: number; caption: string }
 
 export interface AgentStatus {
   countryId: number;
@@ -368,9 +387,21 @@ this table from `@terra/shared`.
 { "type": "belief", "countryId": 2 }
 ```
 
+  `decree` (row A20, owner #288): one interpretation (live: one small Gemini call; mock: a keyword
+  matcher) gives the effect, the target and a `severity` from the words; the effect scales with the
+  severity (plague and famine kill `severity` of the people in the provinces hit, a meteor's crater
+  grows to 1 + 8 x severity provinces, a flood drowns more low land, a storm wrecks more settlements,
+  more gold, more temples, more regions in revolt). Unknown wishes map to the nearest effect, or
+  `none` ("The world shrugs."). It arrives as ordinary events with actor `'decree'`: first the
+  decree's own `decree` chronicle entry, which carries `entry.decree: DecreeOutcome` (X1), then the
+  effect's events, then a consequence line (kind `decree`, no `decree` field). The web shows
+  `entry.decree.result`, flies to `entry.decree.target.tiles`, and plays the effect's visual. Mock
+  mode (both `LLM_MODE=mock` and `npm run mock`) gives all of it.
+
   `speed` is any number from 1/104 to 5 (a multiplier on the base rate of two years a second): 1/104
-  is one week a second (a year in 52 s, the slowest), 1/24 is one month a second (a year in 12 s,
-  and the speed every new world starts at, owner 14 Nov), 1 is two years a second, 5 is ten years a
+  is one week a second (a year in 52 s, the slowest), 1/24 is one month a second (a year in 12 s),
+  1/8 is three months a second (the `3 mo` gear, the speed every new world starts at, owner #288,
+  14 Nov; prepare mode still starts it paused), 1 is two years a second, 5 is ten years a
   second. The server clamps it. **Gears (owner decision 14 Nov, revised the same day):**
   the speed control offers named gears, in game time per second: 1 week (1/104), 2 weeks (1/52),
   1 month (1/24), 1 season (1/8), 6 months (1/4), 1 year (0.5), 2 years (1), 3 years (1.5), 5 years
@@ -420,8 +451,8 @@ this table from `@terra/shared`.
 | `GET /api/region/:id/lore` | a | none | `{ "regionId": 4, "name": "The Salt Marches", "owner": 2, "summary": "...", "history": "..." }` |
 | `GET /api/stats/territory?worldId=` | a | none (`worldId` optional, default current world) | `{ "worldId": "w-3f9a", "series": [ { "countryId": 0, "name": "...", "color": "#c8553d", "points": [ { "tick": 10, "year": 1010, "tiles": 12 } ] } ] }` from Tiger Data (row A11); `503 { "error": "stats unavailable" }` without a database |
 | `GET /api/stats/summary` | a | none | `{ "events": 5210, "worlds": 3, "eventsPerType": { "tile_claimed": 900 } }`; `503` without a database |
-| `POST /api/decree/voice` | a | `{ "audioBase64": "...", "mimeType": "audio/webm" }` (a spoken decree, up to about 15 s) | `{ "transcript": "a plague sweeps the southern coast", "decree": { "text": "A plague sweeps the southern coast", "effect": "plague", "target": { "countryId": 2 } } }`; the decree is applied at once (a `decree` chronicle entry, plus its effect from row A20). Gemini hears the audio directly. `400 { "error": "unsupported audio" }` (webm/opus, ogg, mp3, wav up to about 2 MB) or `{ "error": "no speech heard" }`; `503 { "error": "voice unavailable" }` when Gemini fails; mock mode returns a canned decree. Typed decrees (X2 `decree`) get the same effects |
-| `POST /api/broadcast` | a | `{ "imageBase64": "...", "mimeType": "image/jpeg" }` (a capture of the globe, about 1280 x 720) | `{ "id": "b-7", "tick": 210, "year": 1210, "headline": "War on the Salt Marches", "anchor": "Sam", "script": "Good evening. ...", "audio": "/api/broadcast/b-7/audio" }`: Gemini looks at the image and the recent chronicle and writes a 20 to 30 s news bulletin. Gemini takes about 15 to 20 s with the image (show a "preparing bulletin" state). Over `BROADCAST_MAX_PER_RUN` or the LLM cap, or on any failure, it returns a template bulletin from the chronicle instead (never 503); mock mode does the same. `404` with no world, `400` without an image |
+| `POST /api/decree/voice` | a | `{ "audioBase64": "...", "mimeType": "audio/webm" }` (a spoken decree, up to about 15 s) | `{ "transcript": "a plague sweeps the southern coast", "decree": { "text": "A plague sweeps the southern coast", "effect": "plague", "severity": 0.3, "target": { "countryId": 2, "tiles": [134, 147] }, "result": "Plague in the Iron Downs: 4,471 dead" } }`: `decree` is the same `DecreeOutcome` (X1) as the decree's chronicle entry, plus its clean `text` (owner #288). The decree is applied at once (a `decree` chronicle entry, plus its effect from row A20); during a replay it is not applied and `result` is "The world shrugs.". Gemini hears the audio directly. `400 { "error": "unsupported audio" }` (webm/opus, ogg, mp3, wav up to about 2 MB) or `{ "error": "no speech heard" }`; `503 { "error": "voice unavailable" }` when Gemini fails; mock mode returns a canned decree. Typed decrees (X2 `decree`) get the same effects |
+| `POST /api/broadcast` | a | `{ "imageBase64": "...", "mimeType": "image/jpeg" }` (a capture of the globe, about 1280 x 720) | `{ "id": "b-7", "tick": 210, "year": 1210, "headline": "War on the Salt Marches", "anchor": "Sam", "script": "Good evening. ...", "audio": "/api/broadcast/b-7/audio", "focus": [{ "countryId": 3, "tile": 101, "atSecond": 3, "caption": "Plague strikes the Sunspire Dominion" }, { "countryId": 2, "tile": 147, "atSecond": 15.7, "caption": "Pestilence reaches the Iron Downs" }] }`: Gemini looks at the image and the recent chronicle and writes a 20 to 30 s news bulletin. **`focus` (owner #288):** 0 to 3 `NewsFocus` beats (X1), the places the bulletin speaks of, in order: Gemini picks them from a list the server builds (a decree's tiles, a war's front province, a fallen capital, a wonder, the newest factories, cities, temples, forts and ports, the capitals of nations in the news). `atSecond` counts from the start of the audio, estimated at about 2.6 words a second (at the first mention of the place, else spread evenly, rising and at least 3 s apart). The template bulletin and mock mode return 2 beats on real tiles (the mock audio sample is only about 4 s long, so a player in mock mode should not wait for the audio clock to reach later beats). Gemini takes about 15 to 20 s with the image (show a "preparing bulletin" state). Over `BROADCAST_MAX_PER_RUN` or the LLM cap, or on any failure, it returns a template bulletin from the chronicle instead (never 503); mock mode does the same. `404` with no world, `400` without an image |
 | `GET /api/broadcast/:id/audio` | a | none | `audio/mpeg`: "Terra Nova News." and the bulletin read by a newsreader voice (ElevenLabs), cached; `503 { "error": "voice unavailable" }` over the cap or on failure; mock: a bundled sample |
 | `GET /api/decree/:entryId/herald` | a | none (`entryId` is the id of a `decree` chronicle entry) | `audio/mpeg`: the decree read out by the royal herald (one of the team's voices), cached; `503 { "error": "voice unavailable" }`; mock: a bundled sample. The X6 module plays it automatically when a decree entry arrives |
 | `GET /api/economy` | a | none | `{ "mode": "devnet", "cluster": "devnet", "currency": { "name": "Drowned Age Crown", "symbol": "TNC", "mint": "Ab1...", "url": "https://explorer.solana.com/address/Ab1...?cluster=devnet", "supply": 1000000, "mintAuthority": null }, "commons": { "address": "Co1...", "url": "...", "balance": 812000 }, "nations": [ { "countryId": 2, "address": "Na2...", "url": "...", "onChain": 10120, "ledger": 10120, "drift": 0, "sim": 151.2, "inSync": true } ], "totals": { "payments": 1284, "volume": 18230.5, "transactions": 402, "feesSol": 0.0061 }, "recent": [ "the last 50 ledger rows, as in X2" ] }` (row A27). The chain records every coin that moves between nations while income and spending stay in the sim: `ledger` is the nation's genesis float (10,000) plus confirmed payments in, minus confirmed payments out, plus any Commons advance; `drift` is `onChain - ledger`; `inSync` is `|drift| <= 0.01` (a nation with a payment still in flight counts as in sync); `sim` is the treasury, for information. Mock mode answers at once with fake addresses and `simulated` rows; `503 { "error": "economy off" }` with `SOLANA_MODE=off` |
@@ -512,6 +543,18 @@ this table from `@terra/shared`.
   trebuchet; gunpowder musketeers, a dragoon, a cannon; industrial riflemen, an armoured car, a field
   gun; modern an infantry squad, a tank, a self-propelled gun; future power-armour troopers, a hover
   tank, a drone launcher; stellar walker infantry, a mech, an orbital-strike beacon.
+
+  **Launch sequence (owner decision #291):** `models.rocket` (`rocket.glb`, the full stack: a
+  reusable booster under an upper stage and a payload fairing), `models.booster` (`booster.glb`, the
+  lower stage alone) and `models.satellite` (same key and file, now with two three-panel solar wings
+  and a big dish). Rockets stand along +Y, nose up, the bottom of the engine bell at the origin. Empty
+  nodes: `fx_thruster` at the bell (local -Z points down) on both, and `sep_point` at the stage join
+  on the rocket. The rocket and the booster share their origin and axis, and `booster.footprint` is
+  `rocket.footprint` times the booster's share of the rocket's height (0.272 against 0.5), so drawn at
+  the same scale the booster covers the rocket's lower stage exactly at separation. Optional
+  `ages.modern.rocket` (`ages/modern/rocket.glb`): a 1960s moon rocket with the same empties
+  (`sep_point` at the first stage join). Same rules as the unit models (one `team` material, fits
+  1 x 1 x 1, under 800 triangles).
 
   **Building styles (owner decision #91):** the manifest also has
   `"styles": { "<style>": { "<kind>": { "file": "<style>/<kind>.glb", "footprint": n } } }` for six

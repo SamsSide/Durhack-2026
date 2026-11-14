@@ -68,6 +68,14 @@
     "satellite": {
       "file": "satellite.glb",
       "footprint": 0.3
+    },
+    "rocket": {
+      "file": "rocket.glb",
+      "footprint": 0.5
+    },
+    "booster": {
+      "file": "booster.glb",
+      "footprint": 0.272
     }
   },
   "styles": {
@@ -453,6 +461,10 @@
           "file": "ages/modern/formation_back.glb",
           "footprint": 0.25
         }
+      },
+      "rocket": {
+        "file": "ages/modern/rocket.glb",
+        "footprint": 0.5
       }
     },
     "future": {

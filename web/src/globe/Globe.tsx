@@ -20,6 +20,7 @@ import { Atmosphere } from './atmosphere/Atmosphere';
 import { Space } from './space/Space';
 import { Celestial } from './celestial';
 import { Orbit } from './orbit';
+import { Launch } from './orbit/Launch';
 import { Trade } from './trade/Trade';
 import { Routes } from './trade/Routes';
 import { CoinBurst } from './trade/CoinBurst';
@@ -199,6 +200,7 @@ export function Globe() {
       <Celestial />
       <Space />
       <Orbit />
+      <Launch />
       <Atmosphere />
       <Clouds />
       {world && <Scene world={world} />}

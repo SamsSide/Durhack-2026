@@ -14,7 +14,7 @@ import { NationAgent } from '../agents/nation';
 import {
   FALL_AFTER_TICKS, disputeText, fallText, findDisputes, returnText, silenceText,
 } from './resilience';
-import { decreeEvents, interpretDecree, interpretDecreeMock, type Decree } from './decrees';
+import { decreeEvents, decreeOutcomeOf, interpretDecree, interpretDecreeMock, type Decree, type DecreeOutcome } from './decrees';
 import { RulerScheduler } from '../agents/ruler';
 import { secessionBatch } from './secession';
 import { currentMode, getBudget, resetRun } from '../llm';
@@ -105,7 +105,7 @@ export class EngineRunner implements WorldRunner {
     this.scanned = 0;
     this.clock.setPaused(!!opts.paused);         // row A31: prepare mode starts the world paused
     this.clock.reset();
-    this.clock.setTarget(START_SPEED);           // every new world starts at one month a second
+    this.clock.setTarget(START_SPEED);           // every new world starts at three months a second
     w.speed = this.clock.target;
     w.paused = !!opts.paused;
     this.lastAgents = '';
@@ -443,10 +443,11 @@ export class EngineRunner implements WorldRunner {
   }
 
   /** Applies an interpreted decree: its events go through the bus like any world event (row A20). */
-  applyDecree(decree: Decree): void {
+  applyDecree(decree: Decree): DecreeOutcome | null {
     const w = this.world;
-    if (!w) return;
+    if (!w) return null;
     const events = decreeEvents(w, decree, w.tick, { n: ++this.decrees, lamport: () => ++this.lamport });
+    const outcome = decreeOutcomeOf(events);
     this.bus.deliver(events);
     // Row A29: a decree that strikes down a leader or a general kills one (its target nation, else one by hash).
     if (KILL_RE.test(decree.text) && LEADER_RE.test(decree.text)) {
@@ -457,6 +458,7 @@ export class EngineRunner implements WorldRunner {
     this.syncStatuses();
     this.flushOut();
     this.pushAgents(true);
+    return outcome;
   }
 
   /** Row A31 (prepare mode): one ruler's opening decision, asked now while the world waits paused. It
