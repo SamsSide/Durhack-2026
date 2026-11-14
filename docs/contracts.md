@@ -117,7 +117,12 @@ export interface Country {
   population: number;
   treasury: number;
   council?: Council;                                     // row A29; missing on old replays
+  warReadiness?: number;                                 // #204 (lane b): 0..100, missing means 0; bands 0-19 Peace, 20-49 Watchful, 50-79 Mobilised, 80-100 Total war
+  politics?: { axis: number; radicalism: number };       // #204: axis -100 far left..+100 far right, radicalism 0..100; missing means { axis: 0, radicalism: 10 }
 }
+
+// Goods (#204, lane b): one good per province, derived from terrain and hashString, never stored.
+export type Good = 'grain' | 'fish' | 'timber' | 'stone' | 'ore' | 'salt' | 'gold' | 'furs' | 'oil' | 'uranium';
 
 // Council (row A29, owner decision on #146: ruler and general only).
 export type CouncilRole = 'ruler' | 'general';
@@ -231,6 +236,17 @@ export type PaymentReason = 'trade' | 'reparations' | 'plunder' | 'seizure' | 'w
   peace treaty; `plunder`: a sacked city; `seizure`: a captured capital's treasury; `war_chest`:
   an ally paying into a war; `subsidy`: a strong nation paying a weak friend; `pooled`: nations
   that join forces and move together pay into one leader's fund.
+
+- **Economy core (#204, owner decision 14 Nov, built by lane b):** `World.devastation?: number[]`
+  (tile id to 0..100, parallel to `owner`, missing means all 0) is folded inside `applyEvent` with
+  no new event: `battle` +20 on its tile, `tile_claimed` with cause `conquest` +10, and on `tick`
+  +5 on each tile where an enemy army stands then -3 on every tile above 0, clamped 0..100. A
+  nation's own `country_updated` patch carries `warReadiness` and `politics`. Province income is
+  multiplied by `(1 - D/125) x (1 - 0.3 x WR/100)`, the population cap by `(1 - D/200)` and army
+  upkeep by `(1 - 0.2 x WR/100)`. The goods market pays with reason `trade` every 5 years per
+  buyer (one merged payment per seller, at most 15% of the buyer's treasury, note like
+  "6 grain, 2 ore"), replacing the older trade dues. Everything is income-neutral at tick 0.
+  Rules and numbers: `docs/research/economy-games.md` section 3.
 
 - **Council (row A29):** every nation has a ruler and a general, each its own agent. The ruler
   sets focus and stance (today's ruler, the only one calling Gemini every turn); the general picks
@@ -511,7 +527,7 @@ export interface WorldStore {
   selectedTileId: number | null;
   selectedRegionId: number | null;           // set with the tile when zoomed in close; null when zoomed out
   beliefOf: number | null;                   // when set, the globe draws that nation's beliefs
-  mapMode: 'political' | 'terrain' | 'diplomacy' | 'strength' | 'wealth';  // diplomacy colours every nation by its stance to the selected one; wealth by treasury on a gold scale (#187)
+  mapMode: 'political' | 'terrain' | 'diplomacy' | 'strength' | 'wealth' | 'politics';  // diplomacy colours every nation by its stance to the selected one; wealth by treasury on a gold scale (#187)
   setMapMode(mode: WorldStore['mapMode']): void;
   select(countryId: number | null, tileId?: number | null): void;
   showBelief(countryId: number | null): void;
