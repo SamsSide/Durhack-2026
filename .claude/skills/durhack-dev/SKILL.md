@@ -102,6 +102,7 @@ commit a key; never paste one into an issue or PR.
 - **Caps in every brief:** "Stop and report after 2 failed fix attempts on the same failure or
   about 60 turns, whichever comes first."
 - **At most 4 agents at once per laptop** (rate limits are shared across the whole weekend).
+  Exception (owner, 14 Nov): the owner's laptop (lane a, SamsSide) may run up to **10** at once.
 
 Agents live in `.claude/agents/` and read [`agent-contract.md`](agent-contract.md):
 
