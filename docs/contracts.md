@@ -50,10 +50,11 @@ Real values go in `.env` at the repo root (git-ignored). The owner's keys file i
 | `TIGER_DATABASE_URL` | lane a | Optional, row A11 |
 | `SOLANA_MODE` | lane a | `off`, `mock` (default: fake signatures, no network) or `devnet` (row A27) |
 | `SOLANA_RPC_URL` | lane a | Default `https://api.devnet.solana.com` |
-| `SOLANA_WS_URL` | lane a | Default `wss://api.devnet.solana.com` |
+| `SOLANA_WS_URL` | lane a | Accepted but unused: confirmation is HTTP polling |
 | `SOLANA_KEYS_DIR` | lane a | Keypair JSON files, default `~/.config/durhack/solana`; never in the repo |
 | `SOLANA_SETTLE_MS` | lane a | Settlement window, default 5000 |
-| `SOLANA_MAX_TX_PER_WINDOW` | lane a | Default 6; overflow nets into the next window |
+| `SOLANA_MAX_TX_PER_WINDOW` | lane a | Default 4, sent one at a time; overflow nets into the next window |
+| `SOLANA_FLOAT` | lane a | Coins each nation gets from the Commons at genesis, default 10000 |
 
 ## X1 · World types and `applyEvent` (lane a gives to lanes b and c)
 
@@ -366,7 +367,7 @@ this table from `@terra/shared`.
 | `POST /api/broadcast` | a | `{ "imageBase64": "...", "mimeType": "image/jpeg" }` (a capture of the globe, about 1280 x 720) | `{ "id": "b-7", "tick": 210, "year": 1210, "headline": "War on the Salt Marches", "anchor": "Sam", "script": "Good evening. ...", "audio": "/api/broadcast/b-7/audio" }`: Gemini looks at the image and the recent chronicle and writes a 20 to 30 s news bulletin. Gemini takes about 15 to 20 s with the image (show a "preparing bulletin" state). Over `BROADCAST_MAX_PER_RUN` or the LLM cap, or on any failure, it returns a template bulletin from the chronicle instead (never 503); mock mode does the same. `404` with no world, `400` without an image |
 | `GET /api/broadcast/:id/audio` | a | none | `audio/mpeg`: "Terra Nova News." and the bulletin read by a newsreader voice (ElevenLabs), cached; `503 { "error": "voice unavailable" }` over the cap or on failure; mock: a bundled sample |
 | `GET /api/decree/:entryId/herald` | a | none (`entryId` is the id of a `decree` chronicle entry) | `audio/mpeg`: the decree read out by the royal herald (one of the team's voices), cached; `503 { "error": "voice unavailable" }`; mock: a bundled sample. The X6 module plays it automatically when a decree entry arrives |
-| `GET /api/economy` | a | none | `{ "mode": "devnet", "cluster": "devnet", "currency": { "name": "Drowned Age Crown", "symbol": "TNC", "mint": "Ab1...", "url": "https://explorer.solana.com/address/Ab1...?cluster=devnet", "supply": 1000000, "mintAuthority": null }, "commons": { "address": "Co1...", "url": "...", "balance": 812000 }, "nations": [ { "countryId": 2, "address": "Na2...", "url": "...", "onChain": 151.2, "sim": 151.2, "inSync": true } ], "totals": { "payments": 1284, "volume": 18230.5, "transactions": 402, "feesSol": 0.0061 }, "recent": [ "the last 50 ledger rows, as in X2" ] }` (row A27). Mock mode answers at once with fake addresses and `simulated` rows; `503 { "error": "economy off" }` with `SOLANA_MODE=off` |
+| `GET /api/economy` | a | none | `{ "mode": "devnet", "cluster": "devnet", "currency": { "name": "Drowned Age Crown", "symbol": "TNC", "mint": "Ab1...", "url": "https://explorer.solana.com/address/Ab1...?cluster=devnet", "supply": 1000000, "mintAuthority": null }, "commons": { "address": "Co1...", "url": "...", "balance": 812000 }, "nations": [ { "countryId": 2, "address": "Na2...", "url": "...", "onChain": 10120, "ledger": 10120, "drift": 0, "sim": 151.2, "inSync": true } ], "totals": { "payments": 1284, "volume": 18230.5, "transactions": 402, "feesSol": 0.0061 }, "recent": [ "the last 50 ledger rows, as in X2" ] }` (row A27). The chain records every coin that moves between nations while income and spending stay in the sim: `ledger` is the nation's genesis float (10,000) plus confirmed payments in, minus confirmed payments out, plus any Commons advance; `drift` is `onChain - ledger`; `inSync` is `|drift| <= 0.01` (a nation with a payment still in flight counts as in sync); `sim` is the treasury, for information. Mock mode answers at once with fake addresses and `simulated` rows; `503 { "error": "economy off" }` with `SOLANA_MODE=off` |
 
   Lore response:
 
