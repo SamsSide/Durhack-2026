@@ -90,5 +90,6 @@ default of 4 still applies to the other lanes).
 - 15:53 · A22: 30 style models (medieval, classical, desert, east_asian, mesoamerican, scrap x capital, city, town, temple, fort) from a shared Blender kit, in the manifest's styles
 - 16:13 · A24: four identity styles (20 models) and sound, flags and chronicle voice by era and government
 - 16:15 · A23 models (Fable): army, war fleet and merchant ship for each of five ages, from spearmen and galleys to tanks, destroyers and container ships
+- 16:22 · A25: any speed from 0.1x to 64x (128 years a second, smooth), an auto pacing director that drops to 1x for 8 s after big moments and eases back, the clock message
 
 Mocks: `npm run mock` (MockRunner behind the `WorldRunner` interface in `server/src/runner.ts`) stands in for the engine until A3; lore, audio and replays are mocked until A13 to A16 and A9.

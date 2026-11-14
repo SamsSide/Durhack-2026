@@ -133,6 +133,7 @@ export interface SchedulerOptions {
   minMs?: number; maxMs?: number;           // routine interval per nation, default 30 to 45 s
   urgentGapMs?: number;                     // minimum gap between decisions for one nation, default 10 s
   maxCallsPerMin?: number;                  // default LLM_MAX_CALLS_PER_MIN or 20
+  minTicks?: number;                        // minimum simulated years between decisions for one nation, default 5 (row A25: very low speeds)
   rng?: () => number;
 }
 
@@ -144,13 +145,14 @@ export interface SchedulerOptions {
 export class RulerScheduler {
   private next = new Map<number, number>();
   private last = new Map<number, number>();
+  private lastYear = new Map<number, number>();
   private urgent = new Set<number>();
   private lastAny = 0;
   private o: Required<SchedulerOptions>;
   constructor(opts: SchedulerOptions = {}) {
     const envCap = Number(process.env.LLM_MAX_CALLS_PER_MIN);
     this.o = {
-      minMs: 30_000, maxMs: 45_000, urgentGapMs: 10_000,
+      minMs: 30_000, maxMs: 45_000, urgentGapMs: 10_000, minTicks: 5,
       maxCallsPerMin: Number.isFinite(envCap) && envCap > 0 ? envCap : 20, rng: Math.random, ...opts,
     };
   }
@@ -162,12 +164,12 @@ export class RulerScheduler {
 
   /** Forget a nation (deleted) or reset everything for a new world. */
   forget(countryId?: number): void {
-    if (countryId === undefined) { this.next.clear(); this.last.clear(); this.urgent.clear(); this.lastAny = 0; return; }
-    this.next.delete(countryId); this.last.delete(countryId); this.urgent.delete(countryId);
+    if (countryId === undefined) { this.next.clear(); this.last.clear(); this.lastYear.clear(); this.urgent.clear(); this.lastAny = 0; return; }
+    this.next.delete(countryId); this.last.delete(countryId); this.lastYear.delete(countryId); this.urgent.delete(countryId);
   }
 
   /** Returns the ids that should be decided now (zero or one). They are marked as decided. */
-  tick(now: number, nations: SchedNation[]): number[] {
+  tick(now: number, nations: SchedNation[], year?: number): number[] {
     const spacing = (60_000 / this.o.maxCallsPerMin) * 1.1;
     if (now - this.lastAny < spacing) return [];
     if (getBudget().capped) return [];
@@ -175,6 +177,8 @@ export class RulerScheduler {
     for (const n of nations) {
       if (!n.alive || n.silenced) { this.urgent.delete(n.id); continue; }
       if (!this.next.has(n.id)) this.next.set(n.id, now + this.rngSpread());
+      // Row A25: at 0.1x thirty real seconds is under one year; wait for minTicks years as well.
+      if (year !== undefined && year - (this.lastYear.get(n.id) ?? -Infinity) < this.o.minTicks) continue;
       const gapOk = now - (this.last.get(n.id) ?? -Infinity) >= this.o.urgentGapMs;
       const isUrgent = this.urgent.has(n.id) && gapOk;
       const due = now >= this.next.get(n.id)!;
@@ -185,6 +189,7 @@ export class RulerScheduler {
     }
     if (!best) return [];
     this.last.set(best.id, now); this.lastAny = now;
+    if (year !== undefined) this.lastYear.set(best.id, year);
     this.next.set(best.id, now + this.jitter());
     this.urgent.delete(best.id);
     return [best.id];

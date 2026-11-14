@@ -6,26 +6,32 @@
 import { applyEvent, cloneWorld, type AgentStatus, type World, type WorldEvent } from '@terra/shared';
 import type { ControlMessage, NewWorldOptions, RunnerListener, WorldRunner } from '../runner';
 import { listReplayFiles, loadReplay, type ReplayFile } from './replays';
+import { Clock, TickLoop, clampSpeed, type ClockState } from './clock';
+import { anyBigMoment } from './bigMoments';
 
-const TICK_MS = 500;
-const MAX_TICKS_PER_STEP = 16;
 const AGENTS_HEARTBEAT_MS = 1000;
 
 export class ReplayRunner implements WorldRunner {
   private world: World;
   private pos = 0;               // next event to play
   private agentPos = 0;          // next agents record to apply
-  private timer: ReturnType<typeof setInterval> | null = null;
   private listeners = new Set<RunnerListener>();
-  private lastTick = 0;
-  private acc = 0;
+  private clock = new Clock();
+  private loop = new TickLoop(this.clock, (n) => this.step(n));
   private lastAgents = '';
   private lastAgentsPush = 0;
   finished = false;
 
   constructor(private file: ReplayFile) {
     this.world = cloneWorld(file.initial);
+    this.world.speed = 1;
+    this.world.paused = false;
+    this.clock.onChange = (s) => { for (const l of this.listeners) l.clock?.(s); };
   }
+
+  clockState(): ClockState { return this.clock.state(); }
+  /** The hub hands the live runner's speed, pacing and pause over when a replay starts. */
+  applyClock(s: ClockState): void { this.clock.apply(s); this.world.speed = this.clock.target; this.world.paused = s.paused; }
 
   getWorld(): World { return this.world; }
   /** The whole saved run, for the timeline scrubber. */
@@ -35,23 +41,24 @@ export class ReplayRunner implements WorldRunner {
   replay(_id: string): World | null { return null; }
 
   start(): void {
-    if (this.timer || this.finished) return;
-    this.lastTick = Date.now();
-    this.timer = setInterval(() => this.step(), 100);
+    if (this.loop.active || this.finished) return;
+    this.loop.start();
   }
 
-  stop(): void {
-    if (this.timer) clearInterval(this.timer);
-    this.timer = null;
-  }
+  stop(): void { this.loop.stop(); }
 
-  setSpeed(speed: number): void { if ([1, 2, 4, 8].includes(speed)) this.world.speed = speed; }
-  setPaused(paused: boolean): void { this.world.paused = paused; }
+  setSpeed(speed: number): void {
+    if (!Number.isFinite(speed)) return;
+    this.world.speed = clampSpeed(speed);
+    this.clock.setTarget(speed);
+  }
+  setPaused(paused: boolean): void { this.world.paused = paused; this.clock.setPaused(paused); }
 
   /** Only speed and pause work during playback; cut, delete, decree and the rest are ignored. */
   control(msg: ControlMessage): void {
     if (msg.action === 'speed') this.setSpeed(msg.value);
     else if (msg.action === 'pause') this.setPaused(msg.value);
+    else if (msg.action === 'pacing') this.clock.setPacing(msg.value);
   }
 
   belief(countryId: number): number[] | null {
@@ -63,16 +70,8 @@ export class ReplayRunner implements WorldRunner {
     return () => { this.listeners.delete(listener); };
   }
 
-  private step(): void {
-    const w = this.world;
-    const now = Date.now();
-    const dt = now - this.lastTick;
-    this.lastTick = now;
-    if (w.paused) return;
-    this.acc = Math.min(this.acc + (dt * w.speed) / TICK_MS, MAX_TICKS_PER_STEP);
-    let n = 0;
-    while (this.acc >= 1) { this.acc -= 1; n++; }
-    if (n) this.advance(n);
+  private step(n: number): void {
+    if (!this.world.paused && n) this.advance(n);
   }
 
   /** Plays `ticks` years of the log at once and broadcasts them (the timer uses it; so do headless checks). */
@@ -82,9 +81,11 @@ export class ReplayRunner implements WorldRunner {
     const batch: WorldEvent[] = [];
     let seen = 0;
     let agentsChanged = false;
+    let bigAt = -1;
     while (this.pos < events.length) {
       const e = events[this.pos]!;
       if (e.type === 'tick' && ++seen > ticks) break;
+      if (bigAt < 0 && anyBigMoment([e], this.world)) bigAt = batch.length;
       if (this.applyAgentsUpTo(this.pos)) agentsChanged = true;
       applyEvent(this.world, e);
       batch.push(e);
@@ -94,6 +95,7 @@ export class ReplayRunner implements WorldRunner {
     // Linked nations are heard every year, as in the live run.
     for (const a of this.world.agents) if (!a.deleted && a.link === 'up') a.lastHeardTick = this.world.tick;
     for (const l of this.listeners) l.events?.(batch);
+    if (bigAt >= 0) this.clock.bigMoment();
     this.pushAgents(agentsChanged);
     if (this.pos >= events.length) this.finish();
   }
@@ -146,6 +148,7 @@ export class RunnerHub implements WorldRunner {
       snapshot: (w) => { if (this.current === r) for (const l of this.listeners) l.snapshot?.(w); },
       events: (e) => { if (this.current === r) for (const l of this.listeners) l.events?.(e); },
       agents: (a) => { if (this.current === r) for (const l of this.listeners) l.agents?.(a); },
+      clock: (c) => { if (this.current === r) for (const l of this.listeners) l.clock?.(c); },
     });
   }
 
@@ -168,6 +171,8 @@ export class RunnerHub implements WorldRunner {
     this.live.stop();
     this.replayRunner?.stop();
     const rr = new ReplayRunner(file);
+    const carry = this.live.clockState?.();
+    if (carry) rr.applyClock(carry);
     this.replayRunner = rr;
     this.attach(rr);
     this.current = rr;
@@ -181,6 +186,7 @@ export class RunnerHub implements WorldRunner {
   stop() { this.current.stop(); }
   setSpeed(s: number) { this.current.setSpeed(s); }
   setPaused(p: boolean) { this.current.setPaused(p); }
+  clockState() { return this.current.clockState?.(); }
   control(msg: ControlMessage) { this.current.control(msg); }
   belief(id: number) { return this.current.belief(id); }
 
