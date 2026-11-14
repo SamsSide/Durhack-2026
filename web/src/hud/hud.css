@@ -14,6 +14,8 @@
 .tb-name, .tb-era, .wordmark, .conn { white-space: nowrap; }
 .wordmark { font-family: var(--font-display); font-weight: 700; font-size: 14px; letter-spacing: 0.22em; text-transform: uppercase; flex: none; }
 .tb-world { max-width: 220px; min-width: 0; overflow: hidden; flex: 0 1 auto; }
+/* The 1920 px projector has room for a whole world name; the group still shrinks first when the bar fills. */
+@media (min-width: 1800px) { .tb-world { max-width: 380px; } }
 .tb-name { font-family: var(--font-display); font-size: 17px; font-weight: 600; letter-spacing: 0.04em; color: var(--color-text); line-height: 20px; overflow: hidden; text-overflow: ellipsis; text-shadow: var(--engrave-on-dark); }
 .tb-era { font-size: 13px; font-style: italic; color: var(--color-text-muted); line-height: 15px; overflow: hidden; text-overflow: ellipsis; }
 /* The year sits in a sunk dark well with a gilt hairline rim: something you read, not press. */
@@ -124,6 +126,8 @@ body:has(.mm-modes) .minimap { border-top-left-radius: 0; border-top-right-radiu
 }
 /* a herald dispatch (lane c, .tn-herald) owns top 64 px centre; it publishes its bottom edge + 8px as --tn-herald-bottom on :root while it shows */
 .belief-banner { top: var(--tn-herald-bottom, 64px); transition: top 200ms var(--ease-out); }
+/* the dispatches are now a stack in the top right corner (#245): from 1440 px up the centred banner clears them and must not jump down */
+@media (min-width: 1440px) { .belief-banner { top: 64px; } }
 /* the news lower-third (.tn-news) covers the minimap: fade the minimap out while it is on screen */
 .minimap, .mm-modes { transition: right var(--dur-fast) var(--ease-out), bottom var(--dur-fast) var(--ease-out), opacity 200ms var(--ease-out); }
 body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes { opacity: 0; pointer-events: none; }
@@ -206,7 +210,7 @@ body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes { opacity: 0; pointer-
   position: absolute; top: 15px; left: 50%; transform: translateX(-50%); white-space: nowrap;
   font-family: var(--font-mono); font-size: 10px; word-spacing: -0.3em; font-weight: 500; line-height: 12px; color: var(--color-text-muted); text-shadow: var(--engrave-on-dark);
 }
-.speed-stop b.first { left: -4px; transform: none; }
+.speed-stop b.first { left: -9px; transform: none; }
 .speed-stop b.last { left: auto; right: -5px; transform: none; }
 .speed-stop.on b { color: var(--gilt-hi); font-weight: 600; }
 .speed-thumb {
