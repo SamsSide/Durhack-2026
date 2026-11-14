@@ -9,6 +9,8 @@ import type { TileGeo } from '../structures/placement';
 import { nationIdentity } from '../identity/identity';
 import { wallTint } from '../identity/look';
 import * as S from './style';
+import { ageStyle } from './ageStyle';
+import { feetOn, inFeet, occupancyVersion } from '../structures/occupancy';
 
 /** World-space instances of one kind: 10 floats each (pos 3, quat 4, scale 3) and an RGB colour. */
 export class PartBuf {
@@ -47,8 +49,9 @@ export const WALL_PARTS: ReadonlySet<PartName> = new Set(['walls', 'towers', 'cr
 export const TOWN_KINDS = new Set(['town', 'city', 'capital']);
 const REL: Record<string, number> = { town: 0.75, city: 0.9, capital: 1.0 };
 
+/** The style the nation's towns are drawn in now: its own, then a modern one, then arcology as it moves through the ages. */
 export function styleOf(world: World, owner: number): BuildingStyle {
-  return world.countries[owner]?.buildingStyle ?? 'medieval';
+  return ageStyle(world.countries[owner]);
 }
 
 /** Energy shields instead of masonry: arcology builders, and any nation in the future or stellar age. */
@@ -57,9 +60,16 @@ export function wantsShield(world: World, owner: number): boolean {
   return styleOf(world, owner) === 'arcology' || age === 'future' || age === 'stellar';
 }
 
-/** What a town's look depends on; a change rebuilds it. `tier` is its wall tier (cityTier in @terra/shared). */
+/**
+ * What a town's look depends on; a change rebuilds it. `tier` is its wall tier (cityTier in @terra/shared).
+ * The part after '#' is the age look (style and shields): a change there alone is an age step, shown as a wave.
+ */
 export function townKey(world: World, s: Structure, tier: CityTier = cityTier(world, s.id)): string {
-  return `${s.kind}|${s.owner}|${tier}|${styleOf(world, s.owner)}|${wantsShield(world, s.owner) ? 1 : 0}`;
+  return `${s.kind}|${s.owner}|${tier}|o${occupancyVersion(s.tile)}#${styleOf(world, s.owner)}|${wantsShield(world, s.owner) ? 1 : 0}`;
+}
+/** True when two town keys differ only in the age look. */
+export function ageOnly(a: string, b: string): boolean {
+  return a !== b && a.slice(0, a.indexOf('#')) === b.slice(0, b.indexOf('#'));
 }
 
 const tmpM = new THREE.Matrix4();
@@ -80,6 +90,12 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
   const gx = g.t1.clone().multiplyScalar(Math.cos(theta)).addScaledVector(g.t2, Math.sin(theta));
   const gy = g.t1.clone().multiplyScalar(-Math.sin(theta)).addScaledVector(g.t2, Math.cos(theta));
   const sag = (0.86 * w) / (2 * h); // the top fan sinks below the tangent plane by d * sag
+
+  // The squares the structure layer fills on this tile (the landmark, the buildings round it, props): no house,
+  // yard or wall goes inside one (structures/occupancy).
+  const feet = feetOn(s.tile);
+  const g11 = gx.dot(g.t1), g12 = gx.dot(g.t2), g21 = gy.dot(g.t1), g22 = gy.dot(g.t2);
+  const taken = (x: number, y: number, m: number): boolean => feet.length > 0 && inFeet(feet, x * g11 + y * g21, x * g12 + y * g22, m);
 
   const toWorld = (x: number, y: number, lift: number, out: THREE.Vector3): THREE.Vector3 => {
     const d = Math.hypot(x, y);
@@ -174,8 +190,8 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
   }
 
   // ---- street grid: houses, courtyards, parks ------------------------------------------------
-  const roofs = S.ROOFS[styleOf(world, s.owner)] ?? S.ROOFS.medieval;
   const style = styleOf(world, s.owner);
+  const roofs = S.ROOFS[style] ?? S.ROOFS.medieval;
   const tint = wallTint(nationIdentity(world, s.owner), s.owner);
   const roofCols = roofs.map((r) => new THREE.Color(r).multiply(tint));
   const heightK = S.HEIGHT_K[style] ?? 1;
@@ -212,7 +228,7 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
       if (mod4(j) === 0) continue;
       const x = (i + o1) * pitch, y = (j + o2) * pitch;
       if (!inside(x, y) || Math.hypot(x, y) < plazaR) continue;
-      if (nearRiver(x, y, pitch * 0.55) || onCoreWall(x, y)) continue;
+      if (nearRiver(x, y, pitch * 0.55) || onCoreWall(x, y) || taken(x, y, pitch * 0.45)) continue;
       const bi = Math.floor(i / 4), bj = Math.floor(j / 4);
       let yard: 0 | 1 | 2 = 0;
       if (hash01(`${id}:${bi}:${bj}`, 11) < 0.06) yard = 2;
@@ -256,7 +272,7 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
           const ox = 1 - axis; // the other coordinate
           const along = a[ox] + (b[ox] - a[ox]) * t;
           const x = axis === 0 ? line : along, y = axis === 0 ? along : line;
-          if (!inside(x, y) || Math.hypot(x, y) < plazaR) continue;
+          if (!inside(x, y) || Math.hypot(x, y) < plazaR || taken(x, y, pitch * 0.35)) continue;
           const dx = b[0] - a[0], dy = b[1] - a[1], dl = Math.hypot(dx, dy) || 1;
           const sinA = Math.abs((axis === 0 ? dx : dy) / dl);
           const len = Math.min(5 * halfW, (2.8 * halfW) / Math.max(0.45, sinA));
@@ -286,6 +302,7 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
 
   /** One upright at (x, y): a palisade post, a stone tower in the nation's style, or a shield pylon. */
   const tower = (mode: Mode, x: number, y: number, ang: number, r: number, hgt: number): void => {
+    if (taken(x, y, r)) return;
     toWorld(x, y, 0, p2);
     quatAt(ang, x, y, q2);
     if (mode === 'palisade') { out.towers.add(p2, q2, r * 2, hgt, r * 2, postC); return; }
@@ -307,6 +324,7 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
   const run = (mode: Mode, a: [number, number], b: [number, number], hgt: number, thick: number): void => {
     const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
     const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (taken(mx, my, thick)) return; // the wall meets a building and gives way to it
     toWorld(mx, my, 0, p2);
     quatAt(Math.atan2(b[1] - a[1], b[0] - a[0]), mx, my, q2);
     if (mode === 'palisade') out.stakes.add(p2, q2, len * 1.05, hgt, thick, woodC);
@@ -386,6 +404,7 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
     // Gatehouses.
     for (const phi of gates) {
       const l = ringPt(phi - half, rg.f), r = ringPt(phi + half, rg.f), m = ringPt(phi, rg.f);
+      if (taken(m[0], m[1], gateW * 0.5)) continue;
       const ang = Math.atan2(r[1] - l[1], r[0] - l[0]);
       const ox = Math.sin(ang), oy = -Math.cos(ang); // outward: the ring runs anticlockwise
       const k = rg.fort ? 1.45 : 1.15;
@@ -459,7 +478,7 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
     for (let k = 0; k < M; k++) {
       const a = ringPt((k / M) * TAU, wallF * 0.99), b = ringPt(((k + 1) / M) * TAU, wallF * 0.99);
       const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
-      if (nearRiver(mx, my, 0)) continue;
+      if (nearRiver(mx, my, 0) || taken(mx, my, 0)) continue;
       toWorld(mx, my, 0.00015, p);
       quatAt(Math.atan2(b[1] - a[1], b[0] - a[0]), mx, my, q);
       out.flats.add(p, q, Math.hypot(b[0] - a[0], b[1] - a[1]) * 1.08, 0.0002, 0.03 * w, road);

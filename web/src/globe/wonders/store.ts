@@ -61,10 +61,14 @@ export function syncWonders(world: World | null): void {
   let changed = false;
   const seen = new Set<string>();
   const first = prev.every((r) => r.demo);
+  // A razed wonder makes way for a new building on its tile (no ruin with a town inside it).
+  const built = new Set<number>();
+  for (const s of world.structures) if (s && s.kind !== 'ruin' && s.kind !== 'wonder') built.add(s.tile);
   for (const raw of world.structures) {
     if (!raw || (raw.kind !== 'wonder' && raw.kind !== 'ruin') || !raw.wonder) continue;
     const ruined = raw.kind === 'ruin';
     if (raw.tile < 0 || raw.tile >= world.tiles.length) continue;
+    if (ruined && built.has(raw.tile)) continue;
     seen.add(raw.id);
     const complete = ruined || raw.complete !== false; // missing means finished (an old snapshot)
     const name = typeof raw.name === 'string' && raw.name ? raw.name : fallbackName(world, raw.owner, raw.wonder);

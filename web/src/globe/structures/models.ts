@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { STYLE_FALLBACK } from '@terra/shared';
 import type { BuildingStyle, Country } from '@terra/shared';
+import { ageStyle, nextAgeStyle } from '../towns/ageStyle';
 
 export interface ModelPart { geometry: THREE.BufferGeometry; material: THREE.Material; team: boolean }
 interface Entry { file: string; footprint: number }
@@ -129,13 +130,14 @@ export function ensureStyles(set: ModelSet, styles: Iterable<string>, nomadic = 
   return Promise.all(jobs).then(() => undefined);
 }
 
-/** Styles used by the living nations of a world, and whether any is nomadic. */
+/** Styles used by the living nations of a world (their age style and the next one), and whether any is nomadic. */
 export function stylesInUse(countries: Country[]): { styles: Set<string>; nomadic: boolean } {
   const styles = new Set<string>(['medieval']);
   let nomadic = false;
   for (const c of countries) {
     if (c.alive === false) continue;
-    styles.add(c.buildingStyle ?? 'medieval');
+    styles.add(ageStyle(c));
+    styles.add(nextAgeStyle(c)); // loaded ahead, so an age step never waits on a download
     if (c.nomadic) nomadic = true;
   }
   return { styles, nomadic };
@@ -150,8 +152,9 @@ const NOMAD_KINDS = new Set(['camp', 'village', 'town']);
 /**
  * The model for a kind in a nation: nomadic entry (camp, village, town), then its style, then the
  * style's fallback, then the shared model, then the box. `key` names the instanced mesh group.
+ * `style` defaults to the nation's style for its tech age (towns/ageStyle).
  */
-export function modelFor(set: ModelSet, kind: string, country?: Country): Resolved {
+export function modelFor(set: ModelSet, kind: string, country?: Country, style: string = ageStyle(country)): Resolved {
   const usable = (style: string): Entry | null => {
     const e = set.styles.get(style)?.get(kind);
     return e && set.files.has(e.file) ? e : null;
@@ -159,7 +162,6 @@ export function modelFor(set: ModelSet, kind: string, country?: Country): Resolv
   let hit: Entry | null = null;
   if (country?.nomadic && NOMAD_KINDS.has(kind)) hit = usable('nomadic');
   if (!hit && set.styles.size) {
-    const style = country?.buildingStyle ?? 'medieval';
     for (const s of chain(style)) { hit = usable(s); if (hit) break; }
     if (!hit && import.meta.env.DEV && STYLED.has(kind)) set.misses.add(`${style}/${kind}`);
   }
@@ -168,7 +170,7 @@ export function modelFor(set: ModelSet, kind: string, country?: Country): Resolv
   if (shared) return { key: `${kind}:shared`, parts: shared, footprint: footprintFor(set, kind), real: true };
   return { key: `${kind}:box`, parts: set.fallback, footprint: footprintFor(set, kind), real: false };
 }
-export function hasModel(set: ModelSet, kind: string, country?: Country): boolean { return modelFor(set, kind, country).real; }
+export function hasModel(set: ModelSet, kind: string, country?: Country, style?: string): boolean { return modelFor(set, kind, country, style).real; }
 export function footprintFor(set: ModelSet, kind: string): number {
   return set.footprint.get(kind) ?? DEFAULT_FOOTPRINT;
 }

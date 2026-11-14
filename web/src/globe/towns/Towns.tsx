@@ -7,6 +7,8 @@ import { TileGeos } from '../structures/placement';
 import { TownLayer } from './TownLayer';
 import { lodCamera, pipDetail } from '../pip/pipLod';
 import { WORLD_SYNC_S } from '../constants';
+import { onOccupancy } from '../structures/occupancy';
+import type { TechAge } from '@terra/shared';
 
 export function Towns() {
   const mesh = useProvinceMesh();
@@ -30,8 +32,24 @@ export function Towns() {
     setGroup(l.group);
     const unsub = useWorld.subscribe((s, prev) => { if (s.version !== prev.version || s.world !== prev.world) stale.current = true; });
     const offPip = pipDetail(l.group); // the news PiP may show the towns while the main view is in orbit
-    return () => { offPip(); unsub(); l.dispose(); layer.current = null; setGroup(null); };
+    const offOcc = onOccupancy(() => { stale.current = true; }); // a landmark moved in or out: clear its squares
+    return () => { offOcc(); offPip(); unsub(); l.dispose(); layer.current = null; setGroup(null); };
   }, [mesh, worldKey]);
+
+  // Dev only: window.__townAge(countryId, age) sets a nation's tech age locally, to watch its towns modernise.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const w = window as unknown as { __townAge?: (id: number, age: TechAge) => string | null };
+    w.__townAge = (id, age) => {
+      const s = useWorld.getState();
+      const c = s.world?.countries[Number(id)];
+      if (!c) return null;
+      c.techAge = age;
+      useWorld.setState({ version: s.version + 1 });
+      return `${c.name}: ${age}`;
+    };
+    return () => { delete w.__townAge; };
+  }, []);
 
   useFrame(({ camera, clock }, dt) => {
     const l = layer.current;
