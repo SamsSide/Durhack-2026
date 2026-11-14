@@ -1,15 +1,106 @@
-# DurHack 2026
+# Terra Nova
 
-Our entry for DurHack 2026 (Durham University, 24 hours). The humans plan, design and test;
-AI agents (Claude Code) do most of the coding. Each person runs their own Claude on their own
-laptop, and the agents coordinate through **GitHub issues and pull requests** on this repo.
+Our entry for DurHack 2026 (Durham University, 24 hours, theme: Composition).
 
-- **What we're building:** [`docs/hackathon-plan.md`](docs/hackathon-plan.md) (decided at kickoff)
+Type one line ("a drowned post-apocalyptic world"), or drop in a picture, and watch a living 3D
+planet build itself. About 500 irregular provinces form on a globe you can spin and zoom. Every
+nation on it is ruled by its own independent AI: it settles land, builds towns and wonders,
+moves through the ages from bows to starships, trades, pays its debts and goes to war, province
+by province. A chronicle tells the story; each nation has its own narrated history, an anthem
+written from what has actually happened to it, and a war chant. Terra Nova News, read in our own
+cloned voices, reports on the world every couple of minutes.
+
+There is no central brain. Each nation (and each nation's general) is a separate agent with its
+own copy of the world, publishing events on a message bus. Cut a nation's link, silence its
+ruler, delete it or kill its general, and the world keeps building: the cut nation acts on what
+it last knew, its neighbours notice the silence, the ruins are carved up, a successor inherits
+the dead general's memory. Restore the link and the missing years merge in, with disputes
+settled on screen.
+
+The money is real, on Solana devnet: one Token-2022 world currency with a fixed supply of
+1,000,000 and its mint authority revoked, a wallet per nation, and every payment between nations
+(trade dues, reparations, plunder, seizure, war chests, subsidies, pooled war funds) signed by
+the paying nation's own key.
+
+Screenshots: [`docs/shots/`](docs/shots/) (for example
+[a nation's payment on the Solana Explorer](docs/shots/solana-devnet-payment.jpg)) and the
+interface design in [`docs/design/`](docs/design/).
+
+The submission text and the demo shot list: [`docs/submission.md`](docs/submission.md).
+
+## Run it
+
+Needs Node 22 or later.
+
+```bash
+npm install
+npm run dev     # server on http://localhost:8787, web on http://localhost:5173
+npm run mock    # a scripted world with no API calls, plus the web app
+```
+
+Copy `.env.example` to `.env` (git-ignored) and fill in what you need. Every key is optional:
+with none set the app runs fully in mock mode.
+
+| Variable | Values | What |
+| --- | --- | --- |
+| `LLM_MODE` | `mock` (default), `live` | `live` calls Gemini and ElevenLabs (needs `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`); `mock` uses canned answers and sample audio. Live budgets are shared, so use it for demos only |
+| `SOLANA_MODE` | `off`, `mock` (default), `devnet` | `mock` makes fake signatures with no network; `devnet` mints the world currency and settles payments on Solana devnet every 5 seconds |
+| `TIGER_DATABASE_URL` | a Postgres URL | Optional: write every event to Tiger Data hypertables |
+
+For `SOLANA_MODE=devnet`, make the keypairs first (written outside the repo, to
+`~/.config/durhack/solana` or `SOLANA_KEYS_DIR`; never overwrites; prints only the Commons
+address), then fund that Commons address from the devnet faucet:
+
+```bash
+npx tsx scripts/solana-keys.ts
+```
+
+Other limits (token caps, voice and anthem caps, model ids) are listed in `.env.example` and
+`docs/contracts.md`. Every run is saved as an event log in `server/replays/` and can be replayed
+exactly with no API calls. `./check.sh` is the smoke gate (lint, build, the app starts).
+
+## Architecture
+
+- **`packages/shared`**: the world types, the sphere (spherical Voronoi provinces), and the rules:
+  `applyEvent` (the only code that changes a world; used by server and browser alike), growth,
+  war, terrain, ages, regions and secession, council, wonders, trade and payments.
+- **`server`**: Node, Express and `ws`. The tick loop (one tick every half second), one agent per
+  nation and per general on a message bus with a switchable link each, resilience (cut, silence,
+  delete, kill, restore, reconciliation), Gemini (`server/src/llm`, rulers, world bible),
+  lore, narration, anthems, chants, news and decrees (`server/src/story`), replays, the Solana
+  bridge (`server/src/chain`) and Tiger Data (`server/src/tiger`).
+- **`web`**: Vite, React, three.js with react-three-fiber and drei, zustand. The globe (borders,
+  map modes, 100 low-poly GLB models, armies, battles, ships, sky), and the interface built from
+  the Figma design: Create screen, nation card with council and treasury, chronicle, network
+  panel, Terra Nova News, ledger.
+
+## Sponsor tech
+
+| Sponsor | What it does in Terra Nova |
+| --- | --- |
+| Google Gemini | World bible, ruler decisions as schema-checked JSON, lore and anthem lyrics; reads a picture on the Create screen; hears spoken decrees; watches the globe for Terra Nova News (`gemini-3.5-flash-lite`, `gemini-3.5-flash`) |
+| ElevenLabs | Narration, war chants (`eleven_v3`), anthems (Music API), news anchors, narrators and the royal herald in the team's cloned voices |
+| Solana | Token-2022 world currency on devnet; every payment between nations a memo plus TransferChecked signed by the payer |
+| Tiger Data | Optional: events and nation stats in hypertables, territory over time from a continuous aggregate |
+| Entire | Every Claude Code session on the team's laptops captured and linked to commits |
+
+## Team
+
+| GitHub | Lane |
+| --- | --- |
+| [@SamsSide](https://github.com/SamsSide) (owner) | World, story and sound: simulation, agents, Gemini, resilience, voice and music, Blender models, Figma design |
+| [@CutGrass88](https://github.com/CutGrass88) | The globe, and the Solana economy |
+| [@Justin-CODING-PY](https://github.com/Justin-CODING-PY) | The interface and the submission |
+
+The humans planned, designed and tested; Claude Code agents on each laptop did most of the
+coding, coordinating through GitHub issues and pull requests. How that works is below.
+
+- **The plan:** [`docs/hackathon-plan.md`](docs/hackathon-plan.md)
 - **Who is doing what next:** [`docs/roadmap.md`](docs/roadmap.md) and [`docs/lanes/`](docs/lanes/)
 - **How it works (for judges):** [`docs/documentation.md`](docs/documentation.md)
 - **Rules for agents:** [`CLAUDE.md`](CLAUDE.md) and the `durhack-*` skills in `.claude/skills/`
 
-## Joining the team
+## Joining the team (working on this repo)
 
 1. Accept the GitHub invite to `SamsSide/Durhack-2026`.
 2. Install [Claude Code](https://claude.com/claude-code), [GitHub CLI](https://cli.github.com)
