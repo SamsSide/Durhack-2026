@@ -347,7 +347,7 @@ export function generateWorld(bible: WorldBible, opts: WorldGenOptions): World {
   return {
     id: `w-${(hashString(`world:${seed}`) & 0xffff).toString(16).padStart(4, '0')}`,
     seed, prompt: '', name: bible.name, era: bible.era,
-    tick: 0, year: bible.startYear, speed: 1 / 24, paused: false,
+    tick: 0, year: bible.startYear, speed: 1 / 8, paused: false,
     tiles, regions, owner, countries, structures, units, relations, chronicle,
     agents: countries.map((c) => ({ countryId: c.id, link: 'up', ruler: 'llm', deleted: false, lastHeardTick: 0, pendingEvents: 0 })),
   };

@@ -45,7 +45,7 @@ for (const speed of [0.1, 1, 2.5, 5]) {
   ok(Math.abs(c.target - 1 / 104) < 1e-12, `speed below 1/104 is clamped to 1/104 (${c.target.toFixed(6)})`);
   c.setTarget(64);
   ok(c.target === 5, `speed above 5 is clamped to 5 (${c.target})`);
-  ok(c.state(t).speed === 5 && Math.abs(new Clock(() => 0).state().speed - 1 / 24) < 1e-6, 'new clock starts at 1/24; state speed is 5 at the top gear');
+  ok(c.state(t).speed === 5 && Math.abs(new Clock(() => 0).state().speed - 1 / 8) < 1e-6, 'new clock starts at 1/8 (three months a second, owner #288); state speed is 5 at the top gear');
   // The director never speeds a slow world up: with a ceiling below 1 a big moment leaves it alone.
   c.setTarget(1 / 24); c.setPacing('auto');
   c.bigMoment(t);

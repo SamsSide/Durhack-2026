@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { World } from '@terra/shared';
+import type { ChronicleEntry, ChronicleKind, NewsFocus, StructureKind, World } from '@terra/shared';
 import { currentMode, getBudget, loreModel, validate, type Schema } from '../llm';
 import { speak, VoiceUnavailable } from './eleven';
 import { anchorFor } from './teamVoices';
@@ -23,6 +23,8 @@ export interface Bulletin {
   id: string; tick: number; year: number; headline: string; script: string; audio: string;
   /** The team voice reading this bulletin (Sam, Justin or Denis, in rotation). */
   anchor: string;
+  /** Owner #288: 0 to 3 places to show while the anchor speaks, `atSecond` from the start of the audio. */
+  focus: NewsFocus[];
 }
 interface Stored extends Bulletin { mood: string; voiced: boolean; voiceId: string }
 export interface BroadcastResult { bulletin: Bulletin; source: 'gemini' | 'template'; tokensIn: number; tokensOut: number; ms: number }
@@ -36,20 +38,26 @@ const store = new Map<string, Stored>();
 
 export const getBulletin = (id: string): Stored | undefined => store.get(id);
 
+const FOCUS_DESC = 'The 1 to 3 places the bulletin talks about, in the order it speaks of them: place is an id from the Places list, caption at most 6 words.';
 const schema: Schema = {
   type: 'object', required: ['headline', 'script', 'mood'],
   properties: {
     headline: { type: 'string', description: 'At most 8 words.' },
     script: { type: 'string', description: 'A newsreader bulletin of 45 to 65 words, plain text.' },
     mood: { type: 'string', enum: ['grave', 'triumphant', 'neutral'] },
+    focus: { type: 'array', description: FOCUS_DESC, maxItems: 3, items: { type: 'object', required: ['place', 'caption'], properties: { place: { type: 'integer' }, caption: { type: 'string' } } } },
   },
 };
 const geminiSchema = {
-  type: 'OBJECT', required: ['headline', 'script', 'mood'],
+  type: 'OBJECT', required: ['headline', 'script', 'mood', 'focus'],
   properties: {
     headline: { type: 'STRING', description: 'At most 8 words.' },
     script: { type: 'STRING', description: 'A newsreader bulletin of 45 to 65 words, plain text.' },
     mood: { type: 'STRING', enum: ['grave', 'triumphant', 'neutral'] },
+    focus: {
+      type: 'ARRAY', description: FOCUS_DESC, maxItems: 3,
+      items: { type: 'OBJECT', required: ['place', 'caption'], properties: { place: { type: 'INTEGER' }, caption: { type: 'STRING' } } },
+    },
   },
 };
 
@@ -116,7 +124,7 @@ function template(w: World, f: ReturnType<typeof facts>): { headline: string; sc
   return { headline, script, mood: f.war ? 'grave' : 'neutral' };
 }
 
-async function ask(w: World, f: ReturnType<typeof facts>, imageBase64: string, mimeType: string) {
+async function ask(w: World, f: ReturnType<typeof facts>, ps: Place[], imageBase64: string, mimeType: string) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('GEMINI_API_KEY is not set');
   const ai = new GoogleGenAI({ apiKey: key });
@@ -125,7 +133,7 @@ async function ask(w: World, f: ReturnType<typeof facts>, imageBase64: string, m
     model,
     contents: [{ role: 'user', parts: [
       { inlineData: { mimeType, data: imageBase64 } },
-      { text: `${f.text}\n\nWrite the bulletin as JSON: headline (max 8 words), script (45 to 65 words), mood.` },
+      { text: `${f.text}\n${placesText(ps)}\n\nWrite the bulletin as JSON: headline (max 8 words), script (45 to 65 words), mood, and focus: the 1 to 3 places from the list the script speaks of, in the order it speaks of them, each with a caption of at most 6 words ("Steel works rise in Hatfield").` },
     ] }],
     config: {
       systemInstruction: SYSTEM,
@@ -138,12 +146,151 @@ async function ask(w: World, f: ReturnType<typeof facts>, imageBase64: string, m
     } as never,
   });
   if (!res.text) throw new Error('empty response');
-  const out = validate<{ headline: string; script: string; mood: string }>(JSON.parse(res.text), schema);
+  const out = validate<{ headline: string; script: string; mood: string; focus?: { place: number; caption: string }[] }>(JSON.parse(res.text), schema);
   out.script = out.script.replace(/[*_#`]/g, '').replace(/\s+/g, ' ').trim();
   out.headline = words(out.headline.replace(/[*_#`]/g, ''), 8);
   if (out.script.split(' ').length < 20) throw new Error('script too short');
   return { out, tokensIn: res.usageMetadata?.promptTokenCount ?? 0,
     tokensOut: (res.usageMetadata?.candidatesTokenCount ?? 0) + (res.usageMetadata?.thoughtsTokenCount ?? 0) };
+}
+
+// --- focus beats (owner #288) ----------------------------------------------------------------
+// Places the bulletin can cut to while it is read: built from the recent chronicle (a decree's tiles,
+// a war's front province, a fallen capital, a wonder) and the newest notable buildings. Gemini picks
+// from the numbered list; the template and mock mode take the first two.
+
+interface Place { countryId: number | null; tile: number; caption: string; names: string[] }
+
+const WORDS_PER_SECOND = 2.6;
+const BUILT_CAPTION: Partial<Record<StructureKind, (where: string) => string>> = {
+  factory: (r) => `Steel works rise in ${r}`, city: (r) => `${r} grows into a city`, temple: (r) => `A temple rises in ${r}`,
+  fort: (r) => `New walls rise in ${r}`, port: (r) => `A new harbour in ${r}`, town: (r) => `${r} grows into a town`,
+};
+const KIND_CAPTION: Partial<Record<ChronicleKind, (nation: string) => string>> = {
+  founding: (n) => `${n} is founded`, proclamation: (n) => `${n} proclaims`, growth: (n) => `${n} grows`,
+  peace: (n) => `Peace for ${n}`, alliance: (n) => `${n} seals an alliance`, betrayal: (n) => `Betrayal in ${n}`,
+  silence: (n) => `${n} falls silent`, return: (n) => `${n} is heard again`, dispute: (n) => `A dispute in ${n}`,
+  death: (n) => `Mourning in ${n}`, succession: (n) => `A new ruler in ${n}`,
+};
+const bare = (name: string) => name.replace(/^the /i, '');
+
+function places(w: World): Place[] {
+  const out: Place[] = [];
+  const seen = new Set<number>();
+  const country = (id: number | undefined) => (id !== undefined ? w.countries[id] : undefined);
+  const regionName = (tile: number) => bare(w.regions[w.tiles[tile]?.region ?? -1]?.name || '');
+  const add = (p: Place) => {
+    if (!w.tiles[p.tile] || seen.has(p.tile) || out.length >= 8) return;
+    seen.add(p.tile);
+    out.push({ ...p, names: p.names.filter((n) => n.length >= 3) });
+  };
+  const ownedBy = (id: number) => { const t: number[] = []; for (let i = 0; i < w.owner.length; i++) if (w.owner[i] === id) t.push(i); return t; };
+  /** A province of `a` that touches `b`: the front. */
+  const front = (a: number, b: number): number | undefined => ownedBy(a).find((t) => w.tiles[t]!.neighbors.some((x) => w.owner[x] === b));
+  const recent: ChronicleEntry[] = w.chronicle.slice(-20).reverse();       // newest first
+  for (const e of recent) {
+    const c0 = country(e.countries[0]);
+    if (e.decree && e.decree.target.tiles.length) {
+      const c = country(e.decree.target.countryId ?? undefined);
+      const t = e.decree.effect === 'meteor' ? e.decree.target.tiles[0]! : e.decree.target.tiles[Math.floor(e.decree.target.tiles.length / 2)]!;
+      add({ countryId: c?.id ?? null, tile: t, caption: e.decree.result.split(':')[0]!, names: [c ? bare(c.name) : '', regionName(t), e.decree.effect] });
+    } else if ((e.kind === 'war' || e.kind === 'battle') && e.countries.length >= 2) {
+      const [a, b] = e.countries as [number, number];
+      const t = front(a, b) ?? front(b, a);
+      if (t !== undefined) add({ countryId: w.owner[t]! >= 0 ? w.owner[t]! : null, tile: t, caption: `War on the ${regionName(t) || bare(country(a)?.name ?? 'border')} front`, names: [bare(country(a)?.name ?? ''), bare(country(b)?.name ?? ''), regionName(t)] });
+    } else if (e.kind === 'fall' && c0) {
+      add({ countryId: c0.id, tile: c0.capitalTile, caption: `${c0.name} falls`, names: [bare(c0.name), regionName(c0.capitalTile)] });
+    } else if (e.kind === 'wonder' && c0) {
+      const wonder = w.structures.filter((s) => s.kind === 'wonder' && s.owner === c0.id).sort((a, b) => b.builtTick - a.builtTick)[0];
+      if (wonder) add({ countryId: c0.id, tile: wonder.tile, caption: `${wonder.name ?? 'A wonder'} rises in ${regionName(wonder.tile) || bare(c0.name)}`, names: [wonder.name ?? '', bare(c0.name), regionName(wonder.tile)] });
+    } else if (e.kind === 'secession' && c0) {
+      const c = country(e.countries[e.countries.length - 1]) ?? c0;
+      add({ countryId: c.id, tile: c.capitalTile, caption: `${c.name} breaks away`, names: [bare(c.name), regionName(c.capitalTile)] });
+    }
+  }
+  // Active wars not in the recent lines.
+  for (const r of w.relations) {
+    if (r.stance !== 'war' || !w.countries[r.a]?.alive || !w.countries[r.b]?.alive) continue;
+    const t = front(r.a, r.b);
+    if (t !== undefined) add({ countryId: r.a, tile: t, caption: `War on the ${regionName(t) || bare(w.countries[r.a]!.name)} front`, names: [bare(w.countries[r.a]!.name), bare(w.countries[r.b]!.name), regionName(t)] });
+  }
+  // The newest notable buildings.
+  const built = w.structures.filter((s) => BUILT_CAPTION[s.kind] && w.countries[s.owner]?.alive).sort((a, b) => b.builtTick - a.builtTick || (a.id < b.id ? -1 : 1)).slice(0, 4);
+  for (const s of built) {
+    const c = w.countries[s.owner]!;
+    add({ countryId: c.id, tile: s.tile, caption: BUILT_CAPTION[s.kind]!(regionName(s.tile) || bare(c.name)), names: [bare(c.name), regionName(s.tile)] });
+  }
+  // Recent lines about a nation not shown yet: its capital.
+  for (const e of recent) {
+    const c0 = country(e.countries[0]);
+    if (!c0?.alive || e.kind === 'decree' || out.some((p) => p.countryId === c0.id)) continue;
+    add({ countryId: c0.id, tile: c0.capitalTile, caption: (KIND_CAPTION[e.kind] ?? ((n: string) => `News from ${n}`))(c0.name), names: [bare(c0.name), regionName(c0.capitalTile)] });
+  }
+  // Always something: the biggest nations' capitals.
+  const counts = tileCounts(w);
+  for (const c of w.countries.filter((x) => x.alive).sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0)).slice(0, 2)) {
+    add({ countryId: c.id, tile: c.capitalTile, caption: `${c.name} holds ${counts.get(c.id) ?? 0} provinces`, names: [bare(c.name), regionName(c.capitalTile)] });
+  }
+  return out;
+}
+
+const placesText = (ps: Place[]) => ps.length
+  ? `Places (id: what is there):\n${ps.map((p, i) => `${i}: ${p.caption}`).join('\n')}`
+  : 'Places: none.';
+
+/** Time the beats against the spoken audio (about 2.6 words a second): each at the first mention of
+ *  one of its names after the previous beat, else spread evenly; always rising, at least 3 s apart. */
+function timeBeats(chosen: { place: Place; caption: string }[], spokenText: string): NewsFocus[] {
+  const ws = spokenText.split(/\s+/).filter(Boolean);
+  const total = ws.length / WORDS_PER_SECOND;
+  const lower = ws.map((x) => x.toLowerCase().replace(/[^\p{L}\p{N}'-]/gu, ''));
+  const intro = spokenText.indexOf('Terra Nova News.') >= 0 ? spokenText.slice(0, spokenText.indexOf('Terra Nova News.') + 16).split(/\s+/).length : 0;
+  const find = (names: string[], from: number): number => {
+    let best = -1;
+    for (const n of names) {
+      const parts = n.toLowerCase().split(/\s+/).map((x) => x.replace(/[^\p{L}\p{N}'-]/gu, '')).filter(Boolean);
+      if (!parts.length) continue;
+      for (let i = from; i <= lower.length - parts.length; i++) {
+        if (parts.every((p, j) => lower[i + j]!.startsWith(p))) { if (best < 0 || i < best) best = i; break; }
+      }
+    }
+    return best;
+  };
+  const out: NewsFocus[] = [];
+  let from = intro; let prev = -Infinity;
+  chosen.forEach((c, i) => {
+    const at = find(c.place.names, from);
+    const even = (intro + ((ws.length - intro) * i) / Math.max(1, chosen.length)) / WORDS_PER_SECOND;
+    let sec = at >= 0 ? at / WORDS_PER_SECOND - 0.5 : even;
+    if (at >= 0) from = at + 1;
+    sec = Math.max(sec, prev + 3, 0);
+    sec = Math.min(sec, Math.max(0, total - 2));
+    prev = sec;
+    out.push({ countryId: c.place.countryId, tile: c.place.tile, atSecond: Math.round(sec * 10) / 10, caption: c.caption });
+  });
+  return out;
+}
+
+/** Gemini's picks, cleaned; else the first two places. */
+function focusFor(ps: Place[], picks: { place: number; caption: string }[] | undefined, spokenText: string): NewsFocus[] {
+  const chosen: { place: Place; caption: string }[] = [];
+  const used = new Set<number>();
+  for (const p of picks ?? []) {
+    const place = ps[p.place];
+    if (!place || used.has(p.place) || chosen.length >= 3) continue;
+    used.add(p.place);
+    const caption = words(p.caption.replace(/[*_#`"]/g, '').trim(), 8) || place.caption;
+    chosen.push({ place, caption });
+  }
+  if (!chosen.length) {
+    // The template (and a Gemini answer without picks): the places the script names, in the order it
+    // names them, then the first places on the list, two in all.
+    const lower = spokenText.toLowerCase();
+    const at = (p: Place) => Math.min(...p.names.map((n) => { const i = n ? lower.indexOf(n.toLowerCase()) : -1; return i < 0 ? Infinity : i; }));
+    const named = ps.filter((p) => at(p) < Infinity).sort((a, b) => at(a) - at(b));
+    for (const place of [...named, ...ps.filter((p) => !named.includes(p))].slice(0, 2)) chosen.push({ place, caption: place.caption });
+  }
+  return timeBeats(chosen, spokenText);
 }
 
 // --- audio ---------------------------------------------------------------------------------
@@ -180,12 +327,13 @@ export async function makeBroadcast(w: World, imageBase64: string, mimeType: str
   const f = facts(w);
   const live = !offline && currentMode() === 'live' && !!process.env.GEMINI_API_KEY;
   const underCap = made < maxBroadcasts();
-  let body: { headline: string; script: string; mood: string } | null = null;
+  const ps = places(w);
+  let body: { headline: string; script: string; mood: string; focus?: { place: number; caption: string }[] } | null = null;
   let tokensIn = 0, tokensOut = 0;
   if (underCap) made++;
   if (live && underCap && !getBudget().capped) {
     try {
-      const r = await ask(w, f, imageBase64, mimeType);
+      const r = await ask(w, f, ps, imageBase64, mimeType);
       body = r.out; tokensIn = r.tokensIn; tokensOut = r.tokensOut;
     } catch (e) {
       console.warn('broadcast gemini failed, using the template:', e instanceof Error ? e.message.slice(0, 200) : e);
@@ -195,7 +343,9 @@ export async function makeBroadcast(w: World, imageBase64: string, mimeType: str
   body ??= template(w, f);
   const id = `b-${++counter}`;
   const anchor = anchorFor(counter);
-  const stored: Stored = { id, tick: w.tick, year: w.year, ...body, audio: `/api/broadcast/${id}/audio`, voiced: underCap, anchor: anchor.name, voiceId: anchor.id };
+  const { focus: picks, ...text } = body;
+  const focus = focusFor(ps, picks, spoken({ script: text.script, anchor: anchor.name }));
+  const stored: Stored = { id, tick: w.tick, year: w.year, ...text, focus, audio: `/api/broadcast/${id}/audio`, voiced: underCap, anchor: anchor.name, voiceId: anchor.id };
   store.set(id, stored);
   while (store.size > KEEP) store.delete(store.keys().next().value as string);
   lastHeadline = stored.headline;

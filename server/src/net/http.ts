@@ -1,6 +1,6 @@
 // X3 HTTP routes.
 import { parseImage } from '../engine/bibleAi';
-import { checkAudio, hearDecree, NoSpeechError, type DecreeRunner } from '../engine/decrees';
+import { checkAudio, hearDecree, NoSpeechError, type DecreeOutcome, type DecreeRunner } from '../engine/decrees';
 import express from 'express';
 import type { LlmMode, WorldRunner } from '../runner';
 import { storyRoutes } from '../story/routes';
@@ -84,9 +84,12 @@ export function createApp(runner: WorldRunner, mode: LlmMode, recorder?: Recorde
     try {
       const { transcript, decree } = await hearDecree(world, body.audioBase64, mime);
       const engine = runner as WorldRunner & Partial<DecreeRunner>;
-      if (engine.applyDecree) engine.applyDecree(decree);
+      let outcome: DecreeOutcome | null = null;
+      if (engine.applyDecree) outcome = engine.applyDecree(decree);
       else runner.control({ action: 'decree', text: decree.text });
-      res.json({ transcript, decree });
+      // Owner #288: the same object as the decree's chronicle entry `decree` field, plus the clean text.
+      outcome ??= { effect: decree.effect, severity: decree.severity, target: { countryId: decree.target.countryId ?? null, tiles: [] }, result: 'The world shrugs.' };
+      res.json({ transcript, decree: { text: decree.text, ...outcome } });
     } catch (e) {
       if (e instanceof NoSpeechError) return void res.status(400).json({ error: 'no speech heard' });
       console.warn('voice decree failed:', e instanceof Error ? e.message : e);
