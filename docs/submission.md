@@ -120,7 +120,7 @@ claims are settled on screen and the chronicle records the dispute.
   the shared `applyEvent`, and the full event log streams from disk, so long worlds stay small.
 - **Three people, many agents.** Each of us ran Claude Code agents on our own laptop, in our own
   lane, coordinating only through GitHub issues and pull requests. About 270 pull requests landed
-  in 24 hours. Agent sessions were captured with Entire.
+  in 24 hours.
 
 ### Challenges we ran into
 
@@ -188,7 +188,7 @@ TypeScript, Node.js 22, Express, ws (WebSockets), React 18, Vite, three.js, reac
 drei, zustand, quickhull3d, Google Gemini API (`@google/genai`; gemini-3.5-flash and
 gemini-3.5-flash-lite; image and audio input), ElevenLabs (text to speech, eleven_v3, Music API,
 voice cloning), Solana devnet (`@solana/kit`, Token-2022, Memo program), Tiger Data
-(TimescaleDB, `pg`), Blender (headless, Python), Figma, Claude Code, Entire, GitHub.
+(TimescaleDB, `pg`), Blender (headless, Python), Figma, Claude Code, GitHub.
 
 ---
 
@@ -288,19 +288,7 @@ it is a teaching tool for distributed systems and resilience.
 - **Where:** `server/src/llm/index.ts`, `server/src/engine/bibleAi.ts`, `server/src/agents/ruler.ts`,
   `server/src/story/loreAi.ts`, `server/src/story/broadcast.ts`, `server/src/engine/decrees.ts`.
 
-### 2.7 MLH Best Use of Entire
-
-- **Criterion (brief):** use Sessions, Graph and Brain (and Trails); seamless human-AI
-  collaboration, clean code history, measurable token efficiency.
-- **How:** Entire is enabled for Claude Code on every laptop (`.entire/settings.json`, hooks in
-  `.claude/settings.json`); sessions are captured and linked to commits with the
-  `Entire-Checkpoint` trailer. Clean history: about 270 squash-merged pull requests with plain
-  subjects, lanes, contracts and an append-only decision log.
-- **Where:** `.entire/`, `docs/decisions.md`, `git log`, `docs/prizes/P3-entire.md`.
-- **Weak `[check]`:** session push is off, and Graph, Brain, Trails and the entire.com mirror are not set
-  up yet (see Gaps). No token-efficiency numbers yet.
-
-### 2.8 MLH Best Use of Solana
+### 2.7 MLH Best Use of Solana
 
 - **Criterion (inferred, no rubric):** real use of Solana, a use case that needs speed or low
   cost, a working demo with a visible devnet transaction, Solana-native pieces.
@@ -317,7 +305,7 @@ it is a teaching tool for distributed systems and resilience.
   "Treasury on Solana" on the nation card (C9); `scripts/solana-keys.ts`; screenshot
   `docs/shots/solana-devnet-payment.jpg`.
 
-### 2.9 MLH Best Use of Tiger Data (stretch)
+### 2.8 MLH Best Use of Tiger Data (stretch)
 
 - **Criterion:** the most innovative, impactful and performance-driven use of Tiger Data.
 - **How:** every world event and each nation's stats go into two hypertables
@@ -343,8 +331,6 @@ it is a teaching tool for distributed systems and resilience.
 - **Gemini:** painted flags need image billing and return 503; spoken decrees not yet tested with
   a real browser microphone (A20 note); the MLH Gemini category date label needs checking on the
   DurHack Devpost.
-- **Entire:** `push_sessions` is false; Graph, Brain, Trails and the mirror are not set up; no
-  token numbers. This is the weakest MLH entry as things stand.
 - **Solana:** the owner's devnet run of the exact ledger (#180) was clean; B10 hand test is pending; the Commons wallet must be
   funded from the faucet before the demo; keep the saved signature file as the fallback.
 - **Tiger Data:** the chart exists; needs a Tiger Cloud URL in the demo `.env` and one look at it.
@@ -427,15 +413,12 @@ gear (`gears-10y.jpg`) and the Tiger Data territory chart `[check]`.
 - [ ] Rehearse the 2-minute table demo and the reset routine (section 3) three times in a row;
       there is no video to upload. If a form requires a demo link, write "live demo at the table;
       no video" `[check]`.
-- [ ] Make the repository public (or confirm judges can see it). First decide on Entire session
-      push: once on, transcripts become public with the repo `[check]`.
-- [ ] Owner: turn on Entire `push_sessions`, set up Graph, Brain, the mirror and if possible one
-      Trail; screenshot the sessions page and token numbers `[check]`.
+- [ ] Make the repository public (or confirm judges can see it).
 - [ ] Optional: set `TIGER_DATABASE_URL` and look at the chart, or untick Tiger Data.
 - [ ] Copy section 1 into the Devpost fields; use the gallery shots from `docs/shots/`.
 - [ ] Add all three team members to the Devpost project (SamsSide, CutGrass88, Justin-CODING-PY).
 - [ ] Tick the prizes: main track; Neptune North; Marshall Wace New Worlds; Waterstons; MLH
-      ElevenLabs, Gemini, Entire, Solana; Tiger Data only if the chart works.
+      ElevenLabs, Gemini, Solana; Tiger Data only if the chart works.
 - [ ] Check the MLH Gemini category label on the DurHack Devpost `[check]`.
 - [ ] Visit the Neptune North and Marshall Wace stands; rehearse the demo three times (CP3).
 - [ ] Bring a speaker for the audio and the saved replay as the offline backup.

@@ -77,3 +77,4 @@
 - 14 Nov (owner): one command starts the table demo (`npm run demo:live`, or `npm run demo` for a mock rehearsal), `npm run demo:reset` between judges, `npm run demo:stop` to exit.
 - 14 Nov (owner, #313): tech ages are gated by calendar year (medieval 500, gunpowder 1400, industrial 1760, modern 1900, future 2050, stellar 2150); a world's starting era wins; satellites need stellar and 1957.
 - 14 Nov (owner): polish mode ON: polish, fixes, performance and approved features only; a new major feature needs the owner's yes first. Toggle: the `## Polish mode: ON` heading in CLAUDE.md.
+- 14 Nov (owner): we do not enter the MLH Best Use of Entire prize (not used properly enough); removed from the Devpost draft and the submission text. Entire keeps recording sessions as before.
