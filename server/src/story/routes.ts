@@ -7,7 +7,8 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import { currentMode } from '../llm';
 import { getLore, getRegionLore } from './loreAi';
-import { chooseVoice, speak } from './eleven';
+import { speak } from './eleven';
+import { heraldText, heraldVoice, voiceForCountry } from './teamVoices';
 import { imageLive, paintFlag } from './paintedFlag';
 import { ensureChant } from './chant';
 import { anthemFile, anthemLive } from './anthem';
@@ -63,7 +64,7 @@ export function storyRoutes(runner: WorldRunner): Router {
       const lore = await getLore(id, w);
       if (!lore) return void res.status(404).json({ error: 'no such country' });
       const text = `${lore.summary} ${lore.history}`.replace(/\s+/g, ' ').trim();
-      const voice = chooseVoice(w.countries[id]!.voiceStyle);
+      const voice = voiceForCountry(w, id);
       const file = path.join(CACHE, 'narration', `${sha(`${voice.id}\n${text}`)}.mp3`);
       if (playing()) {
         if (!(await exists(file))) return void res.type('audio/mpeg').sendFile(path.join(SAMPLES, 'narration.mp3'));
@@ -145,6 +146,27 @@ export function storyRoutes(runner: WorldRunner): Router {
       res.type('audio/mpeg').sendFile(await ensureAudio(b, playing()));
     } catch {
       if (playing()) return void res.type('audio/mpeg').sendFile(path.join(SAMPLES, 'narration.mp3'));
+      res.status(503).json({ error: 'voice unavailable' });
+    }
+  });
+
+  // The royal herald reads a decree aloud, in one of the team's voices. Only a decree's own line is read.
+  r.get('/decree/:entryId/herald', async (req, res) => {
+    const w = runner.getWorld();
+    const entryId = req.params.entryId ?? '';
+    const entry = w?.chronicle.find((e) => e.id === entryId && e.kind === 'decree');
+    if (!w || !entry) return void res.status(404).json({ error: 'no such decree' });
+    const sample = path.join(SAMPLES, 'narration.mp3');
+    if (currentMode() !== 'live') return void res.type('audio/mpeg').sendFile(sample);
+    try {
+      const text = heraldText(entry.text);
+      const voice = heraldVoice(entryId);
+      const file = path.join(CACHE, 'herald', `${sha(`${voice.id}\n${text}`)}.mp3`);
+      if (playing()) {
+        if (!(await exists(file))) return void res.type('audio/mpeg').sendFile(sample);
+      } else await ensure(file, () => speak(text, voice.id, { settings: { stability: 0.4, similarity_boost: 0.75, style: 0.5 } }));
+      res.type('audio/mpeg').sendFile(file);
+    } catch {
       res.status(503).json({ error: 'voice unavailable' });
     }
   });

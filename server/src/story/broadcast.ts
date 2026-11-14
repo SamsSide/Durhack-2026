@@ -8,11 +8,9 @@ import { fileURLToPath } from 'node:url';
 import type { World } from '@terra/shared';
 import { currentMode, getBudget, loreModel, validate, type Schema } from '../llm';
 import { speak, VoiceUnavailable } from './eleven';
+import { anchorFor } from './teamVoices';
 
 const CACHE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.cache', 'broadcast');
-/** Daniel: the formal British broadcaster premade voice. */
-const NEWS_VOICE = { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel' };
-const STING = 'Terra Nova News.';
 const KEEP = 10;
 
 /** BROADCAST_MAX_PER_RUN: bulletins per world that may use Gemini and ElevenLabs (default 12). */
@@ -23,8 +21,10 @@ export const maxBroadcasts = () => {
 
 export interface Bulletin {
   id: string; tick: number; year: number; headline: string; script: string; audio: string;
+  /** The team voice reading this bulletin (Sam, Justin or Denis, in rotation). */
+  anchor: string;
 }
-interface Stored extends Bulletin { mood: string; voiced: boolean }
+interface Stored extends Bulletin { mood: string; voiced: boolean; voiceId: string }
 export interface BroadcastResult { bulletin: Bulletin; source: 'gemini' | 'template'; tokensIn: number; tokensOut: number; ms: number }
 
 let worldId = '';
@@ -149,9 +149,9 @@ async function ask(w: World, f: ReturnType<typeof facts>, imageBase64: string, m
 // --- audio ---------------------------------------------------------------------------------
 const exists = (p: string) => fs.access(p).then(() => true, () => false);
 const inflight = new Map<string, Promise<void>>();
-const spoken = (b: { script: string }) => `${STING} ${b.script}`;
-export const audioFile = (b: { script: string }) =>
-  path.join(CACHE, `${crypto.createHash('sha256').update(`${NEWS_VOICE.id}\n${spoken(b)}`).digest('hex')}.mp3`);
+const spoken = (b: { script: string; anchor: string }) => `This is ${b.anchor} for Terra Nova News. ${b.script}`;
+export const audioFile = (b: { script: string; anchor: string; voiceId: string }) =>
+  path.join(CACHE, `${crypto.createHash('sha256').update(`${b.voiceId}\n${spoken(b)}`).digest('hex')}.mp3`);
 
 /** Make the bulletin's mp3 once, even when several requests ask at the same time. */
 export function ensureAudio(b: Stored, cachedOnly = false): Promise<string> {
@@ -162,7 +162,7 @@ export function ensureAudio(b: Stored, cachedOnly = false): Promise<string> {
       if (await exists(file)) return;
       if (cachedOnly) throw new VoiceUnavailable('not recorded');
       if (!b.voiced) throw new VoiceUnavailable('broadcast cap reached');
-      const buf = await speak(spoken(b), NEWS_VOICE.id, { settings: { stability: 0.6, similarity_boost: 0.75, style: 0.2 } });
+      const buf = await speak(spoken(b), b.voiceId, { settings: { stability: 0.6, similarity_boost: 0.75, style: 0.2 } });
       await fs.mkdir(CACHE, { recursive: true });
       const tmp = `${file}.${process.pid}.tmp`;
       await fs.writeFile(tmp, buf);
@@ -194,14 +194,15 @@ export async function makeBroadcast(w: World, imageBase64: string, mimeType: str
   const source = body ? 'gemini' : 'template';
   body ??= template(w, f);
   const id = `b-${++counter}`;
-  const stored: Stored = { id, tick: w.tick, year: w.year, ...body, audio: `/api/broadcast/${id}/audio`, voiced: underCap };
+  const anchor = anchorFor(counter);
+  const stored: Stored = { id, tick: w.tick, year: w.year, ...body, audio: `/api/broadcast/${id}/audio`, voiced: underCap, anchor: anchor.name, voiceId: anchor.id };
   store.set(id, stored);
   while (store.size > KEEP) store.delete(store.keys().next().value as string);
   lastHeadline = stored.headline;
   lastCounts = tileCounts(w);
   // Warm the audio in the background so the GET is quick.
   if (currentMode() === 'live' && underCap) void ensureAudio(stored).catch(() => { /* the GET answers 503 */ });
-  const { mood: _m, voiced: _v, ...bulletin } = stored;
-  void _m; void _v;
+  const { mood: _m, voiced: _v, voiceId: _i, ...bulletin } = stored;
+  void _m; void _v; void _i;
   return { bulletin, source, tokensIn, tokensOut, ms: Date.now() - started };
 }

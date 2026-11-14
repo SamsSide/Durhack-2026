@@ -6,7 +6,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { World } from '@terra/shared';
 import { llmJson, loreModel, type Schema } from '../llm';
-import { chooseVoice, speak, voiceLive } from './eleven';
+import { speak, voiceLive } from './eleven';
+import { voiceForCountry } from './teamVoices';
 
 const CACHE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.cache', 'chant');
 /** eleven_v3 understands audio tags such as [shouting] and is the most expressive; set ELEVEN_CHANT_MODEL to change it. */
@@ -60,7 +61,7 @@ export async function chantLine(world: World, id: number): Promise<string> {
 
 /** The cache file for a nation's chant: fixed per world, nation and voice, so it is made once. */
 export function chantFile(world: World, id: number): string {
-  const voice = chooseVoice(world.countries[id]!.voiceStyle);
+  const voice = voiceForCountry(world, id);
   return path.join(CACHE, `${sha(`${world.id}\n${id}\n${voice.id}\n${chantModel()}`)}.mp3`);
 }
 
@@ -77,7 +78,7 @@ export async function ensureChant(world: World, id: number, cachedOnly = false):
       const line = await chantLine(world, id);
       const v3 = chantModel().startsWith('eleven_v3');
       const text = v3 ? `[shouting] ${line}` : line;
-      const voice = chooseVoice(world.countries[id]!.voiceStyle);
+      const voice = voiceForCountry(world, id);
       const buf = await speak(text, voice.id, {
         model: chantModel(),
         settings: v3 ? { stability: 0, similarity_boost: 0.75, style: 0.6 } : { stability: 0.3, similarity_boost: 0.75, style: 0.8 },
