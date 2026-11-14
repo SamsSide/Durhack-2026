@@ -17,6 +17,7 @@ import { SelectionGlow } from './camera/SelectionGlow';
 import { Political } from './political/Political';
 import { Atmosphere } from './atmosphere/Atmosphere';
 import { Space } from './space/Space';
+import { Celestial } from './celestial';
 import { Orbit } from './orbit';
 import { Trade } from './trade/Trade';
 import { Structures } from './structures/Structures';
@@ -30,19 +31,6 @@ import { registerCapture } from './capture';
 import { setStatuses } from './status/statusTint';
 
 const SPACE = '#0b0f14';
-
-/** Directional light that stays at the camera's upper left so the lit side faces the viewer. */
-function CameraLight() {
-  const ref = useRef<THREE.DirectionalLight>(null);
-  const offset = useMemo(() => new THREE.Vector3(), []);
-  useFrame(({ camera }) => {
-    const l = ref.current;
-    if (!l) return;
-    offset.set(-1.2, 1.0, 0.8).applyQuaternion(camera.quaternion);
-    l.position.copy(camera.position).add(offset);
-  });
-  return <directionalLight ref={ref} intensity={1.1} />;
-}
 
 /** Hands the renderer, scene and camera to captureGlobe(). */
 function CaptureBridge() {
@@ -174,8 +162,7 @@ export function Globe() {
   return (
     <Canvas dpr={[1, 2]} camera={{ position: [0, 0.8, 2.48], fov: 45 }}>
       <color attach="background" args={[space]} />
-      <hemisphereLight args={['#fff6e0', '#33414a', 0.6]} />
-      <CameraLight />
+      <Celestial />
       <Space />
       <Orbit />
       <Atmosphere />
