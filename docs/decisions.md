@@ -72,3 +72,4 @@
 - 2026-11-14 · Owner: time gears run from 1 week a second to 10 years a second (1/104 to 5); new worlds still start at 1 month a second. The material-system UI style is kept as the team's chosen look.
 - 14 Nov 21:10 (owner, #276): presentation mode on key P and a collapsed-by-default screen (globe, top bar, minimap; chronicle, history, decree and ledger open on click); 'fewer words at orbit' declined for now. The decree field widens at 1800 px and up. Built by lane c.
 - 14 Nov 21:20 (owner): no video. Judging is a 2-minute live demo on the owner's laptop, repeated for each judge who comes to the table; docs/submission.md section 3 is the script.
+- 14 Nov (owner, #288): demo polish first: decree severity from the words with visible feedback, news focus beats shown as a live picture-in-picture, new worlds start at 3 months a second.

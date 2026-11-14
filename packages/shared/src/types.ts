@@ -90,7 +90,23 @@ export interface Relation { a: number; b: number; stance: Stance; since: number;
 export type ChronicleKind = 'founding' | 'proclamation' | 'growth' | 'war' | 'battle' | 'peace'
   | 'alliance' | 'betrayal' | 'fall' | 'silence' | 'return' | 'dispute' | 'decree' | 'secession' | 'wonder'
   | 'death' | 'succession';
-export interface ChronicleEntry { id: string; tick: number; year: number; kind: ChronicleKind; countries: number[]; text: string }
+export interface ChronicleEntry {
+  id: string; tick: number; year: number; kind: ChronicleKind; countries: number[]; text: string;
+  decree?: DecreeOutcome;                                // owner #288: only on a decree's own line (kind 'decree'), what it did
+}
+
+/** Owner #288: the effects a decree can have (row A20). */
+export type DecreeEffect = 'plague' | 'famine' | 'storm' | 'meteor' | 'prophet' | 'goldrush' | 'rebellion' | 'flood' | 'none';
+/** Owner #288: what a decree did, decided once when it is applied and recorded in its chronicle entry. */
+export interface DecreeOutcome {
+  effect: DecreeEffect;
+  severity: number;                                      // 0 to 0.8, from the words ("half the population dies" 0.5, "a mild fever" 0.1)
+  target: { countryId: number | null; tiles: number[] }; // the nation struck and the provinces actually hit (for the camera and the visual)
+  result: string;                                        // one human line with real numbers: "Plague in Hatfield: 41,000 dead", "The world shrugs."
+}
+
+/** Owner #288: one beat of a news bulletin's picture: where to look while the anchor speaks of it. */
+export interface NewsFocus { countryId: number | null; tile: number; atSecond: number; caption: string }
 
 export interface AgentStatus {
   countryId: number;

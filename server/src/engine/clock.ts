@@ -23,15 +23,15 @@ const WINDOW_MS = 2000;          // how far back the achieved rate looks
 export type Pacing = 'auto' | 'manual';
 export interface ClockState { speed: number; target: number; pacing: Pacing; paused: boolean }
 
-/** The speed every new world starts at: one month a second. */
-export const START_SPEED = 1 / 24;
+/** The speed every new world starts at: three months a second, the `3 mo` gear (owner #288, 14 Nov). */
+export const START_SPEED = 1 / 8;
 export const clampSpeed = (v: number): number => Math.min(MAX_SPEED, Math.max(MIN_SPEED, v));
 // Six places, so the slow gears reach the clients whole enough to interpolate days (1/104 = 0.009615;
 // four places would give 0.0096, 0.2% slow).
 const r4 = (x: number): number => Math.round(x * 1e6) / 1e6;
 
 export class Clock {
-  target = START_SPEED;           // every new world starts at one month a second (owner, 14 Nov)
+  target = START_SPEED;           // every new world starts at three months a second (owner #288, 14 Nov)
   pacing: Pacing = 'manual';
   paused = false;
   /** Called with the new state whenever it changed (throttled while easing). */

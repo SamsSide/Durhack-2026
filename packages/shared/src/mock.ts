@@ -253,7 +253,7 @@ export function mockWorld(seed = 1337): World {
   return {
     id: `w-${(hashString(String(seed)) & 0xffff).toString(16).padStart(4, '0')}`, seed,
     prompt: 'a patchwork world of five young nations', name: 'The Mock Age', era: 'age of founding',
-    tick: 0, year: YEAR0, speed: 1 / 24, paused: false, tiles, regions, owner, countries, structures, units,
+    tick: 0, year: YEAR0, speed: 1 / 8, paused: false, tiles, regions, owner, countries, structures, units,
     relations: stances.map(([a, b, stance]) => ({ a, b, stance, since: 0, grievance: stance === 'hostile' ? 0.4 : 0 })),
     chronicle,
     agents: countries.map((c) => ({ countryId: c.id, link: 'up' as const, ruler: 'llm' as const, deleted: false, lastHeardTick: 0, pendingEvents: 0 })),
