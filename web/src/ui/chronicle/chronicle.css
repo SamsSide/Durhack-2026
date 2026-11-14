@@ -67,10 +67,10 @@
   letter-spacing: 0.16em; text-transform: uppercase;
 }
 .tn-t-track { flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: center; overflow: hidden; white-space: nowrap; font-size: 16px; }
-.tn-t-belt { display: flex; flex: none; will-change: transform; }
-.tn-t-measure { display: flex; flex: none; }
-.tn-t-copy { display: flex; flex: none; align-items: center; gap: 14px; padding-right: 14px; }
-.tn-t-cell { display: inline-flex; align-items: center; gap: 14px; flex: none; }
+/* The belt holds the cells edge to edge (each carries its own trailing space), so taking the
+   first cell off moves the rest by exactly its width. Ticker.tsx owns the transform. */
+.tn-t-belt { display: flex; flex: none; align-items: center; will-change: transform; }
+.tn-t-cell { display: inline-flex; align-items: center; gap: 14px; padding-right: 14px; flex: none; }
 .tn-t-item {
   display: inline-flex; align-items: center; gap: 7px;
   background: none; border: 0; padding: 3px 8px; margin: 0 -8px; border-radius: var(--radius-1);
@@ -79,7 +79,7 @@
 .tn-t-item:disabled { cursor: default; }
 .tn-t-item:not(:disabled):hover .tn-t-txt { text-decoration: underline; text-decoration-color: var(--color-ink-muted); }
 .tn-t-item:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.tn-t-new { font-weight: 500; animation: ticker-new 2s ease-out both; }  /* a gilt wash that fades (keyframes in tokens.css) */
+.tn-t-new { animation: ticker-new 2s ease-out both; }  /* a gilt wash that fades (keyframes in tokens.css); no weight change, a cell's width must never move */
 .tn-t-sep { width: 4px; height: 4px; transform: rotate(45deg); background: var(--color-ink-muted); flex: none; }
 .tn-t-empty { color: var(--color-ink-muted); font-style: italic; font-size: 14px; }
 
