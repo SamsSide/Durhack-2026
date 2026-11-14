@@ -61,5 +61,139 @@
       "file": "tree.glb",
       "footprint": 0.3
     }
+  },
+  "styles": {
+    "medieval": {
+      "capital": {
+        "file": "medieval/capital.glb",
+        "footprint": 1.0
+      },
+      "city": {
+        "file": "medieval/city.glb",
+        "footprint": 1.0
+      },
+      "town": {
+        "file": "medieval/town.glb",
+        "footprint": 0.9
+      },
+      "temple": {
+        "file": "medieval/temple.glb",
+        "footprint": 0.7
+      },
+      "fort": {
+        "file": "medieval/fort.glb",
+        "footprint": 0.7
+      }
+    },
+    "classical": {
+      "capital": {
+        "file": "classical/capital.glb",
+        "footprint": 1.0
+      },
+      "city": {
+        "file": "classical/city.glb",
+        "footprint": 1.0
+      },
+      "town": {
+        "file": "classical/town.glb",
+        "footprint": 0.9
+      },
+      "temple": {
+        "file": "classical/temple.glb",
+        "footprint": 0.7
+      },
+      "fort": {
+        "file": "classical/fort.glb",
+        "footprint": 0.7
+      }
+    },
+    "desert": {
+      "capital": {
+        "file": "desert/capital.glb",
+        "footprint": 1.0
+      },
+      "city": {
+        "file": "desert/city.glb",
+        "footprint": 1.0
+      },
+      "town": {
+        "file": "desert/town.glb",
+        "footprint": 0.9
+      },
+      "temple": {
+        "file": "desert/temple.glb",
+        "footprint": 0.7
+      },
+      "fort": {
+        "file": "desert/fort.glb",
+        "footprint": 0.7
+      }
+    },
+    "east_asian": {
+      "capital": {
+        "file": "east_asian/capital.glb",
+        "footprint": 1.0
+      },
+      "city": {
+        "file": "east_asian/city.glb",
+        "footprint": 1.0
+      },
+      "town": {
+        "file": "east_asian/town.glb",
+        "footprint": 0.9
+      },
+      "temple": {
+        "file": "east_asian/temple.glb",
+        "footprint": 0.7
+      },
+      "fort": {
+        "file": "east_asian/fort.glb",
+        "footprint": 0.7
+      }
+    },
+    "mesoamerican": {
+      "capital": {
+        "file": "mesoamerican/capital.glb",
+        "footprint": 1.0
+      },
+      "city": {
+        "file": "mesoamerican/city.glb",
+        "footprint": 1.0
+      },
+      "town": {
+        "file": "mesoamerican/town.glb",
+        "footprint": 0.9
+      },
+      "temple": {
+        "file": "mesoamerican/temple.glb",
+        "footprint": 0.7
+      },
+      "fort": {
+        "file": "mesoamerican/fort.glb",
+        "footprint": 0.7
+      }
+    },
+    "scrap": {
+      "capital": {
+        "file": "scrap/capital.glb",
+        "footprint": 1.0
+      },
+      "city": {
+        "file": "scrap/city.glb",
+        "footprint": 1.0
+      },
+      "town": {
+        "file": "scrap/town.glb",
+        "footprint": 0.9
+      },
+      "temple": {
+        "file": "scrap/temple.glb",
+        "footprint": 0.7
+      },
+      "fort": {
+        "file": "scrap/fort.glb",
+        "footprint": 0.7
+      }
+    }
   }
 }
