@@ -17,6 +17,7 @@ import type {
 import { hashString, mulberry32, type Rng } from '../rng';
 import { countryTiles, relationOf } from '../world';
 import { TERRAIN_EFFECTS, LANDING_PENALTY } from './terrain';
+import { wonderBonusOf } from './wonders';
 import { AGE_EDGE, STRENGTH_CAP, ageIndex, ageStrength } from './ages';
 
 /** No nation declares a war of its own before this tick. */
@@ -69,7 +70,7 @@ export function defenceEstimate(world: World, tile: number, defender: number): n
   let d = 0;
   for (const u of world.units) if (u.tile === tile && u.owner === defender && isCombatant(u)) d += u.strength;
   const g = world.owner[tile] === defender ? garrisonAt(world, tile, defender) : { strength: 0, fort: false };
-  return (d + g.strength) * (1 + TERRAIN_EFFECTS[world.tiles[tile]!.terrain].defence) * (g.fort ? 1.5 : 1);
+  return (d + g.strength) * (1 + wonderBonusOf(world.structures, defender).defence) * (1 + TERRAIN_EFFECTS[world.tiles[tile]!.terrain].defence) * (g.fort ? 1.5 : 1);
 }
 
 // ---- the battle -----------------------------------------------------------------------------
@@ -177,7 +178,7 @@ export function settleMove(world: World, e: Extract<WorldEvent, { type: 'unit_mo
   const raid = u.kind === 'fleet' && tile.terrain !== 'ocean';
   const seed = hashString(`battle:${to}:${e.tick}:${u.id}:${defUnits.map((v) => v.id).join(',')}`);
   const ageGap = ageIndex(world.countries[a]?.techAge) - ageIndex(world.countries[defender]?.techAge);
-  const r = resolveBattle({ attack: u.strength * (raid ? 0.7 : 1) * landing, defend: defendRaw, terrain: tile.terrain, fort: g.fort, seed, ageGap });
+  const r = resolveBattle({ attack: u.strength * (raid ? 0.7 : 1) * landing, defend: defendRaw * (1 + wonderBonusOf(world.structures, defender).defence), terrain: tile.terrain, fort: g.fort, seed, ageGap });
   const winner = r.attackerWins ? a : defender;
   mk({ type: 'battle', tile: to, attacker: a, defender, attackerUnit: u.id, winner, losses: { attacker: r.lossA, defender: r.lossD } });
 
@@ -218,6 +219,7 @@ export function settleMove(world: World, e: Extract<WorldEvent, { type: 'unit_mo
       for (const s of world.structures) {
         if (s.tile !== to || s.owner !== defender || s.kind === 'ruin') continue;
         if (s.kind === 'capital') mk({ type: 'structure_upgraded', structureId: s.id, kind: 'city' });
+        else if (s.kind === 'wonder' && (hashString(`raze:${s.id}:${e.tick}`) % 100) < 20) mk({ type: 'structure_upgraded', structureId: s.id, kind: 'ruin' });
         else if (RAZEABLE.includes(s.kind) && (hashString(`raze:${s.id}:${e.tick}`) % 100) < 25) mk({ type: 'structure_destroyed', structureId: s.id });
       }
       const left = countryTiles(world, defender).length - 1;

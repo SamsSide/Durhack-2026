@@ -19,12 +19,13 @@ export const KIND_LABEL: Record<DisplayKind, string> = {
   return: 'Return',
   dispute: 'Dispute',
   decree: 'Decree',
+  wonder: 'Wonder',
 };
 
 /** Legend order: the design's eleven first, then the quieter kinds. */
 export const LEGEND_ORDER: DisplayKind[] = [
   'war', 'battle', 'peace', 'alliance', 'betrayal', 'fall', 'secession', 'dispute',
-  'silence', 'return', 'decree', 'founding', 'proclamation', 'growth',
+  'silence', 'return', 'decree', 'founding', 'proclamation', 'growth', 'wonder',
 ];
 
 export function displayKind(e: ChronicleEntry, world: World): DisplayKind {

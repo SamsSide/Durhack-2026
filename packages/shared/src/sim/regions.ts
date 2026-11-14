@@ -15,6 +15,7 @@
 import type { World, WorldEvent } from '../types';
 import { hashString } from '../rng';
 import { regionOwner } from '../world';
+import { wonderBonusOf } from './wonders';
 import { enemiesOf, type WarLedger } from './war';
 
 /** A nation reviews its regions' unrest every this many years (staggered by nation). */
@@ -133,6 +134,7 @@ export function unrestTarget(
   for (const o of view.owner) if (o === me) size++;
   if (size > 35) u += Math.min(0.1, (size - 35) / 150);             // a sprawling empire
   u -= temples * 0.06 + Math.min(0.1, armies * 0.05);               // faith and garrisons calm it
+  u += wonderBonusOf(view.structures, me).unrest * 6;               // a finished wonder calms the nation (row A30)
   if (view.tiles[c.capitalTile]?.region === regionId) u *= 0.4;     // the home region is loyal
   return Math.round(Math.max(0, Math.min(1, u)) * 100) / 100;
 }

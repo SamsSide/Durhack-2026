@@ -14,6 +14,7 @@ import { unrestTurn, type UnrestMemory } from './regions';
 import { ageStrength, ageTurn, satelliteTurn, type AgeMemory } from './ages';
 import { tradeTurn } from './trade';
 import { TERRAIN_EFFECTS } from './terrain';
+import { WONDER_BUILD_TICKS, WONDER_COST, planWonder, wonderBonusOf } from './wonders';
 
 export type Focus = 'expand' | 'develop' | 'fortify' | 'attack';
 export interface NationPolicy { focus: Focus; targets?: number[] }
@@ -30,8 +31,8 @@ export interface TurnContext {
 
 // ---- tables ---------------------------------------------------------------------------------
 
-const STRUCT_INCOME: Record<StructureKind, number> = { capital: 5, camp: 0.3, village: 1.2, town: 3, city: 6, farm: 1.4, port: 2.6, fort: 0, temple: 0.4, factory: 7, ruin: 0 };
-const STRUCT_POP: Record<StructureKind, number> = { capital: 9000, camp: 600, village: 2200, town: 6000, city: 14000, farm: 2500, port: 1800, fort: 0, temple: 300, factory: 1000, ruin: 0 };
+const STRUCT_INCOME: Record<StructureKind, number> = { capital: 5, camp: 0.3, village: 1.2, town: 3, city: 6, farm: 1.4, port: 2.6, fort: 0, temple: 0.4, factory: 7, ruin: 0, wonder: 0 };
+const STRUCT_POP: Record<StructureKind, number> = { capital: 9000, camp: 600, village: 2200, town: 6000, city: 14000, farm: 2500, port: 1800, fort: 0, temple: 300, factory: 1000, ruin: 0, wonder: 1500 };
 const TRADE_KINDS: StructureKind[] = ['port', 'town', 'city', 'factory'];
 
 export const COST = { camp: 4, village: 28, town: 80, city: 220, farm: 12, port: 20, fort: 24, temple: 28, factory: 70, army: 22, fleet: 30 } as const;
@@ -54,6 +55,7 @@ export function nationIncome(world: World, countryId: number): number {
     if (s.owner !== countryId) continue;
     inc += STRUCT_INCOME[s.kind] * (TRADE_KINDS.includes(s.kind) ? tradeMul : 1);
   }
+  inc *= 1 + wonderBonusOf(world.structures, countryId).income;
   for (const u of world.units) if (u.owner === countryId) inc -= upkeep(u, ageStrength(c), world.tiles);
   return inc;
 }
@@ -411,6 +413,36 @@ export function nationTurn(
     }
   }
 
+  // --- 3b. wonders (row A30, sim/wonders.ts): finish the one being built; start one when rich, at peace and past tick 120
+  for (const w of myStructs) {
+    if (w.kind === 'wonder' && !w.complete && own[w.tile] === countryId && tick - w.builtTick >= WONDER_BUILD_TICKS) {
+      emit({ type: 'wonder_built', countryId, structureId: w.id });
+      w.complete = true;
+      out.push({ id: `c-${countryId}-${tick}-wonderdone`, tick, actor: countryId, lamport: 0, type: 'chronicle',
+        entry: { id: `c-${countryId}-${tick}-wonderdone`, tick, year: view.year, kind: 'wonder', countries: [countryId], text: `${w.name ?? 'A great wonder'} is finished, and ${me.name} stands taller for it.` } });
+    }
+  }
+  if (!enemies.length && treasury >= WONDER_COST) {
+    const plan = planWonder(view, countryId, tick, capital, treasury,
+      (i) => own[i] === countryId && !structAt.has(i) && !settlerTiles.has(i),
+      (i) => { const o = structAt.get(i); return own[i] === countryId && o && (o.kind === 'farm' || o.kind === 'camp' || o.kind === 'temple') && !settlerTiles.has(i) ? o.id : undefined; }, myStructs);
+    if (plan) {
+      spend(WONDER_COST);
+      if (plan.clear) {
+        emit({ type: 'structure_destroyed', structureId: plan.clear });
+        const gone = myStructs.findIndex((x) => x.id === plan.clear);
+        if (gone >= 0) myStructs.splice(gone, 1);
+        structAt.delete(plan.tile);
+      }
+      const id = uid('w');
+      emit({ type: 'wonder_started', countryId, structureId: id, tile: plan.tile, wonder: plan.kind, name: plan.name });
+      const w: Structure = { id, tile: plan.tile, owner: countryId, kind: 'wonder', builtTick: tick, wonder: plan.kind, name: plan.name, complete: false };
+      structAt.set(plan.tile, w); myStructs.push(w);
+      out.push({ id: `c-${countryId}-${tick}-wonder`, tick, actor: countryId, lamport: 0, type: 'chronicle',
+        entry: { id: `c-${countryId}-${tick}-wonder`, tick, year: view.year, kind: 'wonder', countries: [countryId], text: `${me.name} lays the first stones of ${plan.name}.` } });
+    }
+  }
+
   // --- 4. diplomacy and war (row A6, sim/war.ts): alliances, peace, declarations, trade; then the march
   diplomacyTurn({ view, me: countryId, tick, rng, focus: policy.focus, targets: policy.targets ?? [], ledger: ctx.wars, own, emit });
   marchTurn({ view, me: countryId, tick, rng, focus: policy.focus, targets: policy.targets ?? [], own, units: myUnits.filter(isCombatant), emit, uid });
@@ -441,6 +473,7 @@ export function nationTurn(
   for (let i = 0; i < own.length; i++) if (own[i] === countryId) income += TERRAIN_EFFECTS[view.tiles[i]!.terrain].income;
   const tradeMul = 0.8 + 0.6 * t.trade;
   for (const s of myStructs) income += STRUCT_INCOME[s.kind] * (TRADE_KINDS.includes(s.kind) ? tradeMul : 1);
+  income *= 1 + wonderBonusOf(myStructs, countryId).income;
   for (const u of myUnits) if (u.tile >= 0) income -= upkeep(u, ageStrength(me), view.tiles);
   treasury = Math.max(0, treasury + income * 0.4 - treasury * 0.01);
   let cap = 0;
@@ -487,6 +520,10 @@ export function isEventValid(world: World, e: WorldEvent): boolean {
       return e.structure.owner === a && world.owner[e.structure.tile] === a
         && !world.structures.some((s) => s.tile === e.structure.tile && s.kind !== 'ruin')
         && !world.structures.some((s) => s.id === e.structure.id);
+    case 'wonder_started':
+      return e.countryId === a && world.owner[e.tile] === a && !world.structures.some((s) => s.id === e.structureId || (s.tile === e.tile && s.kind !== 'ruin'));
+    case 'wonder_built':
+      return e.countryId === a && world.structures.some((s) => s.id === e.structureId && s.owner === a && s.kind === 'wonder');
     case 'structure_upgraded':
       return world.structures.some((s) => s.id === e.structureId && s.owner === a);
     case 'unit_spawned':

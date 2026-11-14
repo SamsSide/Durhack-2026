@@ -7,6 +7,7 @@ import type {
 import { generateProvinces } from './sphere';
 import { hashString, mulberry32, pick, type Rng } from './rng';
 import { applyEvent, countryTiles, regionOwner } from './world';
+import { wonderKindFor, wonderName } from './sim/wonders';
 
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
@@ -280,6 +281,7 @@ export function* mockEvents(world: World): Generator<WorldEvent> {
   let tick = t0;
   let warA = -1, warB = -1;
   let rebelRegion = -1, rebelParent = -1;
+  let wonderId = '';
 
   const mk = (actor: WorldEvent['actor'], body: EventBody): WorldEvent => {
     const ev = { id: `e-${++nEvent}`, tick, actor, lamport: ++lamport, ...body } as WorldEvent;
@@ -364,6 +366,25 @@ export function* mockEvents(world: World): Generator<WorldEvent> {
   }
 
   function* script(rel: number): Generator<WorldEvent> {
+    // one wonder: laid out at rel 22 by the biggest nation, finished 40 ticks later (row A30)
+    if (rel === 22) {
+      const big = alive().map((c) => ({ c, n: countryTiles(w, c.id).length })).sort((x, y) => y.n - x.n || x.c.id - y.c.id)[0]?.c;
+      const spot = big && countryTiles(w, big.id).find((t) => isLand(t) && !w.structures.some((s) => s.tile === t) && w.tiles[t]!.terrain !== 'mountain' && w.tiles[t]!.terrain !== 'ice' && w.tiles[t]!.terrain !== 'coast');
+      if (big && spot !== undefined) {
+        const kind = wonderKindFor(big);
+        const name = wonderName(big, kind, w.regions[w.tiles[big.capitalTile]!.region]?.name ?? '');
+        wonderId = 's-gw1';
+        yield mk(big.id, { type: 'wonder_started', countryId: big.id, structureId: wonderId, tile: spot, wonder: kind, name });
+        yield say('wonder', [big.id], `${big.name} lays the first stones of ${name}.`, big.id);
+      }
+    }
+    if (rel === 62 && wonderId) {
+      const s = w.structures.find((x) => x.id === wonderId);
+      if (s) {
+        yield mk(s.owner, { type: 'wonder_built', countryId: s.owner, structureId: s.id });
+        yield say('wonder', [s.owner], `${s.name ?? 'The great wonder'} is finished, and ${nm(s.owner)} stands taller for it.`, s.owner);
+      }
+    }
     if (rel === 30) {
       const al = w.relations.find((r) => r.stance === 'alliance');
       if (al) yield say('alliance', [al.a, al.b], `${nm(al.a)} and ${nm(al.b)} swear an oath of mutual defence.`);
