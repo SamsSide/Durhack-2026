@@ -33,6 +33,18 @@ export function mainGood(world: World, countryId: number): string {
   return GOODS[best];
 }
 
+/** The nation's next-best good that is not `not`, or null when its ground offers nothing else. */
+function secondGood(world: World, countryId: number, not: string): string | null {
+  const n = new Map<Terrain, number>();
+  for (const t of countryTiles(world, countryId)) {
+    const k = world.tiles[t]!.terrain;
+    if (k !== 'ocean' && GOODS[k] !== not) n.set(k, (n.get(k) ?? 0) + 1);
+  }
+  let best: Terrain | null = null, bn = -1;
+  for (const [k, v] of [...n].sort((a, b) => a[0].localeCompare(b[0]))) if (v > bn) { best = k; bn = v; }
+  return best ? GOODS[best] : null;
+}
+
 /** The place a peace treaty was named for, read back from the chronicle line that made it. */
 function treatyPlace(world: World, a: number, b: number, since: number): string {
   for (let i = world.chronicle.length - 1; i >= 0; i--) {
@@ -93,7 +105,9 @@ export function paymentTurn(p: PaymentInput): void {
     if (!oc?.alive || age <= 0 || age % 10 !== 0) continue;
     if (roll(`trade:${r.a}:${r.b}:${tick}`) >= 0.34) continue;
     if (c.treasury > oc.treasury || (c.treasury === oc.treasury && me > o)) continue;       // only the poorer pays
-    pay(o, 0.04, 'trade', `${mainGood(view, o)} for ${mainGood(view, me)}`);
+    const got = mainGood(view, o); let give = mainGood(view, me);
+    if (give === got) give = secondGood(view, me, got) ?? `${got} and passage`;   // both sides always differ
+    pay(o, 0.04, 'trade', `${got} for ${give}`);
   }
 
   // 3. Allies at war. The war's start is the relation's `since`; each payment happens once per war.

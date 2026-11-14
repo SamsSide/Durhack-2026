@@ -1,7 +1,7 @@
 // Row A27: the devnet settler. Every window the module nets the queue and hands the groups here;
 // each group becomes one transaction, a memo followed by a transfer, signed by the paying nation's
 // own wallet (the Commons wallet pays the fee). Every 15 s a true-up keeps the chain's balances
-// equal to the sim's treasuries, every 30 s the real balances are read back.
+// close to the sim's treasuries (every nation above the tolerance, round-robin), every 30 s the real balances are read back.
 // Nothing here is awaited by the tick loop; the caller catches everything.
 import {
   createClient, devnet, flattenTransactionPlanResult, nonDivisibleSequentialInstructionPlan,
@@ -21,10 +21,10 @@ import { loadWallets, type Wallets } from './wallets';
 const LAMPORTS_PER_SOL = 1_000_000_000;
 const FEE_LAMPORTS_PER_TX = 10_000;    // an estimate: two signatures at 5,000
 const MIN_COMMONS_SOL = 0.05;
-const TRUE_UP_MS = 15_000;
+const TRUE_UP_MS = 10_000;
 const READ_MS = 30_000;
 const TRUE_UP_GAP = 1;                 // coins
-const MAX_TRUE_UPS = 3;                // per pass, so it never eats the payment budget
+const TRUE_UP_PCT = 0.01;              // half of the 2% the API calls in sync, so a true-up lands inside it
 
 export function makeClient(wallets: Wallets) {
   const rpcUrl = process.env.SOLANA_RPC_URL?.trim() || 'https://api.devnet.solana.com';
@@ -59,6 +59,7 @@ export class DevnetBackend implements ChainBackend {
   private lastTrueUp = 0;
   private lastRead = 0;
   private maintaining = false;
+  private cursor = 0;
 
   ready(): boolean { return this.gen !== null; }
   info(): ChainInfo | null { return this.gen?.info ?? null; }
@@ -168,21 +169,28 @@ export class DevnetBackend implements ChainBackend {
       }
       if (now - this.lastTrueUp >= TRUE_UP_MS) {
         this.lastTrueUp = now;
-        let done = 0;
-        for (const [id, target] of input.targets) {
-          if (done >= MAX_TRUE_UPS) break;
-          if (!this.tokenOfNation(id)) continue;
+        const ids = [...input.targets.keys()].filter((id) => this.tokenOfNation(id));
+        const start = ids.length ? this.cursor % ids.length : 0;
+        let done = 0; let tried = 0; let lastErr: unknown = null;
+        for (let i = 0; i < ids.length && done < input.maxTx; i++) {
+          const id = ids[(start + i) % ids.length]!;
+          const target = input.targets.get(id)!;
           const gap = round2(target - (this.bal.get(id) ?? 0));
-          if (Math.abs(gap) <= TRUE_UP_GAP) continue;
+          if (Math.abs(gap) <= Math.max(TRUE_UP_GAP, Math.abs(target) * TRUE_UP_PCT)) continue;
           // Income comes from the Commons; spending goes back to it.
           const ixs = gap > 0
             ? this.transferIx('commons', id, gap, 'TN sync: income')
             : this.transferIx(id, 'commons', -gap, 'TN sync: spending');
           if (!ixs) continue;
-          await this.send(nonDivisibleSequentialInstructionPlan(ixs));
-          this.bump('commons', -gap); this.bump(id, gap);
-          done++;
+          this.cursor = start + i + 1;          // the next pass starts after the last nation served
+          tried++;
+          try {
+            await this.send(nonDivisibleSequentialInstructionPlan(ixs));
+            this.bump('commons', -gap); this.bump(id, gap);
+            done++;
+          } catch (e) { lastErr = e; if (tried - done >= 2) break; }
         }
+        if (tried > 0 && done === 0) throw lastErr instanceof Error ? lastErr : new Error('true-up failed');
       }
     } finally { this.maintaining = false; }
   }
