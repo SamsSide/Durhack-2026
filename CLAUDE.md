@@ -23,6 +23,11 @@ the repo).
 - **Agents talk across laptops through GitHub issues** (`durhack-inbox`): need something from
   another lane → open an `agent-request` issue assigned to that lane's person. A background
   watcher tells each session when something arrives. Keep working while you wait.
+- **Always tell the lanes that need it.** When a merge to `main` finishes something another
+  lane needs (a row in its *Needs* column, a contract going real, an `agent-request` you
+  delivered, a seed or shared file it builds on), open a `ready` issue to each such lane
+  straight away (`scripts/durhack/ask.sh ready --to <lane>`): what landed, the PR, what it
+  unblocks, and what they now own or should swap their mock for. Never assume they'll notice.
 
 ## Git — the hard rules
 

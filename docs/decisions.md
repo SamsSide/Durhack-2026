@@ -20,3 +20,4 @@
 2026-11-14 15:40 · owner · Row A1 is a 30-minute seed holding every shared piece (types, mock server and routes, store, app shell, placeholders, default colours); after it no row waits on another lane · the owner wants every teammate's agents running all the time
 2026-11-14 15:40 · owner · Visual style is an old atlas; the hologram stays as a beam with the card as a lit parchment page · owner's choice
 2026-11-14 15:40 · owner · Everyone stays up overnight; checkpoints unchanged · owner's answer
+2026-11-14 16:00 · owner · Every merge that finishes something another lane needs is followed by a `ready` issue to each such lane (`ask.sh ready`) · the owner wants lanes notified, never left to notice merges

@@ -21,6 +21,7 @@ labels() {
   label agent-request 1D76DB "One lane's agent needs something from another lane"
   label needs-owner   8250DF "Needs a decision or review from the owner (SamsSide)"
   label human-test    FBCA04 "A person should test this by hand"
+  label ready         0E8A16 "Something another lane needs has landed on main"
   label blocking      B60205 "The asker is blocked until this is answered"
   label answered      0E8A16 "An answer has been posted"
   label declined      6A737D "Answered: no / not now"
