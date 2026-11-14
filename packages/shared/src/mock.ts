@@ -20,6 +20,7 @@ interface Seedling {
 
 // Different building styles so lane b can see them all against the mock (X4 styles).
 // Every technology age on the mock, so lane b can draw all unit looks (X4 ages).
+const YEAR0 = 1000;
 const MOCK_AGES: TechAge[] = ['ancient', 'medieval', 'gunpowder', 'industrial', 'modern'];
 const MOCK_STYLES: BuildingStyle[] = ['classical', 'medieval', 'east_asian', 'desert', 'mesoamerican', 'scrap'];
 
@@ -209,7 +210,7 @@ export function mockWorld(seed = 1337): World {
     population: 20000 + Math.floor(rng() * 20000), treasury: 100 + Math.floor(rng() * 100),
   }));
   // Row A29: each nation's ruler and general (hashed from the seed; the world rng is left alone).
-  for (const c of countries) c.council = foundingCouncil(c, seed, 0);
+  for (const c of countries) c.council = foundingCouncil(c, seed, 0, YEAR0);
 
   // Each nation: capital plus a few neighbouring land tiles.
   caps.forEach((c, id) => { owner[c] = id; });
@@ -224,7 +225,6 @@ export function mockWorld(seed = 1337): World {
   const structures: Structure[] = [];
   const units: Unit[] = [];
   const chronicle: ChronicleEntry[] = [];
-  const YEAR0 = 1000;
   const nameFor = (rng2: Rng, used: Set<string>): string => {
     for (let k = 0; k < 50; k++) {
       const n = `The ${pick(rng2, REGION_PREFIX)} ${pick(rng2, REGION_NOUN)}`;
@@ -253,7 +253,7 @@ export function mockWorld(seed = 1337): World {
   return {
     id: `w-${(hashString(String(seed)) & 0xffff).toString(16).padStart(4, '0')}`, seed,
     prompt: 'a patchwork world of five young nations', name: 'The Mock Age', era: 'age of founding',
-    tick: 0, year: YEAR0, speed: 1, paused: false, tiles, regions, owner, countries, structures, units,
+    tick: 0, year: YEAR0, speed: 1 / 24, paused: false, tiles, regions, owner, countries, structures, units,
     relations: stances.map(([a, b, stance]) => ({ a, b, stance, since: 0, grievance: stance === 'hostile' ? 0.4 : 0 })),
     chronicle,
     agents: countries.map((c) => ({ countryId: c.id, link: 'up' as const, ruler: 'llm' as const, deleted: false, lastHeardTick: 0, pendingEvents: 0 })),
@@ -474,7 +474,7 @@ export function* mockEvents(world: World): Generator<WorldEvent> {
           anthemPrompt: 'defiant marching song with drums and a fiddle', voiceStyle: 'young, fierce, a revolutionary',
           alive: true, population: 6000, treasury: 20,
         };
-        country.council = foundingCouncil(country, w.seed, tick);
+        country.council = foundingCouncil(country, w.seed, tick, w.year);
         yield mk(id, { type: 'country_founded', country, regionId: region.id });
         for (const t of claim) yield mk(id, { type: 'tile_claimed', tile: t, owner: id, from: rebelParent, cause: 'dispute' });
         yield mk('world', { type: 'region_updated', regionId: region.id, patch: { unrest: 0.1 } });

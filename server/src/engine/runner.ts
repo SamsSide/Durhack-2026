@@ -18,7 +18,7 @@ import { decreeEvents, interpretDecree, interpretDecreeMock, type Decree } from 
 import { RulerScheduler } from '../agents/ruler';
 import { secessionBatch } from './secession';
 import { currentMode, getBudget, resetRun } from '../llm';
-import { Clock, TickLoop, clampSpeed, type ClockState } from './clock';
+import { Clock, START_SPEED, TickLoop, clampSpeed, type ClockState } from './clock';
 import { anyBigMoment } from './bigMoments';
 import { CouncilKeeper } from './council';
 
@@ -99,6 +99,7 @@ export class EngineRunner implements WorldRunner {
     this.scanned = 0;
     this.clock.setPaused(!!opts.paused);         // row A31: prepare mode starts the world paused
     this.clock.reset();
+    this.clock.setTarget(START_SPEED);           // every new world starts at one month a second
     w.speed = this.clock.target;
     w.paused = !!opts.paused;
     this.lastAgents = '';

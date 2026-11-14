@@ -7,7 +7,7 @@
 // member's seat is null, but the successor inherits his memory) and the tick each seat fell empty
 // (the successor comes SUCCESSION_TICKS later). Replays never need either: they apply the logged events.
 import {
-  COUNCIL_ROLES, SUCCESSION_TICKS, assassinations, cutEvents, deathEvents, restoreEvents, successionEvents,
+  COUNCIL_ROLES, SUCCESSION_TICKS, assassinations, cutEvents, deathEvents, oldAgeDeaths, oldAgeEvents, restoreEvents, successionEvents,
   type CouncilBody, type CouncilLine, type CouncilMember, type CouncilRole, type World,
 } from '@terra/shared';
 
@@ -35,7 +35,7 @@ export class CouncilKeeper {
     }
   }
 
-  /** This year's council news: successors for seats empty long enough, then assassinations.
+  /** This year's council news: successors for seats empty long enough, then deaths of old age and assassinations.
    *  `eligible` says which nations the world may act on (alive, agent not deleted). */
   turn(w: World, tick: number, eligible: (countryId: number) => boolean): CouncilBody[] {
     this.observe(w);
@@ -50,6 +50,12 @@ export class CouncilKeeper {
       if (!eligible(countryId) || named.has(countryId)) continue;
       const bodies = successionEvents(w, countryId, role, this.last.get(key), this.line(w));
       if (bodies.length) { out.push(...bodies); this.vacantSince.delete(key); named.add(countryId); }
+    }
+    // Natural deaths: the same seeded roll on every replica, once a year per member.
+    for (const d of oldAgeDeaths(w, tick)) {
+      if (!eligible(d.countryId) || named.has(d.countryId)) continue;
+      const bodies = oldAgeEvents(w, d.countryId, d.roles, this.line(w));
+      if (bodies.length) { out.push(...bodies); named.add(d.countryId); }
     }
     for (const a of assassinations(w, tick)) {
       if (!eligible(a.countryId) || named.has(a.countryId)) continue;

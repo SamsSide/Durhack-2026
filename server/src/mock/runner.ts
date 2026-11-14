@@ -3,7 +3,7 @@ import {
   applyEvent, cutEvents, deathEvents, mockEvents, mockWorld, restoreEvents, type AgentStatus, type World, type WorldEvent,
 } from '@terra/shared';
 import type { ControlMessage, NewWorldOptions, RunnerListener, WorldRunner } from '../runner';
-import { Clock, TickLoop, clampSpeed, type ClockState } from '../engine/clock';
+import { Clock, START_SPEED, TickLoop, clampSpeed, type ClockState } from '../engine/clock';
 import { anyBigMoment } from '../engine/bigMoments';
 import { loadReplay } from '../engine/replays';
 
@@ -38,6 +38,7 @@ export class MockRunner implements WorldRunner {
     this.gen = mockEvents(w);
     this.pending = null;
     this.clock.setPaused(paused);                // row A31: prepare mode starts the world paused
+    this.clock.setTarget(START_SPEED);           // every new world starts at one month a second
     w.speed = this.clock.target;
     w.paused = paused;
     this.lamport = 0;
