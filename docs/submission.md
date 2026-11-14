@@ -360,6 +360,10 @@ link, write "live demo at the table; no video" `[check]` if the form insists on 
 
 ### On screen before a judge arrives
 
+- Start it with one command: `npm run demo:live` (stops any old copy, starts a stable server and a
+  production build of the web, makes a prepared world, opens the browser). `npm run demo` is the
+  same with no API calls, for rehearsals. `npm run demo:status` says what is running;
+  `npm run demo:stop` ends it. Logs are in `.demo/`.
 - The app running in live mode (`LLM_MODE=live`, `SOLANA_MODE=devnet`) on a **prepared world**:
   created earlier with Prepare ticked, readiness panel green, audio cached, a few hundred years
   in so there are cities, a war under way and at least one gold payment in the ledger.
@@ -397,12 +401,14 @@ show the rest.
 1. Press **Escape** to close any open panel or card, then **P** to return to presentation mode.
 2. If the link was cut, restore it; unpause time; set the gears back to a few years a second.
 3. If the world has run too far (late ages, many nations dead, a quiet stretch with no war) or
-   anything looks broken: open the Create screen and press **Replay** on `demo-1` (a saved world
-   in a known strong state), or switch to the second prepared world tab. A replay needs no API
-   calls, so a stack of judges does not burn the Gemini or ElevenLabs budget.
-4. Press **Home** on the timeline scrubber to jump a replay back to tick 0, then run the gears.
-5. Keep two prepared worlds: one live (the main script) and `demo-1` (instant reset and backup).
-   Refresh the Explorer tab only if the devnet page has expired.
+   anything looks broken: run `npm run demo:reset` in the terminal. It keeps the servers, makes a
+   fresh prepared world with the same prompt and mode (about a minute live, prints
+   `Preparing 14/30` as it goes), and the open tab switches to it by itself, no reload. Press play.
+4. Instant fallback, no API calls: `npm run demo:reset -- --replay demo-1` plays the saved world in
+   a known strong state at once, so a stack of judges does not burn the Gemini or ElevenLabs
+   budget. Press **Home** on the timeline scrubber to jump a replay back to tick 0, then run the gears.
+5. Run the next reset while the current judge is still at the table only if it is a replay; a live
+   reset replaces the world on screen. Refresh the Explorer tab only if the devnet page has expired.
 
 Safety shots: the Explorer page (`docs/shots/solana-devnet-payment.jpg`), the 10-years-a-second
 gear (`gears-10y.jpg`) and the Tiger Data territory chart `[check]`.
