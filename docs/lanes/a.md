@@ -43,7 +43,7 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 | A18 | Regions and secession: nations name the regions they settle, unrest per region, a region breaking away as a new nation with its own agent and ruler (one at a time, with a cooldown) | A4, A6 | `country_founded`, `region_updated` events | CP1.5 | todo | Cut to names and flags only if unstable |
 | A19 | Flags: a `FlagSpec` for every nation and region from the world bible, `flagSvg` in the shared package, and the painted-flag route (Gemini image model, cached, capped) | A5 | X1 `flagSvg`, X3 flag | CP1 for drawn, CP1.5 for painted | testing | Drawn flags done; painted-flag route built but Gemini image needs billing (429), returns 503 meanwhile |
 | A20 | Multimodal, audio in: spoken decrees. Gemini hears the recording directly and turns it into a decree with an effect (plague, famine, storm, meteor, prophet, gold rush, rebellion) that the engine applies to a nation or region | A6, A7 | X3 `POST /api/decree/voice` | CP2 | next | Lane c adds the mic to DecreeBox |
-| A21 | Multimodal, image in and voice out: "Terra Nova News". Gemini watches a capture of the globe plus the recent chronicle and writes a 20 to 30 s news bulletin; ElevenLabs reads it in a newsreader voice | A14 | X3 `POST /api/broadcast`, X6 `playBroadcast` | CP1.5 | next | Lane b gives `captureGlobe`, lane c the `NewsBroadcast` lower-third |
+| A21 | Multimodal, image in and voice out: "Terra Nova News". Gemini watches a capture of the globe plus the recent chronicle and writes a 20 to 30 s news bulletin; ElevenLabs reads it in a newsreader voice | A14 | X3 `POST /api/broadcast`, X6 `playBroadcast` | CP1.5 | done | Gemini with the image takes about 19 s |
 
 ## Waiting on
 
@@ -69,5 +69,6 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 - 15:13 · A4: every nation its own agent and replica on a message bus with switchable links and heartbeats; Gemini bible and rulers wired in (A5 done); capitals placed so empires meet; Tiger Data wired
 
 - 15:23 · A7: silence and return entries on cut and restore, neighbours notice the silence, disputes settled on restore (earlier claim wins) with tile flips, deleted nations fall to ruins and are carved up, blackout
+- 15:29 · A21: Terra Nova News: Gemini watches a capture of the globe and the chronicle and writes a bulletin, read by an ElevenLabs newsreader; X6 playBroadcast
 
 Mocks: `npm run mock` (MockRunner behind the `WorldRunner` interface in `server/src/runner.ts`) stands in for the engine until A3; lore, audio and replays are mocked until A13 to A16 and A9.
