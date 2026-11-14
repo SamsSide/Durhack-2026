@@ -55,3 +55,4 @@ pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
 - 14 Nov · province lines, shading, cliff steps, region borders
 - 14 Nov · close-up walled towns with rivers inside (province-crossing rivers removed), AoH terrain map mode with effects legend and tooltip, names anchored on the visible land, lighter clouds, smaller interior cliffs
 - 14 Nov · event beacons and spotlight tour (S), space (stars, nebula, shooting stars), council mourning/succession/pips (#146), wonders with scaffolding, reveal and Great Wall (#147), gold payment arcs and economy placement (#145), banner and minimap fixes (#143), terrain effects from TERRAIN_EFFECTS and attrition (#154), future/stellar ages and satellites (#158), lane c's EventFeed placed (#148)
+- 14 Nov · #164 · vehicle effects from model anchors
