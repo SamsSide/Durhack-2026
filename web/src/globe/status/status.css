@@ -14,7 +14,10 @@
   --edge: var(--holo-tint);
 }
 .gs-tag.cut .cap { color: var(--holo-tint); }
-.gs-tag.cut .yrs { font-family: var(--font-mono); font-size: 12px; }
+/* the cut marker: the letter pile then the tag, in one row below the capital; far out, the pile only */
+.gs-cut { display: flex; align-items: center; gap: 4px; }
+.gs-cut.far .gs-tag { display: none; }
+.gs-tag.cut .yrs { white-space: nowrap; font-family: var(--font-mono); font-size: 12px; }
 .gs-tag.dispute { animation: gs-tag-life 3s ease forwards; }
 @keyframes gs-tag-life {
   0% { opacity: 0; transform: translateY(4px); }

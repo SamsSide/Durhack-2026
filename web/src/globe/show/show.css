@@ -1,5 +1,5 @@
-/* "Show, don't tell" on the globe (B14): ruler scrolls and the queued-letter count. Colours and fonts come
-   from theme/tokens.css; the paper is tn-sheet and the count is tn-plate (theme/materials.css). Lane b. */
+/* "Show, don't tell" on the globe (B14): ruler scrolls and the queued-letter pile. Colours and fonts come
+   from theme/tokens.css; the paper is tn-sheet (theme/materials.css). Lane b. */
 
 /* --- the ruler's scroll ------------------------------------------------------------------------------ */
 .rs-scroll {
@@ -87,12 +87,22 @@
   @keyframes rs-life-still { 0%, 100% { opacity: 0; } 6%, 90% { opacity: 1; } }
 }
 
-/* --- "x14": more queued moves than the 8 letters drawn --------------------------------------------- */
-.sv-count {
-  --edge: var(--holo-tint);
-  padding: 2px 7px 3px;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--gilt-hi);
+/* --- the letter pile beside a cut nation's "signal lost" tag (LetterPile.tsx) ----------------------- */
+/* At most three envelopes, 24px tall, each a little up and to the side of the one below, like a pile. */
+.lp-pile {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 30px;
 }
+.lp-env {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 32px;
+  height: 24px;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.6));
+}
+.lp-env:nth-child(1) { transform: rotate(-7deg); }
+.lp-env:nth-child(2) { transform: translate(4px, -3px) rotate(4deg); }
+.lp-env:nth-child(3) { transform: translate(7px, -6px) rotate(-2deg); }
