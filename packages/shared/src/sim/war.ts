@@ -20,6 +20,7 @@ import { TERRAIN_EFFECTS, LANDING_PENALTY } from './terrain';
 import { wonderBonusOf } from './wonders';
 import { AGE_EDGE, STRENGTH_CAP, ageIndex, ageStrength } from './ages';
 import { coverMultiplier, deathEvents, generalFalls } from './council';
+import { costTo, inZoc, nextStep, sig, zocTiles } from './paths';
 
 /** No nation declares a war of its own before this tick. */
 export const WAR_EARLIEST = 70;
@@ -165,6 +166,9 @@ export function settleMove(world: World, e: Extract<WorldEvent, { type: 'unit_mo
   if (defender < 0) {
     if (u.kind === 'fleet' && tile.terrain !== 'ocean') return [];
     if (u.kind === 'army' && tileOwner >= 0 && tileOwner !== a && relationOf(world, a, tileOwner).stance !== 'alliance') return [];
+    // Zone of control (row A32): an army next to an enemy army, fort or city may only attack or fall back
+    // onto its own land; any other step is dropped, the same way on every replica.
+    if (u.kind === 'army' && tileOwner !== a && inZoc(world, a, u.tile)) return [];
     sinkTraders();
     if (!out.length) return null;
     return [e, ...out];
@@ -204,7 +208,13 @@ export function settleMove(world: World, e: Extract<WorldEvent, { type: 'unit_mo
     }
     const big = u.strength + defendRaw >= 50;
     if ((big && noteRoll < 0.5) || noteRoll < 0.07) {
-      chron = { kind: 'battle', text: `The armies of ${A.name} break against the defenders of ${Dc.name} at ${place}.` };
+      // Row A32: a big repulse at a fort or in a mountain pass gets its own line (same odds, no extra roll).
+      const halt = big && (g.fort ? 'fort' : tile.terrain === 'mountain' || tile.terrain === 'hills' ? 'pass' : '');
+      chron = { kind: 'battle', text: halt === 'fort'
+        ? `The armies of ${A.name} are halted before the walls of the fort at ${place}, and ${Dc.name} holds the line.`
+        : halt === 'pass'
+          ? `The armies of ${A.name} are held in the pass at ${place}; ${Dc.name} does not yield the heights.`
+          : `The armies of ${A.name} break against the defenders of ${Dc.name} at ${place}.` };
     }
   } else {
     const removed = new Set<string>();
@@ -538,8 +548,8 @@ export interface MarchInput {
 }
 
 /**
- * Moves one nation's armies and fleets for a turn. At war: every army walks (one tile a turn, along a
- * breadth-first path over its own and empty land) to the nearest enemy province and, now and then,
+ * Moves one nation's armies and fleets for a turn. At war: every army walks (one tile a turn, along the
+ * cheapest terrain path over its own and empty land, row A32) to the nearest front and, now and then,
  * attacks one next to it (a `unit_moved` into it; the battle is settled when the batch is applied).
  * Fleets sail the same way over the sea and fight enemy fleets or raid enemy coasts. At peace with an
  * attack focus, armies gather at the border facing the target.
@@ -590,7 +600,9 @@ export function marchTurn(p: MarchInput): void {
     }
     return dist;
   };
+  const allies = view.relations.filter((r) => r.stance === 'alliance' && (r.a === me || r.b === me)).map((r) => (r.a === me ? r.b : r.a)).sort((x, y) => x - y);
   const landPass = (t: number): boolean => terrain(t) !== 'ocean' && (own[t] === me || own[t] === -1 || (own[t]! >= 0 && relationOf(view, me, own[t]!).stance === 'alliance'));
+  const ownSig = sig(own);
   let moves = 0;
 
   if (enemies.size) {
@@ -600,9 +612,10 @@ export function marchTurn(p: MarchInput): void {
     for (const o of enemies) theirS += militaryStrength(view, o);
     const edge = Math.max(0.5, Math.min(2, militaryStrength(view, me) / Math.max(1, theirS)));
     const pAttack = (0.1 + 0.12 * c.temperament.aggression) * edge;
-    // Distance from every land tile to the nearest enemy capital: armies push towards it.
-    const caps = [...enemies].map((o) => view.countries[o]!.capitalTile).filter((t) => own[t] !== me);
-    const toCap = bfs(caps, (t) => terrain(t) !== 'ocean', 60);
+    // Cost (Dijkstra over terrain move, row A32) from every land tile to the nearest enemy capital:
+    // armies push along the cheap road towards it.
+    const caps = [...enemies].map((o) => view.countries[o]!.capitalTile).filter((t) => own[t] !== me).sort((x, y) => x - y);
+    const toCap = costTo(view.tiles, caps, (t) => terrain(t) !== 'ocean', 150, undefined, `cap:${caps.join(',')}`);
     const front: { u: Unit; to: number; ratio: number; score: number }[] = [];
     for (const u of [...armies, ...fleets]) {
       if (u.tile < 0) continue;
@@ -612,7 +625,7 @@ export function marchTurn(p: MarchInput): void {
         if (u.kind === 'army' && terrain(j) === 'ocean') continue;
         if (u.kind === 'fleet' && terrain(j) !== 'ocean' && rng() > 0.25) continue;   // fleets mostly fight at sea
         const ratio = u.strength / Math.max(1, defenceEstimate(view, j, foe));
-        front.push({ u, to: j, ratio, score: Math.min(ratio, 3) - 0.04 * (toCap.get(j) ?? 60) });
+        front.push({ u, to: j, ratio, score: Math.min(ratio, 3) - 0.03 * (toCap.get(j) ?? 90) });
       }
     }
     if (front.length && rng() < pAttack) {
@@ -623,21 +636,25 @@ export function marchTurn(p: MarchInput): void {
         best.u.tile = -1;                           // it has acted this turn
       }
     }
-    // March: armies not yet at the front step towards it.
+    // March: armies not yet at the front step towards it, along the cheapest road (round mountains,
+    // through passes). Zone of control (row A32): an army that stands next to an enemy army, fort or city
+    // has stopped; it only fights from there (the attack above), and no path runs through such a tile.
     const goals: number[] = [];
     for (let t = 0; t < own.length; t++) {
       if (!landPass(t)) continue;
       if (view.tiles[t]!.neighbors.some((j) => terrain(j) !== 'ocean' && hostile(j) >= 0)) goals.push(t);
     }
     if (goals.length) {
-      const dist = bfs(goals, landPass);
+      const zoc = zocTiles(view, me, enemies, own);
+      const zocList = [...zoc].sort((x, y) => x - y);
+      const dist = costTo(view.tiles, goals, landPass, 100, zoc, `m:${me}:${allies.join(',')}:${ownSig}:${sig(goals)}:${sig(zocList)}`);
       for (const u of armies) {
         if (u.tile < 0 || moves >= 3) continue;
+        if (zoc.has(u.tile) && own[u.tile] !== me) continue;
         const d = dist.get(u.tile);
         if (d === undefined || d === 0 || rng() < 0.3) continue;
-        const next = view.tiles[u.tile]!.neighbors.filter((j) => dist.get(j) === d - 1);
-        if (!next.length) continue;
-        const to = next[Math.floor(rng() * next.length)]!;
+        const to = nextStep(view.tiles, dist, u.tile);
+        if (to < 0) continue;
         emit({ type: 'unit_moved', unitId: u.id, from: u.tile, to, arriveTick: tick + TERRAIN_EFFECTS[terrain(to)].move });
         u.tile = to; moves++;
       }
@@ -675,14 +692,13 @@ export function marchTurn(p: MarchInput): void {
     if (view.tiles[i]!.neighbors.some((j) => own[j]! >= 0 && own[j] !== me && (want.size === 0 || want.has(own[j]!)))) goals.push(i);
   }
   if (!goals.length) return;
-  const dist = bfs(goals, (t) => own[t] === me);
+  const dist = costTo(view.tiles, goals, (t) => own[t] === me, 100, undefined, `g:${me}:${ownSig}:${sig(goals)}`);
   for (const a of armies) {
     if (a.tile < 0 || moves >= 2) continue;
     const d = dist.get(a.tile);
     if (d === undefined || d === 0 || rng() < 0.4) continue;
-    const next = view.tiles[a.tile]!.neighbors.filter((j) => dist.get(j) === d - 1);
-    if (!next.length) continue;
-    const to = next[Math.floor(rng() * next.length)]!;
+    const to = nextStep(view.tiles, dist, a.tile);
+    if (to < 0) continue;
     emit({ type: 'unit_moved', unitId: a.id, from: a.tile, to, arriveTick: tick + TERRAIN_EFFECTS[terrain(to)].move });
     a.tile = to; moves++;
   }

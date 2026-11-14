@@ -18,3 +18,4 @@ export * from './sim/terrain';
 export * from './sim/wonders';
 export * from './sim/council';
 export * from './sim/economy';
+export * from './sim/paths';
