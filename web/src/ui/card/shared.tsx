@@ -9,6 +9,20 @@ export function CloseIcon() {
   );
 }
 
+/** One labelled meter: a caps label, a sunk trough (theme/materials.css) and the value. */
+export function Meter({ label, value, pct, fill, bad, title, seg, meter }: { label: string; value: string; pct: number; fill: string; bad?: boolean; title?: string; seg?: boolean; meter?: number }) {
+  return (
+    <div className="tn-gaugerow" title={title}>
+      <span className="tn-stat__label">{label}</span>
+      <span className={`tn-trough${seg ? ' tn-trough--seg' : ''}`} aria-label={`${label} ${value}`}
+        {...(meter != null ? { role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': 1, 'aria-valuenow': meter } : { role: 'img' })}>
+        <i className="tn-trough__fill" style={{ width: `${Math.max(0, Math.min(100, pct))}%`, ['--fill' as string]: fill }} />
+      </span>
+      <span className={`tn-gaugerow-v${bad ? ' tn-bad' : ''}`}>{value}</span>
+    </div>
+  );
+}
+
 export function Lines() {
   return (
     <div className="tn-lines" aria-hidden="true">
@@ -17,10 +31,10 @@ export function Lines() {
   );
 }
 
-/** Class for the card root: the docked parchment `.panel`; `.speaking` (tokens.css) is the gilt top rule while
- *  narration or the anthem plays. `.tn-silenced` and `.tn-short` are set by the caller. */
+/** Class for the card root: a framed parchment sheet (theme/materials.css) with gilt corners; `.speaking` (card.css)
+ *  is the gilt top rule while narration or the anthem plays. `.tn-silenced` and `.tn-short` are set by the caller. */
 export function useCardClass(_ref: RefObject<HTMLElement | null>, speaking: boolean, silenced = false, short = false): string {
-  return `panel tn-card${speaking ? ' speaking' : ''}${silenced ? ' tn-silenced' : ''}${short ? ' tn-short' : ''}`;
+  return `tn-sheet tn-frame tn-frame--corners tn-card${speaking ? ' speaking' : ''}${silenced ? ' tn-silenced' : ''}${short ? ' tn-short' : ''}`;
 }
 
 /** True while the viewport is under 800 px tall (the card drops its summary). */

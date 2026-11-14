@@ -1,7 +1,7 @@
 import { flagSvg, goodOf } from '@terra/shared';
 import { useRef } from 'react';
 import { useWorld } from '../../state/world';
-import { CloseIcon, Lines as Placeholder, useCardClass } from './shared';
+import { CloseIcon, Lines as Placeholder, Meter, useCardClass } from './shared';
 import { useRegionLore } from './useLore';
 
 export function RegionView({ regionId }: { regionId: number }) {
@@ -29,35 +29,32 @@ export function RegionView({ regionId }: { regionId: number }) {
   for (const [g, n] of goods) if (n > best) { best = n; mainGood = g; }
   return (
     <div className={cls} ref={ref}>
+      <span className="tn-cartouche tn-gov">Region</span>
       <div className="tn-card-body">
         <header className="tn-head">
-          <div className="tn-flag"><div className="tn-flag-drawn" dangerouslySetInnerHTML={{ __html: flagSvg(region.flag, 66, 44) }} /></div>
+          <div className="tn-flag tn-flag-plate"><div className="tn-flag-drawn" dangerouslySetInnerHTML={{ __html: flagSvg(region.flag, 66, 44) }} /></div>
           <div className="tn-head-text">
-            <h2 className="tn-name">{region.name || 'Unnamed lands'}</h2>
+            <h2 className="tn-name tn-engraved">{region.name || 'Unnamed lands'}</h2>
             {owner && (
               <div className="tn-sub">
-                <span className="tn-held-flag" dangerouslySetInnerHTML={{ __html: flagSvg(owner.flag, 24, 16) }} />
+                <span className="tn-held-flag tn-flag-plate" dangerouslySetInnerHTML={{ __html: flagSvg(owner.flag, 24, 16) }} />
                 Held by{' '}
                 <button type="button" className="tn-link" onClick={() => select(owner.id)}>{owner.name}</button>
               </div>
             )}
           </div>
-          <button type="button" className="tn-close" aria-label="Close" onClick={() => select(null)}><CloseIcon /></button>
+          <button type="button" className="tn-close tn-button tn-button--lacquer tn-button--round" aria-label="Close" onClick={() => select(null)}><CloseIcon /></button>
         </header>
         <div className="tn-grid">
-          <div className="tn-grid-row">
-            <div><span className="tn-cap">Provinces</span><span className="tn-v">{region.tiles.length}</span></div>
-            <div><span className="tn-cap">Main good</span><span className="tn-v">{mainGood ? mainGood.charAt(0).toUpperCase() + mainGood.slice(1) : 'None'}</span></div>
-            <div title="Mean devastation of its provinces"><span className="tn-cap">Devastation</span><span className={`tn-v${devastation > 5 ? ' tn-bad' : ''}`}>{Math.round(devastation)}%</span></div>
-            <div><span className="tn-cap">Unrest</span><span className={`tn-v${unrest > 0.5 ? ' tn-bad' : ''}`}>{Math.round(unrest * 100)}%</span></div>
-          </div>
+          <div className="tn-stat"><span className="tn-stat__label">Provinces</span><span className="tn-stat__value">{region.tiles.length}</span></div>
+          <div className="tn-stat"><span className="tn-stat__label">Main good</span><span className="tn-stat__value">{mainGood ? mainGood.charAt(0).toUpperCase() + mainGood.slice(1) : 'None'}</span></div>
         </div>
-        <section className="tn-sec">
-          <h3>Unrest</h3>
-          <div className="tn-bar" role="meter" aria-valuemin={0} aria-valuemax={1} aria-valuenow={unrest}>
-            <div className="tn-bar-fill" style={{ width: `${Math.round(unrest * 100)}%` }} />
-          </div>
-        </section>
+        <div className="tn-meters">
+          <Meter label="Devastation" value={`${Math.round(devastation)}%`} pct={devastation} title="Mean devastation of its provinces"
+            fill={devastation > 5 ? 'var(--color-rubric)' : 'var(--color-ink-muted)'} bad={devastation > 5} />
+          <Meter label="Unrest" value={`${Math.round(unrest * 100)}%`} pct={unrest * 100} meter={unrest} seg
+            fill={unrest > 0.5 ? 'var(--color-rubric)' : 'var(--stance-hostile)'} bad={unrest > 0.5} />
+        </div>
         {error ? (
           <section className="tn-sec">
             <p className="tn-muted">No lore is available yet. <button type="button" className="tn-link" onClick={retry}>Try again</button></p>
@@ -65,11 +62,11 @@ export function RegionView({ regionId }: { regionId: number }) {
         ) : (
           <>
             <section className="tn-sec">
-              <h3>The land</h3>
+              <h3 className="tn-header-bar">The land</h3>
               {loading || !lore ? <Placeholder /> : <p className="tn-p tn-fade">{lore.summary}</p>}
             </section>
             <section className="tn-sec">
-              <h3>History</h3>
+              <h3 className="tn-header-bar">History</h3>
               {loading || !lore ? <Placeholder /> : <p className="tn-p tn-fade">{lore.history}</p>}
             </section>
           </>

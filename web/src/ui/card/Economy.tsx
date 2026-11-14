@@ -13,6 +13,8 @@ export function useMarketPlan(world: World | null, enabled: boolean): MarketPlan
 }
 
 const BAND_CLASS = { 'Peace': 'peace', 'Watchful': 'watch', 'Mobilised': 'mob', 'Total war': 'total' } as const;
+/** The chip material of each readiness band (theme/materials.css). */
+const BAND_CHIP = { 'Peace': 'tn-chip--alliance', 'Watchful': 'tn-chip--neutral', 'Mobilised': 'tn-chip--hostile', 'Total war': 'tn-chip--war' } as const;
 
 export function shortGroups(plan: MarketPlan | null, id: number): GoodGroup[] {
   return plan ? GROUPS.filter((g) => isShort(plan, id, g)) : [];
@@ -28,9 +30,9 @@ export function StatusChips({ world, countryId, plan }: { world: World; countryI
   const shorts = shortGroups(plan, countryId);
   return (
     <div className="tn-status">
-      <span className={`tn-st tn-st-${BAND_CLASS[band]}`} title={`War readiness ${Math.round(wr)} of 100`}>{band}</span>
-      {dev > 5 && <span className="tn-st tn-st-dev" title="Mean devastation of its provinces">Devastated {Math.round(dev)}%</span>}
-      {shorts.length > 0 && <span className="tn-st tn-st-short" title="Needs the market cannot fill">Short of: {shorts.join(', ')}</span>}
+      <span className={`tn-chip tn-chip--caps ${BAND_CHIP[band]} tn-st tn-st-${BAND_CLASS[band]}`} title={`War readiness ${Math.round(wr)} of 100`}>{band}</span>
+      {dev > 5 && <span className="tn-chip tn-chip--caps tn-st tn-st-dev" title="Mean devastation of its provinces">Devastated {Math.round(dev)}%</span>}
+      {shorts.length > 0 && <span className="tn-chip tn-chip--caps tn-st tn-st-short" title="Needs the market cannot fill">Short of: {shorts.join(', ')}</span>}
     </div>
   );
 }
@@ -74,7 +76,7 @@ export function EconomyTab({ world, countryId, plan }: { world: World; countryId
   const groupOf = (g: string): GoodGroup | null => (g === 'grain' || g === 'fish' ? 'food' : g === 'ore' || g === 'oil' || g === 'uranium' ? 'ore' : g === 'timber' || g === 'stone' ? 'timber' : null);
   return (
     <div className="tn-eco">
-      <h3>Goods it produces</h3>
+      <h3 className="tn-header-bar">Goods it produces</h3>
       {counts.length === 0 ? <p className="tn-muted">No provinces yield goods.</p> : (
         <ul className="tn-goods">
           {counts.map(([g, n]) => {
@@ -90,7 +92,7 @@ export function EconomyTab({ world, countryId, plan }: { world: World; countryId
       )}
       {shorts.length > 0 && (
         <>
-          <h3>Shortages</h3>
+          <h3 className="tn-header-bar">Shortages</h3>
           <ul className="tn-goods">
             {shorts.map((g) => (
               <li key={g}><span className="tn-good-n tn-bad">{cap(g)}</span><span className="tn-good-p">{price(plan.prices[g])} <Arrow now={plan.prices[g]} base={PRICE_BASE[g]} /></span></li>
@@ -101,7 +103,7 @@ export function EconomyTab({ world, countryId, plan }: { world: World; countryId
       <p className="tn-market">{marketLine(plan, countryId)}</p>
       <div className="tn-gauge">
         <span className="tn-cap">Devastation</span>
-        <div className="tn-gauge-bar" role="img" aria-label={`Devastation ${Math.round(dev)}%`}><div style={{ width: `${dev}%` }} className={dev > 5 ? 'tn-warn' : ''} /></div>
+        <div className="tn-gauge-bar tn-trough" role="img" aria-label={`Devastation ${Math.round(dev)}%`}><i className="tn-trough__fill" style={{ width: `${dev}%`, ['--fill' as string]: dev > 5 ? 'var(--color-rubric)' : 'var(--color-ink-muted)' }} /></div>
         <span className="tn-gauge-v">{Math.round(dev)}%</span>
       </div>
     </div>
@@ -118,7 +120,7 @@ export function PoliticsBlock({ world, countryId }: { world: World; countryId: n
       <div className="tn-pol-creed">{m.creed}</div>
       <div className="tn-gauge">
         <span className="tn-cap">Radicalism</span>
-        <div className="tn-gauge-bar" role="img" aria-label={`Radicalism ${Math.round(rad)} of 100`}><div style={{ width: `${rad}%` }} className={rad > 60 ? 'tn-warn' : ''} /></div>
+        <div className="tn-gauge-bar tn-trough" role="img" aria-label={`Radicalism ${Math.round(rad)} of 100`}><i className="tn-trough__fill" style={{ width: `${rad}%`, ['--fill' as string]: rad > 60 ? 'var(--color-rubric)' : 'var(--stance-hostile)' }} /></div>
         <span className="tn-gauge-v">{Math.round(rad)}</span>
       </div>
     </div>

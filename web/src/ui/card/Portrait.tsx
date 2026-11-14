@@ -17,9 +17,23 @@ const HAIR = ['var(--color-ink)', 'var(--color-ink-muted)', 'var(--color-accent)
 const pick = <T,>(r: () => number, xs: T[]): T => xs[Math.floor(r() * xs.length)]!;
 const f = (n: number) => n.toFixed(1);
 
-/** A generated ink-framed bust in an oval cameo. `seed` null draws the empty dashed oval of a vacant role. */
-export function Portrait({ seed, role, color, size = 36 }: { seed: number | null; role: CouncilRole; color: string; size?: number }) {
+/** A generated ink-framed bust in an oval cameo. `seed` null draws the empty dashed oval of a vacant role.
+ *  `bezel` draws a round crop set in a gilt `tn-roundel` (theme/materials.css) of `size` px instead. */
+export function Portrait({ seed, role, color, size = 36, bezel = false }: { seed: number | null; role: CouncilRole; color: string; size?: number; bezel?: boolean }) {
   const id = useId().replace(/:/g, '');
+  if (bezel) {
+    return (
+      <span className={`tn-roundel tn-por-bezel${seed == null ? ' tn-por-vacant' : ''}`} style={{ ['--size' as string]: `${size}px` }} aria-hidden="true">
+        {seed == null ? (
+          <svg className="tn-por" viewBox="2 4 32 32">
+            <circle cx="18" cy="20" r="10" fill="none" stroke="var(--color-ink-muted)" strokeWidth="1.4" strokeDasharray="3 2.5" />
+          </svg>
+        ) : (
+          <svg className="tn-por" viewBox="2 4 32 32"><Bust seed={seed} role={role} color={color} id={id} round /></svg>
+        )}
+      </span>
+    );
+  }
   const w = size, h = Math.round(size * 1.12);
   if (seed == null) {
     return (
@@ -28,6 +42,13 @@ export function Portrait({ seed, role, color, size = 36 }: { seed: number | null
       </svg>
     );
   }
+  return (
+    <svg className="tn-por" width={w} height={h} viewBox="0 0 36 40" aria-hidden="true"><Bust seed={seed} role={role} color={color} id={id} /></svg>
+  );
+}
+
+/** The drawn bust: an oval cameo, or (`round`) a circle that fills the roundel's face. */
+function Bust({ seed, role, color, id, round = false }: { seed: number; role: CouncilRole; color: string; id: string; round?: boolean }) {
   const r = rng(seed);
   const headRx = 5.6 + r() * 1.8, headRy = 6.6 + r() * 1.8;
   const headY = 17 + r() * 1.5;
@@ -41,9 +62,11 @@ export function Portrait({ seed, role, color, size = 36 }: { seed: number | null
   const base = 40;
   const sh = `M${f(18 - shoulder)} ${base} C${f(18 - shoulder)} ${f(30 + slope)} ${f(18 - 5)} 27.5 18 27.5 C${f(18 + 5)} 27.5 ${f(18 + shoulder)} ${f(30 + slope)} ${f(18 + shoulder)} ${base} Z`;
   return (
-    <svg className="tn-por" width={w} height={h} viewBox="0 0 36 40" aria-hidden="true">
-      <defs><clipPath id={id}><ellipse cx="18" cy="20" rx="15" ry="17.5" /></clipPath></defs>
-      <ellipse cx="18" cy="20" rx="15" ry="17.5" style={{ fill: 'var(--color-parchment-dark)' }} />
+    <>
+      <defs><clipPath id={id}>{round ? <circle cx="18" cy="20" r="16" /> : <ellipse cx="18" cy="20" rx="15" ry="17.5" />}</clipPath></defs>
+      {round
+        ? <circle cx="18" cy="20" r="16" style={{ fill: 'var(--color-parchment-dark)' }} />
+        : <ellipse cx="18" cy="20" rx="15" ry="17.5" style={{ fill: 'var(--color-parchment-dark)' }} />}
       <g clipPath={`url(#${id})`}>
         <path d={sh} style={{ fill: color }} stroke="var(--color-ink)" strokeWidth="0.9" />
         {mantle2 && <path d={`M18 27.5 L${f(18 - 3)} ${base} L${f(18 + 3)} ${base} Z`} style={{ fill: 'var(--color-parchment-light)' }} opacity="0.55" />}
@@ -65,7 +88,7 @@ export function Portrait({ seed, role, color, size = 36 }: { seed: number | null
           </>
         )}
       </g>
-      <ellipse cx="18" cy="20" rx="15" ry="17.5" fill="none" stroke="var(--color-ink)" strokeWidth="1.6" />
-    </svg>
+      {!round && <ellipse cx="18" cy="20" rx="15" ry="17.5" fill="none" stroke="var(--color-ink)" strokeWidth="1.6" />}
+    </>
   );
 }

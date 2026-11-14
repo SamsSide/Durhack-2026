@@ -11,7 +11,7 @@ import { Portrait } from './Portrait';
 import { RegionView } from './RegionView';
 import { useLore } from './useLore';
 import { EconomyTab, PoliticsBlock, StatusChips, useMarketPlan } from './Economy';
-import { CloseIcon, Lines, useCardClass, useShort } from './shared';
+import { CloseIcon, Lines, Meter, useCardClass, useShort } from './shared';
 import './card.css';
 
 const STANCE_ORDER: Stance[] = ['war', 'hostile', 'alliance', 'trade', 'neutral'];
@@ -47,7 +47,7 @@ function Flag({ countryId, spec }: { countryId: number; spec: Parameters<typeof 
   const [shown, setShown] = useState(false);
   useEffect(() => setShown(false), [painted]);
   return (
-    <div className="tn-flag">
+    <div className="tn-flag tn-flag-plate">
       <div className="tn-flag-drawn" dangerouslySetInnerHTML={{ __html: flagSvg(spec, 66, 44) }} />
       {painted && (
         <img className={`tn-flag-painted ${shown ? 'tn-on' : ''}`} src={painted} alt="" width={66} height={44} onLoad={() => setShown(true)} />
@@ -87,6 +87,9 @@ function useNationStats(world: World | null, countryId: number) {
     return { provinces, mainGood, army, unrest: regions ? (unrest / regions) * 100 : 0, devastation: landDevastation(world, countryId) };
   }, [world, countryId, version]);
 }
+
+/** The fill colour of the war-readiness trough: calm green at peace, through gilt and amber, to war red. */
+const readinessFill = (r: number) => (r < 25 ? 'var(--color-ok)' : r < 50 ? 'var(--gilt)' : r < 75 ? 'var(--stance-hostile)' : 'var(--stance-war)');
 
 const DIPLOMACY: { stance: Stance; label: string }[] = [
   { stance: 'war', label: 'At war' }, { stance: 'alliance', label: 'Allies' }, { stance: 'trade', label: 'Trade pacts' },
@@ -175,7 +178,7 @@ function Nation({ countryId }: { countryId: number }) {
     const on = mine && state === k;
     const busy = mine && state === 'loading' && pressed === k;
     return (
-      <button type="button" className={`btn${on ? ' active' : ''}`} onClick={() => press(k)}>
+      <button type="button" className={`tn-button${on ? ' is-active' : ''}`} onClick={() => press(k)}>
         {on ? <StopSq /> : busy ? null : <Play />}
         {label(k)}
         {on && <Eq />}
@@ -193,18 +196,18 @@ function Nation({ countryId }: { countryId: number }) {
 
   return (
     <div className={cls} ref={ref}>
+      <span className="tn-cartouche tn-gov">{country.government}</span>
       <div className="tn-card-body">
         <header className="tn-head">
           <Flag countryId={countryId} spec={country.flag} />
           <div className="tn-head-text">
-            <div className="tn-gov">{country.government}</div>
-            <h2 className="tn-name">{country.name}</h2>
+            <h2 className="tn-name tn-engraved">{country.name}</h2>
             {!country.alive && <div className="tn-fallen">{fallYear != null ? `Fallen in Y${fallYear}` : 'Fallen'}</div>}
           </div>
-          <button type="button" className="tn-close" aria-label="Close" onClick={() => select(null)}><CloseIcon /></button>
+          <button type="button" className="tn-close tn-button tn-button--lacquer tn-button--round" aria-label="Close" onClick={() => select(null)}><CloseIcon /></button>
         </header>
         <div className="tn-ruler">
-          {ruler && <Portrait seed={ruler.portraitSeed} role="ruler" color={country.color} size={30} />}
+          <Portrait seed={ruler ? ruler.portraitSeed : null} role="ruler" color={country.color} size={isShort ? 34 : 42} bezel />
           <div className="tn-ruler-text">
             <span className="tn-cap">{ruler ? 'Ruler' : 'Led by'}</span>
             <span className="tn-ruler-name">{ruler ? ruler.name : country.leader}</span>
@@ -222,20 +225,21 @@ function Nation({ countryId }: { countryId: number }) {
           <div><span className="tn-cap">Main good</span><span className="tn-pair-v">{stats?.mainGood ? cap(stats.mainGood) : 'None'}</span></div>
         </div>
         <div className="tn-grid">
-          <div className="tn-grid-row">
-            <div><span className="tn-cap">Provinces</span><span className="tn-v">{fmt(stats?.provinces ?? 0)}</span></div>
-            <div><span className="tn-cap">Population</span><span className="tn-v">{short(country.population)}</span></div>
-            <div><span className="tn-cap">Treasury</span><span className="tn-v">{fmt(country.treasury)} <small>{coin}</small></span></div>
-          </div>
-          <div className="tn-grid-row">
-            <div title="The summed strength of its armies and fleets"><span className="tn-cap">Army</span><span className="tn-v">{fmt(stats?.army ?? 0)}</span></div>
-            <div title={`War readiness ${Math.round(readiness)} of 100: ${readinessBand(readiness)}`}><span className="tn-cap">Readiness</span><span className="tn-v">{Math.round(readiness)}</span></div>
-            <div title="Mean devastation of its provinces"><span className="tn-cap">Devastation</span><span className={`tn-v${(stats?.devastation ?? 0) > 5 ? ' tn-bad' : ''}`}>{Math.round(stats?.devastation ?? 0)}%</span></div>
-            <div title="Mean unrest of the regions it holds"><span className="tn-cap">Unrest</span><span className={`tn-v${(stats?.unrest ?? 0) > 50 ? ' tn-bad' : ''}`}>{Math.round(stats?.unrest ?? 0)}%</span></div>
-          </div>
+          <div className="tn-stat"><span className="tn-stat__label">Provinces</span><span className="tn-stat__value">{fmt(stats?.provinces ?? 0)}</span></div>
+          <div className="tn-stat"><span className="tn-stat__label">Population</span><span className="tn-stat__value">{short(country.population)}</span></div>
+          <div className="tn-stat"><span className="tn-stat__label">Treasury</span><span className="tn-stat__value">{fmt(country.treasury)}<small>{coin}</small></span></div>
+          <div className="tn-stat" title="The summed strength of its armies and fleets"><span className="tn-stat__label">Army</span><span className="tn-stat__value">{fmt(stats?.army ?? 0)}</span></div>
+        </div>
+        <div className="tn-meters">
+          <Meter label="Readiness" value={String(Math.round(readiness))} pct={readiness} fill={readinessFill(readiness)} seg
+            title={`War readiness ${Math.round(readiness)} of 100: ${readinessBand(readiness)}`} />
+          <Meter label="Devastation" value={`${Math.round(stats?.devastation ?? 0)}%`} pct={stats?.devastation ?? 0}
+            fill={(stats?.devastation ?? 0) > 5 ? 'var(--color-rubric)' : 'var(--color-ink-muted)'} bad={(stats?.devastation ?? 0) > 5} title="Mean devastation of its provinces" />
+          <Meter label="Unrest" value={`${Math.round(stats?.unrest ?? 0)}%`} pct={stats?.unrest ?? 0}
+            fill={(stats?.unrest ?? 0) > 50 ? 'var(--color-rubric)' : 'var(--stance-hostile)'} bad={(stats?.unrest ?? 0) > 50} title="Mean unrest of the regions it holds" />
         </div>
         <section className="tn-dip" aria-label="Diplomacy">
-          <h3>Diplomacy</h3>
+          <h3 className="tn-header-bar">Diplomacy</h3>
           {!relations.some((r) => r.stance === 'war' || r.stance === 'alliance' || r.stance === 'trade') && (
             <p className="tn-dip-none">No wars, allies or trade pacts yet.</p>
           )}
@@ -249,7 +253,7 @@ function Nation({ countryId }: { countryId: number }) {
                   {group.map(({ other }) => {
                     const oc = world.countries[other]!;
                     return (
-                      <button key={other} type="button" className="tn-dip-flag" title={oc.name} aria-label={`${label}: ${oc.name}`} onClick={() => { select(other); flyTo(other); }}
+                      <button key={other} type="button" className="tn-dip-flag tn-flag-plate" title={oc.name} aria-label={`${label}: ${oc.name}`} onClick={() => { select(other); flyTo(other); }}
                         dangerouslySetInnerHTML={{ __html: flagSvg(oc.flag, 30, 20) }} />
                     );
                   })}
@@ -286,15 +290,15 @@ function Nation({ countryId }: { countryId: number }) {
           <p className="tn-muted">No lore is available yet. <button type="button" className="tn-link" onClick={retry}>Try again</button></p>
         )}
 
-        <div className="tn-tabs" role="tablist">
+        <div className="tn-booktabs tn-tabs" role="tablist">
           {TABS.map((t) => (
-            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={`tn-tab${tab === t.id ? ' tn-on' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
+            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={`tn-booktab${tab === t.id ? ' tn-booktab--active' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
           ))}
         </div>
         <div className="tn-tab-body" role="tabpanel">
           {tab === 'culture' && (
             <>
-              <div className="tn-chips">{country.culture.map((c) => <span key={c} className="chip">{c}</span>)}</div>
+              <div className="tn-chips">{country.culture.map((c) => <span key={c} className="tn-chip">{c}</span>)}</div>
               {text(lore?.culture, true)}
             </>
           )}
@@ -319,7 +323,7 @@ function Nation({ countryId }: { countryId: number }) {
                         <span className="tn-rel-top">
                           <span className="tn-swatch" style={{ background: oc.color }} />
                           <span className="tn-rel-name">{oc.name}</span>
-                          <span className={`tn-stance tn-stance-${stance}`}>{stance}</span>
+                          <span className={`tn-stance tn-chip tn-chip--caps tn-chip--${stance}`}>{stance}</span>
                         </span>
                         {story && <span className="tn-rel-story tn-fade">{story}</span>}
                       </button>
@@ -337,7 +341,7 @@ function Nation({ countryId }: { countryId: number }) {
         </div>
         {speaking && (
           <>
-            <div className="tn-progress" aria-hidden="true"><div /></div>
+            <div className="tn-progress tn-trough" aria-hidden="true"><div /></div>
             <div className="tn-now">{state === 'anthem' ? `Anthem of ${country.name}` : `Narration of ${country.name}`}</div>
           </>
         )}

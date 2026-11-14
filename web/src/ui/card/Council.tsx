@@ -8,6 +8,9 @@ const ROLES: { role: CouncilRole; label: string; other: string }[] = [
   { role: 'general', label: 'General', other: 'ruler' },
 ];
 
+/** Status chip material per state (theme/materials.css): outline plates for steady states, solid for alarms. */
+const CHIP_CLASS: Record<CouncilState, string> = { active: 'tn-chip tn-chip--caps', covering: 'tn-chip tn-chip--caps tn-chip--hostile', vacant: 'tn-chip tn-chip--caps', cut: 'tn-chip tn-chip--caps tn-chip--war' };
+
 const CHIP_LABEL: Record<CouncilState, string> = { active: 'Active', covering: 'Covering', vacant: 'Vacant', cut: 'Cut' };
 
 interface Props { countryId: number; council: CouncilData; color: string; tick: number; short: boolean; frozen: boolean }
@@ -17,7 +20,7 @@ export function Council({ countryId, council, color, tick, short, frozen }: Prop
   useWorld((s) => s.version);
   return (
     <section className="tn-council" aria-label="The Council">
-      <h3>The Council</h3>
+      <h3 className="tn-header-bar">The Council</h3>
       {ROLES.map(({ role, label, other }) => (
         <MemberRow key={role} countryId={countryId} role={role} label={label} other={other}
           member={council[role]} state={council.state[role]} color={color} tick={tick} short={short} frozen={frozen} />
@@ -75,11 +78,11 @@ function MemberRow({ countryId, role, label, other, member, state, color, tick, 
 
   return (
     <div className={`tn-cm tn-cm-${state}${flash ? ' tn-flash' : ''}`}>
-      <Portrait seed={member ? member.portraitSeed : null} role={role} color={color} size={short ? 28 : 36} />
+      <Portrait seed={member ? member.portraitSeed : null} role={role} color={color} size={short ? 32 : 40} bezel />
       <div className="tn-cm-info" tabIndex={member ? 0 : -1} aria-label={member ? `${label} ${member.name}` : `${label} vacant`}>
         <div className="tn-cm-role">
           {label}
-          <span className={`tn-cm-chip tn-cm-chip-${state}`} title={title}>{CHIP_LABEL[state]}</span>
+          <span className={`${CHIP_CLASS[state]} tn-cm-chip tn-cm-chip-${state}`} title={title}>{CHIP_LABEL[state]}</span>
         </div>
         <div className="tn-cm-name">
           {member ? <span className="tn-cm-n">{member.name}</span> : <span className="tn-cm-vac">Vacant</span>}
@@ -94,9 +97,9 @@ function MemberRow({ countryId, role, label, other, member, state, color, tick, 
       </div>
       {canAct && (
         <div className="tn-cm-btns">
-          {member && state !== 'cut' && <button type="button" className="btn xs" onClick={() => send('cut_member')}>Cut</button>}
-          {state === 'cut' && <button type="button" className="btn xs" onClick={() => send('restore_member')}>Restore</button>}
-          {member && <button type="button" className="btn xs danger" onClick={kill}>{confirming ? 'Confirm' : 'Kill'}</button>}
+          {member && state !== 'cut' && <button type="button" className="tn-button tn-button--sm" onClick={() => send('cut_member')}>Cut</button>}
+          {state === 'cut' && <button type="button" className="tn-button tn-button--sm" onClick={() => send('restore_member')}>Restore</button>}
+          {member && <button type="button" className={`tn-button tn-button--sm tn-button--danger${confirming ? ' is-active' : ''}`} onClick={kill}>{confirming ? 'Confirm' : 'Kill'}</button>}
         </div>
       )}
     </div>

@@ -1,9 +1,18 @@
 /* Council layer: mourning banner, pips, seal, coup flash. Colours mirror the palette (accent gilt, holo cyan). */
 .cn-root { position: relative; width: 0; height: 0; pointer-events: none; transform: scale(1.6); transform-origin: 0 0; }
 /* A parchment plate behind every council mark so it reads over towns, landmarks and any nation colour. */
+/* Material pass (theme/materials.css): a parchment face inside a gilt bezel, a hard dark outer line, a static lift. */
 .cn-pips, .cn-banner, .cn-seal, .cn-coup {
-  background: var(--color-parchment, #ecdfc0); border: 1.5px solid var(--color-accent, #c9a24b);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.55), 0 0 0 1px rgba(20,14,8,0.55);
+  border: 2px solid transparent;
+  background:
+    radial-gradient(circle at 50% 35%, var(--color-parchment-light, #f6eedb), var(--color-parchment-dark, #d6c399)) padding-box,
+    var(--gilt-metal, #c9a24b) border-box;
+  box-shadow: 0 0 0 1px var(--frame-line, #140e08), inset 0 1px 2px rgba(42,31,20,0.35), 0 2px 6px rgba(0,0,0,0.55);
+}
+.cn-seal, .cn-coup {
+  background:
+    radial-gradient(circle at 50% 35%, var(--color-parchment-light, #f6eedb), var(--color-parchment-dark, #d6c399)) padding-box,
+    var(--gilt-ring, #c9a24b) border-box;
 }
 .cn-pips { position: absolute; left: -26px; top: -40px; display: flex; gap: 3px; padding: 2px 3px; border-radius: 12px; }
 .cn-pip { width: 20px; height: 20px; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6)); }
