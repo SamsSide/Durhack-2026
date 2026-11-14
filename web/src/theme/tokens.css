@@ -208,20 +208,11 @@ button, select, input, textarea { font: inherit; }
 .holo {
   position: relative;
   background: var(--parchment-fill);
-  opacity: var(--holo-opacity);
   border: 1px solid rgba(42, 31, 20, 0.6);
   border-radius: var(--radius-2);
-  box-shadow: var(--holo-glow);
-  background-image: var(--holo-spill), var(--parchment-fill);
-  animation: holo-rise var(--dur-slow) var(--ease-out) both, holo-flicker 6s 1s infinite;
+  box-shadow: var(--shadow-1);
 }
-.holo::after {
-  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
-  background: var(--holo-scanlines);
-}
-.holo.speaking { box-shadow: var(--holo-glow-warm); background-image: var(--holo-spill-warm), var(--parchment-fill); }
-/* The nation's link is cut: the page loses colour and the light fails. */
-.holo.silenced { box-shadow: var(--holo-glow-cut); filter: saturate(0.55); animation: holo-rise var(--dur-slow) var(--ease-out) both, holo-flicker 1.6s infinite; }
+.holo.silenced { filter: saturate(0.55); }
 
 /* The docked nation card while its nation speaks or sings: a gilt rule along the top edge. */
 .panel.speaking { box-shadow: inset 0 4px 0 var(--color-accent), var(--rule-double), var(--shadow-1); }
