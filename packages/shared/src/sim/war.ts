@@ -216,6 +216,16 @@ export function settleMove(world: World, e: Extract<WorldEvent, { type: 'unit_mo
     if (holds) {
       mk({ type: 'tile_claimed', tile: to, owner: a, from: defender, cause: 'conquest' });
       const capitalTaken = Dc.capitalTile === to;
+      // Row A27: a sacked town or city pays its conqueror; a fallen capital hands over a share of the treasury.
+      // The payer's balance is the one this replica holds now; applyTickBatch applies it after the batch's income.
+      const prize = world.structures.find((s) => s.tile === to && s.owner === defender && (s.kind === 'capital' || s.kind === 'city' || s.kind === 'town'));
+      if (prize && Dc.treasury >= 2) {
+        const willFall = shouldFall(countryTiles(world, defender).length - 1, capitalTaken, countryTiles(world, a).length + 1);
+        const share = capitalTaken ? (willFall ? 0.7 : 0.3) : prize.kind === 'city' ? 0.12 : 0.07;
+        const amount = Math.round(Math.max(1, Dc.treasury * share) * 100) / 100;
+        mk({ type: 'payment', from: defender, to: a, amount, reason: capitalTaken ? 'seizure' : 'plunder',
+          note: capitalTaken ? `the fall of the capital at ${place}` : `the sack of ${place}` });
+      }
       for (const s of world.structures) {
         if (s.tile !== to || s.owner !== defender || s.kind === 'ruin') continue;
         if (s.kind === 'capital') mk({ type: 'structure_upgraded', structureId: s.id, kind: 'city' });

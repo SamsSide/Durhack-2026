@@ -13,5 +13,6 @@ export * from './sim/style';
 export * from './sim/regions';
 export * from './sim/ages';
 export * from './sim/trade';
+export * from './sim/payments';
 export * from './sim/terrain';
 export * from './sim/wonders';
