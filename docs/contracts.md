@@ -218,7 +218,8 @@ export const TERRAIN_EFFECTS: Record<Terrain, TerrainEffect>;
 export const LANDING_PENALTY: number;  // 0.2: an army attacking from the sea fights at (1 - 0.2)
 
 // Payments (row A27, owner decision 14 Nov 19:20; design in docs/research/solana-economy.md).
-export type PaymentReason = 'trade' | 'reparations' | 'plunder' | 'seizure' | 'war_chest' | 'subsidy' | 'pooled';
+export type PaymentReason = 'trade' | 'reparations' | 'plunder' | 'seizure' | 'war_chest' | 'subsidy' | 'pooled'
+  | 'loan' | 'repayment';   // #187: a rich nation lends to a poor friend, who repays in instalments or defaults
 ```
 
 - **`payment`:** `from` and `to` are country ids; `amount` in coins with 2 decimals; `note` is a
@@ -494,7 +495,7 @@ export interface WorldStore {
   selectedTileId: number | null;
   selectedRegionId: number | null;           // set with the tile when zoomed in close; null when zoomed out
   beliefOf: number | null;                   // when set, the globe draws that nation's beliefs
-  mapMode: 'political' | 'terrain' | 'diplomacy' | 'strength';  // diplomacy colours every nation by its stance to the selected one
+  mapMode: 'political' | 'terrain' | 'diplomacy' | 'strength' | 'wealth';  // diplomacy colours every nation by its stance to the selected one; wealth by treasury on a gold scale (#187)
   setMapMode(mode: WorldStore['mapMode']): void;
   select(countryId: number | null, tileId?: number | null): void;
   showBelief(countryId: number | null): void;
