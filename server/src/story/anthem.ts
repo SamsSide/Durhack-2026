@@ -89,11 +89,12 @@ const exists = (p: string) => fs.access(p).then(() => true, () => false);
 const inflight = new Map<string, Promise<void>>();
 
 /** Path of the cached anthem for these lyrics, generating it once (concurrent callers share one call). */
-export async function anthemFile(country: Country, lyrics: string[]): Promise<string> {
+export async function anthemFile(country: Country, lyrics: string[], cachedOnly = false): Promise<string> {
   if (!anthemLive()) throw new VoiceUnavailable('music off');
   const plan = buildPlan(country, lyrics);
   const hash = crypto.createHash('sha256').update(`${model()}\n${JSON.stringify(plan)}`).digest('hex');
   const file = path.join(CACHE_DIR, `${hash}.mp3`);
+  if (cachedOnly && !(await exists(file))) throw new VoiceUnavailable('not recorded');
   let p = inflight.get(file);
   if (!p) {
     p = (async () => {

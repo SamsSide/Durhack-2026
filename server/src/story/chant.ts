@@ -67,12 +67,13 @@ export function chantFile(world: World, id: number): string {
 const inflight = new Map<string, Promise<void>>();
 
 /** Make the chant file once even when several requests ask at the same time; resolves to its path. */
-export async function ensureChant(world: World, id: number): Promise<string> {
+export async function ensureChant(world: World, id: number, cachedOnly = false): Promise<string> {
   const file = chantFile(world, id);
   let p = inflight.get(file);
   if (!p) {
     p = (async () => {
       if (await exists(file)) return;
+      if (cachedOnly) throw new Error('not recorded');
       const line = await chantLine(world, id);
       const v3 = chantModel().startsWith('eleven_v3');
       const text = v3 ? `[shouting] ${line}` : line;

@@ -154,12 +154,13 @@ export const audioFile = (b: { script: string }) =>
   path.join(CACHE, `${crypto.createHash('sha256').update(`${NEWS_VOICE.id}\n${spoken(b)}`).digest('hex')}.mp3`);
 
 /** Make the bulletin's mp3 once, even when several requests ask at the same time. */
-export function ensureAudio(b: Stored): Promise<string> {
+export function ensureAudio(b: Stored, cachedOnly = false): Promise<string> {
   const file = audioFile(b);
   let p = inflight.get(file);
   if (!p) {
     p = (async () => {
       if (await exists(file)) return;
+      if (cachedOnly) throw new VoiceUnavailable('not recorded');
       if (!b.voiced) throw new VoiceUnavailable('broadcast cap reached');
       const buf = await speak(spoken(b), NEWS_VOICE.id, { settings: { stability: 0.6, similarity_boost: 0.75, style: 0.2 } });
       await fs.mkdir(CACHE, { recursive: true });
@@ -173,11 +174,11 @@ export function ensureAudio(b: Stored): Promise<string> {
 }
 
 // --- the bulletin --------------------------------------------------------------------------
-export async function makeBroadcast(w: World, imageBase64: string, mimeType: string): Promise<BroadcastResult> {
+export async function makeBroadcast(w: World, imageBase64: string, mimeType: string, offline = false): Promise<BroadcastResult> {
   const started = Date.now();
   if (w.id !== worldId) { worldId = w.id; made = 0; lastHeadline = ''; lastCounts = null; store.clear(); }
   const f = facts(w);
-  const live = currentMode() === 'live' && !!process.env.GEMINI_API_KEY;
+  const live = !offline && currentMode() === 'live' && !!process.env.GEMINI_API_KEY;
   const underCap = made < maxBroadcasts();
   let body: { headline: string; script: string; mood: string } | null = null;
   let tokensIn = 0, tokensOut = 0;
