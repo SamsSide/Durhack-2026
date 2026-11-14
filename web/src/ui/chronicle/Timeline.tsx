@@ -65,6 +65,13 @@ function buildLayout(world: World): Layout {
         if (w) { w.to = e.year; openWar.delete(key); }
       }
     }
+    if (e.kind === 'fall' && e.countries.length > 0) {
+      // A fallen (or deleted, which ends in a fall) nation's wars and silence end with it.
+      const gone = e.countries[0]!;
+      for (const [key, w] of openWar) if (w.a === gone || w.b === gone) { w.to = e.year; openWar.delete(key); }
+      const s = openSilence.get(gone);
+      if (s) { s.to = e.year; openSilence.delete(gone); }
+    }
     if (e.kind === 'silence' || e.kind === 'return') {
       for (const c of e.countries) {
         if (e.kind === 'silence' && !openSilence.has(c)) {
