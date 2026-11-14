@@ -24,9 +24,14 @@
       "id": "b",
       "name": "Lane B (The globe)",
       "github": "CutGrass88",
-      "focus": "The 3D planet: tiles, camera, borders, map modes, buildings, war animation, status visuals, the hologram, performance",
+      "focus": "The 3D planet: tiles, camera, borders, map modes, buildings, war animation, status visuals, the hologram, performance; from 14 Nov 17:50 also the economy: Solana bridge, payments and trade rules",
       "paths": [
-        "web/ (except web/src/ui/, web/src/audio/, web/src/theme/ and web/public/models/)"
+        "web/ (except web/src/ui/, web/src/audio/, web/src/theme/ and web/public/models/)",
+        "server/src/chain/",
+        "packages/shared/src/sim/payments.ts",
+        "packages/shared/src/sim/trade.ts",
+        "scripts/solana-keys.ts",
+        "server/scripts/check-money.ts"
       ]
     },
     {

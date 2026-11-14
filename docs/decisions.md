@@ -49,3 +49,5 @@
 - 2026-11-14 17:10 · Owner: air escorts drawn into army models (a jet fighter above the modern tank, two rocket bikes of our own design for the future army; no new unit kind) and effect anchors in unit models for afterburners, thrusters, wakes, smoke, dust and contrails, drawn by lane b.
 
 - 2026-11-14 17:40 · Owner: keep lane c's visual event feed with globe thumbnails as row C10 (#151; built in #159, placed in #162).
+
+- 2026-11-14 17:50 · Owner: the economy moves to lane b (its owner asked for it): the Solana bridge `server/src/chain/`, `sim/payments.ts`, `sim/trade.ts`, `scripts/solana-keys.ts` and `server/scripts/check-money.ts` join lane b's paths. Contract changes (X1 `payment`, X2 `ledger`/`economy`, X3 economy) still go through the owner. Lane a keeps the demo recording and its signature sidecar.
