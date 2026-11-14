@@ -290,7 +290,7 @@ function Nation({ countryId }: { countryId: number }) {
           <p className="tn-muted">No lore is available yet. <button type="button" className="tn-link" onClick={retry}>Try again</button></p>
         )}
 
-        <div className="tn-booktabs tn-tabs" role="tablist">
+        <div className="tn-booktabs tn-booktabs--fill tn-tabs" role="tablist">
           {TABS.map((t) => (
             <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={`tn-booktab${tab === t.id ? ' tn-booktab--active' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
           ))}

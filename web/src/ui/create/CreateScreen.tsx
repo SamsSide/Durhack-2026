@@ -306,7 +306,7 @@ export function CreateScreen() {
             <span className="tn-create-prep-title">Prepare for a demo</span>
             <span className="tn-create-prep-sub">The world waits paused while lore, voices, chants and anthems are made, about a minute.</span>
           </span>
-          <span className="tn-create-prep-toggle" aria-hidden="true"><i /></span>
+          <span className={`tn-switch tn-switch--lg tn-create-prep-toggle${prepare ? ' on' : ''}`} aria-hidden="true"><i /></span>
         </button>
       </fieldset>
 

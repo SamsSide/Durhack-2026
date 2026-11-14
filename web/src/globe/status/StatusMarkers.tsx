@@ -12,7 +12,7 @@ function SignalLost({ countryId, pos }: { countryId: number; pos: [number, numbe
   });
   return (
     <Anchor pos={pos} dy={34}>
-      <div className="gs-tag cut">
+      <div className="tn-plate gs-tag cut">
         <span className="cap">Signal lost</span>
         <span className="yrs">silent {years} {years === 1 ? 'yr' : 'yrs'}</span>
       </div>

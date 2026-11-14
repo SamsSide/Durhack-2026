@@ -133,7 +133,7 @@ export function NetworkPanel() {
 
       <div className="tn-net-world">
         <button
-          className={`tn-switch tn-blackout ${blackedOut ? 'on' : ''}`}
+          className={`tn-net-switch tn-blackout ${blackedOut ? 'on' : ''}`}
           role="switch"
           aria-checked={blackedOut}
           title="Cut every link at once"
@@ -145,11 +145,11 @@ export function NetworkPanel() {
             <span className="tn-sw-title">Blackout</span>
             <span className="tn-sw-sub">{blackedOut ? 'Every link is cut' : 'Cut every link at once'}</span>
           </span>
-          <span className={`tn-toggle danger ${blackedOut ? 'on' : ''}`}><i /></span>
+          <span className={`tn-switch tn-switch--danger${blackedOut ? ' on' : ''}`} aria-hidden="true"><i /></span>
         </button>
 
         <button
-          className={`tn-switch ${beliefOf != null ? 'on' : ''}`}
+          className={`tn-net-switch ${beliefOf != null ? 'on' : ''}`}
           role="switch"
           aria-checked={beliefOf != null}
           title={beliefDisabled ? 'Pick a nation on the graph first' : "Show the picked nation's own map instead of the truth"}
@@ -161,7 +161,7 @@ export function NetworkPanel() {
             <span className="tn-sw-title">Show beliefs</span>
             <span className="tn-sw-sub">{beliefSub}</span>
           </span>
-          <span className={`tn-toggle ${beliefOf != null ? 'on' : ''}`}><i /></span>
+          <span className={`tn-switch${beliefOf != null ? ' on' : ''}`} aria-hidden="true"><i /></span>
         </button>
       </div>
 

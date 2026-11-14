@@ -13,7 +13,7 @@ export function EconomyCounter() {
       <span className="tn-eco-dim">paid</span>
       <span className="tn-eco-num">{compact(data.totals.volume)}</span>
       <span className={`tn-eco-mode ${data.mode === 'mock' ? 'mock' : 'live'}`}>{data.mode}</span>
-      <i className={`tn-eco-dot ${data.online ? 'on' : 'off'}`} aria-label={data.online ? 'online' : 'offline'} />
+      <i className={`tn-roundel tn-roundel--dot tn-roundel--dot-sm tn-eco-dot ${data.online ? 'on' : 'off'}`} aria-label={data.online ? 'online' : 'offline'} />
       {data.pending > 0 && <span className="tn-eco-dim">{data.pending} pending</span>}
     </span>
   );

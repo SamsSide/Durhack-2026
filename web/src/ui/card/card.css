@@ -84,12 +84,9 @@
 .tn-link { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-style: italic; color: var(--color-rubric); text-decoration: underline; }
 .tn-link:hover { color: var(--color-ink); }
 
-/* Lore tabs: bookmark tabs (tn-booktabs). Five labels in the 340 px column: tighter letters and padding so
-   they share the strip; the active tab still joins the page below. */
-.tn-tabs { margin: 14px calc(-1 * var(--tn-bleed)) 0; gap: 1px; padding: 3px 2px 0; }
-.tn-tabs .tn-booktab { flex: 1 1 auto; min-width: 0; padding-left: 3px; padding-right: 3px; letter-spacing: 0; }
-/* Each closed tab is its own faint bookmark, so five labels in a row still read apart. */
-.tn-tabs .tn-booktab:not(.tn-booktab--active) { background: rgba(255,250,235,.22); border-color: rgba(42,31,20,.16); }
+/* Lore tabs: bookmark tabs that share the strip (tn-booktabs tn-booktabs--fill); the active tab still
+   joins the page below. */
+.tn-tabs { margin: 14px calc(-1 * var(--tn-bleed)) 0; }
 .tn-tabs .tn-booktab:not(.tn-booktab--active):hover { background: rgba(255,250,235,.45); }
 .tn-tab-body { min-height: 92px; padding-top: 10px; }
 .tn-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
@@ -155,8 +152,8 @@
 .tn-cm-n { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tn-cm-vac { font-style: italic; color: var(--color-ink-muted); font-size: 16px; }
 .tn-cm-yrs { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-ink-muted); white-space: nowrap; flex: none; }
-/* A compact status chip on the role line (tn-chip tn-chip--caps) */
-.tn-cm-chip { flex: none; min-height: 16px; padding: 0 6px; line-height: 14px; letter-spacing: 0.06em; }
+/* A compact status chip on the role line (tn-chip tn-chip--caps tn-chip--sm) */
+.tn-cm-chip { flex: none; }
 .tn-cm-chip-active { color: var(--link-up); border-color: var(--link-up); }
 .tn-cm-chip-vacant { color: var(--color-rubric); border-color: var(--color-rubric); }
 .tn-cm-btns { flex: none; display: flex; flex-direction: column; gap: 3px; }

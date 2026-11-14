@@ -114,7 +114,7 @@ export function PreparePill() {
   const { done, ready, total } = prepare;
   const pct = total > 0 ? Math.min(100, (ready / total) * 100) : 0;
   return (
-    <button type="button" className={`tn-prep-pill${done ? ' ready' : ''}`} onClick={show} disabled={played} title={played ? 'Still being made in the background' : 'Open the prepare panel'}>
+    <button type="button" className={`tn-button tn-button--lacquer tn-prep-pill${done ? ' ready' : ''}`} onClick={show} disabled={played} title={played ? 'Still being made in the background' : 'Open the prepare panel'}>
       <span className="tn-prep-pill-bar"><i style={{ width: `${pct}%` }} /></span>
       <span className="tn-prep-pill-word">{done ? 'Ready' : 'Preparing'}</span>
       <span className="tn-prep-pill-num">{ready}/{total}</span>
@@ -133,7 +133,7 @@ export function PrepareSwitch() {
     requestPrepare();
   };
   return (
-    <button type="button" className={`tn-switch tn-prep-switch${running ? ' on' : ''}`} onClick={onClick}>
+    <button type="button" className={`tn-net-switch tn-prep-switch${running ? ' on' : ''}`} onClick={onClick}>
       <span>
         <span className="tn-sw-title">Prepare for a demo</span>
         <span className="tn-sw-sub">{running ? `Making lore, voices and anthems · ${prepare.ready} of ${prepare.total}` : 'Pause and pre-make lore, voices and anthems'}</span>

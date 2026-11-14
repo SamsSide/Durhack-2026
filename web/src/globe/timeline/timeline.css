@@ -23,7 +23,32 @@
 
 .tls .tn-button { flex: none; }
 .tls-track:focus-visible { outline: 2px solid var(--gilt-hi); outline-offset: 2px; }
-.tls-toggle { height: 28px; }
+/* Closed: a small lacquer tab cut from the chronicle bar below it (the same moulded gilt top edge, black
+   edge and gilt rim), engraved gilt caps after a gilt diamond; it presses into a well. Open, it is a
+   pressed lacquer button inside the strip and keeps only the diamond. */
+.tls:not(.tls-open) .tls-toggle {
+  height: 28px; min-height: 0; padding: 0 12px 0 10px; gap: 7px;
+  font-size: var(--text-cap); font-weight: 700; letter-spacing: .16em;
+  color: var(--gilt-hi); text-shadow: var(--engrave-on-dark);
+  background: var(--lacquer-sheen), var(--lacquer-grain), linear-gradient(180deg, var(--lacquer-hi), var(--lacquer));
+  border: 1px solid #000; border-radius: var(--radius-1) var(--radius-1) 2px 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.5),
+    0 0 0 1px rgba(201,162,75,.4),
+    0 -1px 0 #6e5524, 0 -2px 0 var(--gilt), 0 -3px 0 var(--gilt-deep),
+    0 4px 8px rgba(0,0,0,.55);
+}
+.tls .tls-toggle::before {
+  content: ""; flex: none; width: 10px; height: 10px; background: var(--diamond-gilt) center / 10px 10px no-repeat;
+}
+.tls:not(.tls-open) .tls-toggle:hover { color: #fff3c4; background: var(--lacquer-sheen), var(--lacquer-grain), linear-gradient(180deg, #262d44, var(--lacquer)); }
+.tls:not(.tls-open) .tls-toggle:active {
+  transform: translateY(1px);
+  color: var(--gilt-hi);
+  background: linear-gradient(180deg, #080a11, #141927);
+  box-shadow: var(--well-dark), 0 0 0 1px rgba(201,162,75,.55), 0 -1px 0 #6e5524, 0 -2px 0 var(--gilt-lo);
+}
+.tls .tls-toggle:focus-visible { outline: 2px solid var(--gilt-hi); outline-offset: 3px; }
 
 .tls-year { display: flex; align-items: baseline; gap: var(--space-2); flex: none; min-width: 104px; }
 .tls-cap {

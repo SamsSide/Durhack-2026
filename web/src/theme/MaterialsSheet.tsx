@@ -198,6 +198,21 @@ export function MaterialsSheet() {
               <button type="button" className="tn-booktab">Relations</button>
             </div>
             <Tag ink>tn-booktabs &gt; tn-booktab / tn-booktab--active</Tag>
+            <div className="tn-booktabs tn-booktabs--fill" style={{ width: 300 }}>
+              <button type="button" className="tn-booktab tn-booktab--active">Culture</button>
+              <button type="button" className="tn-booktab">Economy</button>
+              <button type="button" className="tn-booktab">Politics</button>
+              <button type="button" className="tn-booktab">History</button>
+              <button type="button" className="tn-booktab">Relations</button>
+            </div>
+            <Tag ink>tn-booktabs tn-booktabs--fill (the tabs share the width)</Tag>
+            <div style={row}>
+              <span className="tn-switch"><i /></span>
+              <span className="tn-switch on"><i /></span>
+              <span className="tn-switch tn-switch--danger on"><i /></span>
+              <span className="tn-switch tn-switch--lg on"><i /></span>
+            </div>
+            <Tag ink>tn-switch &gt; i (.on | --danger | --lg)</Tag>
             <div className="tn-well tn-well--paper">
               <button type="button" className="tn-seg tn-seg--active">Years</button>
               <button type="button" className="tn-seg">Decades</button>
@@ -238,6 +253,11 @@ export function MaterialsSheet() {
               Held by <b>The Belmar Dominion</b> since Y683. Fish and timber; unrest 42%.
             </div>
             <Tag>tn-tooltip (+ __title, b)</Tag>
+            <div style={row}>
+              <span className="tn-plate"><b className="tn-caps" style={{ color: 'var(--gilt-hi)', fontSize: 11 }}>Settled</b> Awarded to Belmar</span>
+              <span className="tn-plate" style={{ ['--edge' as string]: 'var(--kind-war)' }}>War declared</span>
+            </div>
+            <Tag>tn-plate (--edge)</Tag>
           </Group>
 
           <PaperGroup title="Chips, roundels, flags">
@@ -251,16 +271,23 @@ export function MaterialsSheet() {
               <span className="tn-chip tn-chip--alliance">alliance</span>
             </div>
             <Tag ink>tn-chip | --ink --war --hostile --neutral --trade --alliance | button.tn-chip.is-active</Tag>
+            <div style={row}>
+              <span className="tn-chip tn-chip--caps tn-chip--sm">Active</span>
+              <span className="tn-chip tn-chip--caps tn-chip--sm tn-chip--war">Cut</span>
+              <span className="tn-chip tn-chip--caps tn-chip--sm tn-chip--ink" style={{ ['--chip-fill' as string]: 'var(--color-ok)' }}>Confirmed</span>
+            </div>
+            <Tag ink>tn-chip--sm (dense rows)</Tag>
             <div style={{ ...row, gap: 14 }}>
               <span className="tn-roundel tn-roundel--lg"><span className="tn-roundel__face">LS</span></span>
               <span className="tn-roundel"><span className="tn-roundel__face">CY</span></span>
               <span className="tn-roundel tn-roundel--sm"><span className="tn-roundel__face">A</span></span>
               <span className="tn-roundel tn-roundel--dot" />
               <span className="tn-roundel tn-roundel--dot" style={{ ['--dot' as string]: 'var(--color-danger)' }} />
+              <span className="tn-roundel tn-roundel--dot tn-roundel--dot-sm" />
               <span className="tn-flag-plate" style={{ width: 48, height: 32, ['--flag-colour' as string]: '#2f6d9a' }} />
               <span className="tn-flag-plate" style={{ width: 30, height: 20, ['--flag-colour' as string]: '#4d7a3a' }} />
             </div>
-            <Tag ink>tn-roundel (--lg --sm --dot, __face) | tn-flag-plate (--flag-colour)</Tag>
+            <Tag ink>tn-roundel (--lg --sm --dot --dot-sm, __face) | tn-flag-plate (--flag-colour)</Tag>
             <div style={{ ...row, alignItems: 'flex-start' }}>
               <div className="tn-stat" style={{ flex: 1 }}><span className="tn-stat__label">Population</span><span className="tn-stat__value">680.1K</span></div>
               <div className="tn-stat" style={{ flex: 1 }}><span className="tn-stat__label">Devastation</span><span className="tn-stat__value">0%</span></div>

@@ -9,7 +9,7 @@ const ROLES: { role: CouncilRole; label: string; other: string }[] = [
 ];
 
 /** Status chip material per state (theme/materials.css): outline plates for steady states, solid for alarms. */
-const CHIP_CLASS: Record<CouncilState, string> = { active: 'tn-chip tn-chip--caps', covering: 'tn-chip tn-chip--caps tn-chip--hostile', vacant: 'tn-chip tn-chip--caps', cut: 'tn-chip tn-chip--caps tn-chip--war' };
+const CHIP_CLASS: Record<CouncilState, string> = { active: 'tn-chip tn-chip--caps tn-chip--sm', covering: 'tn-chip tn-chip--caps tn-chip--sm tn-chip--hostile', vacant: 'tn-chip tn-chip--caps tn-chip--sm', cut: 'tn-chip tn-chip--caps tn-chip--sm tn-chip--war' };
 
 const CHIP_LABEL: Record<CouncilState, string> = { active: 'Active', covering: 'Covering', vacant: 'Vacant', cut: 'Cut' };
 

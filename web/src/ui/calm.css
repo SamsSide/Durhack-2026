@@ -5,7 +5,10 @@
 .left-net > * { pointer-events: auto; }
 .left-dock {
   left: var(--space-4);
-  top: calc(64px + 40px + var(--space-2));                                      /* below the folded Network tab */
+  /* below the folded Network tab (top 76, 40 tall) with 20px of air, so the card's cartouche (which rides
+     11px above its frame) clears the strip; the Network column itself starts 76px down (App.tsx) so its own
+     cartouche clears the top bar's moulding. */
+  top: calc(76px + 40px + 20px);
   bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3));
   width: var(--left-panel-width);
   display: flex; flex-direction: column; justify-content: flex-start;

@@ -231,7 +231,7 @@ export function Ticker({ world, open, onToggle, onPick }: {
   const still = reduced ? lastOf(chron, SHOWN).reverse() : null; // reduced motion: a static list, newest first
 
   return (
-    <div className="tn-ticker tn-lacquer tn-lacquer--bar-bottom">
+    <div className="tn-ticker tn-lacquer tn-lacquer--bar-floating">
       <span className="tn-t-label tn-cartouche tn-cartouche--inline">Chronicle</span>
       <div
         className="tn-t-track"
