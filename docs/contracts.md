@@ -499,6 +499,20 @@ this table from `@terra/shared`.
   `models[kind]`, then the cone. A nation's age advances during the run (a `country_updated` with
   `techAge` and a chronicle line), so every unit it owns changes look at once.
 
+  **Army formations (owner decision #287):** each age also has
+  `"formation": { "front": {...}, "flank": {...}, "back": {...} }` (each `{ "file":
+  "ages/<age>/formation_<role>.glb", "footprint": n }`) beside `army`, `fleet` and `trader`. Lane b
+  may draw an army as 3 to 7 instanced figures in formation from these (infantry in front, the
+  mounted or vehicle piece on the flanks, ranged or support at the back); `ages.<age>.army` stays as
+  it is and is the fallback. Each model is one small group facing +x, same rules as the unit models
+  (+Y up, origin at the base centre, fits 1 x 1 x 1, one `team` material, flat shaded), under 800
+  triangles, and may hold the effect anchors below. Footprints share one scale across all 21 (a
+  soldier is the same size in every role and age; the full `army` model is 0.5), so they run from
+  about 0.16 to 0.32. Roles: ancient spearmen, a chariot, archers; medieval men-at-arms, a knight, a
+  trebuchet; gunpowder musketeers, a dragoon, a cannon; industrial riflemen, an armoured car, a field
+  gun; modern an infantry squad, a tank, a self-propelled gun; future power-armour troopers, a hover
+  tank, a drone launcher; stellar walker infantry, a mech, an orbital-strike beacon.
+
   **Building styles (owner decision #91):** the manifest also has
   `"styles": { "<style>": { "<kind>": { "file": "<style>/<kind>.glb", "footprint": n } } }` for six
   styles (`medieval`, `classical`, `desert`, `east_asian`, `mesoamerican`, `scrap`, and from #118
