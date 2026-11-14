@@ -72,7 +72,7 @@ export function App() {
       <ClosingCard />
       {world && <HoverTooltip />}
       {showCreate && (
-        <div style={{ ...overlay, inset: 0, zIndex: 10, background: 'color-mix(in srgb, var(--color-bg) 38%, transparent)', display: 'grid', placeItems: 'center' }} onClick={() => world && setCreating(false)}>
+        <div style={{ ...overlay, inset: 0, zIndex: 10, background: 'radial-gradient(ellipse at center, rgba(5,6,10,.35), rgba(5,6,10,.7))', display: 'grid', placeItems: 'center' }} onClick={() => world && setCreating(false)}>
           <div onClick={(e) => e.stopPropagation()}>
             <CreateScreen />
           </div>
