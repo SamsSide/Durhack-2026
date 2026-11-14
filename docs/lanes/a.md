@@ -29,7 +29,7 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 | A4 | Nation agents: one per country with its own replica, an autopilot policy from temperament, heartbeats, and a message bus with a switchable link per agent | | | CP1 | done | Hooks for A6 and A7: onRestore, onDelete, rejoin, silentPeers, adopt |
 | A5 | Gemini: the world bible at creation and ruler decisions as schema-checked JSON; `LLM_MODE=mock`; call and token meter, caps, autopilot on any failure; check the real free-tier limits with one call | | `budget` messages | CP1 | done | Bible and rulers wired by A4. Models: lore 3.5-flash, ruler and bible 3.5-flash-lite |
 | A6 | War and diplomacy: stances, armies with strength, marching along tile paths, battles settled by a pure seeded function, capture tile by tile, peace treaties that hand over land, alliances, a nation falling | | war events to b | CP1.5 | todo | |
-| A7 | Resilience: cut and restore with queued events and reconciliation (disputes written to the chronicle), silence and wake, delete with neighbours carving up the ruins, blackout, `belief` messages | | X2 real controls | CP1.5 | todo | The demo's key moment |
+| A7 | Resilience: cut and restore with queued events and reconciliation (disputes written to the chronicle), silence and wake, delete with neighbours carving up the ruins, blackout, `belief` messages | | X2 real controls | CP1.5 | done | Dispute rule in server/src/engine/resilience.ts |
 | A8 | Low-poly models with headless Blender: all 15 keys in X4, exported as GLB with the manifest and a preview sheet | | X4 to b | CP1 | done | Owner's laptop has Blender |
 | A9 | Replays: save every run's event log, list and play them back with no API calls, `GET /api/world/log`; record the demo world | A14 to A16 (audio cached) | X3 replays and log | CP2 | todo | The backup plan |
 | A10 | Nation agents on other laptops over the socket | | | | cut | Owner, 14 Nov: it runs and demos on one device |
@@ -68,5 +68,6 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 - 15:11 · A11 (code): every event and nation stats into Tiger Data hypertables with a continuous aggregate; territory and summary routes; wired after A4, live once the database URL exists
 - 15:13 · A4: every nation its own agent and replica on a message bus with switchable links and heartbeats; Gemini bible and rulers wired in (A5 done); capitals placed so empires meet; Tiger Data wired
 
+- 15:23 · A7: silence and return entries on cut and restore, neighbours notice the silence, disputes settled on restore (earlier claim wins) with tile flips, deleted nations fall to ruins and are carved up, blackout
 
 Mocks: `npm run mock` (MockRunner behind the `WorldRunner` interface in `server/src/runner.ts`) stands in for the engine until A3; lore, audio and replays are mocked until A13 to A16 and A9.
