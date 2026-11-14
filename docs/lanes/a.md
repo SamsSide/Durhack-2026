@@ -34,7 +34,7 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 | A9 | Replays: save every run's event log, list and play them back with no API calls, `GET /api/world/log`; record the demo world | A14 to A16 (audio cached) | X3 replays and log | CP2 | todo | The backup plan |
 | A10 | Nation agents on other laptops over the socket | | | | cut | Owner, 14 Nov: it runs and demos on one device |
 | A11 | Stretch, prize: write events to a Tiger Data hypertable and serve one territory-over-time series | | | CP2 | testing | Needs a Tiger Cloud database URL in keys.env; wire two lines in index.ts after A4 |
-| A12 | Design the interface in Figma: the style, the Create screen, the hologram nation card, the chronicle, the network panel, the top bar; export the variables to `web/src/theme/tokens.css` and a screenshot of each screen to `docs/design/` | | X7 to b and c | Sat 18:00 | done | Figma: https://www.figma.com/design/7cKEqNpTmvmNd9CUSlxrA6 |
+| A12 | Design the interface in Figma: the style, the Create screen, the hologram nation card, the chronicle, the network panel, the top bar; export the variables to `web/src/theme/tokens.css` and a screenshot of each screen to `docs/design/` | | X7 to b and c | Sat 18:00 | done | Figma: https://www.figma.com/design/7cKEqNpTmvmNd9CUSlxrA6 (frames 01 to 10) |
 | A13 | Lore route: Gemini writes culture, politics, history, relations and anthem lyrics from the nation's real chronicle; cached; a template version for mock mode | | X3 lore | CP1 | done | |
 | A14 | Narration: ElevenLabs speaks the lore in a voice chosen from `voiceStyle`, cached on disk; the real `web/src/audio/` module (X6) | A13 | X3 narration, X6 | CP1.5 | done | MLH ElevenLabs |
 | A15 | Anthem: the music model sings the lyrics from A13 in the nation's style, cached; regenerated only when the lyrics change | A13 | X3 anthem | CP1.5 | testing | Waiting on a person to listen; never say 'national anthem' in music prompts (the filter rejects it) |
@@ -71,5 +71,6 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 - 15:23 · A7: silence and return entries on cut and restore, neighbours notice the silence, disputes settled on restore (earlier claim wins) with tile flips, deleted nations fall to ruins and are carved up, blackout
 - 15:29 · A21: Terra Nova News: Gemini watches a capture of the globe and the chronicle and writes a bulletin, read by an ElevenLabs newsreader; X6 playBroadcast
 - 15:30 · A17: a picture on the Create screen read by Gemini (image in) for mood, palette, setting and sea level, folded into the world bible in one call
+- 15:32 · A12 polish (Fable): projector type scale, AA contrast, folded network tab, docked card, the cut as 'the lights go out', founding scroll, dispatches, dispute flash, closing card; 10 Figma frames, no hologram
 
 Mocks: `npm run mock` (MockRunner behind the `WorldRunner` interface in `server/src/runner.ts`) stands in for the engine until A3; lore, audio and replays are mocked until A13 to A16 and A9.

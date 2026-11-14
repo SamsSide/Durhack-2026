@@ -28,3 +28,4 @@
 2026-11-14 15:50 · owner · X5 gains DecreeBox and TokenMeter (no props), placed in the top-bar area per the design (#61) · additive, matches the merged code
 2026-11-14 16:05 · owner · Make the LLM side multimodal (MLH judge's tip): image prompt (A17, no longer a stretch), spoken decrees heard by Gemini (A20), and Terra Nova News, Gemini watching the map as a live news broadcast read by ElevenLabs (A21) · judge's advice for the Gemini prize
 2026-11-14 16:15 · owner · Drop the hologram: the nation card docks to the right side as a parchment panel; nation and region names on the globe always face the camera · the hologram did not look good enough; labels must read from any angle
+2026-11-14 16:40 · owner · Dispatches (war declared, return, fall) are drawn by lane c's Chronicle from recentEvents, top centre; the closing token card is lane b's (App.tsx), opened by clicking the token meter or the End key · each goes to the lane that already holds the data
