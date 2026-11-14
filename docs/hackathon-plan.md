@@ -45,7 +45,7 @@ with no API calls (`row A9`). Narration and anthems for the saved world are cach
 | Neptune North: Actors work better together | It is their "teams of AI agents" example: common goal, independent decisions, progress when cut off, merge on return | The cut, silence, delete and restore demo; a section headed with their four criteria | a / A4, A7; b / B6; c / C4 | Tick the challenge; show at their stand |
 | Marshall Wace: New Worlds | Literally a new world nobody has seen | Open the pitch with "New Worlds"; visit their stand early | c / C5 | Tick the challenge |
 | MLH Best Use of ElevenLabs | Narrated histories, an anthem written from each nation's history, and war chants when fighting starts | Voice is a core part, not a button | a / A14, A15, A16 | MLH prize tick |
-| MLH Best Use of Gemini API | Gemini rules every nation and writes the lore | Name the models and the token budget | a / A5, A13 | MLH prize tick |
+| MLH Best Use of Gemini API | Gemini rules every nation and writes the lore, and it is multimodal: it reads a picture to shape the world, hears spoken decrees, and watches the map to present a live news broadcast | Name the models and the token budget; show image in, audio in, image in plus voice out | a / A5, A13, A17, A20, A21 | MLH prize tick |
 | MLH Best Use of Entire | Built with agents across three laptops with sessions recorded | Session push on; token numbers on a slide | owner / O2 | MLH prize tick |
 | MLH Best Use of Tiger Data (stretch) | The event log is a time series | Hypertable and one live chart | a / A11 | MLH prize tick |
 | Waterstons (weak fit) | Connects language models, a simulation, voice and music | One honest line | c / C5 | Tick the challenge |
@@ -184,7 +184,9 @@ it well under that.
 bronze age, floating archipelago, ice world, and so on), number of nations (3 to 10), an era
 dropdown, sea level, and an aggression slider. While the world runs, a "decree" box lets the
 judge drop an event on it (a plague, a meteor, a prophet). Stretch: an image as input, read by
-Gemini for mood and palette (row A17).
+Gemini for mood and palette (row A17). Decrees can be spoken: Gemini hears the recording and
+turns it into an event with an effect (row A20). "Terra Nova News": every two minutes Gemini
+watches a capture of the globe and presents a short news bulletin, read aloud (row A21).
 
 ## 5. Lanes
 
