@@ -74,3 +74,4 @@
 - 14 Nov 21:20 (owner): no video. Judging is a 2-minute live demo on the owner's laptop, repeated for each judge who comes to the table; docs/submission.md section 3 is the script.
 - 14 Nov (owner, #288): demo polish first: decree severity from the words with visible feedback, news focus beats shown as a live picture-in-picture, new worlds start at 3 months a second.
 - 14 Nov (owner): instrumental cinematic backing music per era from ElevenLabs, quiet under the voices and ducked while anyone speaks.
+- 14 Nov (owner): one command starts the table demo (`npm run demo:live`, or `npm run demo` for a mock rehearsal), `npm run demo:reset` between judges, `npm run demo:stop` to exit.

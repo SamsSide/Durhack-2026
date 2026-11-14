@@ -12,7 +12,12 @@
     "mock": "concurrently -n mock,web -c magenta,green \"npm run mock -w server\" \"npm run dev -w web\"",
     "mock:server": "npm run mock -w server",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present"
+    "build": "npm run build --workspaces --if-present",
+    "demo": "bash scripts/demo.sh mock",
+    "demo:live": "bash scripts/demo.sh live",
+    "demo:reset": "bash scripts/demo.sh reset",
+    "demo:stop": "bash scripts/demo.sh stop",
+    "demo:status": "bash scripts/demo.sh status"
   },
   "engines": {
     "node": ">=22"

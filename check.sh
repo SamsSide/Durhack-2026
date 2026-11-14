@@ -7,7 +7,7 @@ fail=0
 step() { printf '%-34s' "$1"; shift; if out="$("$@" 2>&1)"; then echo "ok"; else echo "FAIL"; echo "$out" | tail -15; fail=1; fi; }
 
 # --- repo tooling (always) ---------------------------------------------------
-step "scripts parse (bash -n)" bash -c 'for f in scripts/durhack/*.sh scripts/hooks/* check.sh; do bash -n "$f" || exit 1; done'
+step "scripts parse (bash -n)" bash -c 'for f in scripts/*.sh scripts/durhack/*.sh scripts/hooks/* check.sh; do bash -n "$f" || exit 1; done'
 if command -v shellcheck >/dev/null; then
   step "shellcheck (errors only)" shellcheck -S error scripts/durhack/*.sh scripts/hooks/*
 fi
