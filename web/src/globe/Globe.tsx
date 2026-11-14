@@ -33,6 +33,7 @@ import { Living } from './living';
 import { EventBeacons, Spotlight, WarFlash } from './events';
 import { Council } from './council';
 import { WarFx } from './war/WarFx';
+import { BattleBadges } from './war/BattleBadges';
 import { Wonders } from './wonders';
 import { CutVeil } from './show/CutVeil';
 import { RulerScrolls } from './show/RulerScrolls';
@@ -171,6 +172,7 @@ function Scene({ world }: { world: World }) {
       <Structures />
       <Wonders />
       <Units />
+      <BattleBadges />
       <Routes />
       <Trade />
       <CoinBurst />

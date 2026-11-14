@@ -5,6 +5,7 @@ import { useWorld } from '../../state/world';
 import { useProvinceMesh } from '../mesh/context';
 import { useEventStream } from '../status/useEventStream';
 import { UnitLayer } from './UnitLayer';
+import { armyPicker } from './pick';
 
 export function Units() {
   const mesh = useProvinceMesh();
@@ -23,6 +24,7 @@ export function Units() {
     setLayer(l);
     if (import.meta.env.DEV) (window as unknown as { __units?: UnitLayer }).__units = l; // dev only: lets a browser review read the marches
     l.sync();
+    armyPicker.current = (ndc, camera, w, h) => l.pickArmy(camera, ndc, w, h);
     let seen = useWorld.getState().version;
     const unsub = useWorld.subscribe((s) => {
       if (s.version === seen) return;
@@ -31,6 +33,7 @@ export function Units() {
     });
     return () => {
       unsub();
+      armyPicker.current = null;
       if (ref.current === l) ref.current = null;
       setLayer((cur) => (cur === l ? null : cur));
       l.dispose();

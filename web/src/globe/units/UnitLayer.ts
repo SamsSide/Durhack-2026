@@ -891,6 +891,32 @@ export class UnitLayer {
 
   // ---------- frame ----------
 
+  /** #311: the army under a screen point (NDC): its counter chip first, else a formation within
+   *  `radiusPx` of the point. Returns the unit id, or null. */
+  pickArmy(camera: THREE.Camera, ndc: THREE.Vector2, viewW: number, viewH: number, radiusPx = 22): string | null {
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(ndc, camera);
+    const shown = this.chipGroup.children.filter((o) => o.visible);
+    for (const hit of ray.intersectObjects(shown, false)) {
+      const chip = [...this.chips.values()].find((c) => c.sprite === hit.object);
+      const lead = chip && (chip.kind === 'army' || chip.kind === 'fleet') ? chip.moving ?? chip.units[0] : null;
+      if (lead) return lead.id;
+    }
+    const now = performance.now();
+    let best: string | null = null, bestD = radiusPx;
+    for (const st of this.states.values()) {
+      if (st.kind !== 'army' && st.kind !== 'fleet') continue;
+      this.statePos(st, now, _p);
+      if (_p.lengthSq() === 0) continue;
+      const dist = camera.position.length();
+      if (_w.copy(_p).normalize().dot(camera.position) / dist <= 1 / dist + 0.05) continue;   // past the horizon
+      _p.project(camera);
+      const d = Math.hypot((_p.x - ndc.x) * viewW / 2, (_p.y - ndc.y) * viewH / 2);
+      if (d < bestD) { bestD = d; best = st.id; }
+    }
+    return best;
+  }
+
   update(camera: THREE.Camera, now: number, viewW = 1280, viewH = 800): void {
     if (this.disposed) return;
     const dt = this.lastNow ? Math.min(100, now - this.lastNow) : 16;

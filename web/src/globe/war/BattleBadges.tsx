@@ -1,0 +1,66 @@
+// #311: a small plate over each battle still going: both flags and both strengths, "12.0k (swords) 21.0k"
+// (Age of History 3 style). Clicking it selects the battle (selectedBattleTile). Lane b.
+import { useMemo } from 'react';
+import { flagSvg } from '@terra/shared';
+import type { FlagSpec } from '@terra/shared';
+import { useWorld } from '../../state/world';
+import { useActiveBattles, battleInfoOf } from '../../state/battleInfo';
+import type { BattleRecord } from '../../state/battleInfo';
+import { formatSoldiers } from '../../state/armyInfo';
+import { useProvinceMesh } from '../mesh/context';
+import { Anchor } from '../status/Anchor';
+import { liftPoint } from '../status/geo';
+import type { P3 } from '../status/geo';
+import './battleBadge.css';
+
+function Flag({ spec }: { spec: FlagSpec }) {
+  const html = useMemo(() => flagSvg(spec, 18, 12), [spec]);
+  return <span className="bb-flag" dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+/** Two crossed blades, drawn (not a text glyph). */
+function Swords() {
+  return (
+    <svg className="bb-swords" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+      <path d="M2 2 L11 11 M14 2 L5 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M9.5 12.5 L12.5 9.5 M3.5 9.5 L6.5 12.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function Badge({ record, pos }: { record: BattleRecord; pos: P3 }) {
+  const world = useWorld((s) => s.world);
+  useWorld((s) => s.version);   // the strengths change with every batch
+  const selected = useWorld((s) => s.selectedBattleTile === record.tile);
+  if (!world) return null;
+  const info = battleInfoOf(world, record);
+  return (
+    <Anchor pos={pos} dy={-26} limb={0.25}>
+      <button
+        type="button"
+        className={`bb-plate tn-plate${selected ? ' is-active' : ''}`}
+        title={`Battle of ${info.province}: ${info.attacker.nation} against ${info.defender.nation}`}
+        onClick={(e) => { e.stopPropagation(); useWorld.getState().selectBattle(record.tile); }}
+      >
+        <Flag spec={info.attacker.flag} />
+        <span className="bb-num">{formatSoldiers(info.attacker.soldiers)}</span>
+        <Swords />
+        <span className="bb-num">{formatSoldiers(info.defender.soldiers)}</span>
+        <Flag spec={info.defender.flag} />
+      </button>
+    </Anchor>
+  );
+}
+
+export function BattleBadges() {
+  const mesh = useProvinceMesh();
+  const battles = useActiveBattles();
+  if (!mesh) return null;
+  return (
+    <>
+      {battles.map((b) => (
+        <Badge key={`${b.tile}-${b.startTick}`} record={b} pos={liftPoint(mesh.centroidOf([b.tile]) as P3, 0.012)} />
+      ))}
+    </>
+  );
+}
