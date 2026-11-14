@@ -44,7 +44,7 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 | A19 | Flags: a `FlagSpec` for every nation and region from the world bible, `flagSvg` in the shared package, and the painted-flag route (Gemini image model, cached, capped) | A5 | X1 `flagSvg`, X3 flag | CP1 for drawn, CP1.5 for painted | testing | Drawn flags done; painted-flag route built but Gemini image needs billing (429), returns 503 meanwhile |
 | A20 | Multimodal, audio in: spoken decrees. Gemini hears the recording directly and turns it into a decree with an effect (plague, famine, storm, meteor, prophet, gold rush, rebellion) that the engine applies to a nation or region | A6, A7 | X3 `POST /api/decree/voice` | CP2 | done | Browser webm/opus not yet tested with a real mic |
 | A21 | Multimodal, image in and voice out: "Terra Nova News". Gemini watches a capture of the globe plus the recent chronicle and writes a 20 to 30 s news bulletin; ElevenLabs reads it in a newsreader voice | A14 | X3 `POST /api/broadcast`, X6 `playBroadcast` | CP1.5 | done | Gemini with the image takes about 19 s |
-| A22 | Building styles: `Country.buildingStyle` picked in the world bible (rules fallback, at most two per style), and 30 Blender models (6 styles x capital, city, town, temple, fort) in the X4 manifest's `styles` | | X1 `buildingStyle`, X4 `styles` to b | CP2 | wip | Owner decision #91; types and bible done, models building |
+| A22 | Building styles: `Country.buildingStyle` picked in the world bible (rules fallback, at most two per style), and 30 Blender models (6 styles x capital, city, town, temple, fort) in the X4 manifest's `styles` | | X1 `buildingStyle`, X4 `styles` to b | CP2 | done | Preview: assets/preview-styles.png |
 
 ## Waiting on
 
@@ -77,5 +77,6 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 - 15:42 · A20: spoken and typed decrees heard and interpreted by Gemini (audio in, 1.3 s) with real effects: plague, famine, storm, flood, meteor, prophet, gold rush, rebellion
 - 15:43 · A9: every run recorded to server/replays/, replayed exactly with applyEvent and no API calls, a saved demo world (demo-1, The Drowned Age, 600 ticks), the timeline log
 - 15:50 · A18: unrest per region published by its holder, restless regions break away as new nations with their own agent and ruler (one at a time, cooldown, once per region), the secession chronicle kind
+- 15:53 · A22: 30 style models (medieval, classical, desert, east_asian, mesoamerican, scrap x capital, city, town, temple, fort) from a shared Blender kit, in the manifest's styles
 
 Mocks: `npm run mock` (MockRunner behind the `WorldRunner` interface in `server/src/runner.ts`) stands in for the engine until A3; lore, audio and replays are mocked until A13 to A16 and A9.
