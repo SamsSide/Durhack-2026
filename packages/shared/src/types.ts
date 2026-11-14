@@ -29,7 +29,8 @@ export interface Region {                                // a fixed group of nei
 }
 
 export type BuildingStyle = 'medieval' | 'classical' | 'desert' | 'east_asian' | 'mesoamerican' | 'scrap'
-  | 'norse' | 'south_asian' | 'sahel' | 'industrial';
+  | 'norse' | 'south_asian' | 'sahel' | 'industrial'
+  | 'soviet_bloc' | 'western_modern' | 'egyptian' | 'highland';
 
 export interface Country {
   id: number;                                            // index into World.countries; new nations are appended

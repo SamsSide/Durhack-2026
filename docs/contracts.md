@@ -84,7 +84,8 @@ export interface Region {                                // a fixed group of nei
 }
 
 export type BuildingStyle = 'medieval' | 'classical' | 'desert' | 'east_asian' | 'mesoamerican' | 'scrap'
-  | 'norse' | 'south_asian' | 'sahel' | 'industrial';
+  | 'norse' | 'south_asian' | 'sahel' | 'industrial'
+  | 'soviet_bloc' | 'western_modern' | 'egyptian' | 'highland';
 
 export interface Country {
   id: number;                                            // index into World.countries; new nations are appended
@@ -320,7 +321,8 @@ export function flagSvg(spec: FlagSpec, width?: number, height?: number): string
 
   **Building styles (owner decision #91):** the manifest also has
   `"styles": { "<style>": { "<kind>": { "file": "<style>/<kind>.glb", "footprint": n } } }` for six
-  styles (`medieval`, `classical`, `desert`, `east_asian`, `mesoamerican`, `scrap`) and five kinds
+  styles (`medieval`, `classical`, `desert`, `east_asian`, `mesoamerican`, `scrap`, and from #118
+  `soviet_bloc`, `western_modern`, `egyptian`, `highland`) and five kinds
   (`capital`, `city`, `town`, `temple`, `fort`). Lane b picks `styles[country.buildingStyle][kind]`,
   then `styles[STYLE_FALLBACK[style]][kind]` (`norse` to medieval, `south_asian` and `sahel` to
   desert, `industrial` to scrap; exported from `@terra/shared`), then `models[kind]`, then the box.

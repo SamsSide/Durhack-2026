@@ -19,6 +19,10 @@ in `assets/` and `web/public/models/`) and *design* (A12, in Figma, `web/src/the
 polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps the usual split
 (Opus to plan and design the system, Sonnet to implement).
 
+**Model for Blender work (owner, 14 Nov).** In lane a, every agent that builds or changes 3D models
+in Blender (`assets/blender/`, `web/public/models/`, preview sheets) also runs on Fable 5.2
+(`model: "fable"`), so it looks hard at the result and iterates on the design.
+
 ## Rows
 
 | ID | Row | Needs (from other lanes) | Gives (to other lanes) | Checkpoint | Status | Notes |
@@ -46,6 +50,7 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 | A21 | Multimodal, image in and voice out: "Terra Nova News". Gemini watches a capture of the globe plus the recent chronicle and writes a 20 to 30 s news bulletin; ElevenLabs reads it in a newsreader voice | A14 | X3 `POST /api/broadcast`, X6 `playBroadcast` | CP1.5 | done | Gemini with the image takes about 19 s |
 | A22 | Building styles: `Country.buildingStyle` picked in the world bible (rules fallback, at most two per style), and 30 Blender models (6 styles x capital, city, town, temple, fort) in the X4 manifest's `styles` | | X1 `buildingStyle`, X4 `styles` to b | CP2 | done | Preview: assets/preview-styles.png |
 | A23 | Technology ages and sea trade: each nation advances ancient, medieval, gunpowder, industrial, modern (start from the era; armies stronger with age), trader ships crossing the oceans between trading nations, and 15 unit models (army, fleet, trader x 5 ages) in the manifest's `ages` | | X1 `techAge`, `trader`; X4 `ages` to b | CP2 | wip | Owner decision 14 Nov |
+| A24 | Nation identity (#118): four more building styles (soviet_bloc, western_modern, egyptian, highland; 20 models), anthem, chant and narration prompts shaped by era and government, flag emblems by ideology, a chronicle tone per government | | X1 `BuildingStyle` +4, X4 `styles` | CP2 | wip | Owner decision 14 Nov |
 
 ## Waiting on
 
