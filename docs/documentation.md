@@ -706,6 +706,89 @@ Short answers for the features that landed late.
 - **Timeline scrubber and Tiger Data chart.** The scrubber rebuilds the globe at any past year
   from the log; the territory chart reads the continuous aggregate every 5 s.
 
+### How the interface shows it
+
+For each feature: what the judge sees, what is happening underneath, and the one-line answer.
+
+- **The network cut.** *Sees:* the network panel (a node graph, `web/src/ui/network/`) with a cut
+  button per nation; that nation greys under a drifting mist, its queued moves pile up as
+  wax-sealed letters by its capital with a tag like "silent 42 yrs, 49 queued", and its flag keeps
+  playing. *Underneath:* the cut flips the bus link for that one agent (`server/src/engine/bus.ts`,
+  `resilience.ts`); the globe reads `agents[].link` and `pendingEvents` (`web/src/globe/show/CutVeil.tsx`,
+  `LetterPile.tsx`, `web/src/globe/status/StatusMarkers.tsx`). *Answer:* "Cut means no messages in
+  or out, not stopped: the nation keeps ruling on what it last knew, and the letters are its real
+  queued events."
+- **Show beliefs (the stale map).** *Sees:* select a cut nation, press Show beliefs, and provinces
+  it has got wrong pulse with a holo wash and dashed outline; the fill and borders follow its map,
+  not the truth. *Underneath:* `belief(id)` returns that nation's own replica (`web/src/state/belief.ts`,
+  `useBeliefRefresh.ts`); `web/src/globe/political/BeliefBorders.tsx` marks every tile whose believed
+  owner differs from the real one. In mock mode the map is frozen at the cut (PR #231). *Answer:*
+  "That is a second, real copy of the world that stopped hearing the news, not a visual effect."
+- **Silence and return.** *Sees:* "silence ruler" turns the AI tag into AUTOPILOT; restoring a cut
+  nation flies its letters to the other capitals and a cyan ripple lifts the mist; a deleted nation
+  goes under a dark veil. Rulers proclaim with a parchment scroll (4.6 s, three at most, none from a
+  cut ruler) in `web/src/globe/show/RulerScrolls.tsx`. *Underneath:* silence stops Gemini calls and
+  uses `autopilotPolicy`; restore replays missed batches then merges the queue, and the earlier claim
+  wins a dispute (section 4.11). *Answer:* "Return is a deterministic merge, so it looks the same
+  whichever link comes back first."
+- **Council kill and succession.** *Sees:* the Council section of the nation card shows ruler and
+  general with ages; Kill asks to confirm (3 s), the seat goes vacant, the other member covers, and
+  a successor appears years later. *Underneath:* `web/src/ui/card/Council.tsx` sends
+  `control {action: 'kill'}`; the server `CouncilKeeper` (`server/src/engine/council.ts`,
+  `packages/shared/src/sim/council.ts`) delivers one batch; succession is 8 years later and the
+  successor inherits a memory summary (4.6). *Answer:* "Deaths, cover and coups are rules, so every
+  replica derives the same outcome."
+- **The event feed (fewer, important cards).** *Sees:* a left feed with at most one card every 2 s,
+  full sentences, high-priority first (falls, wars, secessions, cut and return, decree results,
+  wonders); small news is rolled into "N successions this decade". *Underneath:*
+  `web/src/ui/feed/useFeed.ts` scores each chronicle event, drops candidates after 20 s and merges
+  duplicates; the full chronicle is untouched. *Answer:* "The feed is a filter over the same log, so
+  nothing is invented or hidden for good."
+- **The decree box.** *Sees:* type or speak a decree; the box says "Proclaimed.", then a result line
+  such as "PLAGUE: Plague across the Dorrin Horde: 59,315 dead (half its people)", plus a decree tab
+  at top right that flies the camera to the target. *Underneath:* Gemini returns an effect and a
+  severity from the words (clamped 0.05 to 0.8; keyword fallback), the effect scales with it
+  (`server/src/engine/decrees.ts`); the decree chronicle entry carries `decree.{effect, severity,
+  target, result}`; the UI is `web/src/ui/decree/DecreeBox.tsx` and `web/src/ui/chronicle/Herald.tsx`.
+  A decree naming no place hits the whole nation; "the world", "everyone" or "all nations" hits every
+  nation (`target.countryId: null`). *Answer:* "The model reads the words, but the rules decide the
+  damage, and the result line is computed, not written by the model."
+- **The Solana ledger UI.** *Sees:* the Treasury tab in the Network panel
+  (`web/src/ui/economy/LedgerPanel.tsx`) lists each payment and its status; gold arcs between capitals
+  (`web/src/globe/trade/Trade.tsx`); when Solana confirms, a red wax seal "on chain, abcd" stamps on
+  the arc for 6 s (`web/src/globe/trade/ChainSeal.tsx`); clicking the seal or arc opens Solana
+  Explorer, where the memo reads like `TN <id> y<year> <payer> pays <payee> <amount> TNC, <reason>`.
+  *Underneath:* the server nets payments per pair in 5 s windows and sends one memo plus one
+  TransferChecked signed by the payer's wallet (`server/src/chain/settle.ts`, `memoFor`); the row
+  gets `signature` and `url` on confirmation. *Answer:* "The seal only appears after the chain says
+  confirmed, and the memo is the reason the nation gave."
+- **Terra Nova News with anchor and live close-ups.** *Sees:* a broadcast window with an animated
+  anchor reading the bulletin, then cuts to a live close-up of each place it names with a LIVE bug
+  and a caption strap. *Underneath:* `POST /api/broadcast` returns 1 to 3 `focus` beats
+  (`server/src/story/broadcast.ts`); lip-sync comes from the audio analyser (`web/src/ui/news/lipsync.ts`,
+  `AnchorWindow.tsx`); a second camera draws into a corner of the same WebGL buffer and is copied to
+  a small canvas (`web/src/globe/pip/NewsPip.tsx`), so there is one context and the main camera never
+  moves. *Answer:* "The close-up is the real globe filmed from a second camera, not a recording."
+- **Era music.** *Sees (hears):* quiet instrumental music that changes with the leading nation's
+  age and ducks under voices. *Underneath:* seven tracks made once with ElevenLabs Music
+  (`server/scripts/make-era-music.ts`, files in `web/public/audio/music/`), played by
+  `web/src/audio/music.ts` at 0.2 against voices at 1.0, ducked to 30% during speech, crossfaded
+  over 5 s when the era changes. *Answer:* "Generated once ahead of time, so it costs no API calls
+  at the table."
+- **Presentation mode (P) and the collapsed screen.** *Sees:* the screen starts as globe, top bar
+  and minimap with the ticker, history strip and decree box as small round icons; P hides every
+  panel except the globe, the newest war tab and a year plate; P or Esc restores. *Underneath:*
+  `web/src/ui/collapse/` (`useCollapsed.ts`, `presentation.ts`); state is in memory, so every
+  reload starts collapsed and the demo resets between judges. *Answer:* "Nothing is removed, the
+  panels just fold away so the world is what you see."
+- **Army formations and the rocket launch.** *Sees:* an army is 3 to 7 small figures (infantry in
+  front, mounted on the flanks, ranged behind) drawn from the nation's age, facing the march; a new
+  satellite rises on a rocket from the capital, drops a booster that burns up, then joins orbit.
+  *Underneath:* `web/src/globe/units/formation.ts` picks the figure count from summed strength and
+  draws them through instanced models; `web/src/globe/orbit/Launch.tsx` runs the launch (about 10 s
+  of real time) on each `-sat` chronicle line. *Answer:* "These are instanced models driven by the
+  sim's state, so a bigger army and a launch are real events, not decoration."
+
 ### Per-person deep dive
 
 - **Lane a (SamsSide), world, story and sound:** event log and `applyTickBatch`; the battle function;
