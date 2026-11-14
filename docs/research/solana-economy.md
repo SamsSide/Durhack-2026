@@ -154,6 +154,11 @@ the public limit, and inside Helius Free's 1 send a second.
 
 ### 3.4 The chain is a mirror, not the source of truth (argued)
 
+> Note, 14 Nov: this section describes the original design and is out of date. Since PR #180 the chain
+> is an exact ledger of payments between nations (not a mirror of treasuries): no Commons true-up,
+> no cap of 6. Each nation gets a float of 10,000 TNC at genesis, the default is 4 transactions per
+> window (sent one at a time) and confirmation is HTTP status polling. `docs/contracts.md` is current.
+
 - **For a mirror:** exact replay is a core promise of the project (demo backup, the timeline
   scrubber). A ruler, a battle or a treaty cannot wait 1 to 2 s for confirmation inside a 500 ms
   tick, let alone a 64x tick. Agents also need balances synchronously to decide. If the chain held
