@@ -21,6 +21,7 @@ export function Units() {
     const l = new UnitLayer(mesh, world);
     ref.current = l;
     setLayer(l);
+    if (import.meta.env.DEV) (window as unknown as { __units?: UnitLayer }).__units = l; // dev only: lets a browser review read the marches
     l.sync();
     let seen = useWorld.getState().version;
     const unsub = useWorld.subscribe((s) => {

@@ -1,0 +1,1 @@
+export { Living } from './Living';

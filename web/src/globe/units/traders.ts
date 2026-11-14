@@ -9,6 +9,7 @@ import { standMatrix } from './ModelField';
 import type { ModelField } from './ModelField';
 import type { UnitModel } from './unitModels';
 import type { VehicleFx } from './vehicleFx';
+import { DISSOLVE_MS, DWELL_MS, dissolveAlpha } from './speed';
 
 interface Seg { to: number; ms: number }
 interface TState {
@@ -18,6 +19,10 @@ interface TState {
   head: THREE.Vector3; pos: THREE.Vector3;
   born: number; gone: number; // fade in / sink out (ms timestamps; gone < 0 while alive)
   nextWake: number;
+  /** The leg is too fast to watch: fade out at `from`, fade in at `to` (see speed.ts). */
+  dissolve: boolean;
+  ghost: THREE.Vector3 | null; // a glide cut short by a speed change fades out from here
+  landAt: number; inAt: number;
 }
 
 const WAKE = 640;
@@ -39,6 +44,8 @@ export interface TraderHost {
   dirs: THREE.Vector3[];
   heights: Float32Array;
   msPerTick(): number;
+  /** Would a leg between two tiles in `ms` be faster than a trader may go on screen? */
+  tooFast(from: number, to: number, ms: number): boolean;
   model(owner: number): UnitModel;
   team(owner: number): THREE.Color;
   pop(owner: number, now: number): number; // age-change bounce, 1 when none
@@ -101,6 +108,7 @@ export class Traders {
           id: u.id, owner: u.owner, seed: hash(u.id) * Math.PI * 2,
           from: start, to: start, t0: 0, t1: 0, queue: [],
           head: new THREE.Vector3(), pos: new THREE.Vector3(), born: now, gone: -1, nextWake: now,
+          dissolve: false, ghost: null, landAt: -1e9, inAt: -1e9,
         };
         if (start !== u.tile) st.queue.push({ to: u.tile, ms: pm!.ms });
         this.states.set(u.id, st);
@@ -121,15 +129,40 @@ export class Traders {
       if (k !== 1) for (const seg of st.queue) seg.ms *= k;
       if (now >= st.t1 || st.from === st.to) continue;
       if (hold) { st.t0 += hold; st.t1 += hold; }
-      else if (k !== 1) {
+      else if (k !== 1 && !st.dissolve) {
         const p = (now - st.t0) / (st.t1 - st.t0), total = Math.min(16_000, Math.max(250, Math.min((st.t1 - st.t0) * k, yearMs * 1.12)));
+        if (this.host.tooFast(st.from, st.to, total)) {
+          st.ghost = st.pos.clone();
+          st.dissolve = true;
+          st.t0 = now; st.t1 = now + DISSOLVE_MS;
+          continue;
+        }
         st.t0 = now - p * total; st.t1 = st.t0 + total;
       }
     }
   }
 
   private advance(st: TState, now: number): void {
+    if (st.dissolve && st.t1 > 0 && now >= st.t1 && st.from !== st.to) {
+      st.landAt = st.t1; st.inAt = (st.t0 + st.t1) / 2; st.ghost = null; st.from = st.to;
+    }
     while (now >= st.t1 && st.queue.length) {
+      const next = st.queue[0]!;
+      // judged at its ordinary pace (a ship catching up may hurry a little); a long backlog means the
+      // world is running far ahead of what can be sailed
+      if (st.queue.length > 4 || this.host.tooFast(st.to, next.to, Math.min(16_000, Math.max(250, next.ms * 1.12)))) {
+        // too fast to sail: rest a moment, then fade out here and in at the newest tile
+        const last = st.queue[st.queue.length - 1]!.to;
+        st.queue.length = 0;
+        if (last === st.to) break;
+        st.from = st.to;
+        st.to = last;
+        st.dissolve = true;
+        st.t0 = Math.max(now, st.landAt + DWELL_MS);
+        st.t1 = st.t0 + DISSOLVE_MS;
+        break;
+      }
+      st.dissolve = false;
       const seg = st.queue.shift()!;
       // carry on from the end of the last leg if it only just ended, so there is no pause
       const t0 = now - st.t1 < 250 ? st.t1 : now;
@@ -154,11 +187,18 @@ export class Traders {
       this.advance(st, now);
       const a = h.dirs[st.from], b = h.dirs[st.to];
       if (!a || !b) continue;
-      const moving = now < st.t1 && st.from !== st.to;
-      const s = moving ? Math.max(0, (now - st.t0) / (st.t1 - st.t0)) : 1;
+      const under = now < st.t1 && st.from !== st.to;
+      const moving = under && !st.dissolve;
+      let s = under ? Math.max(0, (now - st.t0) / (st.t1 - st.t0)) : 1;
+      if (st.dissolve) {
+        if (under && s < 0.5 && st.queue.length) { st.to = st.queue[st.queue.length - 1]!.to; st.queue.length = 0; } // come back at the newest tile
+        fade *= dissolveAlpha(now, under ? st.t0 : Infinity, under ? st.t1 : Infinity, st.inAt);
+        s = under && s < 0.5 ? 0 : 1;
+      }
       const ra = Math.max(h.heights[st.from] ?? 1, 0.992), rb = Math.max(h.heights[st.to] ?? 1, 0.992);
-      arcPoint(st.pos, a, b, ra, rb, s, 0);
-      if (st.from !== st.to) {
+      if (st.dissolve && under && s === 0 && st.ghost) st.pos.copy(st.ghost);
+      else arcPoint(st.pos, a, b, ra, rb, s, 0);
+      if (st.from !== st.to && !st.dissolve) {
         _t.subVectors(b, a).normalize();
         if (st.head.lengthSq() < 1e-12) st.head.copy(_t);
         else st.head.lerp(_t, Math.min(1, dt * 0.005)).normalize(); // turn smoothly at each tile
@@ -170,7 +210,7 @@ export class Traders {
       _a.copy(st.pos).normalize();
       _b.copy(st.pos).addScaledVector(_a, 0.0004 + bob);
       const model = h.model(st.owner);
-      const size = this.size * (model.footprint / 0.4) * orbit * Math.min(1, fade) * h.pop(st.owner, now);
+      const size = this.size * (model.footprint / 0.4) * orbit * Math.max(0, Math.min(1, fade)) * h.pop(st.owner, now);
       field.push(model, standMatrix(_m, _b, st.head, size, roll), h.team(st.owner));
       if (h.fx && camDist < FX_RANGE) h.fx.emit({ anchors: model.anchors, stand: _m, size, moving, facing: f }, now, dt);
 

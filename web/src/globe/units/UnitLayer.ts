@@ -18,6 +18,8 @@ import { UnitModels } from './unitModels';
 import { Pops, Smoke, Sparks, facing, tangentJitter } from './effects';
 import { arcHump, arcPoint, arrowGeometry, arrowMaterial, lineGeometry, lineMaterial, tileFanGeometry, writeArrow } from './ribbons';
 
+import { DISSOLVE_MS, DWELL_MS, dissolveAlpha, tooFast, viewHeight } from './speed';
+
 const MOVE_MAX_MS = 40_000;     // the longest march: a three-year move at one month a second is 36 s
 const CHIP_LIFT = 0.004;
 const CHIP_H = 0.03;            // counter height, as a share of the view (sizeAttenuation off)
@@ -60,6 +62,12 @@ interface UState {
   flickAt?: number;
   arrow: Arrow | null;
   head: THREE.Vector3;          // march direction (world space), kept after the march ends
+  face: THREE.Vector3;          // where the model points: turns towards `head` smoothly
+  /** The move is too fast to watch at this game speed: fade out at `from`, fade in at `to`. */
+  dissolve: boolean;
+  ghost: THREE.Vector3 | null;  // a glide cut short by a speed change fades out from here
+  landAt: number;               // when the last dissolve finished (the unit rests a moment before the next)
+  inAt: number;                 // when it last began to fade in
 }
 
 interface Chip {
@@ -145,6 +153,7 @@ export class UnitLayer {
   private declutterAt = -1e9;
   private lastDt = 16;
   private clockMs = msPerYear();   // real ms a year took at the last frame
+  private viewH = 1.2;             // height of the view at the planet's surface, in globe units
   private lastClockAt = 0;
   private disposed = false;
 
@@ -188,6 +197,7 @@ export class UnitLayer {
       fx: this.fx,
       heights: mesh.heights,
       msPerTick: () => this.msPerTick(),
+      tooFast: (from, to, ms) => this.fast('trader', from, to, ms),
       model: (owner) => this.models.resolve(this.ageFor(owner), 'trader'),
       team: (owner) => this.team(owner),
       pop: (owner, now) => this.popScale(owner, now),
@@ -220,8 +230,17 @@ export class UnitLayer {
     for (const st of this.states.values()) {
       if (now >= st.t1 || st.from === st.to) continue;
       if (paused) { st.t0 += dt; st.t1 += dt; }
+      else if (st.dissolve) continue; // a dissolve runs in real time
       else {
         const p = (now - st.t0) / (st.t1 - st.t0), total = Math.min(MOVE_MAX_MS, Math.max(300, st.years * ms));
+        if (this.fast(st.kind, st.from, st.to, total)) {
+          // the new speed would make this glide a streak: fade out where it is, fade in at the end
+          st.ghost = this.statePos(st, now, new THREE.Vector3());
+          st.dissolve = true;
+          st.t0 = now; st.t1 = now + DISSOLVE_MS;
+          if (st.arrow) { st.arrow.holdUntil = now; st.arrow = null; }
+          continue;
+        }
         st.t0 = now - p * total; st.t1 = st.t0 + total;
       }
       if (st.arrow) st.arrow.holdUntil = st.t1 + ARROW_LINGER;
@@ -236,6 +255,10 @@ export class UnitLayer {
   /** Where a unit is drawn right now (mid-march units are on the arc). */
   private statePos(st: UState, now: number, out: THREE.Vector3): THREE.Vector3 {
     if (now >= st.t1 || st.from === st.to || !this.dirs[st.from] || !this.dirs[st.to]) return this.surf(st.to, CHIP_LIFT, out);
+    if (st.dissolve) {
+      if (now - st.t0 >= (st.t1 - st.t0) / 2) return this.surf(st.to, CHIP_LIFT, out);
+      return st.ghost ? out.copy(st.ghost) : this.surf(st.from, CHIP_LIFT, out);
+    }
     const s = easeInOut(Math.max(0, (now - st.t0) / (st.t1 - st.t0)));
     const a = this.dirs[st.from]!, b = this.dirs[st.to]!;
     return arcPoint(out, a, b, this.mesh.heights[st.from]! + CHIP_LIFT, this.mesh.heights[st.to]! + CHIP_LIFT, s, arcHump(a, b) * 0.6);
@@ -298,12 +321,52 @@ export class UnitLayer {
 
   // ---------- units ----------
 
+  /** Would this move cross the screen faster than its kind may go? Then it is not animated. */
+  private fast(kind: UnitKind, from: number, to: number, ms: number): boolean {
+    const a = this.dirs[from], b = this.dirs[to];
+    if (!a || !b || from === to) return false;
+    return tooFast(kind, a.angleTo(b), ms, this.viewH);
+  }
+
+  /** 1 while a unit shows, dipping to 0 and back while it dissolves between two tiles. */
+  private alphaOf(st: UState, now: number): number {
+    if (!st.dissolve) return 1;
+    const moving = now < st.t1 && st.from !== st.to;
+    return dissolveAlpha(now, moving ? st.t0 : Infinity, moving ? st.t1 : Infinity, st.inAt);
+  }
+
   private startMove(st: UState, from: number, to: number, ms: number, now: number): void {
+    const dur = Math.min(MOVE_MAX_MS, Math.max(300, ms));
+    const underWay = now < st.t1 && st.from !== st.to;
+    // a unit already dissolving, or one drawn somewhere other than where this move starts, cannot
+    // glide from there without a jump: it hops with a dissolve as well
+    const mustHop = from !== to && ((st.dissolve && underWay) || (!underWay && st.t1 > 0 && st.to !== from));
+    if (mustHop || this.fast(st.kind, from, to, dur)) {
+      st.years = ms / this.msPerTick();
+      if (st.arrow) { st.arrow.holdUntil = Math.min(st.arrow.holdUntil, now); st.arrow = null; }
+      // still waiting or fading out: only change where it comes back
+      if (st.dissolve && now < (st.t0 + st.t1) / 2) { if (st.to !== to) { st.to = to; this.dirty = true; } return; }
+      if (st.dissolve && underWay) {
+        // fading in at the last tile: finish that, rest a moment, then go again from there
+        st.inAt = (st.t0 + st.t1) / 2; st.landAt = st.t1; st.from = st.to; st.ghost = null;
+      } else {
+        st.ghost = underWay ? this.statePos(st, now, new THREE.Vector3()) : null; // a glide cut short fades from where it is
+        st.from = st.to; // where it stands now, whatever tile the event names: no jump before the fade
+      }
+      st.to = to;
+      st.dissolve = true;
+      st.t0 = Math.max(now, st.landAt + DWELL_MS);
+      st.t1 = st.t0 + DISSOLVE_MS;
+      this.dirty = true;
+      return;
+    }
+    st.dissolve = false;
+    st.ghost = null;
     st.from = from;
     st.to = to;
     st.years = ms / this.msPerTick();
     st.t0 = now;
-    st.t1 = now + Math.min(MOVE_MAX_MS, Math.max(300, ms));
+    st.t1 = now + dur;
     const da = this.dirs[from], db = this.dirs[to];
     if (from !== to && da && db) st.head.subVectors(db, da);
     if (from !== to && st.kind !== 'settler') {
@@ -337,7 +400,7 @@ export class UnitLayer {
       seen.add(u.id);
       let st = this.states.get(u.id);
       if (!st) {
-        st = { id: u.id, owner: u.owner, kind: u.kind, strength: u.strength, from: u.tile, to: u.tile, t0: 0, t1: 0, years: 1, hopAt: -1e9, arrow: null, head: new THREE.Vector3() };
+        st = { id: u.id, owner: u.owner, kind: u.kind, strength: u.strength, from: u.tile, to: u.tile, t0: 0, t1: 0, years: 1, hopAt: -1e9, arrow: null, head: new THREE.Vector3(), face: new THREE.Vector3(), dissolve: false, ghost: null, landAt: -1e9, inAt: -1e9 };
         this.states.set(u.id, st);
         const pm = this.pendingMoves.get(u.id);
         if (pm && pm.to === u.tile) this.startMove(st, pm.from, pm.to, (pm.arriveTick - pm.tick) * this.msPerTick(), now);
@@ -822,12 +885,23 @@ export class UnitLayer {
     this.followClock(now, now - (this.lastClockAt || now));
     this.lastClockAt = now;
     const dist = camera.position.length();
+    this.viewH = viewHeight(camera, dist);
     _camDir.copy(camera.position).normalize();
     const zoom = Math.min(1.25, Math.max(0.68, 1.25 - ((dist - 1.3) / 2.2) * 0.6)); // compact from orbit
     this.near = smooth(MODEL_FAR, MODEL_NEAR, dist);
 
     for (const st of this.states.values()) {
-      if (st.t1 > 0 && now >= st.t1 && st.from !== st.to) { st.from = st.to; this.dirty = true; }
+      if (st.t1 > 0 && now >= st.t1 && st.from !== st.to) {
+        if (st.dissolve) { st.landAt = st.t1; st.inAt = (st.t0 + st.t1) / 2; st.ghost = null; }
+        st.from = st.to;
+        this.dirty = true;
+      }
+      // the model turns to its heading instead of snapping (ships come about more slowly)
+      if (st.head.lengthSq() > 1e-12) {
+        _w.copy(st.head).normalize();
+        if (st.face.lengthSq() < 1e-12) st.face.copy(_w);
+        else st.face.lerp(_w, 1 - Math.exp(-dt / (st.kind === 'fleet' ? 420 : 160))).normalize();
+      }
     }
     if (this.dirty) this.rebuildChips(now);
     for (const [c, until] of this.fallen) if (until < now) this.fallen.delete(c);
@@ -958,7 +1032,7 @@ export class UnitLayer {
     // little higher from orbit so they clear the nation names
     const base = chip.kind === 'settler' ? 0.5 : -0.18 - 0.85 * this.near - 0.25 * (1 - zoom / 1.25);
     chip.sprite.center.set(0.5, base - stack * 0.92 - hop);
-    chip.mat.opacity = f;
+    chip.mat.opacity = f * this.alphaOf(lead, now);
     // attrition flicker: a brief dim, greyish pulse
     let fl = 0;
     for (const u of chip.units) {
@@ -977,7 +1051,9 @@ export class UnitLayer {
     const f = facing(chip.pos, _camDir);
     if (f <= 0) return;
     const model = this.models.resolve(this.ageFor(chip.owner), chip.kind);
-    const size = this.unitSize * (model.footprint / 0.5) * this.near * k * this.popScale(chip.owner, now);
+    const alpha = this.alphaOf(lead, now);
+    if (alpha <= 0.02) return;
+    const size = this.unitSize * (model.footprint / 0.5) * this.near * k * this.popScale(chip.owner, now) * (0.35 + 0.65 * alpha);
     _n.copy(chip.pos).normalize();
     _v.copy(chip.pos).addScaledVector(_n, 0.0003 - CHIP_LIFT);
     let hop = 0;
@@ -992,9 +1068,12 @@ export class UnitLayer {
       _side.crossVectors(_n, lead.head.lengthSq() > 1e-12 ? lead.head : _w.set(0, 1, 0)).normalize();
       _v.addScaledVector(_side, ((stack % 2) ? 1 : -1) * Math.ceil(stack / 2) * size * 0.9);
     }
-    const bob = chip.kind === 'fleet' ? Math.sin(now * 0.002 + chip.tile) * 0.07 : 0;
-    this.field.push(model, standMatrix(_mm, _v, lead.head, size, bob), this.team(chip.owner));
-    if (this.near > 0.5 && k >= 1) this.fx.emit({ anchors: model.anchors, stand: _mm, size, moving: !!chip.moving, facing: f }, now, this.lastDt);
+    const sea = chip.kind === 'fleet';
+    const bob = sea ? Math.sin(now * 0.002 + chip.tile) * 0.07 : 0;
+    if (sea) _v.addScaledVector(_n, Math.sin(now * 0.0016 + chip.tile * 1.3) * size * 0.035); // riding the swell
+    const face = lead.face.lengthSq() > 1e-12 ? lead.face : lead.head;
+    this.field.push(model, standMatrix(_mm, _v, face, size, bob), this.team(chip.owner));
+    if (this.near > 0.5 && k >= 1 && alpha >= 1) this.fx.emit({ anchors: model.anchors, stand: _mm, size, moving: !!chip.moving && !lead.dissolve, facing: f }, now, this.lastDt);
   }
 
   dispose(): void {
