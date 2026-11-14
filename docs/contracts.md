@@ -32,7 +32,7 @@ Real values go in `.env` at the repo root (git-ignored). The owner's keys file i
 | `ELEVEN_MODEL` | lane a | ElevenLabs text-to-speech model, default `eleven_multilingual_v2` |
 | `ELEVEN_MAX_CHARS_PER_RUN` | lane a | Default 20000; 30000 on the Starter plan (about 40k characters a month). Above it, narration and chants return 503 |
 | `ELEVEN_CHANT_MODEL` | lane a | War chant voice model, default `eleven_v3` (uses the `[shouting]` audio tag) |
-| `TEAM_VOICES` | lane a | Optional `Name:voiceId,...`; default the team's cloned voices Sam, Justin and Denis (news anchors in turn, three nations' narration and chants, the decree herald) |
+| `TEAM_VOICES` | lane a | Optional `Name:voiceId,...`; `Name:voiceId[:female|male]`; default the team's six cloned voices Sam, Justin, Denis, Mei, Angelina and Boaz (news anchors in turn, up to six nations' narration and chants matched by each voice's gender label, the decree herald) |
 | `ELEVEN_MUSIC_MODEL` | lane a | Anthem music model, default `music_v1` (composition plan with sung lyrics) |
 | `ANTHEM_MAX_PER_RUN` | lane a | Default 8. Anthems generated per world; above it the anthem route returns 503 |
 | `BROADCAST_MAX_PER_RUN` | lane a | Default 12. News bulletins written by Gemini per world; above it, template bulletins and no audio |
