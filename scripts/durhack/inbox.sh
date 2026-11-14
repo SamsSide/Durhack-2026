@@ -3,10 +3,16 @@
 #
 #   inbox.sh --list            everything open that concerns you (no state change)
 #   inbox.sh --once            print NEW events since last check, then exit
-#   inbox.sh --watch [SECS]    loop forever, one stdout line per new event (for the Monitor tool)
 #   inbox.sh --until-event [SECS]
-#                              loop until at least one new event, print them, exit
-#                              (for Bash run_in_background where Monitor isn't available)
+#                              loop until at least one new event, print them, exit 0.
+#                              The normal way to watch: run it as a background shell command
+#                              (Bash run_in_background); it has no time limit. Handle the
+#                              event, then start it again.
+#   inbox.sh --watch [SECS]    loop forever, one stdout line per new event (for the Monitor
+#                              tool, which expires after 30 minutes)
+#
+# The two long-running modes never stop on an error: each poll runs in its own child process,
+# and a failed poll (no network, a gh hiccup, a rate limit) is skipped and tried again.
 #
 # Events (one line each, prefixed so they're easy to spot):
 #   DURHACK [new] issue assigned to you (agent-request / needs-owner / human-test)
@@ -17,11 +23,29 @@
 #   DURHACK [pr] a PR of yours was merged or closed
 #
 # State lives in .claude/durhack-inbox/<id>/ (git-ignored). Set DURHACK_INBOX_ID to give a second
-# session on the same laptop its own state. Poll interval default 60s (GitHub rate limits).
+# session on the same laptop its own state. Poll interval default 30s (about 1,000 GitHub calls
+# an hour, well inside the 5,000 an hour limit).
+
+case "${1:-}" in
+  --watch|--until-event)
+    secs="${2:-30}"
+    case "$secs" in ''|*[!0-9]*) secs=30 ;; esac
+    [ "$secs" -lt 15 ] && secs=15
+    trap 'exit 0' TERM INT
+    while true; do
+      ev="$("$0" --once 2>/dev/null)" || ev=""
+      if [ -n "$ev" ]; then
+        printf '%s\n' "$ev"
+        [ "$1" = "--until-event" ] && exit 0
+      fi
+      sleep "$secs" || true
+    done ;;
+esac
+
 . "$(dirname "$0")/lib.sh"
 need_gh
 
-MODE="${1:---once}"; INTERVAL="${2:-60}"
+MODE="${1:---once}"
 R="$(repo)"; ME="$(me)"; OWNER_LOGIN="$(owner)"
 STATE="$ROOT/.claude/durhack-inbox/${DURHACK_INBOX_ID:-default}"
 mkdir -p "$STATE"
@@ -133,13 +157,5 @@ list_all() {
 case "$MODE" in
   --list)  list_all ;;
   --once)  prime; check ;;
-  --watch) prime; while true; do check || true; sleep "$INTERVAL"; done ;;
-  --until-event)
-    prime
-    while true; do
-      ev="$(check || true)"
-      if [ -n "$ev" ]; then printf '%s\n' "$ev"; exit 0; fi
-      sleep "$INTERVAL"
-    done ;;
   *) die "usage: inbox.sh --list | --once | --watch [secs] | --until-event [secs]" ;;
 esac
