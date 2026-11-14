@@ -1,4 +1,4 @@
-/* Nation card (X5, C2): an atlas page, docked as .panel or lit in the beam as .holo.
+/* Nation card (X5, C2): an atlas page, always docked as .panel (the hologram was dropped, PR #75).
    Variables from tokens.css only. */
 .tn-card {
   width: 380px;
@@ -11,8 +11,8 @@
   color: var(--color-ink);
   font-family: var(--font-serif);
 }
-.tn-card.holo { border-bottom: 2px solid var(--holo-tint); }
-.tn-card.holo.speaking { border-bottom-color: var(--holo-warm); }
+.tn-card { border-top: 3px solid transparent; transition: border-color 250ms ease; }
+.tn-card.tn-speaking { border-top-color: var(--color-accent); }
 .tn-card-body {
   position: relative;
   overflow-y: auto;

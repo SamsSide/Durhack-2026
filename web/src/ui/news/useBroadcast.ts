@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { audio } from '../../audio';
 import { useAudio } from '../../audio/useAudio';
 import { useWorld } from '../../state/world';
-import { captureGlobe } from './captureStub';
+import { captureGlobe } from '../../globe/capture';
 
 export interface Bulletin {
   id: string;

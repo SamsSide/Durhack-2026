@@ -30,7 +30,7 @@ budget, run them one at a time in the order below, on Sonnet.
 | C5 | Submission: the project text against the overall criteria and each sponsor's, the video, the prize ticks, the README | all | | CP3 | todo | Mostly writing; platform and deadline not announced yet |
 | C6 | Image prompt: an optional picture drop zone on the Create screen, sent as `imageBase64` (downscaled under about 4 MB) | A17 for the real reading (mocked) | | CP1.5 | wip | Asked by lane a in #73 |
 | C7 | Spoken decrees: a hold-to-speak mic on `DecreeBox` (MediaRecorder, up to 15 s) posting to `POST /api/decree/voice` and showing the transcript | A20 (mocked) | | CP2 | wip | #73 |
-| C8 | `NewsBroadcast`: the "Terra Nova News" lower-third, every 2 minutes and on lane b's button: capture, `POST /api/broadcast`, play, scroll the script | A21, lane b `captureGlobe` (both stubbed) | `NewsBroadcast` to b | CP1.5 | wip | #73; stub swapped when they land |
+| C8 | `NewsBroadcast`: the "Terra Nova News" lower-third, every 2 minutes and on lane b's button: capture, `POST /api/broadcast`, play, scroll the script | A21 (mocked); lane b `captureGlobe` (real, #74) | `NewsBroadcast` to b | CP1.5 | wip | #73 |
 
 ## Waiting on
 
