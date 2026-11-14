@@ -8,6 +8,7 @@ import { EventFeed, LedgerPanel } from './hud/lookup';
 import { BeliefBanner, useEconomyOn, ClosingCard, DiplomacyLegend, Minimap, MODES, TerrainLegend, TopBar, useTimelineOpen } from './hud';
 import { HoverTooltip } from './globe/hover/HoverTooltip';
 import { useEffect, useState } from 'react';
+import { TimelineScrubber } from './globe/timeline';   // B9 timeline (lane a)
 
 // Lane c's NewsBroadcast (X5); resolved at run time so the app builds before it lands.
 const NewsBroadcast = (ui as unknown as Record<string, ComponentType | undefined>).NewsBroadcast;
@@ -62,6 +63,8 @@ export function App() {
       <DiplomacyLegend hidden={timelineOpen} />
       <TerrainLegend hidden={timelineOpen} />
       {world && !timelineOpen && <div className="hud decree-slot"><DecreeBox /></div>}
+      {/* B9 timeline (lane a): the history scrubber, in the band above the chronicle ticker */}
+      {world && !showCreate && <TimelineScrubber />}
       {world && <div style={{ ...overlay, left: 'var(--space-4)', right: 'var(--space-4)', bottom: 'var(--space-4)' }}><Chronicle /></div>}
       {world && EventFeed && <div className="event-feed-slot"><EventFeed /></div>}
       {world && NewsBroadcast && (
