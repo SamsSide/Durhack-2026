@@ -4,15 +4,18 @@
    WHICH CLASS FOR WHAT
    Surfaces   tn-sheet (parchment) | tn-lacquer (dark chrome) | add tn-frame for the gilt frame,
               tn-frame--corners for gilt corner brackets (big panels only), tn-frame--slim for strips.
-   Bars       tn-lacquer tn-lacquer--bar-top (top bar) | tn-lacquer tn-lacquer--bar-bottom (chronicle) | tn-sep (divider in a bar)
+   Bars       tn-lacquer tn-lacquer--bar-top (top bar) | tn-lacquer tn-lacquer--bar-bottom (full-width bottom bar) |
+              tn-lacquer tn-lacquer--bar-floating (a bar inset from the screen edges: the chronicle) | tn-sep (divider in a bar)
    Titles     tn-cartouche (plate on a frame's top edge) | tn-header-bar (claret strip in a sheet) |
               tn-pennant (hanging banner) | tn-rule / tn-rule--gilt (flourish divider)
    Controls   tn-button (paper plate) + --lacquer | --gilt (ONE per screen) | --danger | --sm | --round
               tn-well + tn-seg / tn-seg--active (segmented control) | tn-booktabs + tn-booktab / tn-booktab--active
-              tn-input (recessed field)
+              (+ tn-booktabs--fill: the tabs share the width, five fit in 340px)
+              tn-input (recessed field) | tn-switch > i (paper track, gilt knob; .on / [aria-checked=true]; --danger --lg)
    Data       tn-stat (+ __label, __value; --dark) | tn-chip (+ --ink --caps --war --hostile --neutral --trade
-              --alliance --gilt --lacquer) | tn-trough + tn-trough__fill (--seg) | tn-tooltip
-   Round      tn-roundel (+ __face; --sm --lg --dot) | tn-flag-plate
+              --alliance --gilt --lacquer --sm) | tn-trough + tn-trough__fill (--seg) | tn-tooltip |
+              tn-plate (small lacquer label plate, coloured left edge from --edge)
+   Round      tn-roundel (+ __face; --sm --lg --dot --dot-sm) | tn-flag-plate
    Text       tn-engraved (on paper) | tn-engraved--dark (on lacquer) | tn-gilt-text (dark only) | tn-caps
    Global     tn-scrim (one static edge darkening between the globe and the HUD; wired once in App.tsx)
    States     :hover :active :focus-visible :disabled everywhere; .is-active / [aria-pressed=true] /
@@ -76,6 +79,22 @@
     0 -2px 0 var(--gilt),
     0 -3px 0 var(--gilt-deep),
     0 -10px 20px rgba(0,0,0,.45);
+}
+/* A bar that floats inset from the screen edges (the chronicle): the moulding on its top edge, a black
+   edge and a faint gilt rim on the sides and bottom, and gilt end-caps. */
+.tn-lacquer--bar-floating {
+  border: 1px solid #000;
+  border-radius: var(--radius-1);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    inset 0 -1px 0 rgba(0,0,0,.5),
+    inset 3px 0 0 -1px var(--gilt-lo), inset -3px 0 0 -1px var(--gilt-lo),
+    0 0 0 1px rgba(201,162,75,.4),
+    0 -1px 0 #6e5524,
+    0 -2px 0 var(--gilt),
+    0 -3px 0 var(--gilt-deep),
+    0 -10px 20px rgba(0,0,0,.45),
+    0 4px 10px rgba(0,0,0,.5);
 }
 /* An engraved double-line divider between groups inside a lacquer bar. */
 .tn-sep {
@@ -333,10 +352,14 @@
   box-shadow: inset 0 2px 4px rgba(58,43,16,.6), 0 0 0 1px rgba(0,0,0,.6);
 }
 .tn-button--gilt:focus-visible { outline: 2px solid var(--gilt-hi); }
+/* Disabled: still gilt, only dimmed (a dark glaze over the plate), never a khaki slab. */
 .tn-button--gilt:disabled, .tn-button--gilt[aria-disabled="true"] {
-  border-color: #5a4214;
-  background: linear-gradient(180deg, #d9c99a, #b9a473);
-  box-shadow: inset 0 1px 0 rgba(255,243,196,.5), 0 0 0 1px rgba(0,0,0,.5);
+  opacity: 1;
+  color: rgba(42,31,20,.62);
+  border-color: #4a3610;
+  background: linear-gradient(rgba(24,18,8,.34), rgba(24,18,8,.34)), var(--gilt-plate);
+  box-shadow: inset 0 1px 0 rgba(255,243,196,.35), inset 0 -1px 0 rgba(58,43,16,.6), 0 0 0 1px rgba(0,0,0,.55);
+  text-shadow: 0 1px 0 rgba(255,236,190,.3);
 }
 
 .tn-button--sm { min-height: 22px; padding: 0 var(--space-2); font-size: var(--text-cap); }
@@ -445,6 +468,21 @@
   margin-bottom: -1px;
   padding-bottom: 6px;
 }
+/* Tabs that share the strip's width (five labels fit in a 340px column). Each closed tab is a faint
+   bookmark of its own so the labels still read apart. */
+.tn-booktabs--fill { gap: 1px; padding: 3px 2px 0; }
+.tn-booktabs--fill > .tn-booktab {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: 3px;
+  padding-right: 3px;
+  letter-spacing: 0;
+  text-align: center;
+}
+.tn-booktabs--fill > .tn-booktab:not(.tn-booktab--active):not([aria-selected="true"]) {
+  background: rgba(255,250,235,.22);
+  border-color: rgba(42,31,20,.16);
+}
 
 /* A recessed field on parchment (the decree, search, names). */
 .tn-input {
@@ -459,6 +497,40 @@
 }
 .tn-input::placeholder { color: var(--color-ink-muted); font-style: italic; opacity: 1; }
 .tn-input:focus, .tn-input:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 1px; border-color: var(--color-ink); }
+
+/* A toggle: a track sunk into the paper with a gilt knob (the <i> child). On (.on, .is-active,
+   [aria-checked=true]): the track goes dark ink and the knob slides across. Usually aria-hidden inside a
+   role="switch" button that carries the state; put .on on the track itself. */
+.tn-switch {
+  --w: 34px;
+  --h: 18px;
+  position: relative;
+  display: block;
+  flex: none;
+  width: var(--w);
+  height: var(--h);
+  border-radius: var(--radius-pill);
+  background: rgba(42,31,20,.16);
+  box-shadow: var(--well-paper), inset 0 0 0 1px rgba(42,31,20,.3);
+}
+.tn-switch > i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(var(--h) - 4px);
+  height: calc(var(--h) - 4px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff3c4 0 14%, transparent 42%), var(--gilt-ring);
+  box-shadow: 0 0 0 1px var(--gilt-deep), 0 1px 2px rgba(0,0,0,.5);
+  transition: transform 150ms var(--ease-out);
+}
+.tn-switch.on, .tn-switch.is-active, .tn-switch[aria-checked="true"] {
+  background: var(--color-ink);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.6), inset 0 0 0 1px #000;
+}
+.tn-switch.on > i, .tn-switch.is-active > i, .tn-switch[aria-checked="true"] > i { transform: translateX(calc(var(--w) - var(--h))); }
+.tn-switch--danger.on, .tn-switch--danger.is-active, .tn-switch--danger[aria-checked="true"] { background: #07090f; }
+.tn-switch--lg { --w: 42px; --h: 22px; }
 
 /* ---------------------------------------------------------------- data: stats, chips, bars, tooltips */
 
@@ -528,6 +600,8 @@ button.tn-chip:active, .tn-chip.is-active, .tn-chip[aria-pressed="true"] {
   border-radius: 3px;
   padding: 2px 8px;
 }
+/* A compact chip for a dense row (status on a council line, a ledger row). Pair with --caps. */
+.tn-chip--sm { min-height: 16px; padding: 0 6px; line-height: 14px; font-size: var(--text-cap); letter-spacing: .06em; }
 /* Solid fills: one recipe, the colour from --chip-fill. */
 .tn-chip--ink, .tn-chip--war, .tn-chip--hostile, .tn-chip--neutral, .tn-chip--trade, .tn-chip--alliance {
   color: #fbf3e2;
@@ -597,6 +671,21 @@ button.tn-chip:active, .tn-chip.is-active, .tn-chip[aria-pressed="true"] {
   border-radius: 2px;
   box-shadow: 0 0 0 1px rgba(201,162,75,.55), inset 0 1px 0 rgba(255,255,255,.06), 0 6px 14px rgba(0,0,0,.6);
 }
+/* A small lacquer label plate (globe tags, captions): night enamel, gilt hairline, and a lit left edge
+   in the colour of --edge (a kind, a stance, a nation). */
+.tn-plate {
+  position: relative;
+  padding: 4px 9px 5px;
+  white-space: nowrap;
+  color: var(--color-text);
+  font: 13px/16px var(--font-serif);
+  text-shadow: var(--engrave-on-dark);
+  background: var(--lacquer-sheen), var(--lacquer-grain), #0f1320;
+  border: 1px solid #000;
+  border-left: 4px solid var(--edge, var(--gilt));
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(201,162,75,.55), inset 0 1px 0 rgba(255,255,255,.07), 0 4px 10px rgba(0,0,0,.6);
+}
 .tn-tooltip b, .tn-tooltip strong { color: var(--gilt-hi); font-weight: 600; }
 .tn-tooltip__title {
   display: block;
@@ -656,6 +745,10 @@ button.tn-chip:active, .tn-chip.is-active, .tn-chip[aria-pressed="true"] {
   border-radius: 50%;
   background: radial-gradient(circle at 38% 30%, rgba(255,255,255,.75) 0, rgba(255,255,255,0) 38%), var(--dot, var(--color-ok-bright));
 }
+/* A small bead (8 to 10px) for dense rows: online dots, live markers. Add to tn-roundel--dot. */
+.tn-roundel--dot-sm { --size: 10px; padding: 1.5px; vertical-align: middle; }
+.tn-roundel--dot-sm::before, .tn-roundel--dot-sm::after { inset: 1.5px; }
+.tn-roundel--dot-sm::after { box-shadow: inset 0 1px 1px rgba(0,0,0,.45); }
 
 /* A rectangular flag in a gilt frame with static cloth shading. Give it a size; the flag is the
    background (--flag-colour) or a child <img>/<svg>/<canvas>. */

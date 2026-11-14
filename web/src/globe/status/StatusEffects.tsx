@@ -112,7 +112,7 @@ export function StatusEffects() {
     <>
       {tags.map((t) => (
         <Anchor key={t.key} pos={t.pos} dy={-26}>
-          <div className="gs-tag dispute"><span className="cap">Settled</span>Awarded to {t.name}</div>
+          <div className="tn-plate gs-tag dispute"><span className="cap">Settled</span>Awarded to {t.name}</div>
         </Anchor>
       ))}
       {ripples.map((r) => <RippleRing key={r.key} pos={r.pos} onDone={() => drop(r.key)} />)}

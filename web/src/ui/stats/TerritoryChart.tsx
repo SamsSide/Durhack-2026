@@ -59,7 +59,7 @@ export function TerritoryChart() {
   const { series, ticks, yearOf, top } = model;
   const caption = (
     <p className="tn-st-cap">
-      <i className="tn-st-live" aria-hidden="true" />
+      <i className="tn-roundel tn-roundel--dot tn-roundel--dot-sm tn-st-live" aria-hidden="true" />
       <span>Powered by <b>Tiger Data</b></span>
       <span className="tn-st-n">{data.events.toLocaleString('en-GB')} events{data.sample ? " · sample" : ""}</span>
     </p>
@@ -68,7 +68,7 @@ export function TerritoryChart() {
   if (ticks.length < 2) {
     return (
       <section className="tn-stats">
-        <h3 className="tn-st-title">Territory over time</h3>
+        <h3 className="tn-header-bar tn-st-title">Territory over time</h3>
         <p className="tn-st-empty">The record begins as the first provinces are claimed. Give it a few years.</p>
         {caption}
       </section>
@@ -102,14 +102,13 @@ export function TerritoryChart() {
 
   return (
     <section className="tn-stats">
+      <h3 className="tn-header-bar tn-st-title">Territory over time</h3>
       <header className="tn-st-head">
-        <div>
-          <h3 className="tn-st-title">Territory over time</h3>
-          <p className="tn-st-sub">Provinces held by each nation</p>
-        </div>
-        <p className={`tn-st-year${hover != null ? ' tn-on' : ''}`}><span>{hover != null ? 'Year' : 'Now'}</span>{year}</p>
+        <p className="tn-st-sub">Provinces held by each nation</p>
+        <p className={`tn-stat tn-st-year${hover != null ? ' tn-on' : ''}`}><span className="tn-stat__label">{hover != null ? 'Year' : 'Now'}</span><span className="tn-stat__value">{year}</span></p>
       </header>
 
+      <div className="tn-st-well">
       <svg
         className="tn-st-plot" viewBox={`0 0 ${W} ${H}`} width={W} height={H} tabIndex={0} role="img"
         aria-label={`Provinces held by each nation from year ${yearOf.get(t0)} to year ${yearOf.get(t1)}. Use the arrow keys to read a year.`}
@@ -145,6 +144,7 @@ export function TerritoryChart() {
           onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setHover(null)}
         />
       </svg>
+      </div>
 
       <ul className="tn-st-legend">
         {rows.map(({ s, v, country }) => {

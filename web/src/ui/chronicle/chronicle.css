@@ -36,29 +36,14 @@
 .tn-k-succession { fill: var(--kind-succession, #b08d3a); }
 
 /* Ticker (reference: .ticker, .t-label, .t-track, .t-item, .t-sep) */
-/* The chronicle bar: night lacquer with the moulded gilt edge on top (tn-lacquer--bar-bottom).
-   It floats inset from the screen edges, so it also gets a black edge and a faint gilt rim on the
-   sides and bottom, and gilt end-caps. */
+/* The chronicle bar: night lacquer floating inset from the screen edges (tn-lacquer--bar-floating:
+   the moulded gilt edge on top, a black edge and a faint gilt rim on the sides and bottom). */
 .tn-ticker {
   height: var(--ticker-height);
   display: flex; align-items: center; gap: 14px;
   padding: 0 6px 0 8px;
   color: var(--color-text);
   overflow: hidden;
-}
-.tn-ticker.tn-lacquer--bar-bottom {
-  border: 1px solid #000;
-  border-radius: var(--radius-1);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.06),
-    inset 0 -1px 0 rgba(0,0,0,.5),
-    inset 3px 0 0 -1px var(--gilt-lo), inset -3px 0 0 -1px var(--gilt-lo),
-    0 0 0 1px rgba(201,162,75,.4),
-    0 -1px 0 #6e5524,
-    0 -2px 0 var(--gilt),
-    0 -3px 0 var(--gilt-deep),
-    0 -10px 20px rgba(0,0,0,.45),
-    0 4px 10px rgba(0,0,0,.5);
 }
 .tn-t-label { flex: none; font-size: var(--text-xs); }
 .tn-t-track {
@@ -84,7 +69,14 @@
 .tn-t-item:disabled { cursor: default; }
 .tn-t-item:not(:disabled):hover .tn-t-txt { color: var(--gilt-hi); text-decoration: underline; text-decoration-color: rgba(201,162,75,.6); }
 .tn-t-item:focus-visible { outline: 2px solid var(--gilt-hi); outline-offset: 2px; }
-.tn-t-new { animation: ticker-new 2s ease-out both; }  /* a gilt wash that fades (keyframes in tokens.css); no weight change, a cell's width must never move */
+/* A new entry: a gilt wash on a pseudo-element that fades by opacity (keyframes in tokens.css); no weight
+   change, a cell's width must never move. */
+.tn-t-new { position: relative; isolation: isolate; }
+.tn-t-new::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: rgba(201, 162, 75, 0.55); opacity: 0;
+  animation: ticker-new 2s ease-out both;
+}
 .tn-t-sep { width: 5px; height: 5px; transform: rotate(45deg); background: linear-gradient(135deg, var(--gilt-hi), var(--gilt-lo)); box-shadow: 0 0 0 1px rgba(0,0,0,.6); flex: none; }
 .tn-t-empty { color: var(--color-text-muted); font-style: italic; font-size: 14px; }
 
@@ -251,7 +243,7 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
 @keyframes tab-in { from { opacity: 0; transform: translateX(24px); } to { transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .tn-tl, .tn-t-new, .tn-herald { animation: none; }
+  .tn-tl, .tn-t-new::after, .tn-herald { animation: none; }
   .tn-herald:active { transform: none; }
   .tn-herald, .tn-herald-slot { transition: none; }
 }

@@ -6,36 +6,44 @@
 .tn-eco-mode { font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; line-height: 16px; padding: 0 6px; border-radius: var(--radius-1); border: 1px solid var(--color-ink-muted); }
 .tn-eco-mode.live { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-ink); }
 .tn-eco-mode.mock { background: transparent; color: var(--color-ink-muted); }
-.tn-eco-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-.tn-eco-dot.on { background: var(--color-ok); }
-.tn-eco-dot.off { background: var(--color-danger); }
 .tn-net-tab .tn-eco-counter { color: var(--color-ink); }
 
-.tn-ledger { margin-top: 8px; min-width: 0; }
-.tn-led-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 6px; }
-.tn-led-cur { font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-ink); }
-a.tn-led-cur { text-decoration: underline; text-decoration-color: var(--color-ink-faint); }
-a.tn-led-cur:hover, a.tn-led-sig:hover { color: var(--color-rubric); }
-.tn-led-list { list-style: none; margin: 0; padding: 0; max-height: 420px; overflow-y: auto; }
-.tn-led-row { padding: 6px 4px 7px; border-top: 1px solid var(--color-ink-faint); animation: tn-led-in 320ms var(--ease-out); min-width: 0; }
+/* The Treasury tab of the network sheet: the currency on a claret header bar, the totals in sunk wells
+   (tn-stat), state chips, then the payments as shallow paper wells with engraved figures. */
+.tn-ledger { --tn-bleed: 14px; margin-top: 2px; min-width: 0; }
+.tn-led-head { margin-top: var(--space-3); }
+.tn-led-cur { color: inherit; text-decoration: none; }
+a.tn-led-cur { text-decoration: underline; text-decoration-color: rgba(201,162,75,.6); text-underline-offset: 3px; }
+a.tn-led-cur:hover { color: var(--gilt-hi); }
+.tn-led-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.tn-led-totals .tn-stat__value { font-size: var(--text-md); font-weight: 600; }
+.tn-led-state { display: flex; align-items: center; gap: 6px; margin: 8px 0 6px; font-size: var(--text-sm); font-style: italic; color: var(--color-ink-muted); text-shadow: var(--engrave-on-paper); }
+.tn-led-list { list-style: none; margin: 0; padding: 2px 0 0; display: flex; flex-direction: column; gap: 5px; max-height: 420px; overflow-y: auto; }
+.tn-led-row {
+  min-width: 0; padding: 6px 8px 7px; border-radius: 2px;
+  background: rgba(42,31,20,.05); box-shadow: var(--well-paper), inset 0 0 0 1px rgba(42,31,20,.12);
+  animation: tn-led-in 320ms var(--ease-out);
+}
 .tn-led-top, .tn-led-mid, .tn-led-bot { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-width: 0; }
-.tn-led-mid, .tn-led-bot { margin-top: 3px; }
-.tn-led-year { font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 600; color: var(--color-rubric); }
+.tn-led-mid, .tn-led-bot { margin-top: 4px; }
+.tn-led-year { font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 600; color: var(--color-rubric); text-shadow: var(--engrave-on-paper); }
 .tn-led-who { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
-.tn-led-name { font-size: var(--text-sm); font-weight: 600; overflow-wrap: anywhere; }
+.tn-led-who .tn-sw { width: 10px; height: 10px; box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 0 0 1px rgba(201,162,75,.5); }
+.tn-led-name { font-size: var(--text-sm); font-weight: 600; overflow-wrap: anywhere; text-shadow: var(--engrave-on-paper); }
 .tn-led-pays { font-size: var(--text-sm); font-style: italic; color: var(--color-ink-muted); }
-.tn-led-amt { font-family: var(--font-mono); font-size: var(--text-sm); font-weight: 600; }
-.tn-led-reason { font-family: var(--font-display); font-size: var(--text-cap); letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-ink-muted); }
+.tn-led-amt { font-family: var(--font-mono); font-size: var(--text-md); font-weight: 600; color: var(--color-ink); text-shadow: var(--engrave-on-paper); }
+.tn-led-amt small { margin-left: 3px; font-size: var(--text-cap); color: var(--color-rubric); }
+.tn-led-reason { font-family: var(--font-display); font-size: var(--text-cap); letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-ink-muted); text-shadow: var(--engrave-on-paper); }
 .tn-led-note { font-size: var(--text-sm); font-style: italic; color: var(--color-ink-muted); flex: 1 1 100%; }
 .tn-led-sig { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-ink-muted); }
 a.tn-led-sig { color: var(--silence-ink); text-decoration: underline; }
-.tn-led-chip { font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; line-height: 16px; padding: 0 6px; border-radius: var(--radius-1); border: 1px solid var(--color-ink-muted); margin-left: auto; }
-.tn-led-chip.queued { background: transparent; color: var(--color-ink-muted); }
-.tn-led-chip.sent { background: var(--silence-fill); border-color: var(--silence-ink); color: var(--silence-ink); }
-.tn-led-chip.confirmed { background: var(--color-ok); border-color: var(--color-ok); color: var(--color-parchment-light); }
-.tn-led-chip.failed { background: var(--color-danger); border-color: var(--color-danger); color: var(--color-parchment-light); }
-.tn-led-chip.simulated { background: color-mix(in srgb, var(--color-ink-muted) 22%, transparent); color: var(--color-ink-muted); }
-.tn-led-empty { margin: 8px 0; font-style: italic; color: var(--color-ink-muted); font-size: var(--text-sm); }
+a.tn-led-sig:hover { color: var(--color-rubric); }
+.tn-led-chip { margin-left: auto; }
+.tn-led-chip.sent { --chip-fill: var(--silence-ink); }
+.tn-led-chip.confirmed { --chip-fill: var(--color-ok); }
+.tn-led-chip.failed { --chip-fill: var(--color-danger); }
+.tn-led-chip.simulated { color: var(--color-ink-muted); }
+.tn-led-empty { margin: 4px 0 8px; padding: 10px 12px; border-radius: 2px; font-style: italic; color: var(--color-ink-muted); font-size: var(--text-sm); text-shadow: var(--engrave-on-paper); }
 @keyframes tn-led-in { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .tn-led-row { animation: none; } }
 
@@ -47,23 +55,16 @@ a.tn-led-sig { color: var(--silence-ink); text-decoration: underline; }
 .tn-treasury-sync { font-family: var(--font-display); font-size: var(--text-cap); letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-ok); }
 .tn-treasury-sync.no { color: var(--color-warn); }
 
-/* Material pass (theme/materials.css): chips are small raised plates, the online dot is a glass bead in a gilt
-   bezel, the treasury balance sits in a shallow well. Composed from tokens so it matches tn-chip and tn-roundel. */
-.tn-eco-mode, .tn-led-chip {
+/* Material pass (theme/materials.css): the mode chip is a small raised plate, the online dot a glass bead
+   in a gilt bezel (tn-roundel--dot-sm), the treasury balance sits in a shallow well. */
+.tn-eco-mode {
   background-image: linear-gradient(180deg, rgba(255,255,255,.2) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,.14) 100%);
   box-shadow: inset 0 1px 0 rgba(255,235,210,.3), 0 1px 1px rgba(42,31,20,.3);
 }
-.tn-eco-mode.mock, .tn-led-chip.queued, .tn-led-chip.simulated {
+.tn-eco-mode.mock {
   background-color: #efe3c6;
   box-shadow: var(--bevel-paper), 0 1px 1px rgba(42,31,20,.2);
 }
-.tn-led-chip.confirmed, .tn-led-chip.failed { text-shadow: 0 -1px 0 rgba(0,0,0,.35); }
-.tn-eco-dot {
-  width: 10px; height: 10px; border: 1.5px solid transparent;
-  box-shadow: 0 0 0 1px var(--frame-line);
-}
-.tn-eco-dot.on { background: radial-gradient(circle at 38% 30%, rgba(255,255,255,.75) 0, rgba(255,255,255,0) 40%) padding-box, linear-gradient(var(--color-ok), var(--color-ok)) padding-box, var(--gilt-ring) border-box; }
-.tn-eco-dot.off { background: radial-gradient(circle at 38% 30%, rgba(255,255,255,.75) 0, rgba(255,255,255,0) 40%) padding-box, linear-gradient(var(--color-danger), var(--color-danger)) padding-box, var(--gilt-ring) border-box; }
-.tn-led-year { text-shadow: var(--engrave-on-paper); }
-.tn-led-cur { text-shadow: var(--engrave-on-paper); }
+.tn-eco-dot.on { --dot: var(--color-ok); }
+.tn-eco-dot.off { --dot: var(--color-danger); }
 .tn-treasury { margin-top: 8px; padding: 5px 8px; border-radius: 2px; background: rgba(42,31,20,.05); box-shadow: var(--well-paper); }

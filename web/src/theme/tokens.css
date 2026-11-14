@@ -305,9 +305,9 @@ button, select, input, textarea { font: inherit; }
   from { background-position: -200px 0; }
   to { background-position: 200px 0; }
 }
-@keyframes ticker-new {           /* a new chronicle entry: a gilt wash that fades */
-  from { background: rgba(201, 162, 75, 0.55); }
-  to { background: transparent; }
+@keyframes ticker-new {           /* a new chronicle entry: a gilt wash (a pseudo-element) that fades; opacity only */
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .holo, .holo.silenced { animation: none; }

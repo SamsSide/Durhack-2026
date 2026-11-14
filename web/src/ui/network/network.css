@@ -72,7 +72,7 @@
 .tn-sw { display: inline-block; width: 12px; height: 12px; border: 1px solid var(--color-ink); flex: none; background: var(--tn-nation); }
 
 /* ---- World switches: raised paper plates that press in, with a sunk toggle track ---- */
-.tn-switch {
+.tn-net-switch {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-top: 8px; padding: 7px 10px; text-align: left;
   color: var(--color-ink); font-family: inherit; cursor: pointer;
   border: 1px solid var(--color-ink-muted); border-radius: var(--radius-1);
@@ -80,39 +80,27 @@
   box-shadow: var(--bevel-paper), 0 1px 2px rgba(42, 31, 20, 0.35);
   transition: transform var(--dur-fast) var(--ease-out);
 }
-.tn-switch:hover:not(:disabled) { border-color: var(--gilt-lo); background: linear-gradient(180deg, #fbf5e6 0%, #ead9b2 100%); }
-.tn-switch:active:not(:disabled) { transform: translateY(1px); }
-.tn-switch:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
-.tn-switch:disabled { opacity: 0.5; cursor: default; box-shadow: var(--bevel-paper); }
+.tn-net-switch:hover:not(:disabled) { border-color: var(--gilt-lo); background: linear-gradient(180deg, #fbf5e6 0%, #ead9b2 100%); }
+.tn-net-switch:active:not(:disabled) { transform: translateY(1px); }
+.tn-net-switch:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+.tn-net-switch:disabled { opacity: 0.5; cursor: default; box-shadow: var(--bevel-paper); }
 /* On: the plate is pressed into the page. */
-.tn-switch.on, .tn-switch.on:hover:not(:disabled) {
+.tn-net-switch.on, .tn-net-switch.on:hover:not(:disabled) {
   border-color: var(--color-ink);
   background: linear-gradient(180deg, #d9c495 0%, #e8d6af 100%);
   box-shadow: inset 0 2px 3px rgba(42, 31, 20, 0.38), 0 1px 0 rgba(255, 250, 235, 0.6);
 }
 /* Blackout on: a claret lacquer plate. */
-.tn-switch.tn-blackout.on, .tn-switch.tn-blackout.on:hover:not(:disabled) {
+.tn-net-switch.tn-blackout.on, .tn-net-switch.tn-blackout.on:hover:not(:disabled) {
   color: #f6e7c4; border-color: #3a0f0b;
   background: var(--lacquer-sheen), linear-gradient(180deg, var(--lacquer-claret-hi), var(--lacquer-claret));
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(201, 162, 75, 0.45);
   text-shadow: var(--engrave-on-dark);
 }
-.tn-switch.tn-blackout.on .tn-sw-sub { color: #ead6b0; }
+.tn-net-switch.tn-blackout.on .tn-sw-sub { color: #ead6b0; }
 .tn-sw-title { display: block; font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; line-height: 15px; text-shadow: var(--engrave-on-paper); }
-.tn-switch.tn-blackout.on .tn-sw-title { text-shadow: var(--engrave-on-dark); }
+.tn-net-switch.tn-blackout.on .tn-sw-title { text-shadow: var(--engrave-on-dark); }
 .tn-sw-sub { display: block; font-size: 13.5px; line-height: 16px; color: var(--color-ink-muted); font-style: italic; }
-.tn-toggle {
-  width: 34px; height: 18px; border-radius: var(--radius-pill); position: relative; flex: none; display: block;
-  background: rgba(42, 31, 20, 0.16); box-shadow: var(--well-paper), inset 0 0 0 1px rgba(42, 31, 20, 0.3);
-}
-.tn-toggle i {
-  position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
-  background: radial-gradient(circle at 50% 30%, #fffaf0, #e2cf9f); box-shadow: 0 0 0 1px rgba(42, 31, 20, 0.55), 0 1px 2px rgba(42, 31, 20, 0.5);
-  transition: transform 150ms ease;
-}
-.tn-toggle.on { background: var(--color-ink); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), inset 0 0 0 1px #000; }
-.tn-toggle.on i { transform: translateX(16px); background: var(--gilt-plate); box-shadow: 0 0 0 1px #3a2a0c, 0 1px 2px rgba(0, 0, 0, 0.5); }
-.tn-toggle.danger.on { background: #07090f; }
 /* The Prepare label inside its plate: a small sunk well (its markup lives in prepare/PreparePanel.tsx). */
 .tn-net .tn-prep-switch-go {
   border: 1px solid rgba(42, 31, 20, 0.45); background: rgba(42, 31, 20, 0.07); box-shadow: var(--well-paper);
@@ -232,18 +220,18 @@
 
 /* Blackout and beliefs side by side; each keeps its help line */
 .tn-net-world { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px; }
-.tn-net-world .tn-switch { align-items: flex-start; padding: 7px 8px; gap: 6px; }
+.tn-net-world .tn-net-switch { align-items: flex-start; padding: 7px 8px; gap: 6px; }
 .tn-net-world .tn-sw-sub { font-size: 12.5px; line-height: 15px; }
-.tn-net-world .tn-toggle { margin-top: 1px; }
+.tn-net-world .tn-switch { margin-top: 1px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .tn-node, .tn-node-count, .tn-net-tab, .tn-switch, .tn-toggle i, .tn-state i.tn-pulse { animation: none; transition: none; }
-  .tn-node:hover, .tn-node:active, .tn-net-tab:active, .tn-switch:active:not(:disabled) { transform: none; }
+  .tn-node, .tn-node-count, .tn-net-tab, .tn-net-switch, .tn-switch > i, .tn-state i.tn-pulse { animation: none; transition: none; }
+  .tn-node:hover, .tn-node:active, .tn-net-tab:active, .tn-net-switch:active:not(:disabled) { transform: none; }
 }
 
 /* Under 800 px tall (the projector) the help lines move into tooltips so nothing scrolls. */
-.tn-net-short .tn-net-sub, .tn-net-short .tn-net-world .tn-switch:not(.on) .tn-sw-sub, .tn-net-short .tn-prep-switch:not(.on) .tn-sw-sub { display: none; }   /* the drift count and the prepare progress stay */
+.tn-net-short .tn-net-sub, .tn-net-short .tn-net-world .tn-net-switch:not(.on) .tn-sw-sub, .tn-net-short .tn-prep-switch:not(.on) .tn-sw-sub { display: none; }   /* the drift count and the prepare progress stay */
 .tn-net-short .tn-net-head { justify-content: flex-end; margin-bottom: -4px; }
-.tn-net-short .tn-net-world .tn-switch { align-items: center; }
+.tn-net-short .tn-net-world .tn-net-switch { align-items: center; }
 .tn-net-short .tn-tray { padding: 6px 10px 7px 12px; }
 .tn-net-short .tn-tray-council { margin-top: 6px; padding-top: 4px; gap: 3px; }

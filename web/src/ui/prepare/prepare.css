@@ -66,25 +66,21 @@
 .tn-prep-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-top: 16px; }
 .tn-prep-note { margin: 0; font-size: 15px; line-height: 20px; font-style: italic; color: var(--color-text-muted); }
 .tn-prep .tn-prep-play { flex: none; gap: 10px; min-width: 200px; min-height: 48px; font-size: 17px; letter-spacing: 0.14em; }
-@keyframes tn-prep-pulse {
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 75%, transparent); }
-  70%, 100% { box-shadow: 0 0 0 16px transparent; }
+/* The pill in the top bar: a lacquer plate like ON AIR (tn-button tn-button--lacquer), with the progress
+   in a sunk trough with a lit gilt fill. Ready: gilt caps and a gilt ring that breathes (opacity and
+   transform only, on a pseudo-element). */
+.tn-prep-pill { position: relative; flex: none; gap: 8px; height: 28px; padding: 0 10px; }
+.tn-prep-pill:disabled { cursor: default; color: var(--color-text-muted); }
+.tn-prep-pill-bar { position: relative; width: 44px; height: 6px; border-radius: 3px; background: #07090f; box-shadow: var(--well-dark); overflow: hidden; }
+.tn-prep-pill-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,0) 55%), var(--gilt); box-shadow: inset 0 -1px 0 rgba(0,0,0,.3); transition: width var(--dur-slow) var(--ease-out); }
+.tn-prep-pill-num { font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: 0; color: var(--gilt-hi); text-shadow: var(--engrave-on-dark); }
+.tn-prep-pill.ready, .tn-prep-pill.ready:hover { color: var(--gilt-hi); box-shadow: var(--bevel-dark), 0 0 0 1px var(--gilt), 0 2px 3px rgba(0,0,0,.5); }
+.tn-prep-pill.ready::after {
+  content: ""; position: absolute; inset: -4px; border-radius: 4px; pointer-events: none;
+  box-shadow: 0 0 0 2px rgba(201,162,75,.7);
+  animation: tn-prep-pulse 1.6s var(--ease-out) infinite;
 }
-
-/* The pill in the top bar (dark surface). */
-.tn-prep-pill {
-  appearance: none; flex: none; display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 10px;
-  background: var(--color-surface); color: var(--color-text); cursor: pointer;
-  border: 1px solid var(--color-accent); border-radius: var(--radius-pill);
-  font-family: var(--font-display); font-size: var(--text-cap); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
-}
-.tn-prep-pill:hover:not(:disabled) { color: var(--color-accent); }
-.tn-prep-pill:disabled { cursor: default; border-color: var(--color-border); color: var(--color-text-muted); }
-.tn-prep-pill-bar { width: 44px; height: 4px; border-radius: 2px; background: var(--color-border); overflow: hidden; }
-.tn-prep-pill-bar i { display: block; height: 100%; background: var(--color-accent); transition: width var(--dur-slow) var(--ease-out); }
-.tn-prep-pill-num { font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: 0; color: var(--color-accent); }
-.tn-prep-pill.ready { background: var(--color-accent); color: var(--color-ink); animation: tn-prep-pulse 1.6s var(--ease-out) infinite; }
-.tn-prep-pill.ready .tn-prep-pill-num { color: var(--color-ink); }
+@keyframes tn-prep-pulse { 0% { opacity: 1; transform: scale(.94); } 70%, 100% { opacity: 0; transform: scale(1.12, 1.4); } }
 .tn-prep-pill.ready .tn-prep-pill-bar { display: none; }
 .topbar.compact .tn-prep-pill:not(.ready) .tn-prep-pill-word, .topbar.compact .tn-prep-pill.ready .tn-prep-pill-num { display: none; }
 
@@ -96,7 +92,7 @@
 .tn-prep-switch:hover .tn-prep-switch-go { background: var(--color-ink); color: var(--color-parchment); }
 .tn-prep-switch.on .tn-prep-switch-go { border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 22%, transparent); }
 
-/* The Create screen toggle: a recessed well with a lacquer switch and a gilt knob. */
+/* The Create screen toggle: a recessed well holding a tn-switch. */
 .tn-create .tn-create-prep {
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: 100%;
   margin-top: 16px; padding: 8px 14px; text-align: left; cursor: pointer; color: var(--color-ink);
@@ -108,10 +104,7 @@
 .tn-create-prep:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 1px; }
 .tn-create-prep-title { display: block; font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; line-height: 16px; text-shadow: var(--engrave-on-paper); }
 .tn-create-prep-sub { display: block; font-size: 14px; line-height: 18px; font-style: italic; color: var(--color-ink-muted); }
-.tn-create-prep-toggle { width: 42px; height: 22px; border-radius: var(--radius-pill); background: #2a1f14; box-shadow: var(--well-dark); position: relative; flex: none; display: block; }
-.tn-create-prep-toggle i { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3c4 0 12%, transparent 40%), var(--gilt-ring); border: 1px solid #3a2b10; box-shadow: 0 1px 2px rgba(0,0,0,.6); transition: transform 150ms ease; }
-.tn-create .tn-create-prep.on .tn-create-prep-toggle { background: var(--gilt-lo); }
-.tn-create-prep.on .tn-create-prep-toggle i { transform: translateX(20px); }
+/* The track and knob are tn-switch tn-switch--lg (theme/materials.css). */
 
 @media (max-height: 800px) {
   .tn-prep { padding: 24px 26px 14px; }
@@ -126,5 +119,5 @@
 }
 @media (max-width: 640px) { .tn-prep-chip { padding: 0 6px; font-size: 10px; } .tn-prep-name { display: none; } }
 @media (prefers-reduced-motion: reduce) {
-  .tn-prep-veil, .tn-prep-chip.working::after, .tn-prep-pill.ready { animation: none; }
+  .tn-prep-veil, .tn-prep-chip.working::after, .tn-prep-pill.ready::after { animation: none; }
 }

@@ -269,7 +269,7 @@ body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes { opacity: 0; pointer-
 .event-feed-slot {
   position: absolute;
   left: 16px;
-  top: calc(var(--topbar-height, 52px) + 72px);
+  top: calc(var(--topbar-height, 52px) + 84px);   /* under the folded Network tab (top 76, 40 tall) */
   z-index: 4;
   pointer-events: none;
 }
