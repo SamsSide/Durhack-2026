@@ -8,7 +8,7 @@ import type { ChronicleKind, Country, Structure, TechAge, World } from '../types
 
 export const AGES: readonly TechAge[] = ['ancient', 'medieval', 'gunpowder', 'industrial', 'modern', 'future', 'stellar'];
 
-/** A nation's age as a number, 0 (ancient) to 4 (modern). A missing age means ancient. */
+/** A nation's age as a number, 0 (ancient) to 6 (stellar). A missing age means ancient. */
 export const ageIndex = (age: TechAge | undefined): number => Math.max(0, AGES.indexOf(age ?? 'ancient'));
 
 /** How much stronger a unit is when raised in each age. */

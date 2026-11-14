@@ -527,7 +527,7 @@ canonical order, derived ones are held back, and every payment is clamped to wha
   shows no ledger, deaths or wonders; re-record before judging if those must appear offline.
 - **All agents run in one process** on the owner's laptop; cut and restore are software switches on
   the bus, not real network partitions. Agents on other laptops (row A10) were cut.
-- **The chain mirrors payments only**, not income; treasuries live in the sim. Devnet may reset,
+- **The chain records payments between nations only**, not income; treasuries live in the sim. Devnet may reset,
   which would break old Explorer links.
 - **Painted flags** need Gemini image billing and are off.
 - **Not built yet:** the timeline scrubber (B9); lane b's economy rows B10 to B13 are in progress.
@@ -539,16 +539,7 @@ canonical order, derived ones are held back, and every payment is clamped to wha
 
 ### Where the code and the plan or contracts differ
 
-- `docs/research/solana-economy.md` §3.4 describes the chain as a mirror of treasuries kept in step
-  by a Commons true-up, with a cap of 6 transactions a window. The code (PR #180) is an exact ledger
-  of payments only, no true-up, 4 transactions a window by default. `contracts.md` matches the code.
-- The cover penalty (0.85) applies only to a nation's **attacks** (`coverMultiplier` in
-  `settleMove`), not to its defence, although the lane log says "armies fight at 0.85".
-- `hackathon-plan.md` §4 says rulers return "under 150 tokens"; the code allows 220 output tokens.
-- The plan's painted flags on click are off (no image billing), as decided on 14 Nov.
-- `ageIndex`'s comment in `sim/ages.ts` says 0 to 4; there are seven ages (0 to 6).
-- `contracts.md`'s environment table still lists the `SOLANA_*` variables under lane a; the economy
-  moved to lane b on 14 Nov 17:50. Its shared-files table still mentions the hologram (dropped).
+None known at the time of writing; the mismatches found on 14 Nov were fixed in the docs.
 
 ## 8. Judge prep
 

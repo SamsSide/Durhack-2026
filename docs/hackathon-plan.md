@@ -106,7 +106,7 @@ flowchart LR
   controller. A battle is settled by a pure function of both sides' strength and a seeded hash,
   so every agent computes the same result without a referee.
 - **The ruler is an LLM, called rarely.** Every 30 to 45 seconds, or when something big happens,
-  a nation sends Gemini a digest of under 400 tokens and gets back under 150 tokens of JSON: a
+  a nation sends Gemini a digest of under 400 tokens and gets back under about 220 tokens of JSON: a
   focus (expand, develop, fortify, attack), changes of stance towards neighbours, and one
   sentence of proclamation for the chronicle. Between calls the rules carry out the focus.
 - **Resilience is three switches per nation.**
@@ -170,7 +170,7 @@ joining the world mid-run.
 **Flags.** Gemini gives every nation and region a flag as a small specification (layout, two to
 four colours, an emblem). It is drawn at once as a crisp vector flag, for free, and works in
 mock mode. Clicking a nation asks for an AI-painted version in the background, which replaces
-the drawn one when it arrives (paid, capped per world).
+the drawn one when it arrives (paid, capped per world; off until Gemini image billing is enabled, `GEMINI_MODEL_IMAGE` empty, see contract X3).
 
 **Pacing.** At normal speed a world goes from first settlements to empires at war in about
 three minutes, so a judge sees the whole arc in one visit. Speed and pause are on the top bar.

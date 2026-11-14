@@ -14,7 +14,7 @@ file and the code disagree, the code wins and the owner fixes this file.
 | root `package.json`, `package-lock.json`, `tsconfig.base.json` | a | new dependency: `needs-owner` issue |
 | `packages/shared/**` | a | ask lane a via `agent-request` |
 | `server/**` (engine, agents, and the story routes in `server/src/story/`) | a | ask lane a via `agent-request` |
-| `web/package.json`, `web/vite.config.ts`, `web/src/main.tsx`, `web/src/App.tsx` | b | lane c exports components from `web/src/ui/index.ts`; lane b places them in `App.tsx` and in the hologram (X5) |
+| `web/package.json`, `web/vite.config.ts`, `web/src/main.tsx`, `web/src/App.tsx` | b | lane c exports components from `web/src/ui/index.ts`; lane b places them in `App.tsx` and in the docked card (X5; the hologram was dropped, #75) |
 | `web/src/audio/**` (X6), `web/src/theme/**` and `docs/design/**` (X7) | a | lanes b and c read them |
 | `web/src/state/**` (the store, X5) | b | lane c reads it; changes via `agent-request` |
 | `web/public/models/**` (X4) | a | lane b reads it |
@@ -48,13 +48,13 @@ Real values go in `.env` at the repo root (git-ignored). The owner's keys file i
 | `IMAGE_MAX_PER_RUN` | lane a | Default 12. Painted flags per world |
 | `PORT` | lane a | Server port, default 8787 |
 | `TIGER_DATABASE_URL` | lane a | Optional, row A11 |
-| `SOLANA_MODE` | lane a | `off`, `mock` (default: fake signatures, no network) or `devnet` (row A27) |
-| `SOLANA_RPC_URL` | lane a | Default `https://api.devnet.solana.com` |
-| `SOLANA_WS_URL` | lane a | Accepted but unused: confirmation is HTTP polling |
-| `SOLANA_KEYS_DIR` | lane a | Keypair JSON files, default `~/.config/durhack/solana`; never in the repo |
-| `SOLANA_SETTLE_MS` | lane a | Settlement window, default 5000 |
-| `SOLANA_MAX_TX_PER_WINDOW` | lane a | Default 4, sent one at a time; overflow nets into the next window |
-| `SOLANA_FLOAT` | lane a | Coins each nation gets from the Commons at genesis, default 10000 |
+| `SOLANA_MODE` | lane b | `off`, `mock` (default: fake signatures, no network) or `devnet` (row A27) |
+| `SOLANA_RPC_URL` | lane b | Default `https://api.devnet.solana.com` |
+| `SOLANA_WS_URL` | lane b | Accepted but unused: confirmation is HTTP polling |
+| `SOLANA_KEYS_DIR` | lane b | Keypair JSON files, default `~/.config/durhack/solana`; never in the repo |
+| `SOLANA_SETTLE_MS` | lane b | Settlement window, default 5000 |
+| `SOLANA_MAX_TX_PER_WINDOW` | lane b | Default 4, sent one at a time; overflow nets into the next window |
+| `SOLANA_FLOAT` | lane b | Coins each nation gets from the Commons at genesis, default 10000 |
 
 ## X1 · World types and `applyEvent` (lane a gives to lanes b and c)
 
@@ -264,8 +264,8 @@ export type PaymentReason = 'trade' | 'reparations' | 'plunder' | 'seizure' | 'w
   war targets and moves armies (rules, plus a Gemini call only for declaring or ending a war).
   A general can fall when an army he leads loses a big battle, either member can be assassinated
   (rare, more likely in war), a decree or the `kill` control can kill one, and `cut_member` cuts
-  one off. Then the other **covers** (`council_status` `covering`; armies fight at 0.85 while the
-  ruler covers the general; the general holds the course while covering the ruler). After 8 ticks
+  one off. Then the other **covers** (`council_status` `covering`; the general's attacks are
+  scaled by 0.85 (`COVER_STRENGTH`, attacker only) while the ruler covers the general; the general holds the course while covering the ruler). After 8 ticks
   a **successor** is named (`council_changed` cause `succession`) and inherits the predecessor's
   `memory`; a ruler's successor follows the government (heir, election or coup). `council_changed`
   for the ruler also sets `Country.leader`. Chronicle kinds `death` and `succession` tell it
