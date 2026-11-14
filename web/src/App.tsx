@@ -7,6 +7,7 @@ import type { WorldStore } from './state/world';
 import { useEffect, useState } from 'react';
 
 const MODES: WorldStore['mapMode'][] = ['political', 'terrain', 'diplomacy', 'strength'];
+const MODE_LABELS: Record<WorldStore['mapMode'], string> = { political: 'Political', terrain: 'Terrain', diplomacy: 'Diplomacy', strength: 'Strength' };
 const SPEEDS = [1, 2, 4, 8];
 
 const overlay: CSSProperties = { position: 'absolute', zIndex: 5 };
@@ -31,9 +32,9 @@ function TopBar({ onCreate }: { onCreate: () => void }) {
             <button key={v} className={`btn ${world.speed === v && !world.paused ? 'active' : ''}`} onClick={() => { send({ type: 'control', action: 'pause', value: false }); send({ type: 'control', action: 'speed', value: v }); }}>{v}x</button>
           ))}
           <button className={`btn ${world.paused ? 'active' : ''}`} onClick={() => send({ type: 'control', action: 'pause', value: !world.paused })}>Pause</button>
-          <select className="btn" value={mapMode} onChange={(e) => setMapMode(e.target.value as WorldStore['mapMode'])}>
-            {MODES.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
+          {MODES.map((m, i) => (
+            <button key={m} className={`btn ${mapMode === m ? 'active' : ''}`} title={`Shortcut ${i + 1}`} onClick={() => setMapMode(m)}>{MODE_LABELS[m]}</button>
+          ))}
         </>
       )}
       {budget && <span style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>{budget.mode} / {budget.calls} calls{budget.capped ? ' (capped)' : ''}</span>}
@@ -46,13 +47,31 @@ export function App() {
   const world = useWorld((s) => s.world);
   const selected = useWorld((s) => s.selectedCountryId);
   const regionId = useWorld((s) => s.selectedRegionId);
+  const mapMode = useWorld((s) => s.mapMode);
   const [creating, setCreating] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      const tag = el?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el?.isContentEditable) return;
+      const m = MODES[Number(e.key) - 1];
+      if (m) useWorld.getState().setMapMode(m);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   useEffect(() => setCreating(false), [world?.id]);
   const showCreate = !world || creating;
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
       <Globe />
       <TopBar onCreate={() => setCreating(true)} />
+      {world && mapMode === 'diplomacy' && selected == null && (
+        <div style={{ ...overlay, top: 52, left: '50%', transform: 'translateX(-50%)', padding: 'var(--space-1) var(--space-3)', background: 'var(--color-surface)', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-1)', pointerEvents: 'none' }}>
+          Select a nation to see its friends and enemies
+        </div>
+      )}
       {world && <div style={{ ...overlay, top: 56, left: 'var(--space-3)', bottom: 170 }}><NetworkPanel /></div>}
       {world && selected != null && <div style={{ ...overlay, top: 56, right: 'var(--space-3)', background: 'rgba(18, 16, 13, 0.82)', borderRadius: 'var(--radius-2)', boxShadow: 'var(--shadow-1)' }}><NationCard countryId={selected} regionId={regionId} /></div>}
       {world && <div style={{ ...overlay, left: 'var(--space-3)', right: 'var(--space-3)', bottom: 'var(--space-3)' }}><Chronicle /></div>}
