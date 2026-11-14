@@ -8,6 +8,14 @@ const MIN_MS = 500;
 
 type Note = { kind: 'hint' | 'listen' | 'result' | 'fail'; transcript?: string; decree?: string };
 
+/** The line shown when the voice route refuses a recording (for 'fail', carried in `transcript`). */
+function failText(status: number, error: string): string {
+  if (/no speech/i.test(error)) return 'The herald heard no words. Speak up, and try again.';
+  if (/unsupported audio/i.test(error)) return 'The herald cannot read this recording.';
+  if (status === 503) return 'The herald is away. Type your decree instead.';
+  return 'The herald could not hear you.';
+}
+
 function clock(ms: number): string {
   const s = Math.max(0, Math.ceil(ms / 1000));
   return `0:${String(s).padStart(2, '0')}`;
@@ -48,7 +56,12 @@ export function DecreeBox() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ audioBase64, mimeType: rec.mimeType }),
       });
-      if (!res.ok) throw new Error(String(res.status));
+      if (!res.ok) {
+        // A20 errors: 400 "no speech heard" / "unsupported audio", 503 "voice unavailable".
+        const err = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? '';
+        if (alive.current) showNote({ kind: 'fail', transcript: failText(res.status, err) });
+        return;
+      }
       const data = (await res.json()) as { transcript?: string; decree?: { text?: string } };
       if (!alive.current) return;
       showNote({ kind: 'result', transcript: data.transcript ?? '', decree: data.decree?.text ?? '' });
@@ -77,7 +90,7 @@ export function DecreeBox() {
     <div className="tn-decree">
       {note?.kind === 'hint' && <span className="tn-decree-done" role="status">Hold the button while you speak.</span>}
       {note?.kind === 'listen' && <span className="tn-decree-done" role="status">The herald listens...</span>}
-      {note?.kind === 'fail' && <span className="tn-decree-done" role="status">The herald could not hear you.</span>}
+      {note?.kind === 'fail' && <span className="tn-decree-done" role="status">{note.transcript || 'The herald could not hear you.'}</span>}
       {note?.kind === 'result' && (
         <span className="tn-decree-done" role="status">
           {note.transcript ? <>&ldquo;{note.transcript}&rdquo;</> : null}

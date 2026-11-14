@@ -59,7 +59,7 @@ export function useRecorder({ maxMs, onDone }: Options) {
     rec.ondataavailable = (e) => { if (e.data.size) chunks.current.push(e.data); };
     rec.onstop = () => {
       const durationMs = Date.now() - startedAt.current;
-      const mimeType = (rec.mimeType || type || 'audio/webm').split(';')[0];
+      const mimeType = rec.mimeType || type || 'audio/webm'; // sent as is, codecs included (A20 accepts audio/webm;codecs=opus)
       const blob = new Blob(chunks.current, { type: rec.mimeType || type || 'audio/webm' });
       release();
       recRef.current = null;
