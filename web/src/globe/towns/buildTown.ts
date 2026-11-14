@@ -2,7 +2,8 @@
 // Everything is laid out in the tile's tangent plane (a seeded, rotated street grid), then dropped onto the
 // tile's flat top fan so nothing floats above it.
 import * as THREE from 'three';
-import type { BuildingStyle, Structure, World } from '@terra/shared';
+import { cityTier } from '@terra/shared';
+import type { BuildingStyle, CityTier, Structure, World } from '@terra/shared';
 import { hash01 } from '../structures/placement';
 import type { TileGeo } from '../structures/placement';
 import { nationIdentity } from '../identity/identity';
@@ -24,32 +25,41 @@ export interface RiverSample { p: THREE.Vector3; side: THREE.Vector3; half: numb
 
 export interface TownParts {
   houses: PartBuf;   // gabled houses (roof colour per instance)
-  walls: PartBuf;    // wall segments
-  towers: PartBuf;   // round towers
+  walls: PartBuf;    // plain boxes: square towers, gate blocks, pylons
+  towers: PartBuf;   // round towers and palisade posts
+  crens: PartBuf;    // stone wall segments with battlements
+  stakes: PartBuf;   // palisade segments with pointed tops
+  caps: PartBuf;     // the top fifth of a box: tower tops, gate lintels, gate pavilions
+  roofs4: PartBuf;   // hip roofs for square towers (the top three tenths)
+  roofsC: PartBuf;   // cone roofs for round towers (the top three tenths)
+  shields: PartBuf;  // glowing energy-wall panels
   flats: PartBuf;    // courtyards, parks, ring road, bridge planks
   grounds: PartBuf;  // the pale street ground under the town
   river: RiverSample[] | null;
-  walled: boolean;
+  tier: CityTier;
 }
+
+export const PART_NAMES = ['grounds', 'flats', 'houses', 'walls', 'towers', 'crens', 'stakes', 'caps', 'roofs4', 'roofsC', 'shields'] as const;
+export type PartName = typeof PART_NAMES[number];
+/** Parts that rise when a settlement's walls go up a tier. */
+export const WALL_PARTS: ReadonlySet<PartName> = new Set(['walls', 'towers', 'crens', 'stakes', 'caps', 'roofs4', 'roofsC', 'shields']);
 
 export const TOWN_KINDS = new Set(['town', 'city', 'capital']);
 const REL: Record<string, number> = { town: 0.75, city: 0.9, capital: 1.0 };
-
-/** Walls while the nation is pre-industrial: its tech age if the world tracks one, else the world era. */
-export function wantsWalls(world: World, s: Structure): boolean {
-  if (s.kind === 'town') return false;
-  const age = world.countries[s.owner]?.techAge;
-  if (age) return age === 'ancient' || age === 'medieval' || age === 'gunpowder';
-  return nationIdentity(world, s.owner).eraIndex < 4;
-}
 
 export function styleOf(world: World, owner: number): BuildingStyle {
   return world.countries[owner]?.buildingStyle ?? 'medieval';
 }
 
-/** What a town's look depends on; a change rebuilds it. */
-export function townKey(world: World, s: Structure): string {
-  return `${s.kind}|${s.owner}|${wantsWalls(world, s) ? 1 : 0}|${styleOf(world, s.owner)}`;
+/** Energy shields instead of masonry: arcology builders, and any nation in the future or stellar age. */
+export function wantsShield(world: World, owner: number): boolean {
+  const age = world.countries[owner]?.techAge;
+  return styleOf(world, owner) === 'arcology' || age === 'future' || age === 'stellar';
+}
+
+/** What a town's look depends on; a change rebuilds it. `tier` is its wall tier (cityTier in @terra/shared). */
+export function townKey(world: World, s: Structure, tier: CityTier = cityTier(world, s.id)): string {
+  return `${s.kind}|${s.owner}|${tier}|${styleOf(world, s.owner)}|${wantsShield(world, s.owner) ? 1 : 0}`;
 }
 
 const tmpM = new THREE.Matrix4();
@@ -59,7 +69,7 @@ const smooth = (a: number, b: number, x: number): number => {
   return t * t * (3 - 2 * t);
 };
 
-export function buildTown(world: World, s: Structure, g: TileGeo, walled: boolean): TownParts {
+export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier): TownParts {
   const id = s.id;
   const w = g.width, h = g.h;
   const kind = s.kind;
@@ -106,7 +116,8 @@ export function buildTown(world: World, s: Structure, g: TileGeo, walled: boolea
 
   const out: TownParts = {
     houses: new PartBuf(), walls: new PartBuf(), towers: new PartBuf(), flats: new PartBuf(), grounds: new PartBuf(),
-    river: null, walled,
+    crens: new PartBuf(), stakes: new PartBuf(), caps: new PartBuf(), roofs4: new PartBuf(), roofsC: new PartBuf(), shields: new PartBuf(),
+    river: null, tier,
   };
   const p = new THREE.Vector3();
   const q = new THREE.Quaternion();
@@ -176,6 +187,22 @@ export function buildTown(world: World, s: Structure, g: TileGeo, walled: boolea
   const mod4 = (i: number): number => ((i % 4) + 4) % 4;
   const green = new THREE.Color(S.COURTYARD), park = new THREE.Color(S.PARK);
 
+  // Wall plan (row A33): which rings this tier has. Tiers 1 and 2 are one ring round the footprint (a
+  // palisade, then stone); from tier 3 the old centre gets its own ring inside, and the blocks in its way
+  // are left out. (The centre ring only starts at tier 3 because the landmark model fills most of a small core.)
+  const big = kind === 'city' || kind === 'capital';
+  const wallF = Math.min(1.07, (0.74 * w) / (Math.max(Rx, Ry) * 1.08));
+  const coreF = Math.min(wallF - 0.2, Math.max(0.62, (plazaR + 3 * pitch) / Math.min(Rx, Ry)));
+  const hasCore = big && tier >= 3;
+  const dim = S.WALL_DIM;
+  const coreDim = tier >= 4 ? dim.keep : dim.stone;
+  const coreBand = (0.5 * pitch + 0.7 * coreDim.t * w) / Math.min(Rx, Ry);
+  const onCoreWall = (x: number, y: number): boolean => {
+    if (!hasCore) return false;
+    const nx = x / Rx, ny = y / Ry;
+    return Math.abs(Math.hypot(nx, ny) / wob(Math.atan2(ny, nx)) - coreF) < coreBand;
+  };
+
   type Slot = { x: number; y: number; i: number; j: number; yard: 0 | 1 | 2 };
   const slots: Slot[] = [];
   let houseCount = 0;
@@ -185,7 +212,7 @@ export function buildTown(world: World, s: Structure, g: TileGeo, walled: boolea
       if (mod4(j) === 0) continue;
       const x = (i + o1) * pitch, y = (j + o2) * pitch;
       if (!inside(x, y) || Math.hypot(x, y) < plazaR) continue;
-      if (nearRiver(x, y, pitch * 0.55)) continue;
+      if (nearRiver(x, y, pitch * 0.55) || onCoreWall(x, y)) continue;
       const bi = Math.floor(i / 4), bj = Math.floor(j / 4);
       let yard: 0 | 1 | 2 = 0;
       if (hash01(`${id}:${bi}:${bj}`, 11) < 0.06) yard = 2;
@@ -241,58 +268,201 @@ export function buildTown(world: World, s: Structure, g: TileGeo, walled: boolea
     }
   }
 
-  // ---- walls with towers and gates, or a ring road --------------------------------------------
-  const wallF = Math.min(1.07, (0.74 * w) / (Math.max(Rx, Ry) * 1.08));
+  // ---- walls by tier (row A33), or a ring road ----------------------------------------------------
   const ringPt = (phi: number, f: number): [number, number] => {
     const r = wob(phi) * f;
     return [Rx * r * Math.cos(phi), Ry * r * Math.sin(phi)];
   };
-  if (kind === 'city' || kind === 'capital') {
+  const TAU = Math.PI * 2;
+  const shield = wantsShield(world, s.owner);
+  const look = S.WALL_LOOK[style] ?? S.WALL_LOOK.medieval;
+  const wash = tint.clone().lerp(new THREE.Color(1, 1, 1), 0.5);
+  const col = (css: string): THREE.Color => new THREE.Color(css).multiply(wash);
+  const stoneC = col(look.wall), towerC = col(look.tower), roofC = look.roof ? col(look.roof) : null;
+  const woodC = col(S.PALISADE.wall), postC = col(S.PALISADE.post), doorC = new THREE.Color(S.GATE_DARK);
+  const beamC = new THREE.Color(S.SHIELD.beam), pylonC = new THREE.Color(S.SHIELD.pylon), glowC = new THREE.Color(S.SHIELD.cap);
+  type Mode = 'palisade' | 'stone' | 'shield';
+  const p2 = new THREE.Vector3(), q2 = new THREE.Quaternion();
+
+  /** One upright at (x, y): a palisade post, a stone tower in the nation's style, or a shield pylon. */
+  const tower = (mode: Mode, x: number, y: number, ang: number, r: number, hgt: number): void => {
+    toWorld(x, y, 0, p2);
+    quatAt(ang, x, y, q2);
+    if (mode === 'palisade') { out.towers.add(p2, q2, r * 2, hgt, r * 2, postC); return; }
+    if (mode === 'shield') {
+      out.walls.add(p2, q2, r * 1.1, hgt, r * 1.1, pylonC);
+      out.caps.add(p2, q2, r * 1.7, hgt * 1.08, r * 1.7, glowC);
+      return;
+    }
+    if (look.square) out.walls.add(p2, q2, r * 2, hgt, r * 2, towerC);
+    else out.towers.add(p2, q2, r * 2, hgt, r * 2, towerC);
+    if (roofC) {
+      const eave = look.eave ?? 1.3;
+      (look.square ? out.roofs4 : out.roofsC).add(p2, q2, r * 2 * eave, hgt / 0.7 * (look.square ? 1.0 : 1.08), r * 2 * eave, roofC);
+    } else if (look.square) out.caps.add(p2, q2, r * 2.25, hgt * 1.05, r * 2.25, towerC);
+    else out.towers.add(p2, q2, r * 2.3, hgt * 0.2, r * 2.3, towerC); // a wider foot instead of a cap for round, roofless towers
+  };
+
+  /** One straight run of wall from a to b. */
+  const run = (mode: Mode, a: [number, number], b: [number, number], hgt: number, thick: number): void => {
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    toWorld(mx, my, 0, p2);
+    quatAt(Math.atan2(b[1] - a[1], b[0] - a[0]), mx, my, q2);
+    if (mode === 'palisade') out.stakes.add(p2, q2, len * 1.05, hgt, thick, woodC);
+    else if (mode === 'stone') out.crens.add(p2, q2, len * 1.07, hgt, thick, stoneC);
+    else out.shields.add(p2, q2, len * 1.02, hgt, thick * 0.35, beamC);
+  };
+
+  // Gates sit where the two main streets leave the ring; the first faces the road to the capital
+  // (for a capital, the road to its nearest town).
+  let roadPhi = H(22) * TAU;
+  {
+    const cap = world.countries[s.owner]?.capitalTile;
+    let to = cap != null && cap !== s.tile ? cap : -1;
+    if (to < 0) {
+      let best = -2;
+      const here = new THREE.Vector3(...tile.center).normalize();
+      for (const o of world.structures) {
+        if (o.owner !== s.owner || o.id === s.id || !world.tiles[o.tile] || (o.kind !== 'town' && o.kind !== 'city' && o.kind !== 'village')) continue;
+        const d = here.dot(p2.set(...world.tiles[o.tile]!.center).normalize());
+        if (d > best) { best = d; to = o.tile; }
+      }
+    }
+    if (to >= 0 && world.tiles[to]) {
+      p2.set(...world.tiles[to]!.center).normalize();
+      const dx = p2.dot(gx), dy = p2.dot(gy);
+      if (Math.hypot(dx, dy) > 1e-6) roadPhi = Math.atan2(dy / Ry, dx / Rx);
+    }
+  }
+  const streetX = o1 * pitch, streetY = o2 * pitch;
+  const gatePhis = (f: number, n: number): number[] => {
+    const cl = (v: number): number => Math.max(-1, Math.min(1, v));
+    const solve = (fn: (phi: number) => number, start: number): number => { let phi = start; for (let k = 0; k < 4; k++) phi = fn(phi); return phi; };
+    const cands = [
+      solve((phi) => Math.asin(cl(streetY / (Ry * f * wob(phi)))), 0),                       // +x
+      solve((phi) => Math.acos(cl(streetX / (Rx * f * wob(phi)))), Math.PI / 2),             // +y
+      solve((phi) => Math.PI - Math.asin(cl(streetY / (Ry * f * wob(phi)))), Math.PI),       // -x
+      solve((phi) => -Math.acos(cl(streetX / (Rx * f * wob(phi)))), -Math.PI / 2),           // -y
+    ];
+    const diff = (a: number, b: number): number => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+    let first = 0;
+    for (let k = 1; k < 4; k++) if (diff(cands[k]!, roadPhi) < diff(cands[first]!, roadPhi)) first = k;
+    const order = [first, (first + 2) % 4, (first + 1) % 4, (first + 3) % 4];
+    return order.slice(0, n).map((k) => ((cands[k]! % TAU) + TAU) % TAU);
+  };
+
+  interface Ring { f: number; mode: Mode; h: number; t: number; towR: number; towH: number; gates: number; gateW: number; fort: boolean }
+  const ring = (rg: Ring): void => {
+    const hgt = rg.h * w, thick = rg.t * w, towR = rg.towR * w, towH = rg.towH * w, gateW = rg.gateW * w;
+    const rAvg = ((Rx + Ry) / 2) * rg.f;
+    const half = gateW / 2 / rAvg;
+    const gates = gatePhis(rg.f, rg.gates)
+      .filter((phi) => { const [x, y] = ringPt(phi, rg.f); return !nearRiver(x, y, halfW + gateW); })
+      .sort((a, b) => a - b);
+    const starts = gates.length ? gates : [roadPhi];
+    const segLen = (mode: Mode): number => (mode === 'shield' ? 0.09 : 0.06) * w;
+    const every = Math.max(2, Math.round((rg.mode === 'palisade' ? 0.24 : rg.mode === 'shield' ? 0.27 : 0.3) * w / segLen(rg.mode)));
+    for (let gi = 0; gi < starts.length; gi++) {
+      const open = gates.length > 0;
+      const a0 = starts[gi]! + (open ? half : 0);
+      let a1 = starts[(gi + 1) % starts.length]! - (open ? half : 0);
+      while (a1 <= a0 + 1e-6) a1 += TAU;
+      const n = Math.max(2, Math.round(((a1 - a0) * rAvg) / segLen(rg.mode)));
+      const pts: Array<[number, number]> = [];
+      for (let k = 0; k <= n; k++) pts.push(ringPt(a0 + ((a1 - a0) * k) / n, rg.f));
+      const skip: boolean[] = [];
+      for (let k = 0; k < n; k++) skip.push(nearRiver((pts[k]![0] + pts[k + 1]![0]) / 2, (pts[k]![1] + pts[k + 1]![1]) / 2, halfW * 0.4));
+      for (let k = 0; k < n; k++) if (!skip[k]) run(rg.mode, pts[k]!, pts[k + 1]!, hgt, thick);
+      // Towers at regular steps and on both banks of a river gap; the ends of the arc belong to the gates.
+      for (let k = open ? 1 : 0; k < n; k++) {
+        const before = k > 0 ? skip[k - 1]! : skip[n - 1]!;
+        if (k % every !== 0 && skip[k] === before) continue;
+        if (open && (k < 2 || k > n - 2) && skip[k] === before) continue;
+        const a = pts[Math.max(0, k - 1)]!, b = pts[Math.min(n, k + 1)]!;
+        tower(rg.mode, pts[k]![0], pts[k]![1], Math.atan2(b[1] - a[1], b[0] - a[0]), towR, towH);
+      }
+    }
+    // Gatehouses.
+    for (const phi of gates) {
+      const l = ringPt(phi - half, rg.f), r = ringPt(phi + half, rg.f), m = ringPt(phi, rg.f);
+      const ang = Math.atan2(r[1] - l[1], r[0] - l[0]);
+      const ox = Math.sin(ang), oy = -Math.cos(ang); // outward: the ring runs anticlockwise
+      const k = rg.fort ? 1.45 : 1.15;
+      const span = Math.hypot(r[0] - l[0], r[1] - l[1]);
+      if (rg.mode === 'palisade') {
+        tower('palisade', l[0], l[1], ang, towR * 1.25, towH * 1.25);
+        tower('palisade', r[0], r[1], ang, towR * 1.25, towH * 1.25);
+        toWorld(m[0], m[1], 0, p2); quatAt(ang, m[0], m[1], q2);
+        out.caps.add(p2, q2, span * 1.1, towH * 1.12, thick * 1.2, postC);
+        continue;
+      }
+      if (rg.mode === 'shield') {
+        tower('shield', l[0], l[1], ang, towR * k * 1.2, towH * k);
+        tower('shield', r[0], r[1], ang, towR * k * 1.2, towH * k);
+        if (rg.fort) {
+          const d = 0.05 * w;
+          tower('shield', l[0] + ox * d, l[1] + oy * d, ang, towR, towH);
+          tower('shield', r[0] + ox * d, r[1] + oy * d, ang, towR, towH);
+        }
+        continue;
+      }
+      toWorld(m[0], m[1], 0, p2); quatAt(ang, m[0], m[1], q2);
+      if (look.pavilion) {
+        // A solid gate block with a dark gateway and a roofed pavilion on top.
+        const baseH = hgt * (rg.fort ? 1.5 : 1.25), deep = thick * (rg.fort ? 2.6 : 2);
+        out.walls.add(p2, q2, span * 1.5, baseH, deep, stoneC);
+        out.walls.add(p2, q2, span * 0.5, baseH * 0.62, deep * 1.06, doorC);
+        out.walls.add(p2, q2, span * 1.15, baseH * 1.42, deep * 0.72, col(look.pavilion)); // the hall shows above the block
+        if (roofC) out.roofs4.add(p2, q2, span * 1.7, baseH * 1.42 / 0.7, deep * 1.45, roofC);
+      } else {
+        tower('stone', l[0], l[1], ang, towR * k, towH * k);
+        tower('stone', r[0], r[1], ang, towR * k, towH * k);
+        out.caps.add(p2, q2, span * 1.02, hgt * (rg.fort ? 1.45 : 1.2), thick * 1.25, stoneC);
+        out.walls.add(p2, q2, span * 0.66, hgt * 0.1, thick * 0.9, doorC); // a dark threshold under the arch
+      }
+      if (rg.fort) {
+        // The gate fort: a walled forecourt in front of the gate with its own pair of towers.
+        const d = 0.062 * w, wl = span / 2 + towR * 0.6;
+        const tx = Math.cos(ang), ty = Math.sin(ang);
+        const fl: [number, number] = [m[0] - tx * wl + ox * d, m[1] - ty * wl + oy * d];
+        const fr: [number, number] = [m[0] + tx * wl + ox * d, m[1] + ty * wl + oy * d];
+        const bl: [number, number] = [m[0] - tx * wl, m[1] - ty * wl], br: [number, number] = [m[0] + tx * wl, m[1] + ty * wl];
+        run('stone', bl, fl, hgt * 0.9, thick * 0.9);
+        run('stone', br, fr, hgt * 0.9, thick * 0.9);
+        const gl: [number, number] = [m[0] - tx * span * 0.42 + ox * d, m[1] - ty * span * 0.42 + oy * d];
+        const gr: [number, number] = [m[0] + tx * span * 0.42 + ox * d, m[1] + ty * span * 0.42 + oy * d];
+        run('stone', fl, gl, hgt * 0.9, thick * 0.9);
+        run('stone', gr, fr, hgt * 0.9, thick * 0.9);
+        tower('stone', fl[0], fl[1], ang, towR * 1.1, towH * 1.05);
+        tower('stone', fr[0], fr[1], ang, towR * 1.1, towH * 1.05);
+      }
+    }
+  };
+
+  if (tier > 0) {
+    const outerMode: Mode = shield ? 'shield' : tier === 1 ? 'palisade' : 'stone';
+    const coreMode: Mode = shield ? 'shield' : 'stone';
+    const od = shield ? dim.shield : tier === 1 ? dim.palisade : dim.stone;
+    const gates = tier >= 4 ? 4 : tier === 3 ? 3 : big ? 2 : tier;
+    ring({ f: wallF, mode: outerMode, h: od.h, t: od.t, towR: od.towR, towH: od.towH, gates, gateW: od.gate, fort: tier >= 4 });
+    if (hasCore) {
+      const cd = shield ? dim.shield : coreDim;
+      const kk = shield && tier >= 4 ? 1.35 : 1;
+      ring({ f: coreF, mode: coreMode, h: cd.h * kk, t: cd.t, towR: cd.towR, towH: cd.towH * kk, gates: 4, gateW: cd.gate, fort: false });
+    }
+  } else if (big) {
+    // No walls yet: a ring road around the town instead.
     const perim = Math.PI * (Rx + Ry) * wallF;
     const M = Math.max(24, Math.round(perim / (0.06 * w)));
-    const pts: Array<[number, number]> = [];
-    for (let k = 0; k < M; k++) pts.push(ringPt((k / M) * Math.PI * 2, walled ? wallF : wallF * 0.99));
-    if (walled) {
-      const wall = new THREE.Color(S.WALL), tower = new THREE.Color(S.TOWER);
-      const gateN = kind === 'capital' ? 2 : 1 + (H(21) < 0.4 ? 1 : 0);
-      const gates = new Set<number>();
-      const g0 = Math.floor(H(22) * M);
-      for (let k = 0; k < gateN; k++) gates.add((g0 + Math.round((k * M) / gateN)) % M);
-      const skip: boolean[] = [];
-      for (let k = 0; k < M; k++) {
-        const a = pts[k]!, b = pts[(k + 1) % M]!;
-        const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
-        skip.push(gates.has(k) || nearRiver(mx, my, halfW * 0.4));
-      }
-      const wallH = 0.045 * w, wallT = 0.022 * w, towR = 0.03 * w, towH = 0.075 * w;
-      const step = Math.max(3, Math.round(M / (kind === 'capital' ? 12 : 9)));
-      for (let k = 0; k < M; k++) {
-        const a = pts[k]!, b = pts[(k + 1) % M]!;
-        if (!skip[k]) {
-          const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
-          toWorld(mx, my, 0, p);
-          quatAt(Math.atan2(b[1] - a[1], b[0] - a[0]), mx, my, q);
-          out.walls.add(p, q, Math.hypot(b[0] - a[0], b[1] - a[1]) * 1.06, wallH, wallT, wall);
-        }
-        // A tower at regular steps and on both sides of every gap.
-        const prevSkip = skip[(k - 1 + M) % M]!;
-        if (k % step === 0 || skip[k] !== prevSkip) {
-          toWorld(a[0], a[1], 0, p);
-          quatAt(0, a[0], a[1], q);
-          out.towers.add(p, q, towR * 2, towH, towR * 2, tower);
-        }
-      }
-    } else {
-      // Industrial and later: no walls, a ring road around the town instead.
-      const road = new THREE.Color(S.RING_ROAD);
-      for (let k = 0; k < M; k++) {
-        const a = pts[k]!, b = pts[(k + 1) % M]!;
-        const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
-        if (nearRiver(mx, my, 0)) continue;
-        toWorld(mx, my, 0.00015, p);
-        quatAt(Math.atan2(b[1] - a[1], b[0] - a[0]), mx, my, q);
-        out.flats.add(p, q, Math.hypot(b[0] - a[0], b[1] - a[1]) * 1.08, 0.0002, 0.03 * w, road);
-      }
+    const road = new THREE.Color(S.RING_ROAD);
+    for (let k = 0; k < M; k++) {
+      const a = ringPt((k / M) * TAU, wallF * 0.99), b = ringPt(((k + 1) / M) * TAU, wallF * 0.99);
+      const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      if (nearRiver(mx, my, 0)) continue;
+      toWorld(mx, my, 0.00015, p);
+      quatAt(Math.atan2(b[1] - a[1], b[0] - a[0]), mx, my, q);
+      out.flats.add(p, q, Math.hypot(b[0] - a[0], b[1] - a[1]) * 1.08, 0.0002, 0.03 * w, road);
     }
   }
 

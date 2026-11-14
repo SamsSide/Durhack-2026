@@ -1,18 +1,20 @@
-// Lane b: every close-up town on the globe in six draw calls (ground, flats, houses, walls, towers, river).
+// Lane b: every close-up town on the globe in a dozen draw calls (ground, flats, houses, the wall parts, river).
+// City walls (row A33) are part of the town: they are rebuilt only when its wall tier changes.
 // Towns are built once per structure id and rebuilt only when what they look like changes.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import type { World } from '@terra/shared';
+import { cityTiers } from '@terra/shared';
+import type { CityTier, World } from '@terra/shared';
 import type { TileGeos } from '../structures/placement';
 import { clamp01, easeOutBack, smoothstep } from '../structures/placement';
 import { makeRiverMaterial } from '../rivers/buildRivers';
 import { getPalette } from '../palette';
-import { TOWN_KINDS, buildTown, townKey } from './buildTown';
-import type { PartBuf, TownParts } from './buildTown';
+import { PART_NAMES, TOWN_KINDS, WALL_PARTS, buildTown, townKey } from './buildTown';
+import type { PartBuf, PartName, TownParts } from './buildTown';
 import { FADE_FAR, FADE_NEAR, PLASTER } from './style';
 
-type PartName = 'grounds' | 'flats' | 'houses' | 'walls' | 'towers';
-const PARTS: PartName[] = ['grounds', 'flats', 'houses', 'walls', 'towers'];
+const PARTS = PART_NAMES;
+const zeroes = (): Record<PartName, number> => Object.fromEntries(PARTS.map((k) => [k, 0])) as Record<PartName, number>;
 const PLASTER_GLSL = new THREE.Color(PLASTER).toArray().map((v) => v.toFixed(3)).join(', ');
 const BUILD_S = 0.7, DESTROY_S = 0.6, WALL_S = 0.9;
 
@@ -34,6 +36,28 @@ function houseGeometry(): THREE.BufferGeometry {
   };
   const merged = mergeGeometries([mark(body, 0), mark(roof, 1)], false)!;
   body.dispose(); roof.dispose();
+  return merged;
+}
+
+/** A stone wall segment with battlements: unit length along x, thickness along z, total height 1. */
+function crenGeometry(): THREE.BufferGeometry {
+  const parts = [new THREE.BoxGeometry(1, 0.8, 1).translate(0, 0.4, 0)];
+  const N = 4;
+  for (let k = 0; k < N; k++) parts.push(new THREE.BoxGeometry(0.5 / N, 0.2, 1.12).translate(-0.5 + (k + 0.5) / N, 0.9, 0));
+  const merged = mergeGeometries(parts.map((g) => g.toNonIndexed()), false)!;
+  for (const g of parts) g.dispose();
+  return merged;
+}
+
+/** A palisade segment: a plank wall with a row of pointed stakes on top, total height 1. */
+function stakeGeometry(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [new THREE.BoxGeometry(1, 0.72, 0.7).translate(0, 0.36, 0)];
+  const N = 6;
+  for (let k = 0; k < N; k++) {
+    parts.push(new THREE.CylinderGeometry(0, 0.5 / N, 0.3, 4, 1).rotateY(Math.PI / 4).scale(1, 1, N * 0.72).translate(-0.5 + (k + 0.5) / N, 0.85, 0));
+  }
+  const merged = mergeGeometries(parts.map((g) => g.toNonIndexed()), false)!;
+  for (const g of parts) g.dispose();
   return merged;
 }
 
@@ -91,15 +115,32 @@ export class TownLayer {
     solid.customProgramCacheKey = () => 'towns-solid';
     const flat = new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0, transparent: true });
     const ground = new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0, transparent: true, side: THREE.DoubleSide });
-    this.mats = { grounds: ground, flats: flat, houses: house, walls: solid, towers: solid };
+    // Energy walls: an additive glow that never writes depth, so the town shows through it.
+    const glow = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+    glow.onBeforeCompile = (sh) => {
+      sh.uniforms.uGrow = grow;
+      sh.vertexShader = 'uniform float uGrow;\n' + sh.vertexShader
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed.y *= uGrow;');
+    };
+    glow.customProgramCacheKey = () => 'towns-glow';
+    this.mats = {
+      grounds: ground, flats: flat, houses: house, walls: solid, towers: solid,
+      crens: solid, stakes: solid, caps: solid, roofs4: solid, roofsC: solid, shields: glow,
+    };
     this.geos = {
       grounds: groundGeometry(),
       flats: new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
       houses: houseGeometry(),
       walls: new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
       towers: new THREE.CylinderGeometry(0.5, 0.5, 1, 10).translate(0, 0.5, 0),
+      crens: crenGeometry(),
+      stakes: stakeGeometry(),
+      caps: new THREE.BoxGeometry(1, 0.2, 1).translate(0, 0.9, 0),
+      roofs4: new THREE.CylinderGeometry(0, Math.SQRT1_2, 0.3, 4, 1).rotateY(Math.PI / 4).translate(0, 0.85, 0),
+      roofsC: new THREE.CylinderGeometry(0, 0.5, 0.3, 10, 1).translate(0, 0.85, 0),
+      shields: new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
     };
-    const order: Record<PartName, number> = { grounds: 1, flats: 2, houses: 0, walls: 0, towers: 0 };
+    const order: Record<PartName, number> = { ...zeroes(), grounds: 1, flats: 2, shields: 4 };
     for (const k of PARTS) {
       const mesh = this.alloc(k, 256);
       mesh.renderOrder = order[k];
@@ -127,18 +168,19 @@ export class TownLayer {
   /** Add, rebuild or retire towns to match the world. `initial` builds without animation. */
   sync(world: World, now: number, initial: boolean): void {
     const seen = new Set<string>();
+    const tiers = cityTiers(world);
     for (const s of world.structures) {
       if (!TOWN_KINDS.has(s.kind) || !world.tiles[s.tile]) continue;
       seen.add(s.id);
-      const key = townKey(world, s);
+      const tier: CityTier = tiers.get(s.id) ?? 0;
+      const key = townKey(world, s, tier);
       const have = this.towns.get(s.id);
       if (have && have.key === key && have.anim?.type !== 'destroy') continue;
-      const walls = key.split('|')[2] === '1';
-      const parts = buildTown(world, s, this.tileGeos.get(s.tile), walls);
+      const parts = buildTown(world, s, this.tileGeos.get(s.tile), tier);
       if (!have) {
         this.towns.set(s.id, { id: s.id, key, parts, anim: initial ? null : { type: 'build', t0: now }, wallT0: null });
       } else {
-        const wallsNew = parts.walled && !have.parts.walled;
+        const wallsNew = parts.tier > have.parts.tier; // the new works rise; a lower tier just swaps
         have.key = key;
         have.parts = parts;
         if (have.anim?.type === 'destroy') have.anim = { type: 'build', t0: now };
@@ -191,7 +233,7 @@ export class TownLayer {
   }
 
   private write(now: number): void {
-    const counts: Record<PartName, number> = { grounds: 0, flats: 0, houses: 0, walls: 0, towers: 0 };
+    const counts = zeroes();
     const done: string[] = [];
     let busy = false;
     const anims = new Map<string, { k: number; kw: number }>();
@@ -207,12 +249,12 @@ export class TownLayer {
       let cap = this.meshes[k].instanceMatrix.count;
       if (counts[k] > cap) { while (cap < counts[k]) cap *= 2; this.alloc(k, cap); }
     }
-    const at: Record<PartName, number> = { grounds: 0, flats: 0, houses: 0, walls: 0, towers: 0 };
+    const at = zeroes();
     for (const t of this.towns.values()) {
       const a = anims.get(t.id);
       if (!a) continue;
       for (const k of PARTS) {
-        const ky = k === 'walls' || k === 'towers' ? a.k * a.kw : a.k;
+        const ky = WALL_PARTS.has(k) ? a.k * a.kw : a.k;
         at[k] = this.writePart(this.meshes[k], t.parts[k], at[k], a.k, ky);
       }
     }
