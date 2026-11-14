@@ -1,123 +1,171 @@
-// Procedural cloud shells plus soft cloud shadows on the land (lane b).
-// Two thin transparent spheres, drawn before the names so the names always read on top, and one
-// faint shadow shell just over the terrain.
-// One shared fbm CanvasTexture, generated once. Fades out as the camera zooms in.
+// Volumetric-looking clouds, weather and storms (lane a, in lane b's area by owner decision).
+// Technique: a low-step raymarch through a thin spherical shell (noise from one baked cube map, a
+// second sample toward the sun for self-shadowing), rendered into a small render target and
+// composited over the globe before the names. The march costs the same from orbit or from the
+// ground, and the render target keeps it cheap on an integrated GPU at any device pixel ratio.
+// Weather fronts, rain and decree storms live in ./weather.ts; rain streaks in ./Rain.tsx.
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { countryTiles } from '@terra/shared';
+import { useWorld } from '../../state/world';
+import { reducedMotion, sunDir } from '../celestial/sun';
+import { makeNoiseCube } from './noise';
+import { COMPOSITE_FRAG, FS_VERT, MARCH_FRAG } from './shaders';
+import { MAX_SYS, raiseStorm, systems, updateWeather, watchDecrees } from './weather';
+import { Rain } from './Rain';
 
-const FADE_FAR = 3.0; // fully visible above this camera distance
-const FADE_NEAR = 2.3; // gone below this
-const CLOUD_MAX = 0.22; // opacity cap so borders and names stay readable
-const SHADOW_MAX = 0.06;
-const COVER = 0.62; // noise threshold: higher means fewer, smaller puffs
-const SOFT = 0.14; // edge softness of a puff
-const RENDER_ORDER = 900; // before the names (1000) so the cloud shells never veil them
-const R_CLOUD_A = 1.085;
-const R_CLOUD_B = 1.105;
-const R_SHADOW = 1.063; // just above the tallest terrain (1.06), under the labels' lift
-const SPEED_A = 0.012; // rad/s
-const SPEED_B = -0.007;
-const SHADOW_OFFSET = 0.035; // rad shift toward the light
+const RENDER_ORDER = 900; // before the names (1000) so the clouds never veil them
+const COVER = 0.61;       // noise threshold: higher means fewer, smaller clouds
 
-const hash = (x: number, y: number, z: number): number => {
-  let h = (x * 374761393 + y * 668265263 + z * 2147483647) | 0;
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
-};
-const sm = (t: number): number => t * t * (3 - 2 * t);
-function vnoise(x: number, y: number, z: number): number {
-  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
-  const u = sm(x - xi), v = sm(y - yi), w = sm(z - zi);
-  const l = (a: number, b: number, t: number): number => a + (b - a) * t;
-  const c = (i: number, j: number, k: number): number => hash(xi + i, yi + j, zi + k);
-  return l(
-    l(l(c(0, 0, 0), c(1, 0, 0), u), l(c(0, 1, 0), c(1, 1, 0), u), v),
-    l(l(c(0, 0, 1), c(1, 0, 1), u), l(c(0, 1, 1), c(1, 1, 1), u), v),
-    w,
-  );
-}
+/** Quality levels: march steps, render-target scale of the drawing buffer, and a pixel cap. */
+const LEVELS = [
+  { steps: 10, scale: 0.5, maxPixels: 520_000 },
+  { steps: 7, scale: 0.42, maxPixels: 340_000 },
+  { steps: 5, scale: 0.34, maxPixels: 210_000 },
+] as const;
+const SLOW_MS = 19.5;   // average frame time that means we are missing 60 fps
+const WINDOW_S = 2.5;   // how long it must stay slow before stepping down
 
-function makeCloudTexture(): THREE.CanvasTexture {
-  const W = 512, H = 256;
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d')!;
-  const img = ctx.createImageData(W, H);
-  for (let y = 0; y < H; y++) {
-    const lat = (0.5 - (y + 0.5) / H) * Math.PI;
-    const cl = Math.cos(lat), sl = Math.sin(lat);
-    for (let x = 0; x < W; x++) {
-      const lon = ((x + 0.5) / W) * Math.PI * 2;
-      const px = cl * Math.cos(lon), py = sl, pz = cl * Math.sin(lon);
-      let a = 0, amp = 0.5, f = 3.1, sum = 0;
-      for (let o = 0; o < 5; o++) {
-        a += amp * vnoise(px * f + 11, py * f * 1.4 + 7, pz * f + 3);
-        sum += amp; amp *= 0.5; f *= 2.05;
-      }
-      a /= sum;
-      const d = Math.min(1, Math.max(0, (a - COVER) / SOFT));
-      const i = (y * W + x) * 4;
-      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
-      img.data[i + 3] = Math.round(sm(d) * 255);
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.anisotropy = 4;
-  return tex;
-}
-
-const smooth = (a: number, b: number, x: number): number => {
-  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-  return t * t * (3 - 2 * t);
-};
+const vec4s = (): THREE.Vector4[] => Array.from({ length: MAX_SYS }, () => new THREE.Vector4());
 
 export function Clouds() {
-  const a = useRef<THREE.Mesh>(null);
-  const b = useRef<THREE.Mesh>(null);
-  const s = useRef<THREE.Mesh>(null);
-  const tex = useMemo(() => makeCloudTexture(), []);
-  const geo = useMemo(() => new THREE.SphereGeometry(1, 64, 32), []);
-  const reduced = useMemo(
-    () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
-    [],
-  );
-  const mats = useMemo(() => {
-    const mk = (color: string): THREE.MeshBasicMaterial =>
-      new THREE.MeshBasicMaterial({ map: tex, color, transparent: true, opacity: 0, depthWrite: false, fog: false, toneMapped: false });
-    return { a: mk('#ffffff'), b: mk('#ffffff'), s: mk('#1a2230') };
-  }, [tex]);
-  useEffect(() => () => { tex.dispose(); geo.dispose(); mats.a.dispose(); mats.b.dispose(); mats.s.dispose(); }, [tex, geo, mats]);
+  const quality = useRef({ level: 0, off: false, repeat: 1, flash: 0 }).current; // `off` is dev switches for measuring: `off` gives the baseline, `repeat` runs the march several times
+  const frozen = useMemo(reducedMotion, []);
 
-  useFrame((state, dt) => {
-    const d = state.camera.position.length();
-    const f = smooth(FADE_NEAR, FADE_FAR, d);
-    const meshes = [a.current, b.current, s.current];
-    for (const m of meshes) if (m) m.visible = f > 0.01;
-    if (f <= 0.01) return;
-    mats.a.opacity = CLOUD_MAX * f;
-    mats.b.opacity = CLOUD_MAX * 0.7 * f;
-    mats.s.opacity = SHADOW_MAX * f;
-    if (!reduced) {
-      const step = Math.min(dt, 0.1);
-      if (a.current) a.current.rotation.y += SPEED_A * step;
-      if (b.current) b.current.rotation.y += SPEED_B * step;
+  const parts = useMemo(() => {
+    const noise = makeNoiseCube();
+    const tri = new THREE.BufferGeometry();
+    tri.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3));
+    const cam = { uInvProj: { value: new THREE.Matrix4() }, uCamWorld: { value: new THREE.Matrix4() }, uCamPos: { value: new THREE.Vector3() } };
+    const march = new THREE.ShaderMaterial({
+      vertexShader: FS_VERT, fragmentShader: MARCH_FRAG,
+      uniforms: {
+        ...cam, uNoise: { value: noise }, uSun: { value: sunDir }, uTime: { value: 0 }, uSteps: { value: LEVELS[0].steps },
+        uCover: { value: COVER }, uSys: { value: vec4s() }, uSysP: { value: vec4s() }, uFlash: { value: vec4s() },
+        uClear: { value: new THREE.Vector4(0, 1, 0, 0.2) }, uClearK: { value: 0 },
+      },
+      depthTest: false, depthWrite: false, blending: THREE.NoBlending, toneMapped: false,
+    });
+    const target = new THREE.WebGLRenderTarget(4, 4, { depthBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: false });
+    const composite = new THREE.ShaderMaterial({
+      vertexShader: FS_VERT, fragmentShader: COMPOSITE_FRAG,
+      uniforms: { ...cam, uMap: { value: target.texture }, uTexel: { value: new THREE.Vector2() }, uViewProj: { value: new THREE.Matrix4() } },
+      transparent: true, depthTest: true, depthWrite: false, toneMapped: false,
+      blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
+    });
+    const marchMesh = new THREE.Mesh(tri, march);
+    marchMesh.frustumCulled = false;
+    const marchScene = new THREE.Scene();
+    marchScene.add(marchMesh);
+    const quad = new THREE.Mesh(tri, composite);
+    quad.frustumCulled = false;
+    quad.renderOrder = RENDER_ORDER;
+    quad.raycast = () => {};
+    return { noise, tri, cam, march, target, composite, marchScene, quad, size: new THREE.Vector2() };
+  }, []);
+  useEffect(() => () => {
+    parts.noise.dispose(); parts.tri.dispose(); parts.march.dispose(); parts.composite.dispose(); parts.target.dispose();
+  }, [parts]);
+
+  // Dev only: lets a browser review raise weather and read the quality level (window.__weather).
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    (window as unknown as { __weather?: unknown }).__weather = {
+      quality, systems,
+      raise: (countryId: number, kind: 'storm' | 'flood' = 'storm') => {
+        const w = useWorld.getState().world;
+        return w ? raiseStorm(w, countryId, kind, performance.now() / 1000) : false;
+      },
+    };
+  }, [quality]);
+
+  const st = useRef({ tick: 0, tickWorld: '', drift: 0, avg: 16, since: -3, trial: false, before: 16, hold: 0, clearFor: -2 as number, clearK: 0 }).current;
+
+  useFrame(({ gl, camera }, dtRaw) => {
+    const dt = Math.min(dtRaw, 0.1);
+    parts.quad.visible = !quality.off;
+    if (quality.off) return;
+    const now = performance.now() / 1000;
+    const s = useWorld.getState();
+    const world = s.world;
+
+    // The smoothed world tick: fronts are a pure function of it, so every viewer sees the same weather.
+    if (world) {
+      if (st.tickWorld !== world.id || Math.abs(world.tick - st.tick) > 400) { st.tick = world.tick; st.tickWorld = world.id; }
+      else st.tick += (world.tick - st.tick) * (1 - Math.exp(-dt * 2));
+      watchDecrees(world, s.recentEvents, now);
     }
-    // The shadow follows the lower cloud layer, shifted toward the light.
-    if (s.current && a.current) {
-      s.current.rotation.y = a.current.rotation.y - SHADOW_OFFSET;
-      s.current.rotation.x = SHADOW_OFFSET * 0.6;
+    updateWeather(world, st.tick, now);
+    if (!frozen && !s.clock?.paused) st.drift += dt; // the fine cloud drift follows wall time, like the sun
+
+    // Clouds thin out over the selected nation so its borders, towns and name stay readable.
+    const sel = world ? s.selectedCountryId : null;
+    if (sel !== st.clearFor && world) {
+      st.clearFor = sel ?? -1;
+      if (sel != null) {
+        const tiles = countryTiles(world, sel);
+        const mean = new THREE.Vector3();
+        for (const t of tiles) { const c = world.tiles[t]!.center; mean.x += c[0]; mean.y += c[1]; mean.z += c[2]; }
+        if (mean.lengthSq() > 1e-9) {
+          mean.normalize();
+          let far = 0;
+          for (const t of tiles) { const c = world.tiles[t]!.center; far = Math.max(far, Math.hypot(c[0] - mean.x, c[1] - mean.y, c[2] - mean.z)); }
+          (parts.march.uniforms.uClear!.value as THREE.Vector4).set(mean.x, mean.y, mean.z, Math.min(0.6, Math.max(0.12, far)));
+        }
+      }
     }
+    st.clearK += ((sel != null ? 1 : 0) - st.clearK) * (1 - Math.exp(-dt * 3));
+
+    // Quality fallback: step down when the frame time stays above the 60 fps budget. If a step down
+    // does not make frames faster, the clouds are not what is slow: step back up and leave it alone
+    // for a while, rather than degrading the sky for nothing.
+    if (dtRaw < 0.25) {
+      st.avg += (dtRaw * 1000 - st.avg) * 0.04;
+      st.since += dtRaw;
+      if (st.trial && st.since > WINDOW_S) {
+        if (st.avg > st.before * 0.9) { quality.level--; st.hold = 30; }
+        st.trial = false; st.since = 0;
+      } else if (!st.trial && st.since > WINDOW_S && st.hold <= 0 && st.avg > SLOW_MS && quality.level < LEVELS.length - 1) {
+        st.before = st.avg; quality.level++; st.trial = true; st.since = 0;
+      }
+      st.hold = Math.max(0, st.hold - dtRaw);
+    }
+    const q = LEVELS[quality.level]!;
+
+    const u = parts.march.uniforms;
+    for (let i = 0; i < MAX_SYS; i++) {
+      const w = systems[i]!;
+      (u.uSys!.value as THREE.Vector4[])[i]!.set(w.center.x, w.center.y, w.center.z, w.intensity > 0.01 ? w.radius : 0);
+      (u.uSysP!.value as THREE.Vector4[])[i]!.set(w.intensity, w.storm, w.spin, w.rain);
+      (u.uFlash!.value as THREE.Vector4[])[i]!.set(w.flashPos.x, w.flashPos.y, w.flashPos.z, Math.max(w.flash, w.storm > 0.3 ? quality.flash : 0)); // quality.flash: dev hold for screenshots
+    }
+    u.uTime!.value = st.drift;
+    u.uSteps!.value = q.steps;
+    u.uClearK!.value = st.clearK;
+    camera.updateMatrixWorld();
+    parts.cam.uInvProj.value.copy(camera.projectionMatrixInverse);
+    parts.cam.uCamWorld.value.copy(camera.matrixWorld);
+    parts.cam.uCamPos.value.setFromMatrixPosition(camera.matrixWorld);
+    (parts.composite.uniforms.uViewProj!.value as THREE.Matrix4).multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+
+    // March into the small target, then the composite quad draws it in the main pass.
+    gl.getDrawingBufferSize(parts.size);
+    const k = Math.min(q.scale, Math.sqrt(q.maxPixels / Math.max(1, parts.size.x * parts.size.y)));
+    const w = Math.max(8, Math.round(parts.size.x * k)), h = Math.max(8, Math.round(parts.size.y * k));
+    if (parts.target.width !== w || parts.target.height !== h) parts.target.setSize(w, h);
+    (parts.composite.uniforms.uTexel!.value as THREE.Vector2).set(1 / w, 1 / h);
+    const prev = gl.getRenderTarget();
+    gl.setRenderTarget(parts.target);
+    for (let i = 0; i < quality.repeat; i++) gl.render(parts.marchScene, camera); // repeat > 1 is a dev stress test
+    gl.setRenderTarget(prev);
   });
 
   return (
     <group>
-      <mesh ref={s} geometry={geo} material={mats.s} scale={R_SHADOW} renderOrder={2} raycast={() => null} />
-      <mesh ref={a} geometry={geo} material={mats.a} scale={R_CLOUD_A} renderOrder={RENDER_ORDER} raycast={() => null} />
-      <mesh ref={b} geometry={geo} material={mats.b} scale={R_CLOUD_B} renderOrder={RENDER_ORDER + 1} raycast={() => null} />
+      <primitive object={parts.quad} />
+      <Rain quality={quality} />
     </group>
   );
 }
+
