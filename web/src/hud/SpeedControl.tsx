@@ -1,19 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { useWorld } from '../state/world';
 
-/** The gears (X2, owner decision 14 Nov): speed is a multiplier on two years a second. */
+/** The gears (X2, owner decision 14 Nov): speed is a multiplier on two years a second. One week a second (1/104) to ten years a second (5). */
 export const GEARS = [
+  { v: 1 / 104, label: '1 wk', name: '1 week/s' },
+  { v: 1 / 52, label: '2 wk', name: '2 weeks/s' },
   { v: 1 / 24, label: '1 mo', name: '1 month/s' },
-  { v: 1 / 8, label: '', name: '1 season/s' },
-  { v: 0.5, label: '1 yr', name: '1 year/s' },
+  { v: 1 / 8, label: '3 mo', name: '1 season/s' },
+  { v: 1 / 4, label: '6 mo', name: '6 months/s' },
+  { v: 1 / 2, label: '1 yr', name: '1 year/s' },
   { v: 1, label: '2', name: '2 years/s' },
   { v: 1.5, label: '3', name: '3 years/s' },
-  { v: 2, label: '4', name: '4 years/s' },
-  { v: 4, label: '8', name: '8 years/s' },
-  { v: 8, label: '16', name: '16 years/s' },
-  { v: 16, label: '32', name: '32 years/s' },
-  { v: 32, label: '64', name: '64 years/s' },
-  { v: 64, label: '128', name: '128 years/s' },
+  { v: 2.5, label: '5', name: '5 years/s' },
+  { v: 5, label: '10', name: '10 years/s' },
 ] as const;
 const N = GEARS.length - 1;
 const MIN = GEARS[0].v;
@@ -42,16 +41,17 @@ function fromPos(p: number): number {
   return Math.round(a * Math.pow(b / a, x - i) * 10000) / 10000;
 }
 
-/** "1 month/s", "1 season/s", "3 years/s", "128 years/s"; between gears "4.5 months/s", "5.7 years/s". */
+/** "1 week/s", "1 month/s", "3 years/s", "10 years/s"; between gears "1.5 weeks/s", "4.5 months/s", "5.7 years/s". */
 export function speedText(v: number): string {
   const g = gearAt(v);
   if (g >= 0) return GEARS[g]!.name;
   const years = v * 2;
+  if (years < 1 / 12) return `${(years * 52).toFixed(1)} weeks/s`;
   if (years < 1) return `${(years * 12).toFixed(1)} months/s`;
   return `${years < 10 ? years.toFixed(1) : Math.round(years)} years/s`;
 }
 
-/** Pause, the gear slider (one month a second to 128 years a second) and the Auto pacing toggle. */
+/** Pause, the gear slider (one week a second to ten years a second) and the Auto pacing toggle. */
 export function SpeedControl() {
   const send = useWorld((s) => s.send);
   const clock = useWorld((s) => s.clock);
