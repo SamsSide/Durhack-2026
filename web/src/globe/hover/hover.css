@@ -2,34 +2,33 @@
 .hover-tip {
   position: fixed; left: 0; top: 0; z-index: 8; pointer-events: none;
   min-width: 150px; max-width: 280px; padding: 8px 12px 9px;
-  background: var(--color-night-inset); color: var(--color-text);
-  border: 1px solid var(--color-border); border-top: 2px solid var(--color-accent); border-radius: var(--radius-1);
-  box-shadow: var(--shadow-1);
+  /* Material (background, black edge, gilt hairline, lift) comes from .tn-tooltip. */
+  border-top: 2px solid var(--gilt);
   opacity: 0; transition: opacity var(--dur-fast) var(--ease-out);
   will-change: transform;
 }
 .hover-tip.on { opacity: 1; }
 .hover-tip.dragging { opacity: 0; transition: none; }
 .ht-head { display: flex; align-items: center; gap: 10px; }
-.ht-flag { width: 42px; height: 28px; flex: none; border: 1px solid var(--color-accent); border-radius: var(--radius-1); display: block; }
+.ht-flag { width: 42px; height: 28px; flex: none; display: block; padding: 0; }
 .ht-names { min-width: 0; }
 .ht-title {
   font-family: var(--font-display); font-weight: 600; font-size: 15px; line-height: 19px;
-  letter-spacing: var(--tracking-caps); color: var(--color-text);
+  letter-spacing: var(--tracking-caps); color: var(--gilt-hi); text-shadow: var(--engrave-on-dark);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .ht-sub { font-family: var(--font-serif); font-style: italic; font-size: var(--text-sm); line-height: 18px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ht-row {
   display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
-  margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--color-border);
+  margin-top: 7px; padding-top: 6px; border-top: 1px solid rgba(201, 162, 75, 0.35); box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5);
 }
 .ht-cap { font-family: var(--font-display); font-size: var(--text-cap); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
-.ht-num { font-family: var(--font-mono); font-size: 15px; font-weight: 600; color: var(--color-accent); }
+.ht-num { font-family: var(--font-mono); font-size: 15px; font-weight: 600; color: var(--gilt-hi); text-shadow: var(--engrave-on-dark); }
 @media (prefers-reduced-motion: reduce) { .hover-tip { transition: none; } }
-.ht-fx { margin-top: 4px; font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--color-text-muted); white-space: nowrap; }
+.ht-fx { margin-top: 4px; font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--color-text-muted); white-space: normal; }
 /* Wonder section (row A30). */
-.ht-wonder { margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--color-border); }
+.ht-wonder { margin-top: 7px; padding-top: 6px; border-top: 1px solid rgba(201, 162, 75, 0.35); box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5); }
 .ht-wonder-name {
   margin-top: 2px; font-family: var(--font-display); font-weight: 600; font-size: 14px; line-height: 18px;
-  color: var(--color-accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--gilt-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }

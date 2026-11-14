@@ -90,11 +90,11 @@ export function HoverTooltip() {
   const wonderBonusLine = ww ? bonusText(wonderBonus(ww.kind)) : '';
 
   return (
-    <div ref={box} className={`hover-tip${info ? ' on' : ''}`} aria-hidden>
+    <div ref={box} className={`hover-tip tn-tooltip${info ? ' on' : ''}`} aria-hidden>
       {shown?.kind === 'nation' && (
         <>
           <div className="ht-head">
-            <img className="ht-flag" src={shown.flag} alt="" width={42} height={28} />
+            <img className="ht-flag tn-flag-plate" src={shown.flag} alt="" width={42} height={28} />
             <div className="ht-names">
               <div className="ht-title">{shown.title}</div>
               {shown.sub && <div className="ht-sub">{shown.sub}</div>}

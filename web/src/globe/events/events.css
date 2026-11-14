@@ -36,8 +36,8 @@
   width: 20px;
   height: 13px;
   line-height: 0;
-  border: 1px solid var(--color-ink);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  border: 1px solid #000;
+  box-shadow: 0 0 0 1px var(--gilt), 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 .ev-flag svg { width: 100%; height: 100%; display: block; }
 .ev-count {
@@ -48,10 +48,12 @@
   height: 16px;
   padding: 0 4px;
   border-radius: 8px;
-  background: var(--color-parchment-light);
-  color: var(--color-ink);
-  border: 1px solid var(--color-ink);
-  font: 600 11px/14px var(--font-serif);
+  background: var(--lacquer-sheen), #0f1320;
+  color: var(--gilt-hi);
+  border: 1px solid #000;
+  box-shadow: 0 0 0 1.5px var(--gilt), 0 2px 4px rgba(0, 0, 0, 0.6);
+  text-shadow: var(--engrave-on-dark);
+  font: 700 11px/14px var(--font-display);
   text-align: center;
 }
 .ev-stem {
@@ -68,11 +70,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font: 14px/17px var(--font-serif);
-  color: var(--color-ink);
-  background: var(--color-parchment-light);
-  border: 1px solid var(--color-ink);
+  color: var(--color-text);
+  text-shadow: var(--engrave-on-dark);
+  background: var(--lacquer-sheen), var(--lacquer-grain), #0f1320;
+  border: 1px solid #000;
   border-left: 4px solid var(--ev-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(201, 162, 75, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 4px 10px rgba(0, 0, 0, 0.6);
   opacity: 0;
   animation: ev-label 4.5s ease forwards;
   translate: 0 calc(-1 * var(--ev-lift, 0px)); /* lifted clear of other captions and tags */
@@ -136,37 +140,41 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-accent);
-  background: rgba(13, 22, 32, 0.82);
-  border: 1px solid var(--color-accent);
+  color: var(--gilt-hi);
+  background: var(--lacquer-sheen), #0f1320;
+  border: 1px solid #000;
+  box-shadow: 0 0 0 1px var(--gilt), 0 3px 8px rgba(0, 0, 0, 0.6);
 }
 .ev-spot.on .ev-spot-pill { display: block; }
 .ev-caption {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 16px 10px 10px;
-  background: var(--color-parchment-light);
-  color: var(--color-ink);
-  border: 1px solid var(--color-ink);
+  padding: 10px 18px 10px 12px;
+  color: var(--color-text);
+  background: var(--lacquer-sheen), var(--lacquer-grain), #0f1320;
+  border: 1px solid #000;
   border-left: 6px solid var(--ev-color, var(--color-accent));
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.55);
+  border-radius: 2px;
+  /* gilt hairline, a second inner gilt rule, then lift */
+  box-shadow: 0 0 0 2px var(--gilt), 0 0 0 3px #000, inset 0 0 0 3px #0f1320, inset 0 0 0 4px rgba(201, 162, 75, 0.4), 0 10px 24px rgba(0, 0, 0, 0.6);
   opacity: 0;
   transform: translateY(-8px);
   transition: opacity 0.35s ease, transform 0.35s ease;
 }
 .ev-caption.show { opacity: 1; transform: none; }
 .ev-caption .ev-c-icon { width: 46px; height: 46px; flex: none; }
-.ev-caption .ev-c-flag { width: 36px; height: 24px; flex: none; line-height: 0; border: 1px solid var(--color-ink); }
+.ev-caption .ev-c-flag { width: 36px; height: 24px; flex: none; line-height: 0; border: 1px solid #000; box-shadow: 0 0 0 1px var(--gilt), 0 2px 4px rgba(0, 0, 0, 0.6); }
 .ev-caption .ev-c-flag svg { width: 100%; height: 100%; display: block; }
 .ev-caption .ev-c-text { display: flex; flex-direction: column; min-width: 0; }
 .ev-caption .ev-c-kind {
-  font: 10px/13px var(--font-display);
+  font: 11px/13px var(--font-display);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-ink-muted);
+  color: var(--gilt);
 }
-.ev-caption .ev-c-title { font: 600 20px/24px var(--font-serif); }
-.ev-caption .ev-c-sub { font: 14px/18px var(--font-serif); color: var(--color-ink-muted); }
+.ev-caption .ev-c-title { font: 600 20px/24px var(--font-serif); color: var(--gilt-hi); text-shadow: var(--engrave-on-dark); }
+.ev-caption .ev-c-sub { font: 14px/18px var(--font-serif); color: var(--color-text-muted); }
 @media (prefers-reduced-motion: reduce) {
   .ev-caption { transition: opacity 0.2s; transform: none; }
 }
