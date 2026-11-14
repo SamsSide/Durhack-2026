@@ -346,8 +346,8 @@ link, write "live demo at the table; no video" `[check]` if the form insists on 
 
 ### On screen before a judge arrives
 
-- Start it with one command: `npm run demo:live` (stops any old copy, starts a stable server and a
-  production build of the web, makes a prepared world, opens the browser). `npm run demo` is the
+- Start it with one command: `npm run demo` (live; stops any old copy, starts a stable server and a
+  production build of the web, makes a prepared world, opens the browser). `npm run demo:mock` is the
   same with no API calls, for rehearsals. `npm run demo:status` says what is running;
   `npm run demo:stop` ends it. Logs are in `.demo/`.
 - The app running in live mode (`LLM_MODE=live`, `SOLANA_MODE=devnet`) on a **prepared world**:

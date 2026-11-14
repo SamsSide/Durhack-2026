@@ -2,8 +2,8 @@
 # One command for the table demo: start the whole app, open it in the browser, reset it between
 # judges, stop it.
 #
-#   scripts/demo.sh live   [options]   real Gemini, ElevenLabs and Solana devnet  (npm run demo:live)
-#   scripts/demo.sh mock   [options]   no API calls, for rehearsals              (npm run demo)
+#   scripts/demo.sh live   [options]   real Gemini, ElevenLabs and Solana devnet  (npm run demo, npm run demo:live)
+#   scripts/demo.sh mock   [options]   no API calls, for rehearsals              (npm run demo:mock)
 #   scripts/demo.sh reset  [options]   a fresh prepared world, servers kept       (npm run demo:reset)
 #   scripts/demo.sh status                                                         (npm run demo:status)
 #   scripts/demo.sh stop                                                           (npm run demo:stop)
@@ -300,8 +300,8 @@ do_reset() {
   parse_opts "$@"
   load_state
   resolve_ports
-  [ -n "$S_MODE" ] || die "no demo is running (start one with npm run demo:live or npm run demo)"
-  health_ok || die "the demo server on :$SERVER_PORT does not answer (see .demo/server.log); restart with npm run demo:live"
+  [ -n "$S_MODE" ] || die "no demo is running (start one with npm run demo, or npm run demo:mock for a rehearsal)"
+  health_ok || die "the demo server on :$SERVER_PORT does not answer (see .demo/server.log); restart with npm run demoive"
   [ -n "$OPT_PROMPT" ] && S_PROMPT="$OPT_PROMPT"
   [ -n "$OPT_NATIONS" ] && S_NATIONS="$OPT_NATIONS"
   [ -n "$S_PROMPT" ] || S_PROMPT="$DEFAULT_PROMPT"
@@ -345,8 +345,8 @@ case "$cmd" in
     sed -n '2,/^set -uo/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//' ;;
   *)
     say "Usage: scripts/demo.sh live|mock|reset|status|stop|help [options]"
-    say "  npm run demo:live    start with real Gemini, ElevenLabs and Solana devnet"
-    say "  npm run demo         start a mock rehearsal (no API calls)"
+    say "  npm run demo         start live: real Gemini, ElevenLabs and Solana devnet"
+    say "  npm run demo:mock    start a mock rehearsal (no API calls)"
     say "  npm run demo:reset   a fresh prepared world between judges (-- --replay demo-1 for instant)"
     say "  npm run demo:status  is it running, which world"
     say "  npm run demo:stop    stop everything"

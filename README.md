@@ -200,15 +200,15 @@ Needs **Node 22** or later.
 
 ```bash
 npm install
-npm run demo        # a mock rehearsal: the whole app, no API spend
+npm run demo        # the live demo: real Gemini, ElevenLabs and Solana devnet, opened in the browser
 ```
 
 ### The demo commands
 
 | Command | What |
 | --- | --- |
-| `npm run demo` | A mock rehearsal: the whole app with no API calls, opened in the browser |
-| `npm run demo:live` | Live: Gemini, ElevenLabs and Solana devnet (needs the keys below) |
+| `npm run demo` | The live demo: Gemini, ElevenLabs and Solana devnet (needs the keys below), opened in the browser |
+| `npm run demo:mock` | A mock rehearsal: the whole app with no API calls |
 | `npm run demo:reset` | A fresh prepared world between judges, servers kept running |
 | `npm run demo:stop` | Stop the demo |
 | `npm run demo:status` | Show what is running |
