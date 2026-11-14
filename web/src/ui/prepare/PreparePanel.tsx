@@ -54,34 +54,34 @@ export function PreparePanel() {
 
   return (
     <div className="tn-prep-veil" onClick={hide}>
-      <section className={`panel tn-prep${done ? ' done' : ''}`} role="dialog" aria-label="Preparing the world" onClick={(e) => e.stopPropagation()}>
+      <section className={`tn-lacquer tn-frame tn-prep${done ? ' done' : ''}`} role="dialog" aria-label="Preparing the world" onClick={(e) => e.stopPropagation()}>
+        <span className="tn-cartouche">{done ? 'Ready for the demo' : 'Before the demo'}</span>
         <header className="tn-prep-head">
           <div>
-            <span className="tn-cap tn-prep-kicker">{done ? 'Ready for the demo' : 'Before the demo'}</span>
             <h2 className="tn-prep-title">{done ? 'The world is ready' : 'Preparing the world'}</h2>
             <p className="tn-prep-sub">{done
               ? `${world.name} waits paused. Press play to begin.`
               : 'The world waits paused while lore, voices, chants and anthems are made.'}</p>
           </div>
-          <button type="button" className="tn-prep-hide" onClick={hide} title="Hide (Esc)">Hide</button>
+          <button type="button" className="tn-button tn-button--lacquer tn-button--sm tn-prep-hide" onClick={hide} title="Hide (Esc)">Hide</button>
         </header>
 
         <div className="tn-prep-progress" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={ready}>
-          <div className="tn-prep-bar"><i style={{ width: `${pct}%` }} /></div>
+          <div className="tn-trough tn-trough--lg tn-trough--seg tn-prep-bar"><i className="tn-trough__fill" style={{ width: `${pct}%` }} /></div>
           <span className="tn-prep-count"><b>{ready}</b> of {total} ready{failed > 0 && <em> · {failed} failed</em>}</span>
         </div>
 
         <ul className="tn-prep-list">
           {nations.map((c) => (
             <li key={c.id} className="tn-prep-row">
-              <span className="tn-prep-flag" dangerouslySetInnerHTML={{ __html: flagSvg(c.flag, 30, 20) }} />
+              <span className="tn-flag-plate tn-prep-flag" dangerouslySetInnerHTML={{ __html: flagSvg(c.flag, 30, 20) }} />
               <span className="tn-prep-name" title={c.name}>{c.name}</span>
               <span className="tn-prep-chips">
                 {KINDS.map(({ kind, label }) => {
                   const status = items.find((it) => it.countryId === c.id && it.kind === kind)?.status ?? 'none';
                   const word = status === 'none' ? 'not made for this nation' : STATUS_WORD[status];
                   return (
-                    <span key={kind} className={`tn-prep-chip ${status}`} title={`${label}: ${word}`} aria-label={`${label}: ${word}`}>
+                    <span key={kind} className={`tn-chip tn-chip--lacquer tn-prep-chip ${status}`} title={`${label}: ${word}`} aria-label={`${label}: ${word}`}>
                       <Mark status={status} />{label}
                     </span>
                   );
@@ -95,7 +95,7 @@ export function PreparePanel() {
           <p className="tn-prep-note">{done
             ? (failed > 0 ? 'What failed will be made again when it is first needed.' : 'Every voice, chant and anthem is waiting.')
             : 'You can start at any time. The rest carries on in the background.'}</p>
-          <button type="button" className={`tn-prep-play${done ? ' ready' : ''}`} onClick={play} autoFocus>
+          <button type="button" className={`tn-button tn-button--gilt tn-button--lg tn-prep-play${done ? ' ready' : ''}`} onClick={play} autoFocus>
             <svg width="12" height="14" viewBox="0 0 12 14" aria-hidden="true"><path d="M1 1L11 7L1 13Z" fill="currentColor" /></svg>
             {done ? 'Play' : 'Play now'}
           </button>
