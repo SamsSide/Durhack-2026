@@ -1,0 +1,719 @@
+/* Terra Nova material system. Recipes from docs/research/ui-depth.md; tokens in theme/tokens.css.
+   See every class rendered at /?materials (web/src/theme/MaterialsSheet.tsx).
+
+   WHICH CLASS FOR WHAT
+   Surfaces   tn-sheet (parchment) | tn-lacquer (dark chrome) | add tn-frame for the gilt frame,
+              tn-frame--corners for gilt corner brackets (big panels only), tn-frame--slim for strips.
+   Bars       tn-lacquer tn-lacquer--bar-top (top bar) | tn-lacquer tn-lacquer--bar-bottom (chronicle) | tn-sep (divider in a bar)
+   Titles     tn-cartouche (plate on a frame's top edge) | tn-header-bar (claret strip in a sheet) |
+              tn-pennant (hanging banner) | tn-rule / tn-rule--gilt (flourish divider)
+   Controls   tn-button (paper plate) + --lacquer | --gilt (ONE per screen) | --danger | --sm | --round
+              tn-well + tn-seg / tn-seg--active (segmented control) | tn-booktabs + tn-booktab / tn-booktab--active
+              tn-input (recessed field)
+   Data       tn-stat (+ __label, __value; --dark) | tn-chip (+ --ink --caps --war --hostile --neutral --trade
+              --alliance --gilt --lacquer) | tn-trough + tn-trough__fill (--seg) | tn-tooltip
+   Round      tn-roundel (+ __face; --sm --lg --dot) | tn-flag-plate
+   Text       tn-engraved (on paper) | tn-engraved--dark (on lacquer) | tn-gilt-text (dark only) | tn-caps
+   Global     tn-scrim (one static edge darkening between the globe and the HUD; wired once in App.tsx)
+   States     :hover :active :focus-visible :disabled everywhere; .is-active / [aria-pressed=true] /
+              [aria-selected=true] for toggles; .is-hover and .is-pressed exist only to show states on the sheet.
+
+   THE 10 RULES
+   1  Two materials, one metal: parchment sheets for content, night lacquer for chrome, gilt joins them.
+   2  Every sheet sits in a frame: dark outer line, gilt band, recessed paper, ink rule 5px in.
+   3  Paper is never flat: grain, mottling and a warm vignette, capped so muted ink keeps 4.5:1.
+   4  Lift with three static shadows and one static edge scrim. No blur, no backdrop-filter, ever.
+   5  Titles sit on plates: claret strips, a cartouche on the card, or rubric caps over a flourish rule.
+   6  Clickable things are raised and press in by 1px; numbers, bars, inputs and mode strips are sunk in wells.
+   7  One gilt button per screen (the primary action). Everything else is paper or lacquer.
+   8  Round things get gilt bezels; flags are framed plates with static cloth shading.
+   9  GILT ONLY ON DARK. Ink and rubric on parchment. Text is engraved (1px shadow, 0 blur), never glowing.
+   10 Ornament lives at the edges (corners, header ends, dividers); content and the globe stay calm.
+
+   PERFORMANCE (the UI sits over a WebGL canvas): no backdrop-filter, no mix-blend-mode, never animate
+   box-shadow, filter or gradients (animate opacity and transform only). */
+
+/* ---------------------------------------------------------------- surfaces */
+
+.tn-sheet {
+  --tn-fill: var(--paper-surface);
+  position: relative;
+  isolation: isolate;
+  color: var(--color-ink);
+  background: var(--tn-fill);
+  border-radius: var(--radius-2);
+  box-shadow: 0 0 0 1px var(--frame-line), var(--recess-paper), var(--lift-2);
+}
+
+.tn-lacquer {
+  --tn-fill: var(--lacquer-surface);
+  position: relative;
+  isolation: isolate;
+  color: var(--color-text);
+  background: var(--tn-fill);
+  border: 1px solid #000;
+  border-radius: var(--radius-1);
+  box-shadow: var(--bevel-dark), 0 0 0 1px rgba(201,162,75,.35), var(--lift-2);
+}
+/* The top bar: a moulded edge below it (dark, lit gilt, dark), no side borders. */
+.tn-lacquer--bar-top {
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 1px 0 #6e5524,
+    0 2px 0 var(--gilt),
+    0 3px 0 var(--gilt-deep),
+    0 10px 20px rgba(0,0,0,.55);
+}
+/* The chronicle bar: the same moulding on its top edge. */
+.tn-lacquer--bar-bottom {
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    inset 0 -1px 0 rgba(0,0,0,.5),
+    0 -1px 0 #6e5524,
+    0 -2px 0 var(--gilt),
+    0 -3px 0 var(--gilt-deep),
+    0 -10px 20px rgba(0,0,0,.45);
+}
+/* An engraved double-line divider between groups inside a lacquer bar. */
+.tn-sep {
+  display: inline-block;
+  flex: none;
+  width: 2px;
+  align-self: stretch;
+  min-height: 20px;
+  margin: 6px 6px;
+  background: linear-gradient(90deg, rgba(0,0,0,.75) 50%, rgba(255,255,255,.08) 50%);
+}
+
+/* ---------------------------------------------------------------- the frame */
+/* Put tn-frame on the same element as tn-sheet (or tn-lacquer). The gilt band is the element's own
+   transparent 3px border, painted by the last background layer. */
+.tn-frame {
+  position: relative;
+  isolation: isolate;
+  border: 3px solid transparent;
+  border-radius: var(--radius-2);
+  background: var(--tn-fill, var(--paper-surface)), var(--gilt-metal) border-box;
+  box-shadow:
+    0 0 0 1px var(--frame-line),            /* hard dark outer line: separates from the globe */
+    inset 0 0 0 1px rgba(58,43,16,.85),     /* dark line where the paper meets the gilt */
+    var(--recess-paper),                    /* the paper is sunk inside the frame */
+    var(--lift-2);                          /* lifted off the world */
+}
+/* The atlas inner ink rule, 5px in, under the content. */
+.tn-frame::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(42,31,20,.5);
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: -1;
+}
+.tn-lacquer.tn-frame {
+  box-shadow: 0 0 0 1px var(--frame-line), inset 0 0 0 1px #000, inset 0 1px 0 1px rgba(255,255,255,.05), var(--lift-2);
+}
+.tn-lacquer.tn-frame::before { border-color: rgba(201,162,75,.32); }
+/* Small strips (decree box, network strip, minimap): a 2px band and no inner rule. */
+.tn-frame--slim { border-width: 2px; }
+.tn-frame--slim::before { display: none; }
+/* Gilt corner brackets riding on the band. Big panels only (nation card, Create screen). */
+.tn-frame--corners::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-style: solid;
+  border-width: 16px;
+  border-image-source: var(--frame-corners);
+  border-image-slice: 16;
+  border-image-repeat: stretch;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ---------------------------------------------------------------- title plates */
+
+/* A claret plate that breaks the frame's top edge. Place it as a direct child of a tn-frame. */
+.tn-cartouche {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, calc(-50% - 2px));
+  isolation: isolate;
+  display: inline-block;
+  padding: 4px 20px 3px;
+  white-space: nowrap;
+  font: 700 var(--text-cap)/1.4 var(--font-display);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--gilt-hi);
+  text-shadow: var(--engrave-on-dark);
+  filter: drop-shadow(0 0 1px var(--frame-line)) drop-shadow(0 2px 2px rgba(0,0,0,.45));
+  pointer-events: none;
+}
+.tn-cartouche::before,
+.tn-cartouche::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+}
+.tn-cartouche::before { inset: 0; background: var(--gilt-metal); }
+.tn-cartouche::after {
+  inset: 2px 3px;
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 8px 100%, 0 50%);
+  background: var(--lacquer-sheen), linear-gradient(180deg, var(--lacquer-claret-hi), var(--lacquer-claret));
+}
+/* The same plate in the flow (not on an edge). */
+.tn-cartouche--inline { position: relative; top: auto; left: auto; transform: none; }
+
+/* A claret lacquer strip for section headers inside a sheet (DIPLOMACY, THE COUNCIL).
+   It bleeds into the sheet's side padding: set --tn-bleed to that padding (default 24px). */
+.tn-header-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-4) calc(-1 * var(--tn-bleed, var(--space-5)) + 6px) var(--space-2);
+  padding: 4px max(22px, calc(var(--tn-bleed, var(--space-5)) - 6px));
+  font: 700 var(--text-sm)/1.3 var(--font-display);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: #f6e7c4;
+  text-shadow: var(--engrave-on-dark);
+  background:
+    var(--lacquer-sheen),
+    linear-gradient(90deg, rgba(90,31,24,0) 0%, var(--lacquer-claret) 9%, var(--lacquer-claret) 91%, rgba(90,31,24,0) 100%);
+  box-shadow: inset 0 1px 0 rgba(201,162,75,.6), inset 0 -1px 0 rgba(201,162,75,.4);
+}
+.tn-header-bar::before,
+.tn-header-bar::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  background: var(--diamond-gilt) center / 10px 10px no-repeat;
+}
+.tn-header-bar::before { left: 5px; }
+.tn-header-bar::after { right: 5px; }
+.tn-header-bar--flush { margin-left: 0; margin-right: 0; }
+/* On a dark panel: a night strip instead of claret. */
+.tn-header-bar--night {
+  background: var(--lacquer-sheen), linear-gradient(90deg, rgba(32,38,58,0) 0%, var(--lacquer-hi) 9%, var(--lacquer-hi) 91%, rgba(32,38,58,0) 100%);
+}
+
+/* A hanging banner (for the nation name or the year in the top bar). */
+.tn-pennant {
+  display: inline-block;
+  padding: 6px 12px 14px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 82%, 0 100%);
+  color: var(--gilt-hi);
+  font: 700 var(--text-xs)/1.2 var(--font-display);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  text-shadow: var(--engrave-on-dark);
+  background: var(--lacquer-sheen), var(--lacquer-claret);
+  border-top: 2px solid var(--gilt);
+}
+
+/* A flourish rule: a hairline on each side of a rubric diamond. */
+.tn-rule {
+  display: block;
+  height: 12px;
+  border: 0;
+  margin: var(--space-3) 0;
+  background:
+    var(--diamond) center / 12px 12px no-repeat,
+    linear-gradient(90deg, transparent 0, rgba(42,31,20,.55) 18%, rgba(42,31,20,.55) calc(50% - 11px), transparent calc(50% - 11px),
+                    transparent calc(50% + 11px), rgba(42,31,20,.55) calc(50% + 11px), rgba(42,31,20,.55) 82%, transparent 100%) center / 100% 1px no-repeat;
+}
+.tn-rule--gilt {
+  background:
+    var(--diamond-gilt) center / 12px 12px no-repeat,
+    linear-gradient(90deg, transparent 0, rgba(201,162,75,.7) 18%, rgba(201,162,75,.7) calc(50% - 11px), transparent calc(50% - 11px),
+                    transparent calc(50% + 11px), rgba(201,162,75,.7) calc(50% + 11px), rgba(201,162,75,.7) 82%, transparent 100%) center / 100% 1px no-repeat;
+}
+
+/* ---------------------------------------------------------------- buttons */
+/* Default: an embossed paper plate, for use on parchment. */
+.tn-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  font: 600 var(--text-xs)/1 var(--font-display);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  color: var(--color-ink);
+  background: linear-gradient(180deg, #f8f0dc 0%, #e6d5ad 100%);
+  border: 1px solid var(--color-ink-muted);
+  border-radius: var(--radius-1);
+  box-shadow: var(--bevel-paper), 0 1px 2px rgba(42,31,20,.35);
+  text-shadow: var(--engrave-on-paper);
+  transition: color var(--dur-fast), border-color var(--dur-fast);
+}
+.tn-button:hover, .tn-button.is-hover {
+  border-color: var(--gilt-lo);
+  background: linear-gradient(180deg, #fbf5e6 0%, #ead9b2 100%);
+}
+.tn-button:active, .tn-button.is-pressed, .tn-button.is-active, .tn-button[aria-pressed="true"] {
+  background: linear-gradient(180deg, #d9c495 0%, #e8d6af 100%);
+  border-color: var(--color-ink);
+  box-shadow: inset 0 2px 3px rgba(42,31,20,.38), 0 1px 0 rgba(255,250,235,.6);
+  transform: translateY(1px);
+}
+.tn-button:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+.tn-button:disabled, .tn-button[aria-disabled="true"] {
+  opacity: .5;
+  cursor: default;
+  transform: none;
+  border-color: var(--color-ink-muted);
+  background: linear-gradient(180deg, #f3ead3 0%, #e3d3ad 100%);
+  box-shadow: var(--bevel-paper);
+}
+.tn-button--danger { color: #8f1f17; border-color: #8f1f17; }
+.tn-button--danger:hover, .tn-button--danger.is-hover { border-color: #6e1a12; color: #6e1a12; }
+
+/* On the dark surface (AUTO, top-bar controls): a lacquer plate with a gilt hairline. */
+.tn-button--lacquer {
+  color: var(--color-text);
+  background: linear-gradient(180deg, var(--lacquer-hi), var(--lacquer));
+  border: 1px solid #000;
+  box-shadow: var(--bevel-dark), 0 0 0 1px rgba(201,162,75,.3), 0 2px 3px rgba(0,0,0,.5);
+  text-shadow: var(--engrave-on-dark);
+}
+.tn-button--lacquer:hover, .tn-button--lacquer.is-hover {
+  color: var(--gilt-hi);
+  border-color: #000;
+  background: linear-gradient(180deg, #262d44, var(--lacquer));
+  box-shadow: var(--bevel-dark), 0 0 0 1px var(--gilt), 0 2px 3px rgba(0,0,0,.5);
+}
+.tn-button--lacquer:active, .tn-button--lacquer.is-pressed, .tn-button--lacquer.is-active, .tn-button--lacquer[aria-pressed="true"] {
+  color: var(--gilt-hi);
+  border-color: #000;
+  background: linear-gradient(180deg, #080a11, #141927);
+  box-shadow: var(--well-dark), 0 0 0 1px rgba(201,162,75,.55);
+}
+.tn-button--lacquer:focus-visible { outline: 2px solid var(--gilt-hi); }
+.tn-button--lacquer:disabled, .tn-button--lacquer[aria-disabled="true"] {
+  border-color: #000;
+  background: linear-gradient(180deg, var(--lacquer-hi), var(--lacquer));
+  box-shadow: var(--bevel-dark), 0 0 0 1px rgba(201,162,75,.18);
+}
+.tn-button--lacquer.tn-button--danger { color: #f08a7a; }
+.tn-button--lacquer.tn-button--danger:hover { color: #ffb0a2; box-shadow: var(--bevel-dark), 0 0 0 1px #b3261e, 0 2px 3px rgba(0,0,0,.5); }
+
+/* The primary: a solid gilt plate with ink text. One per screen. */
+.tn-button--gilt {
+  color: var(--color-ink);
+  font-weight: 700;
+  background: var(--gilt-plate);
+  border: 1px solid #5a4214;
+  box-shadow: inset 0 1px 0 #fff3c4, inset 0 -1px 0 var(--gilt-lo), 0 0 0 1px rgba(0,0,0,.6), 0 3px 6px rgba(0,0,0,.5);
+  text-shadow: 0 1px 0 rgba(255,240,200,.6);
+}
+.tn-button--gilt:hover, .tn-button--gilt.is-hover {
+  border-color: #5a4214;
+  background: linear-gradient(180deg, #fae7aa 0%, #e2bd66 46%, #c39940 54%, #d8ad52 100%);
+}
+.tn-button--gilt:active, .tn-button--gilt.is-pressed, .tn-button--gilt.is-active, .tn-button--gilt[aria-pressed="true"] {
+  border-color: #5a4214;
+  background: linear-gradient(180deg, #b88e38, #d8b25a);
+  box-shadow: inset 0 2px 4px rgba(58,43,16,.6), 0 0 0 1px rgba(0,0,0,.6);
+}
+.tn-button--gilt:focus-visible { outline: 2px solid var(--gilt-hi); }
+.tn-button--gilt:disabled, .tn-button--gilt[aria-disabled="true"] {
+  border-color: #5a4214;
+  background: linear-gradient(180deg, #d9c99a, #b9a473);
+  box-shadow: inset 0 1px 0 rgba(255,243,196,.5), 0 0 0 1px rgba(0,0,0,.5);
+}
+
+.tn-button--sm { min-height: 22px; padding: 0 var(--space-2); font-size: var(--text-cap); }
+.tn-button--lg { min-height: 36px; padding: 0 var(--space-5); font-size: var(--text-sm); }
+/* A round medallion button (close, back, play): put tn-button--round with tn-button--lacquer on dark. */
+.tn-button--round {
+  width: 30px;
+  min-height: 0;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: var(--text-sm);
+  line-height: 1;
+}
+.tn-button--lacquer.tn-button--round {
+  border: 2px solid transparent;
+  background: radial-gradient(circle at 50% 35%, var(--lacquer-hi), var(--lacquer-lo)) padding-box, var(--gilt-ring) border-box;
+  box-shadow: 0 0 0 1px var(--frame-line), inset 0 2px 3px rgba(0,0,0,.5), 0 2px 3px rgba(0,0,0,.5);
+}
+.tn-button--lacquer.tn-button--round:hover { color: var(--gilt-hi); box-shadow: 0 0 0 1px var(--frame-line), inset 0 2px 3px rgba(0,0,0,.5), 0 0 0 3px rgba(201,162,75,.25); }
+.tn-button--lacquer.tn-button--round:active { box-shadow: 0 0 0 1px var(--frame-line), inset 0 3px 5px rgba(0,0,0,.8); }
+
+/* ---------------------------------------------------------------- wells, segmented control, tabs, input */
+
+/* A recessed trough on the dark surface. */
+.tn-well {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 3px;
+  background: #07090f;
+  box-shadow: var(--well-dark);
+}
+/* The same on parchment. */
+.tn-well--paper { background: rgba(42,31,20,.09); box-shadow: var(--well-paper), inset 0 0 0 1px rgba(42,31,20,.18); }
+
+.tn-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  font: 600 var(--text-xs)/1 var(--font-display);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  text-shadow: var(--engrave-on-dark);
+  transition: color var(--dur-fast);
+}
+.tn-seg:hover, .tn-seg.is-hover { color: var(--color-text); background: rgba(255,255,255,.05); }
+.tn-seg:focus-visible { outline: 2px solid var(--gilt-hi); outline-offset: 1px; }
+.tn-seg--active, .tn-seg[aria-pressed="true"], .tn-seg[aria-selected="true"],
+.tn-seg--active:hover, .tn-seg[aria-pressed="true"]:hover, .tn-seg[aria-selected="true"]:hover {
+  color: var(--color-ink);
+  text-shadow: var(--engrave-on-paper);
+  background: linear-gradient(180deg, var(--color-parchment-light), #e2d0a4);
+  box-shadow: var(--bevel-paper), 0 0 0 1px rgba(201,162,75,.85), 0 1px 3px rgba(0,0,0,.7);
+}
+.tn-well--paper .tn-seg { color: var(--color-ink-muted); text-shadow: var(--engrave-on-paper); }
+.tn-well--paper .tn-seg:hover { color: var(--color-ink); background: rgba(255,250,235,.35); }
+.tn-well--paper .tn-seg--active, .tn-well--paper .tn-seg[aria-pressed="true"], .tn-well--paper .tn-seg[aria-selected="true"] {
+  color: var(--color-ink);
+  box-shadow: var(--bevel-paper), 0 0 0 1px rgba(42,31,20,.45), 0 1px 2px rgba(42,31,20,.35);
+}
+
+/* Bookmark tabs on a recessed strip, on parchment. The active tab joins the page below it. */
+.tn-booktabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px 3px 0;
+  border-radius: 2px 2px 0 0;
+  background: rgba(42,31,20,.08);
+  box-shadow: inset 0 1px 2px rgba(42,31,20,.25);
+  border-bottom: 1px solid rgba(42,31,20,.45);
+}
+.tn-booktab {
+  flex: none;
+  padding: 6px 8px 5px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 2px 2px 0 0;
+  background: transparent;
+  cursor: pointer;
+  font: 600 var(--text-cap)/1 var(--font-display);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-ink-muted);
+  text-shadow: var(--engrave-on-paper);
+  transition: color var(--dur-fast);
+}
+.tn-booktab:hover, .tn-booktab.is-hover { color: var(--color-ink); background: rgba(255,250,235,.3); }
+.tn-booktab:focus-visible { outline: 2px solid var(--color-ink); outline-offset: -2px; }
+.tn-booktab--active, .tn-booktab[aria-selected="true"],
+.tn-booktab--active:hover, .tn-booktab[aria-selected="true"]:hover {
+  color: var(--color-rubric);
+  background: linear-gradient(180deg, var(--color-parchment-light), var(--color-parchment));
+  border-color: rgba(42,31,20,.45);
+  box-shadow: inset 0 2px 0 var(--gilt), 0 -1px 2px rgba(42,31,20,.15);
+  margin-bottom: -1px;
+  padding-bottom: 6px;
+}
+
+/* A recessed field on parchment (the decree, search, names). */
+.tn-input {
+  min-height: 30px;
+  padding: 4px var(--space-2);
+  color: var(--color-ink);
+  font: var(--text-md)/1.3 var(--font-serif);
+  background: linear-gradient(180deg, #e9dcbb, var(--color-parchment-light) 40%);
+  border: 1px solid rgba(42,31,20,.55);
+  border-radius: var(--radius-1);
+  box-shadow: var(--well-paper);
+}
+.tn-input::placeholder { color: var(--color-ink-muted); font-style: italic; opacity: 1; }
+.tn-input:focus, .tn-input:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 1px; border-color: var(--color-ink); }
+
+/* ---------------------------------------------------------------- data: stats, chips, bars, tooltips */
+
+.tn-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px 8px 5px;
+  border-radius: 2px;
+  background: rgba(42,31,20,.05);
+  box-shadow: var(--well-paper);
+}
+.tn-stat__label {
+  font: 600 var(--text-cap)/1.2 var(--font-display);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tn-stat__value {
+  font: 500 var(--text-lg)/1.25 var(--font-mono);
+  color: var(--color-ink);
+  text-shadow: var(--engrave-on-paper);
+  white-space: nowrap;
+}
+.tn-stat__value small { font-size: var(--text-cap); color: var(--color-ink-muted); margin-left: 3px; }
+.tn-stat--dark { background: #07090f; box-shadow: var(--well-dark); }
+.tn-stat--dark .tn-stat__label { color: var(--color-text-muted); }
+.tn-stat--dark .tn-stat__value { color: var(--gilt-hi); text-shadow: var(--engrave-on-dark); }
+.tn-stat--dark .tn-stat__value small { color: var(--color-text-muted); }
+
+/* Chips: small plates. Default is an outline plate on parchment. */
+.tn-chip {
+  --chip-fill: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 22px;
+  padding: 1px 10px;
+  border: 1px solid rgba(42,31,20,.55);
+  border-radius: var(--radius-pill);
+  font: 500 var(--text-sm)/1.2 var(--font-serif);
+  color: var(--color-ink);
+  white-space: nowrap;
+  background: linear-gradient(180deg, #f6eedb, #e7d8b3);
+  box-shadow: var(--bevel-paper), 0 1px 1px rgba(42,31,20,.2);
+  text-shadow: var(--engrave-on-paper);
+}
+button.tn-chip { cursor: pointer; }
+button.tn-chip:hover { border-color: var(--gilt-lo); }
+button.tn-chip:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 1px; }
+button.tn-chip:active, .tn-chip.is-active, .tn-chip[aria-pressed="true"] {
+  color: var(--color-parchment);
+  background: linear-gradient(180deg, #3a2c1e, var(--color-ink));
+  border-color: var(--color-ink);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.5);
+  text-shadow: var(--engrave-on-dark);
+}
+/* Caps label chips (TOTAL WAR, VACANT, MOCK). */
+.tn-chip--caps {
+  font: 700 var(--text-cap)/1.2 var(--font-display);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  border-radius: 3px;
+  padding: 2px 8px;
+}
+/* Solid fills: one recipe, the colour from --chip-fill. */
+.tn-chip--ink, .tn-chip--war, .tn-chip--hostile, .tn-chip--neutral, .tn-chip--trade, .tn-chip--alliance {
+  color: #fbf3e2;
+  border-color: rgba(0,0,0,.45);
+  background: linear-gradient(180deg, rgba(255,255,255,.2) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,.18) 100%), var(--chip-fill);
+  box-shadow: inset 0 1px 0 rgba(255,235,210,.3), 0 1px 0 rgba(255,250,235,.55), 0 1px 2px rgba(42,31,20,.4);
+  text-shadow: 0 -1px 0 rgba(0,0,0,.4);
+}
+.tn-chip--ink { --chip-fill: var(--color-ink); }
+.tn-chip--war { --chip-fill: #a42a1f; }
+.tn-chip--hostile { --chip-fill: var(--stance-hostile); color: var(--color-ink); text-shadow: 0 1px 0 rgba(255,230,190,.45); }
+.tn-chip--neutral { --chip-fill: var(--stance-neutral); color: var(--color-ink); text-shadow: 0 1px 0 rgba(255,250,235,.4); }
+.tn-chip--trade { --chip-fill: var(--stance-trade); }
+.tn-chip--alliance { --chip-fill: var(--stance-alliance); }
+/* On the dark surface. */
+.tn-chip--lacquer {
+  color: var(--color-text);
+  border-color: #000;
+  background: linear-gradient(180deg, var(--lacquer-hi), var(--lacquer));
+  box-shadow: var(--bevel-dark), 0 0 0 1px rgba(201,162,75,.3);
+  text-shadow: var(--engrave-on-dark);
+}
+.tn-chip--gilt {
+  color: var(--color-ink);
+  border-color: #5a4214;
+  background: var(--gilt-plate);
+  box-shadow: inset 0 1px 0 #fff3c4, 0 0 0 1px rgba(0,0,0,.5);
+  text-shadow: 0 1px 0 rgba(255,240,200,.6);
+}
+
+/* A sunk trough with a lit fill. Set the fill's width inline and its colour with --fill. */
+.tn-trough {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: #2a1f14;
+  box-shadow: var(--well-dark);
+  overflow: hidden;
+}
+.tn-trough__fill {
+  display: block;
+  height: 100%;
+  max-width: 100%;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,0) 55%), var(--fill, var(--gilt));
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,.3);
+  transition: width var(--dur-slow) var(--ease-out);
+}
+/* Segmented every 10%. */
+.tn-trough--seg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 2px), #1a130b calc(10% - 2px) 10%);
+  box-shadow: inset 0 2px 3px rgba(0,0,0,.45);
+}
+.tn-trough--lg { height: 12px; border-radius: 6px; }
+
+.tn-tooltip {
+  max-width: 320px;
+  padding: 8px 12px;
+  color: var(--color-text);
+  font: var(--text-sm)/1.4 var(--font-serif);
+  background: var(--lacquer-sheen), var(--lacquer-grain), #0f1320;
+  border: 1px solid #000;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(201,162,75,.55), inset 0 1px 0 rgba(255,255,255,.06), 0 6px 14px rgba(0,0,0,.6);
+}
+.tn-tooltip b, .tn-tooltip strong { color: var(--gilt-hi); font-weight: 600; }
+.tn-tooltip__title {
+  display: block;
+  margin-bottom: 2px;
+  font: 700 var(--text-xs)/1.3 var(--font-display);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--gilt-hi);
+  text-shadow: var(--engrave-on-dark);
+}
+
+/* ---------------------------------------------------------------- roundels and flags */
+
+/* A gilt bezel. Children: an <img>, or a .tn-roundel__face (initials, an icon). Size with --size. */
+.tn-roundel {
+  --size: 44px;
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: var(--size);
+  height: var(--size);
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--gilt-ring);
+  box-shadow: 0 0 0 1px var(--frame-line), 0 2px 4px rgba(0,0,0,.5);
+}
+.tn-roundel > img, .tn-roundel > svg, .tn-roundel > .tn-roundel__face {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 35%, var(--color-parchment-light), var(--color-parchment-dark));
+  color: var(--color-ink);
+  font: 700 calc(var(--size) * .36)/1 var(--font-display);
+}
+.tn-roundel::after {          /* the bezel's lip */
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.55), inset 0 0 0 1px rgba(0,0,0,.45);
+}
+.tn-roundel--sm { --size: 28px; padding: 1.5px; }
+.tn-roundel--lg { --size: 64px; padding: 3px; }
+.tn-roundel--lg::after { inset: 3px; }
+/* A glass status dot in a bezel (the Live dot). Colour with --dot. */
+.tn-roundel--dot { --size: 14px; padding: 2px; box-shadow: 0 0 0 1px var(--frame-line); }
+.tn-roundel--dot::after { inset: 2px; box-shadow: inset 0 1px 2px rgba(0,0,0,.5); }
+.tn-roundel--dot::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, rgba(255,255,255,.75) 0, rgba(255,255,255,0) 38%), var(--dot, var(--color-ok-bright));
+}
+
+/* A rectangular flag in a gilt frame with static cloth shading. Give it a size; the flag is the
+   background (--flag-colour) or a child <img>/<svg>/<canvas>. */
+.tn-flag-plate {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 1px;
+  background: linear-gradient(var(--flag-colour, var(--color-parchment-dark)), var(--flag-colour, var(--color-parchment-dark))) padding-box, var(--gilt-metal) border-box;
+  box-shadow: 0 0 0 1px var(--frame-line), 0 2px 4px rgba(42,31,20,.45);
+}
+.tn-flag-plate > img, .tn-flag-plate > svg, .tn-flag-plate > canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tn-flag-plate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, rgba(255,255,255,.22) 0%, rgba(255,255,255,0) 28%, rgba(0,0,0,.16) 55%, rgba(255,255,255,.08) 75%, rgba(0,0,0,.12) 100%);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.35);
+}
+
+/* ---------------------------------------------------------------- text */
+
+.tn-engraved { text-shadow: var(--engrave-on-paper); }
+.tn-engraved--dark { text-shadow: var(--engrave-on-dark); }
+.tn-caps {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+/* Gilt type. ONLY on dark (it is about 1.8:1 on parchment). */
+.tn-gilt-text {
+  background: linear-gradient(180deg, #fff1c2 0%, #e2c069 45%, #a8802f 55%, #e6c977 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,.85));
+}
+
+/* ---------------------------------------------------------------- the edge scrim */
+/* One fixed layer between the globe canvas and the HUD. Static paint; fade it with opacity only. */
+.tn-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(5,6,10,.5) 0, rgba(5,6,10,0) 420px),
+    linear-gradient(180deg, rgba(5,6,10,.5) 0, rgba(5,6,10,0) 120px),
+    linear-gradient(0deg, rgba(5,6,10,.55) 0, rgba(5,6,10,0) 110px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tn-button, .tn-seg, .tn-booktab, .tn-trough__fill { transition: none; }
+  .tn-button:active, .tn-button.is-pressed, .tn-button.is-active, .tn-button[aria-pressed="true"] { transform: none; }
+}

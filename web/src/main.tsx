@@ -1,6 +1,7 @@
 import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 import './theme/tokens.css';
+import './theme/materials.css';
 import { App } from './App';
 import { connect } from './state/world';
 import { installEconDemo } from './globe/economy/econDemo';
@@ -11,11 +12,18 @@ const wantsGallery = () => new URLSearchParams(location.search).has('gallery') |
 const isGallery = wantsGallery();
 const Gallery = lazy(() => import('./gallery/Gallery').then((m) => ({ default: m.Gallery })));
 window.addEventListener('hashchange', () => { if (wantsGallery() !== isGallery) location.reload(); });
+// ?materials opens the material-system reference sheet (theme/MaterialsSheet.tsx, no server needed).
+const isMaterials = new URLSearchParams(location.search).has('materials');
+const MaterialsSheet = lazy(() => import('./theme/MaterialsSheet').then((m) => ({ default: m.MaterialsSheet })));
 
-if (!isGallery) connect();
+if (!isGallery && !isMaterials) connect();
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isGallery ? (
+    {isMaterials ? (
+      <Suspense fallback={null}>
+        <MaterialsSheet />
+      </Suspense>
+    ) : isGallery ? (
       <Suspense fallback={null}>
         <Gallery />
       </Suspense>
