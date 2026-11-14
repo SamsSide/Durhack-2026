@@ -9,8 +9,10 @@ import type { WorldBible } from './bible';
 import { startAge } from './ages';
 import { foundingCouncil } from './council';
 import { startPolitics } from './economy';
+import { WARMONGER_AGGRESSION } from './war';
 
-export interface WorldGenOptions { seed: number; seaLevel?: number; provinces?: number }
+/** `aggression` is the Create screen's slider (0 to 1); it is the floor for the world's warmonger. */
+export interface WorldGenOptions { seed: number; seaLevel?: number; provinces?: number; aggression?: number }
 
 /** Provinces in a new world (#203 idea 1: was 500; 1,200 keeps the globe's frame time and the sim
  *  under about 5 ms a tick; 1,500 went over). Old replays keep their own count. */
@@ -283,6 +285,44 @@ function placeCapitals(
   return chosen;
 }
 
+/** Owner #317: at least one warmonger per world, so a war is always on show. The nation whose capital
+ *  is fewest provinces by land from another nation's capital (it meets a neighbour first; the map comes
+ *  from the seed, so the pick does too; straight-line distance if no two capitals share land) gets an
+ *  aggression of at least WARMONGER_AGGRESSION and the Create screen's slider. */
+function crownWarmonger(countries: Country[], tiles: Tile[], slider: number | undefined): void {
+  if (countries.length < 2) return;
+  const capOf = new Map(countries.map((c) => [c.capitalTile, c.id]));
+  let best = -1, bestD = Infinity;
+  for (const c of countries) {
+    const dist = new Map<number, number>([[c.capitalTile, 0]]);
+    const q = [c.capitalTile];
+    for (let h = 0; h < q.length; h++) {
+      const t = q[h]!, d = dist.get(t)!;
+      if (d + 1 >= bestD) break;
+      let hit = false;
+      for (const j of tiles[t]!.neighbors) {
+        if (dist.has(j) || tiles[j]!.terrain === 'ocean') continue;
+        dist.set(j, d + 1);
+        if (capOf.has(j)) { bestD = d + 1; best = c.id; hit = true; break; }
+        q.push(j);
+      }
+      if (hit) break;
+    }
+  }
+  if (best < 0) {
+    for (const a of countries) for (const b of countries) {
+      if (a === b) continue;
+      const d = 1000 + angle(tiles[a.capitalTile]!.center, tiles[b.capitalTile]!.center);
+      if (d < bestD) { bestD = d; best = a.id; }
+    }
+  }
+  const c = countries[best]!;
+  const floor = Math.max(WARMONGER_AGGRESSION + 0.05, Math.min(1, slider ?? 0));
+  if (c.temperament.aggression >= floor) return;
+  c.temperament = { ...c.temperament, aggression: Math.round(floor * 100) / 100 };
+  c.politics = startPolitics(c.temperament);
+}
+
 export function generateWorld(bible: WorldBible, opts: WorldGenOptions): World {
   const seed = opts.seed >>> 0;
   const seaLevel = Math.max(0.2, Math.min(0.85, opts.seaLevel ?? 0.55));
@@ -340,6 +380,8 @@ export function generateWorld(bible: WorldBible, opts: WorldGenOptions): World {
     units.push({ id: `u-${units.length}`, owner: id, kind: 'settler', tile: cap, strength: 1 });
     chronicle.push({ id: `c-${chronicle.length + 1}`, tick: 0, year: bible.startYear, kind: 'founding', countries: [id], text: bn.foundingMyth });
   });
+
+  crownWarmonger(countries, tiles, opts.aggression);
 
   const relations: Relation[] = [];
   for (let a = 0; a < nNations; a++) for (let b = a + 1; b < nNations; b++) relations.push({ a, b, stance: 'neutral', since: 0, grievance: 0 });

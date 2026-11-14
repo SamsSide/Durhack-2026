@@ -8,7 +8,7 @@ import type {
 import { hashString, type Rng } from '../rng';
 import { countryTiles, regionOwner, relationOf } from '../world';
 import {
-  WAR_EARLIEST, ageScaled, armyStrengthFor, diplomacyTurn, enemiesOf, inTruce, isCombatant, marchTurn, type MarchInput, type WarLedger,
+  WAR_EARLIEST, ageScaled, earlyWarmonger, reachableNations, armyStrengthFor, diplomacyTurn, enemiesOf, inTruce, isCombatant, marchTurn, type MarchInput, type WarLedger,
 } from './war';
 import { unrestTurn, type UnrestMemory } from './regions';
 import { ageStrength, ageTurn, satelliteTurn, type AgeMemory } from './ages';
@@ -123,12 +123,17 @@ export function autopilotPolicy(world: World, countryId: number): NationPolicy {
   let grudge = 0;
   for (const o of rivals.keys()) grudge = Math.max(grudge, relationOf(world, countryId, o).grievance);
   const noise = (salt: number): number => (hashString(`${countryId}:${Math.floor(world.tick / 40)}:${salt}`) % 1000) / 1000 * 0.5;
+  // Owner #317: before the world's first war, its warmonger looks past its borders for a victim.
+  const early = !wars.length && earlyWarmonger(world, countryId, world.tick);
+  const reach = early ? reachableNations(world, countryId).filter((o) => !rivals.has(o)) : [];
   const score: Record<Focus, number> = {
     expand: (frontier > 0 ? 0.9 : -5) + t.expansion * 1.2 + noise(1),
     develop: 0.5 + t.trade * 0.8 + t.faith * 0.4 + (frontier === 0 ? 0.3 : 0) + (c.treasury > 150 ? 0.4 : 0) + noise(2),
     fortify: rivals.size > 0 ? 0.3 + (1 - t.aggression) * 0.7 + noise(3) : -5,
     attack: wars.length ? 4 : rivals.size > 0 && mine.length >= 8 && world.tick >= WAR_EARLIEST
-      ? t.aggression * 2.2 - 0.3 + grudge * 1.5 + (frontier === 0 ? 0.8 : 0) + noise(4) : -5,
+      ? t.aggression * 2.2 - 0.3 + grudge * 1.5 + (frontier === 0 ? 0.8 : 0) + noise(4)
+      // Owner #317: the world's warmonger arms for the first war early, small or not.
+      : early && (rivals.size > 0 || reach.length > 0) ? 3 : -5,
   };
   let focus: Focus = 'develop';
   let best = -Infinity;
@@ -145,7 +150,7 @@ export function autopilotPolicy(world: World, countryId: number): NationPolicy {
     .map((o) => ({ o, g: relationOf(world, countryId, o).grievance, n: countryTiles(world, o).length }))
     .sort((a, b) => (b.g - a.g) || (a.n - b.n) || (a.o - b.o))
     .map((x) => x.o);
-  return { focus, targets: [...wars, ...others] };
+  return { focus, targets: [...wars, ...others, ...reach.filter((o) => !inTruce(world, countryId, o, world.tick) && relationOf(world, countryId, o).stance !== 'alliance')] };
 }
 
 // ---- words -----------------------------------------------------------------------------------
