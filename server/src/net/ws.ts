@@ -1,6 +1,7 @@
 // X2: live stream and controls on /ws.
 import type { Server } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
+import { getBudget } from '../llm';
 import type { ControlMessage, LlmMode, WorldRunner } from '../runner';
 
 const ACTIONS_WITH_COUNTRY = ['cut', 'restore', 'silence', 'wake', 'delete'];
@@ -9,7 +10,7 @@ export function attachWs(server: Server, runner: WorldRunner, mode: LlmMode): We
   const wss = new WebSocketServer({ server, path: '/ws' });
   const send = (ws: WebSocket, msg: object) => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); };
   const broadcast = (msg: object) => { const s = JSON.stringify(msg); for (const c of wss.clients) if (c.readyState === WebSocket.OPEN) c.send(s); };
-  const budget = () => ({ type: 'budget', calls: 0, tokensIn: 0, tokensOut: 0, callsPerMin: 0, capped: false, mode });
+  const budget = () => getBudget();
 
   runner.subscribe({
     snapshot: (world) => { broadcast({ type: 'snapshot', world }); broadcast({ type: 'agents', agents: world.agents }); },

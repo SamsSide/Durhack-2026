@@ -3,7 +3,7 @@ import { Router } from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { WorldRunner } from '../runner';
-import { countryLore, regionLore } from './lore';
+import { getLore, getRegionLore } from './loreAi';
 
 const SAMPLES = path.join(path.dirname(fileURLToPath(import.meta.url)), 'samples');
 
@@ -15,11 +15,13 @@ export function storyRoutes(runner: WorldRunner): Router {
     return w && Number.isInteger(id) && w.countries[id] ? id : null;
   };
 
-  r.get('/country/:id/lore', (req, res) => {
+  r.get('/country/:id/lore', async (req, res) => {
     const id = countryId(req.params.id);
     const w = runner.getWorld();
     if (id === null || !w) return void res.status(404).json({ error: 'no such country' });
-    res.json(countryLore(w, id));
+    const lore = await getLore(id, w);
+    if (!lore) return void res.status(404).json({ error: 'no such country' });
+    res.json(lore);
   });
 
   for (const kind of ['narration', 'anthem', 'chant'] as const) {
@@ -34,9 +36,9 @@ export function storyRoutes(runner: WorldRunner): Router {
     res.status(503).json({ error: 'image generation off' });
   });
 
-  r.get('/region/:id/lore', (req, res) => {
+  r.get('/region/:id/lore', async (req, res) => {
     const w = runner.getWorld();
-    const lore = w ? regionLore(w, Number(req.params.id)) : null;
+    const lore = w ? await getRegionLore(Number(req.params.id), w) : null;
     if (!lore) return void res.status(404).json({ error: 'no such region' });
     res.json(lore);
   });
