@@ -39,6 +39,7 @@ export const DEFAULT_MODEL_RULER = 'gemini-3.5-flash-lite';
 
 export const loreModel = () => process.env.GEMINI_MODEL_LORE || DEFAULT_MODEL_LORE;
 export const rulerModel = () => process.env.GEMINI_MODEL_RULER || DEFAULT_MODEL_RULER;
+export const bibleModel = () => process.env.GEMINI_MODEL_BIBLE || process.env.GEMINI_MODEL_RULER || DEFAULT_MODEL_RULER;
 export const llmMode = (): LlmMode => (process.env.LLM_MODE === 'live' ? 'live' : 'mock');
 
 let forcedMock = false;
