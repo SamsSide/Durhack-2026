@@ -1,0 +1,41 @@
+/* B13: the wax seal stamped on a payment once Solana confirms it. Lane b. */
+.chain-seal-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 2; }
+.chain-seal {
+  position: absolute; left: 0; top: 0; visibility: hidden; opacity: 0; pointer-events: auto; cursor: pointer;
+  will-change: transform, opacity;
+}
+.chain-seal__pos { display: block; position: relative; transform-origin: 50% 50%; }
+.chain-seal__wax {
+  display: block; width: 40px; height: 40px; border-radius: 50%; position: relative;
+  background: radial-gradient(circle at 35% 30%, #e0503f 0%, #b0261b 45%, #6f120c 100%);
+  border: 1px solid #2a0603;
+  box-shadow: 0 0 0 1px rgba(201, 162, 75, 0.7), inset 0 1px 0 rgba(255, 220, 200, 0.35), inset 0 -2px 3px rgba(0, 0, 0, 0.4), 0 3px 6px rgba(0, 0, 0, 0.6);
+}
+.chain-seal__wax::after {
+  content: ''; position: absolute; inset: 7px; border-radius: 50%;
+  border: 1px solid rgba(255, 201, 64, 0.75); box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+.chain-seal__count {
+  position: absolute; right: -8px; bottom: -4px; padding: 0 4px; border-radius: 2px;
+  font: 700 10px/14px var(--font-mono, ui-monospace, monospace); color: var(--gilt-hi, #ffe08a);
+  background: #0f1320; border: 1px solid #000; display: none;
+}
+.chain-seal.merged .chain-seal__count { display: block; }
+.chain-seal__ring {
+  position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%;
+  border: 2px solid rgba(255, 201, 64, 0.9); opacity: 0; pointer-events: none;
+}
+.chain-seal.stamp .chain-seal__pos { animation: chain-seal-stamp 420ms cubic-bezier(.2, .8, .3, 1) both; }
+.chain-seal.stamp .chain-seal__ring { animation: chain-seal-ring 560ms ease-out both; }
+@keyframes chain-seal-stamp { 0% { transform: scale(2.2); } 55% { transform: scale(0.82); } 78% { transform: scale(1.08); } 100% { transform: scale(1); } }
+@keyframes chain-seal-ring { 0% { transform: scale(0.8); opacity: 0.9; } 100% { transform: scale(2.4); opacity: 0; } }
+.chain-seal__tip {
+  position: absolute; left: 50%; bottom: 100%; margin-bottom: 6px; transform: translateX(-50%);
+  white-space: nowrap; padding: 2px 8px; border-radius: 2px; opacity: 1; pointer-events: none;
+  font: 700 12px/18px var(--font-mono, ui-monospace, monospace); color: var(--gilt-hi, #ffe08a);
+  background: var(--lacquer-sheen), var(--lacquer-grain), #0f1320; border: 1px solid #000;
+  box-shadow: 0 0 0 1px rgba(201, 162, 75, 0.6), 0 3px 8px rgba(0, 0, 0, 0.6);
+}
+.chain-seal:hover .chain-seal__tip { color: #fff4c4; box-shadow: 0 0 0 1px var(--gilt-hi, #ffe08a), 0 3px 8px rgba(0, 0, 0, 0.6); }
+.chain-seal__tick { position: absolute; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; font: 700 18px/1 var(--font-mono, monospace); color: #ffc940; text-shadow: 0 1px 0 rgba(0,0,0,.6); pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .chain-seal.stamp .chain-seal__pos, .chain-seal.stamp .chain-seal__ring { animation: none; } }

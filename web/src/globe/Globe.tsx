@@ -23,6 +23,7 @@ import { Orbit } from './orbit';
 import { Trade } from './trade/Trade';
 import { Routes } from './trade/Routes';
 import { CoinBurst } from './trade/CoinBurst';
+import { ChainSeal } from './trade/ChainSeal';
 import { Structures } from './structures/Structures';
 import { Units } from './units';
 import { Clouds } from './clouds';
@@ -170,6 +171,7 @@ function Scene({ world }: { world: World }) {
       <Routes />
       <Trade />
       <CoinBurst />
+      <ChainSeal />
       <Towns />
       <Living />
       <EventBeacons />
