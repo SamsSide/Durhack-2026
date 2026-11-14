@@ -24,6 +24,11 @@ PALETTES = {
     "desert": dict(wall="#E3C99A", stone="#B8864E", roof="#F2EEE4", trim="#2F7F8C", dark="#5A4430", extra="#F2EEE4"),
     "east_asian": dict(wall="#E8DCC0", stone="#EFEAE0", roof="#2E3B3F", trim="#B23A2E", dark="#3B2A22", extra="#D4A93A"),
     "mesoamerican": dict(wall="#B7AE98", stone="#7A6A52", roof="#D7B98A", trim="#2E8C6E", dark="#3A3026", extra="#C2452D"),
+    # nation identity (row A24)
+    "soviet_bloc": dict(wall="#A8A8A0", stone="#6E6E68", roof="#D6C29C", trim="#D4A93A", dark="#34363A", extra="#8E8C84"),
+    "western_modern": dict(wall="#EDE6D6", stone="#9A6B4F", roof="#3E5566", trim="#7FB6CC", dark="#2A333B", extra="#5E8C4A"),
+    "egyptian": dict(wall="#E6D3A3", stone="#C8A26A", roof="#8A6A45", trim="#2F6E9E", dark="#4A3826", extra="#D4A93A"),
+    "highland": dict(wall="#F2EEE4", stone="#8C8273", roof="#5B5F66", trim="#8E2A1E", dark="#6A6358", extra="#6F8F4E"),
     "scrap": dict(wall="#6B6B5E", stone="#A79B7C", roof="#8A4B2A", trim="#3E4A3D", dark="#2E2A26", extra="#B0623A"),
 }
 

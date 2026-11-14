@@ -194,6 +194,94 @@
         "file": "scrap/fort.glb",
         "footprint": 0.7
       }
+    },
+    "soviet_bloc": {
+      "capital": {
+        "file": "soviet_bloc/capital.glb",
+        "footprint": 1.0
+      },
+      "city": {
+        "file": "soviet_bloc/city.glb",
+        "footprint": 1.0
+      },
+      "town": {
+        "file": "soviet_bloc/town.glb",
+        "footprint": 0.9
+      },
+      "temple": {
+        "file": "soviet_bloc/temple.glb",
+        "footprint": 0.7
+      },
+      "fort": {
+        "file": "soviet_bloc/fort.glb",
+        "footprint": 0.7
+      }
+    },
+    "western_modern": {
+      "capital": {
+        "file": "western_modern/capital.glb",
+        "footprint": 1.0
+      },
+      "city": {
+        "file": "western_modern/city.glb",
+        "footprint": 1.0
+      },
+      "town": {
+        "file": "western_modern/town.glb",
+        "footprint": 0.9
+      },
+      "temple": {
+        "file": "western_modern/temple.glb",
+        "footprint": 0.7
+      },
+      "fort": {
+        "file": "western_modern/fort.glb",
+        "footprint": 0.7
+      }
+    },
+    "egyptian": {
+      "capital": {
+        "file": "egyptian/capital.glb",
+        "footprint": 1.0
+      },
+      "city": {
+        "file": "egyptian/city.glb",
+        "footprint": 1.0
+      },
+      "town": {
+        "file": "egyptian/town.glb",
+        "footprint": 0.9
+      },
+      "temple": {
+        "file": "egyptian/temple.glb",
+        "footprint": 0.7
+      },
+      "fort": {
+        "file": "egyptian/fort.glb",
+        "footprint": 0.7
+      }
+    },
+    "highland": {
+      "capital": {
+        "file": "highland/capital.glb",
+        "footprint": 1.0
+      },
+      "city": {
+        "file": "highland/city.glb",
+        "footprint": 1.0
+      },
+      "town": {
+        "file": "highland/town.glb",
+        "footprint": 0.9
+      },
+      "temple": {
+        "file": "highland/temple.glb",
+        "footprint": 0.7
+      },
+      "fort": {
+        "file": "highland/fort.glb",
+        "footprint": 0.7
+      }
     }
   }
 }
