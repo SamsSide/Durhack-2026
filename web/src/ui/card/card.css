@@ -1,68 +1,79 @@
-/* Nation card (X5, C2): an atlas page, always docked as .panel (the hologram was dropped, PR #75).
-   Variables from tokens.css only. */
+/* Nation card (X5, C2): an atlas page in a gilt frame, docked in the left column.
+   The material comes from theme/materials.css (tn-sheet tn-frame tn-frame--corners on the root, tn-cartouche,
+   tn-flag-plate, tn-roundel, tn-stat, tn-trough, tn-header-bar, tn-chip, tn-booktabs, tn-button).
+   This file only lays them out; colours, shadows and gradients come from tokens.css. */
+
+/* The frame sits on this non-scrolling root (its corners, band and cartouche must not be clipped);
+   the body inside it scrolls. */
 .tn-card {
   width: var(--left-panel-width);
   max-width: 100%;
   max-height: 100%;   /* the left dock gives the height (#245) */
   display: flex;
   flex-direction: column;
-  padding: 0;
-  overflow: hidden;
+  padding: 24px 6px 8px;
   color: var(--color-ink);
   font-family: var(--font-serif);
+  --tn-bleed: 14px;   /* the body's side padding: header bars run out to it */
+}
+/* While its nation speaks or sings: a gilt rule along the top of the paper (static; it appears, never animates). */
+.tn-card.speaking {
+  box-shadow:
+    0 0 0 1px var(--frame-line),
+    inset 0 0 0 1px rgba(58,43,16,.85),
+    inset 0 4px 0 var(--gilt),
+    var(--recess-paper),
+    var(--lift-2);
 }
 .tn-card-body {
   position: relative;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 14px var(--space-4) var(--space-3);
+  contain: paint;
+  padding: 2px var(--tn-bleed) var(--space-2);
   scrollbar-width: thin;
-  scrollbar-color: var(--color-ink-muted) transparent;
+  scrollbar-color: rgba(94,76,54,.55) transparent;
 }
 
-.tn-card .btn { background: transparent; color: var(--color-ink); border-color: var(--color-ink); display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); }
-.tn-card .btn:hover { background: var(--color-parchment-dark); color: var(--color-ink); border-color: var(--color-ink); }
-.tn-card .btn.active { background: var(--color-ink); color: var(--color-parchment-light); }
-.tn-card h3 {
-  font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+/* Section headings that are not header bars: rubric caps */
+.tn-card h3:not(.tn-header-bar) {
+  font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.14em;
   text-transform: uppercase; color: var(--color-rubric); margin: 0 0 5px;
 }
+.tn-card .tn-header-bar { margin-top: 14px; }
 
-/* Header */
-.tn-head { display: flex; gap: 14px; align-items: center; }
+/* Header: the government type rides the frame's top edge as a cartouche */
+.tn-card > .tn-cartouche { max-width: calc(100% - 64px); overflow: hidden; text-overflow: ellipsis; }
+.tn-head { display: flex; gap: 14px; align-items: center; padding-top: 6px; }
 .tn-head-text { flex: 1; min-width: 0; }
-.tn-flag { position: relative; width: 66px; height: 44px; flex: none; border: 1px solid var(--color-ink); line-height: 0; overflow: hidden; }
+.tn-flag { width: 64px; height: 44px; line-height: 0; }
 .tn-flag-drawn, .tn-flag-painted { position: absolute; inset: 0; }
 .tn-flag-drawn svg { width: 100%; height: 100%; display: block; }
 .tn-flag-painted { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 250ms ease; }
 .tn-flag-painted.tn-on { opacity: 1; }
-.tn-name { margin: 0; font-family: var(--font-display); font-size: 22px; font-weight: 700; line-height: 25px; letter-spacing: 0.03em; }
-.tn-gov { font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-rubric); line-height: 14px; margin-bottom: 2px; }
-.tn-sub { font-style: italic; color: var(--color-ink-muted); font-size: 16px; line-height: 20px; }
-.tn-fallen { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-rubric); margin-top: 2px; }
-.tn-close { align-self: flex-start; padding: 2px; background: transparent; border: 0; cursor: pointer; color: var(--color-ink); line-height: 0; border-radius: var(--radius-1); }
-.tn-close:hover { color: var(--color-rubric); }
+.tn-name { margin: 0; font-family: var(--font-display); font-size: 21px; font-weight: 700; line-height: 24px; letter-spacing: 0.03em; color: var(--color-ink); }
+.tn-sub { font-style: italic; color: var(--color-ink-muted); font-size: 16px; line-height: 20px; margin-top: 3px; }
+.tn-fallen { font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-rubric); margin-top: 2px; }
+.tn-close { align-self: flex-start; flex: none; }
+.tn-close svg { width: 12px; height: 12px; }
 
 .tn-ideology {
-  margin: 12px 0 10px; padding: 8px 12px; border-left: 2px solid var(--color-rubric);
-  font-style: italic; font-size: 16px; line-height: 21px; background: var(--color-ink-faint);
+  margin: 12px 0 10px; padding: 8px 12px; border-left: 2px solid var(--color-rubric); border-radius: 2px;
+  font-style: italic; font-size: 16px; line-height: 21px; background: rgba(42,31,20,.05); box-shadow: var(--well-paper);
 }
 
-/* The Silence strip: a hole in the parchment, cyan rule */
-.tn-silence { margin: 12px 0 10px; padding: 9px 12px 10px; background: var(--color-night-inset); color: var(--color-text); border-left: 2px solid var(--holo-tint); border-radius: 1px; }
+/* The Silence strip: a hole in the parchment, sunk deep, cyan rule */
+.tn-silence {
+  margin: 12px 0 10px; padding: 9px 12px 10px; color: var(--color-text); border-radius: 2px;
+  background: var(--color-night-inset); border-left: 2px solid var(--holo-tint); box-shadow: var(--well-dark);
+}
 .tn-silence-top { display: flex; justify-content: space-between; align-items: baseline; }
 .tn-silence-cap { font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--holo-tint); }
 .tn-silence-yrs { font-family: var(--font-mono); font-size: 13px; color: var(--holo-tint); }
 .tn-silence-txt { font-style: italic; font-size: 15px; line-height: 19px; margin-top: var(--space-1); }
 
-
-/* Facts: one row of three */
-.tn-facts {
-  display: grid; grid-template-columns: 0.8fr 1fr 1fr; gap: 6px 16px; padding: 8px 0 9px;
-  border-top: 1px solid var(--color-ink-faint); border-bottom: 1px solid var(--color-ink-faint);
-}
-.tn-facts > div { display: flex; flex-direction: column; }
-.tn-cap { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-ink-muted); }
+.tn-cap { font-family: var(--font-display); font-size: var(--text-cap); letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-ink-muted); }
 .tn-v { font-family: var(--font-mono); font-size: 16px; font-weight: 600; line-height: 21px; }
 
 .tn-sec { margin-top: 10px; }
@@ -73,48 +84,37 @@
 .tn-link { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-style: italic; color: var(--color-rubric); text-decoration: underline; }
 .tn-link:hover { color: var(--color-ink); }
 
-/* Tabs */
-.tn-tabs { display: flex; margin-top: 12px; border-bottom: 1px solid var(--color-ink-faint); }
-.tn-tab {
-  background: transparent; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;
-  font-family: var(--font-display); font-size: var(--text-cap); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
-  padding: 4px 10px 5px; color: var(--color-ink-muted);
-}
-.tn-tab:hover { color: var(--color-ink); }
-.tn-tab.tn-on { color: var(--color-ink); border-bottom-color: var(--color-rubric); }
+/* Lore tabs: bookmark tabs (tn-booktabs). Five labels in the 340 px column: tighter letters and padding so
+   they share the strip; the active tab still joins the page below. */
+.tn-tabs { margin: 14px calc(-1 * var(--tn-bleed)) 0; gap: 1px; padding: 3px 2px 0; }
+.tn-tabs .tn-booktab { flex: 1 1 auto; min-width: 0; padding-left: 3px; padding-right: 3px; letter-spacing: 0; }
+/* Each closed tab is its own faint bookmark, so five labels in a row still read apart. */
+.tn-tabs .tn-booktab:not(.tn-booktab--active) { background: rgba(255,250,235,.22); border-color: rgba(42,31,20,.16); }
+.tn-tabs .tn-booktab:not(.tn-booktab--active):hover { background: rgba(255,250,235,.45); }
 .tn-tab-body { min-height: 92px; padding-top: 10px; }
 .tn-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.tn-card .chip { font-size: 13.5px; padding: 0 9px; line-height: 21px; cursor: default; }
 
 /* Relations */
 .tn-rels { list-style: none; margin: 0; padding: 0; }
 .tn-rel {
   width: 100%; display: block; text-align: left; background: transparent; color: inherit; font: inherit; cursor: pointer;
-  border: 0; border-bottom: 1px dotted var(--color-ink-faint); padding: 3px 0;
+  border: 0; border-bottom: 1px dotted rgba(42,31,20,.3); padding: 4px 0;
 }
 .tn-rel:hover .tn-rel-name, .tn-rel:focus-visible .tn-rel-name { text-decoration: underline; }
-.tn-rel:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.tn-rel:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 1px; }
 .tn-rel-top { display: flex; align-items: center; gap: 8px; font-size: 15px; line-height: 20px; }
 .tn-rel-name { flex: 1; min-width: 0; }
-.tn-swatch { width: 12px; height: 12px; flex: none; border: 1px solid var(--color-ink); }
+.tn-swatch { width: 12px; height: 12px; flex: none; border: 1px solid var(--color-ink); box-shadow: 0 1px 0 rgba(255,250,235,.55); }
 .tn-rel-story { display: block; margin: 2px 0 2px 20px; font-size: 13px; line-height: 17px; font-style: italic; color: var(--color-ink-muted); }
-.tn-stance {
-  font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-  padding: 0 8px; line-height: 17px; border-radius: var(--radius-pill); color: var(--color-parchment-light); flex: none;
-}
-.tn-stance-war { background: var(--stance-war); }
-.tn-stance-hostile { background: var(--stance-hostile); color: var(--color-ink); }
-.tn-stance-trade { background: var(--stance-trade); }
-.tn-stance-alliance { background: var(--stance-alliance); }
-.tn-stance-neutral { background: transparent; color: var(--color-ink-muted); border: 1px solid var(--stance-neutral); line-height: 15px; }
+.tn-stance { flex: none; min-height: 18px; }
 
-/* Footer: Narrate and Anthem */
-.tn-foot { display: flex; gap: 8px; margin-top: 12px; }
-.tn-foot .btn { flex: 1; font-size: var(--text-xs); line-height: 26px; padding-top: 0; padding-bottom: 0; }
-.tn-foot .btn svg { flex: none; }
+/* Footer: Narrate and Anthem (tn-button) */
+.tn-foot { display: flex; gap: 8px; margin-top: 14px; }
+.tn-foot .tn-button { flex: 1; gap: var(--space-2); min-height: 30px; }
+.tn-foot .tn-button svg { flex: none; }
 .tn-lyrics { margin-top: 10px; font-style: italic; font-size: 14px; line-height: 19px; border-left: 2px solid var(--color-rubric); padding-left: var(--space-3); }
-.tn-progress { height: 3px; margin-top: 10px; background: var(--color-ink-faint); overflow: hidden; }
-.tn-progress div { height: 100%; width: 38%; background: var(--color-accent); animation: tn-run 2.4s ease-in-out infinite alternate; }
+.tn-progress { height: 6px; margin-top: 10px; }
+.tn-progress div { height: 100%; width: 38%; border-radius: 3px; background: linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,0) 55%), var(--gilt); animation: tn-run 2.4s ease-in-out infinite alternate; }
 @keyframes tn-run { from { transform: translateX(-10%); } to { transform: translateX(165%); } }
 .tn-now { margin-top: 4px; font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-ink-muted); }
 .tn-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 11px; }
@@ -126,7 +126,7 @@
 /* Lore states */
 .tn-lines { display: grid; gap: 7px; }
 .tn-shimmer {
-  display: block; height: 9px; border-radius: var(--radius-1);
+  display: block; height: 9px; border-radius: var(--radius-1); box-shadow: var(--well-paper);
   background: linear-gradient(90deg, var(--color-ink-faint) 0%, var(--color-parchment-dark) 50%, var(--color-ink-faint) 100%);
   background-size: 200% 100%; animation: tn-shimmer 1.4s linear infinite;
 }
@@ -138,46 +138,40 @@
 /* Short viewport (under 800 px tall): the summary and the strip's second sentence are dropped in the markup */
 .tn-short .tn-tab-body { min-height: 0; }
 
-/* Region view */
-.tn-bar { height: 6px; border: 1px solid var(--color-ink); border-radius: var(--radius-1); overflow: hidden; }
-.tn-bar-fill { height: 100%; background: var(--color-rubric); transition: width 250ms ease; }
-
 @media (prefers-reduced-motion: reduce) {
   .tn-shimmer, .tn-fade, .tn-progress div, .tn-eq i { animation: none; }
+  .tn-flag-painted, .tn-dip-flag { transition: none; }
 }
 
-/* The Council (row A29): one row per role */
-.tn-council { padding: 8px 0 6px; border-bottom: 1px solid var(--color-ink-faint); }
-.tn-council h3 { margin-bottom: 4px; }
-.tn-cm { position: relative; display: flex; align-items: center; gap: 10px; padding: 4px 4px; border-radius: var(--radius-1); }
-.tn-cm + .tn-cm { border-top: 1px dotted var(--color-ink-faint); }
+/* The Council (row A29): one row per role, a gilt roundel per member */
+.tn-council { padding: 0 0 4px; }
+.tn-cm { position: relative; display: flex; align-items: center; gap: 10px; padding: 5px 4px; border-radius: var(--radius-1); }
+.tn-cm + .tn-cm { border-top: 1px dotted rgba(42,31,20,.3); }
 .tn-por { flex: none; display: block; }
 .tn-cm-info { flex: 1; min-width: 0; outline: none; }
-.tn-cm-info:focus-visible { box-shadow: 0 0 0 1.5px var(--color-accent); border-radius: var(--radius-1); }
-.tn-cm-role { display: flex; align-items: center; gap: 6px; font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-ink-muted); line-height: 15px; }
-.tn-cm-name { display: flex; align-items: baseline; gap: 6px; min-width: 0; line-height: 19px; }
+.tn-cm-info:focus-visible { box-shadow: 0 0 0 1.5px var(--color-ink); border-radius: var(--radius-1); }
+.tn-cm-role { display: flex; align-items: center; gap: 6px; font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-ink-muted); line-height: 18px; }
+.tn-cm-name { display: flex; align-items: baseline; gap: 6px; min-width: 0; line-height: 20px; }
 .tn-cm-n { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tn-cm-vac { font-style: italic; color: var(--color-ink-muted); font-size: 16px; }
 .tn-cm-yrs { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-ink-muted); white-space: nowrap; flex: none; }
-.tn-cm-chip {
-  flex: none; font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-  line-height: 13px; padding: 0 5px; border-radius: var(--radius-1); border: 1px solid transparent; white-space: nowrap;
-}
+/* A compact status chip on the role line (tn-chip tn-chip--caps) */
+.tn-cm-chip { flex: none; min-height: 16px; padding: 0 6px; line-height: 14px; letter-spacing: 0.06em; }
 .tn-cm-chip-active { color: var(--link-up); border-color: var(--link-up); }
-.tn-cm-chip-covering { color: var(--color-ink); background: var(--color-accent); border-color: var(--color-accent); }
 .tn-cm-chip-vacant { color: var(--color-rubric); border-color: var(--color-rubric); }
-.tn-cm-chip-cut { color: var(--color-parchment-light); background: var(--link-cut); border-color: var(--link-cut); }
-.tn-cm-btns { flex: none; display: flex; gap: 4px; }
-.tn-card .btn.xs { font-size: var(--text-cap); padding: 0 7px; line-height: 20px; }
-.tn-card .btn.xs.danger { color: var(--color-danger); border-color: var(--color-danger); }
-.tn-card .btn.xs.danger:hover { background: var(--color-danger); color: var(--color-parchment-light); }
+.tn-cm-btns { flex: none; display: flex; flex-direction: column; gap: 3px; }
+.tn-cm-btns .tn-button { min-width: 58px; }
+.tn-short .tn-cm-btns { flex-direction: row; }
+.tn-por-vacant > svg { background: radial-gradient(circle at 50% 35%, var(--color-parchment), var(--color-parchment-dark)); }
 
+/* The member's memory: a lacquer tooltip under the row */
 .tn-cm-tip {
-  display: none; position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 2px); padding: 8px 10px;
-  background: var(--color-parchment-light); color: var(--color-ink); border: 1px solid var(--color-ink); box-shadow: var(--shadow-1);
-  font-size: 14px; line-height: 18px; pointer-events: none;
+  display: none; position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 2px); padding: 8px 12px;
+  color: var(--color-text); font-size: 14px; line-height: 18px; pointer-events: none;
+  background: var(--lacquer-sheen), var(--lacquer-grain), #0f1320; border: 1px solid #000; border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(201,162,75,.55), inset 0 1px 0 rgba(255,255,255,.06), 0 6px 14px rgba(0,0,0,.6);
 }
-.tn-cm-tip-h { font-style: italic; color: var(--color-rubric); margin-bottom: 3px; }
+.tn-cm-tip-h { font-family: var(--font-display); font-size: var(--text-xs); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--gilt-hi); text-shadow: var(--engrave-on-dark); margin-bottom: 3px; }
 .tn-cm-info:hover .tn-cm-tip, .tn-cm-info:focus .tn-cm-tip, .tn-cm-info:focus-within .tn-cm-tip { display: block; }
 
 .tn-flash { animation: tn-cm-flash 600ms var(--ease-out); }
@@ -188,29 +182,21 @@
 @media (prefers-reduced-motion: reduce) { .tn-flash { animation: none; } }
 
 /* Short viewports: one line per row, a smaller portrait, no years */
-.tn-short .tn-council { padding: 5px 0 3px; }
+.tn-short .tn-council { padding: 0 0 2px; }
 .tn-short .tn-cm { padding: 2px 4px; gap: 8px; }
 /* The role and its status chip sit on a small line above the name, so the name gets the row's width. */
 .tn-short .tn-cm-n, .tn-short .tn-cm-vac { font-size: 15px; }
 .tn-short .tn-cm-name { line-height: 17px; }
 .tn-short .tn-cm-yrs { display: none; }
 
-/* Status chips (C13): one compact line under the facts row */
-.tn-status { display: flex; flex-wrap: wrap; gap: 4px 5px; padding: 6px 0 2px; }
-.tn-st {
-  font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-  line-height: 15px; padding: 0 6px; border-radius: var(--radius-pill); border: 1px solid transparent; white-space: nowrap; cursor: default;
-}
-.tn-st-peace { color: var(--link-up); border-color: var(--link-up); }
-.tn-st-watch { color: var(--color-ink); border-color: var(--color-accent); }
-.tn-st-mob { color: var(--color-ink); background: var(--color-accent); border-color: var(--color-accent); }
-.tn-st-total { color: var(--color-parchment-light); background: var(--color-danger); border-color: var(--color-danger); }
-.tn-st-dev, .tn-st-short { color: var(--color-rubric); border-color: var(--color-rubric); }
+/* Status chips (C13): one line of small plates under the diplomacy rows */
+.tn-status { display: flex; flex-wrap: wrap; gap: 5px 6px; padding: 8px 0 2px; }
+.tn-st { cursor: default; min-height: 20px; }
+.tn-st-dev, .tn-st-short { color: var(--color-rubric); border-color: rgba(122,30,22,.6); }
 
 /* Economy tab and politics block */
-.tn-eco h3 { margin-top: 2px; }
 .tn-goods { list-style: none; margin: 0 0 8px; padding: 0; }
-.tn-goods li { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; line-height: 20px; border-bottom: 1px dotted var(--color-ink-faint); }
+.tn-goods li { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; line-height: 21px; border-bottom: 1px dotted rgba(42,31,20,.3); }
 .tn-good-p { font-family: var(--font-mono); font-size: 13px; color: var(--color-ink-muted); display: inline-flex; align-items: center; gap: 4px; }
 .tn-bad { color: var(--color-rubric); }
 .tn-arrow { display: inline-flex; line-height: 0; }
@@ -219,55 +205,52 @@
 .tn-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .tn-market { margin: 4px 0 8px; font-style: italic; font-size: 14.5px; line-height: 19px; color: var(--color-ink-muted); }
 .tn-gauge { display: flex; align-items: center; gap: 8px; }
-.tn-gauge-bar { flex: 1; height: 4px; background: var(--color-ink-faint); border-radius: var(--radius-1); overflow: hidden; }
-.tn-gauge-bar > div { height: 100%; background: var(--color-ink-muted); transition: width 250ms ease; }
-.tn-gauge-bar > div.tn-warn { background: var(--color-rubric); }
+.tn-gauge-bar { flex: 1; }
 .tn-gauge-v { font-family: var(--font-mono); font-size: 13px; min-width: 32px; text-align: right; }
 .tn-pol { margin-bottom: 8px; }
 .tn-pol-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .tn-pol-creed { font-style: italic; font-size: 14.5px; line-height: 19px; color: var(--color-ink-muted); margin: 1px 0 6px; }
 
-/* Five tabs at 380 px */
-/* Five tabs in 380 px: no side padding (the gap spaces them), tighter letters, a touch smaller. */
-.tn-tab { letter-spacing: 0.03em; padding: 4px 0 5px; font-size: 11px; flex: none; }
-.tn-tabs { justify-content: space-between; gap: 6px; }
-
-/* ---- Calm UI (#245): the left info card. Ruler line, two facts, a stats grid, diplomacy as flags ---- */
-.tn-flag { width: 60px; height: 40px; }
-.tn-name { font-size: 19px; line-height: 23px; }
-.tn-ruler { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 5px 8px; background: var(--color-ink-faint); border-radius: var(--radius-1); }
+/* ---- Calm UI (#245): ruler line, two facts, stat wells, meters, diplomacy as flags ---- */
+.tn-ruler {
+  display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 5px 10px 5px 6px; border-radius: 2px;
+  background: rgba(42,31,20,.05); box-shadow: var(--well-paper);
+}
 .tn-ruler-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.tn-ruler-name { font-size: 16px; font-weight: 600; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tn-ruler-name { font-size: 17px; font-weight: 600; line-height: 21px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: var(--engrave-on-paper); }
 .tn-ruler-age { flex: none; font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-ink-muted); }
-.tn-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 8px 0 7px; }
+.tn-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 10px 2px 8px; }
 .tn-pair > div { display: flex; flex-direction: column; min-width: 0; }
 .tn-pair-v { font-size: 16px; font-weight: 600; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tn-grid { border-top: 1px solid var(--color-ink-faint); border-bottom: 1px solid var(--color-ink-faint); }
-.tn-grid-row { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0 5px; }
-.tn-grid-row + .tn-grid-row { border-top: 1px dotted var(--color-ink-faint); }
-.tn-grid-row > div { display: flex; flex-direction: column; min-width: 0; }
-.tn-grid .tn-cap { font-size: 9.5px; letter-spacing: 0.08em; }
-.tn-grid .tn-v { font-size: 15px; line-height: 20px; white-space: nowrap; }
-.tn-grid .tn-v small { font-size: 10px; font-weight: 500; color: var(--color-ink-muted); }
-.tn-grid .tn-v.tn-bad { color: var(--color-rubric); }
-.tn-dip { padding: 8px 0 4px; }
-.tn-dip-row { display: flex; align-items: center; gap: 8px; min-height: 26px; padding-left: 8px; border-left: 3px solid var(--stance-neutral); }
-.tn-dip-row + .tn-dip-row { margin-top: 4px; }
+
+/* The stat wells: numbers set into the page */
+.tn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tn-grid .tn-stat__value { font-size: 18px; }
+.tn-grid .tn-stat__value.tn-bad { color: var(--color-rubric); }
+
+/* Meters: label, sunk trough, value on one line */
+.tn-meters { display: grid; gap: 7px; margin-top: 10px; padding: 0 2px; }
+.tn-gaugerow .tn-trough { display: block; }
+.tn-gaugerow { display: grid; grid-template-columns: 92px 1fr 40px; align-items: center; gap: 8px; }
+.tn-gaugerow-v { font-family: var(--font-mono); font-size: 13px; font-weight: 600; text-align: right; }
+
+/* Diplomacy: a row per stance, framed flag plates */
+.tn-dip { padding: 0 0 4px; }
+.tn-dip-row { display: flex; align-items: center; gap: 8px; min-height: 28px; padding-left: 8px; border-left: 3px solid var(--stance-neutral); }
+.tn-dip-row + .tn-dip-row { margin-top: 5px; }
 .tn-dip-war { border-left-color: var(--stance-war); }
 .tn-dip-alliance { border-left-color: var(--stance-alliance); }
 .tn-dip-trade { border-left-color: var(--stance-trade); }
-.tn-dip-label { flex: none; width: 88px; font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
-.tn-dip-flags { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
-.tn-dip-flag { padding: 0; line-height: 0; cursor: pointer; background: none; border: 1px solid var(--color-ink); border-radius: 1px; transition: transform var(--dur-fast) var(--ease-out); }
-.tn-dip-flag svg { display: block; }
-.tn-dip-flag:hover { transform: translateY(-1px); box-shadow: 0 0 0 2px var(--color-accent); }
-.tn-dip-flag:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.tn-dip-label { flex: none; width: 88px; font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.tn-dip-flags { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.tn-dip-flag { width: 34px; height: 24px; padding: 0; line-height: 0; cursor: pointer; transition: transform var(--dur-fast) var(--ease-out); }
+.tn-dip-flag svg { display: block; width: 100%; height: 100%; }
+.tn-dip-flag:hover { transform: translateY(-1px); }
+.tn-dip-flag:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
 .tn-dip-none { margin: 0; font-style: italic; font-size: var(--text-sm); color: var(--color-ink-muted); }
-.tn-held-flag { display: inline-block; vertical-align: -2px; margin-right: 6px; line-height: 0; border: 1px solid var(--color-ink); }
-.tn-held-flag svg { display: block; }
+.tn-held-flag { width: 28px; height: 20px; vertical-align: -4px; margin-right: 6px; line-height: 0; }
+.tn-held-flag svg { display: block; width: 100%; height: 100%; }
 .tn-tab-body .tn-ideology { margin: 0 0 8px; }
-.tn-short .tn-ruler { margin-top: 7px; padding: 3px 8px; }
-.tn-short .tn-pair { padding: 5px 0 4px; }
-/* Five tabs in the 340 px left panel */
-.tn-tab { letter-spacing: 0.01em; font-size: 10.5px; }
-.tn-tabs { gap: 4px; }
+.tn-short .tn-ruler { margin-top: 8px; padding: 3px 8px 3px 5px; }
+.tn-short .tn-pair { padding: 6px 2px 5px; }
+.tn-short .tn-meters { gap: 5px; margin-top: 8px; }

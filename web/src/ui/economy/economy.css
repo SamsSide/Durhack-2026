@@ -46,3 +46,24 @@ a.tn-led-sig { color: var(--silence-ink); text-decoration: underline; }
 .tn-treasury-bal { font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 600; }
 .tn-treasury-sync { font-family: var(--font-display); font-size: var(--text-cap); letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-ok); }
 .tn-treasury-sync.no { color: var(--color-warn); }
+
+/* Material pass (theme/materials.css): chips are small raised plates, the online dot is a glass bead in a gilt
+   bezel, the treasury balance sits in a shallow well. Composed from tokens so it matches tn-chip and tn-roundel. */
+.tn-eco-mode, .tn-led-chip {
+  background-image: linear-gradient(180deg, rgba(255,255,255,.2) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,.14) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,235,210,.3), 0 1px 1px rgba(42,31,20,.3);
+}
+.tn-eco-mode.mock, .tn-led-chip.queued, .tn-led-chip.simulated {
+  background-color: #efe3c6;
+  box-shadow: var(--bevel-paper), 0 1px 1px rgba(42,31,20,.2);
+}
+.tn-led-chip.confirmed, .tn-led-chip.failed { text-shadow: 0 -1px 0 rgba(0,0,0,.35); }
+.tn-eco-dot {
+  width: 10px; height: 10px; border: 1.5px solid transparent;
+  box-shadow: 0 0 0 1px var(--frame-line);
+}
+.tn-eco-dot.on { background: radial-gradient(circle at 38% 30%, rgba(255,255,255,.75) 0, rgba(255,255,255,0) 40%) padding-box, linear-gradient(var(--color-ok), var(--color-ok)) padding-box, var(--gilt-ring) border-box; }
+.tn-eco-dot.off { background: radial-gradient(circle at 38% 30%, rgba(255,255,255,.75) 0, rgba(255,255,255,0) 40%) padding-box, linear-gradient(var(--color-danger), var(--color-danger)) padding-box, var(--gilt-ring) border-box; }
+.tn-led-year { text-shadow: var(--engrave-on-paper); }
+.tn-led-cur { text-shadow: var(--engrave-on-paper); }
+.tn-treasury { margin-top: 8px; padding: 5px 8px; border-radius: 2px; background: rgba(42,31,20,.05); box-shadow: var(--well-paper); }
