@@ -31,6 +31,14 @@ export function applyEvent(world: World, event: WorldEvent): void {
     case 'structure_destroyed':
       world.structures = world.structures.filter((x) => x.id !== event.structureId);
       break;
+    case 'wonder_started':
+      world.structures.push({ id: event.structureId, tile: event.tile, owner: event.countryId, kind: 'wonder', builtTick: event.tick, wonder: event.wonder, name: event.name, complete: false });
+      break;
+    case 'wonder_built': {
+      const s = world.structures.find((x) => x.id === event.structureId);
+      if (s && s.kind === 'wonder') s.complete = true;
+      break;
+    }
     case 'unit_spawned':
       world.units.push({ ...event.unit });
       break;

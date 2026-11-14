@@ -57,8 +57,13 @@ export interface Country {
 }
 
 export type StructureKind = 'camp' | 'village' | 'town' | 'city' | 'capital'
-  | 'farm' | 'port' | 'fort' | 'temple' | 'factory' | 'ruin';
-export interface Structure { id: string; tile: number; owner: number; kind: StructureKind; builtTick: number }
+  | 'farm' | 'port' | 'fort' | 'temple' | 'factory' | 'ruin' | 'wonder';
+export interface Structure {
+  id: string; tile: number; owner: number; kind: StructureKind; builtTick: number;
+  wonder?: WonderKind; name?: string; complete?: boolean;   // only when kind is 'wonder' (row A30); complete false while it is being built
+}
+export type WonderKind = 'great_wall' | 'mausoleum' | 'pyramid' | 'colossus' | 'cathedral'
+  | 'palace_of_soviets' | 'skyscraper' | 'space_elevator';
 
 export type UnitKind = 'army' | 'fleet' | 'settler' | 'trader';   // trader: a merchant ship crossing the ocean between trading nations
 export type TechAge = 'ancient' | 'medieval' | 'gunpowder' | 'industrial' | 'modern' | 'future' | 'stellar';
@@ -68,7 +73,7 @@ export type Stance = 'war' | 'hostile' | 'neutral' | 'trade' | 'alliance';
 export interface Relation { a: number; b: number; stance: Stance; since: number; grievance: number } // a < b
 
 export type ChronicleKind = 'founding' | 'proclamation' | 'growth' | 'war' | 'battle' | 'peace'
-  | 'alliance' | 'betrayal' | 'fall' | 'silence' | 'return' | 'dispute' | 'decree' | 'secession';
+  | 'alliance' | 'betrayal' | 'fall' | 'silence' | 'return' | 'dispute' | 'decree' | 'secession' | 'wonder';
 export interface ChronicleEntry { id: string; tick: number; year: number; kind: ChronicleKind; countries: number[]; text: string }
 
 export interface AgentStatus {
@@ -107,6 +112,8 @@ export type WorldEvent = Base & (
   | { type: 'unit_spawned'; unit: Unit }
   | { type: 'unit_moved'; unitId: string; from: number; to: number; arriveTick: number }
   | { type: 'unit_attrition'; unitId: string; loss: number; terrain: Terrain }
+  | { type: 'wonder_started'; countryId: number; structureId: string; tile: number; wonder: WonderKind; name: string }
+  | { type: 'wonder_built'; countryId: number; structureId: string }
   | { type: 'unit_removed'; unitId: string; reason: 'battle' | 'disband' | 'collapse' }
   | { type: 'battle'; tile: number; attacker: number; defender: number; attackerUnit: string; winner: number; losses: { attacker: number; defender: number } }
   | { type: 'relation_changed'; a: number; b: number; stance: Stance; reason: string }
