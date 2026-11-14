@@ -8,3 +8,4 @@ export { TokenMeter } from './meter/TokenMeter';
 export { NewsBroadcast, requestBroadcast } from './news/NewsBroadcast';
 export { LedgerPanel } from './economy/LedgerPanel';
 export { EconomyCounter } from './economy/EconomyCounter';
+export { EventFeed } from './feed/EventFeed';
