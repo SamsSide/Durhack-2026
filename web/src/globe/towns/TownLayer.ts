@@ -160,6 +160,7 @@ export class TownLayer {
     const old = this.meshes[k];
     const mesh = new THREE.InstancedMesh(this.geos[k], this.mats[k], cap);
     mesh.count = 0;
+    mesh.visible = false;
     mesh.frustumCulled = false;
     mesh.setColorAt(0, this.c.set(1, 1, 1));
     if (old) { mesh.renderOrder = old.renderOrder; this.group.remove(old); old.dispose(); }
@@ -296,6 +297,7 @@ export class TownLayer {
     for (const k of PARTS) {
       const mesh = this.meshes[k];
       mesh.count = at[k];
+      mesh.visible = at[k] > 0; // B8: an empty part is not handed to the renderer at all
       mesh.instanceMatrix.clearUpdateRanges();
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
