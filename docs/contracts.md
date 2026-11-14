@@ -126,7 +126,7 @@ export type Good = 'grain' | 'fish' | 'timber' | 'stone' | 'ore' | 'salt' | 'gol
 
 // Council (row A29, owner decision on #146: ruler and general only).
 export type CouncilRole = 'ruler' | 'general';
-export interface CouncilMember { name: string; portraitSeed: number; since: number; memory: string } // since = tick; memory = rolling 5-line summary handed to a successor
+export interface CouncilMember { name: string; portraitSeed: number; since: number; memory: string; born?: number } // since = tick; memory = rolling 5-line summary handed to a successor; born = birth year (missing on old replays: never ages)
 export type CouncilState = 'active' | 'covering' | 'vacant' | 'cut';
 export interface Council {
   ruler: CouncilMember | null; general: CouncilMember | null;
@@ -189,7 +189,7 @@ export type WorldEvent = Base & (
   | { type: 'unit_removed'; unitId: string; reason: 'battle' | 'disband' | 'collapse' }
   | { type: 'unit_attrition'; unitId: string; loss: number; terrain: Terrain }   // strength lost to hunger, cold and thirst in hostile land; applyEvent subtracts loss
   | { type: 'payment'; from: number; to: number; amount: number; reason: PaymentReason; note: string }  // row A27; see below
-  | { type: 'council_changed'; countryId: number; role: CouncilRole; member: CouncilMember | null; cause: 'founded' | 'death' | 'assassination' | 'disconnect' | 'succession' | 'coup' | 'restored' }
+  | { type: 'council_changed'; countryId: number; role: CouncilRole; member: CouncilMember | null; cause: 'founded' | 'death' | 'assassination' | 'disconnect' | 'succession' | 'coup' | 'restored' | 'old_age' }
   | { type: 'council_status'; countryId: number; role: CouncilRole; state: CouncilState }
   | { type: 'wonder_started'; countryId: number; structureId: string; tile: number; wonder: WonderKind; name: string }
   | { type: 'wonder_built'; countryId: number; structureId: string }
@@ -265,7 +265,11 @@ export type PaymentReason = 'trade' | 'reparations' | 'plunder' | 'seizure' | 'w
   A general can fall when an army he leads loses a big battle, either member can be assassinated
   (rare, more likely in war), a decree or the `kill` control can kill one, and `cut_member` cuts
   one off. Then the other **covers** (`council_status` `covering`; the general's attacks are
-  scaled by 0.85 (`COVER_STRENGTH`, attacker only) while the ruler covers the general; the general holds the course while covering the ruler). After 8 ticks
+  scaled by 0.85 (`COVER_STRENGTH`, attacker only) while the ruler covers the general; the general holds the course while covering the ruler). **Ageing (owner, 14 Nov):** every
+  member has a `born` year (a ruler takes office aged about 18 to 45, a general about 25 to 50,
+  seeded); from 50 the yearly chance of a natural death rises steeply and nobody lives past 100
+  (`council_changed` cause `old_age`, a `death` chronicle line such as "Queen Ada of the Salt Marches
+  dies in her sleep, aged 78"); the usual cover and succession follow. After 8 ticks
   a **successor** is named (`council_changed` cause `succession`) and inherits the predecessor's
   `memory`; a ruler's successor follows the government (heir, election or coup). `council_changed`
   for the ruler also sets `Country.leader`. Chronicle kinds `death` and `succession` tell it
@@ -357,7 +361,8 @@ this table from `@terra/shared`.
 ```
 
   `speed` is any number from 1/24 to 64 (a multiplier on the base rate of two years a second): 1/24
-  is one month a second (a year in 12 s, the slowest, for live interaction in demos), 1 is two
+  is one month a second (a year in 12 s, the slowest, for live interaction in demos, and the speed
+  every new world starts at, owner 14 Nov), 1 is two
   years a second, 64 is 128 years a second. The server clamps it. **Gears (owner decision 14 Nov):**
   the speed control offers named gears, in years per second of game time: 1 month (1/24), 1 season
   (1/8), 1 year (0.5), 2 years (1), 3 years (1.5), 4 years (2), 8 (4), 16 (8), 32 (16), 64 (32) and
