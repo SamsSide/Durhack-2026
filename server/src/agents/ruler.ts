@@ -1,7 +1,10 @@
 // The ruler (row A5): one nation's Gemini decision, from a compact digest to a schema-checked JSON
 // decision. On any failure it throws RulerFailed and the caller (row A4) runs the nation on autopilot.
 // It never retries. RulerScheduler decides when each nation is next due, spreading calls under the cap.
-import { isCombatant, relationOf, type Stance, type TechAge, type World, type WorldEvent } from '@terra/shared';
+import {
+  MOVEMENTS, PRICE_BASE, isCombatant, landDevastation, marketPlan, movementOf, politicsOf, readinessBand, readinessOf, relationOf,
+  type Stance, type TechAge, type World, type WorldEvent,
+} from '@terra/shared';
 import { getBudget, llmJson, rulerModel, type Schema } from '../llm';
 import { chronicleToneOf, governmentKeyOf } from '../story/identity';
 
@@ -24,6 +27,8 @@ export interface RulerDigest {
   chronicle: string[];                   // the last few lines involving this nation
   events: string[];                      // recent big events anywhere
   terrain?: string;                      // one line when its armies stand on rough ground (row A28)
+  movement?: string;                     // B11: the movement that rules it ("The Iron Oath")
+  politics?: string;                     // B11: one line, its politics, war readiness, devastation and food
 }
 export interface RulerDecision {
   focus: Focus;
@@ -60,6 +65,16 @@ export function makeDigest(world: World, countryId: number, focus: Focus = 'expa
   const terrain = rough && (rough === 'ice' ? 'Our armies freeze in the ice fields.' : rough === 'desert' ? 'Our armies wither in the desert.'
     : rough === 'mountain' ? 'The mountain passes hold, and cost dearly to cross.' : 'The hill country slows every march and shelters its defenders.');
   const lines = (es: typeof world.chronicle) => es.map((e) => `y${e.year}: ${e.text.slice(0, 120)}`);
+  // B11 (#204): one line on its politics and economy, and the movement that speaks through it.
+  const pol = politicsOf(c);
+  const mv = movementOf(pol.axis);
+  const wr = readinessOf(c);
+  const market = marketPlan(world);
+  const short = market.nations.get(countryId)?.short.food ?? 0;
+  const price = market.prices.food;
+  const food = short >= 0.5
+    ? `, food short ${Math.round(short)} at ${price.toFixed(1)} (price ${price >= PRICE_BASE.food ? 'up' : 'down'} ${Math.round(Math.abs(price / PRICE_BASE.food - 1) * 100)}%)` : '';
+  const politics = `Politics: ${mv.short} (axis ${Math.round(pol.axis)}), radicalism ${Math.round(pol.radicalism)}, war readiness ${wr} (${readinessBand(wr)}), land devastation ${Math.round(landDevastation(world, countryId))}${food}`;
   return {
     id: countryId, name: c.name, government: c.government, ideology: c.ideology.slice(0, 100), year: world.year,
     temperament: { aggression: r2(c.temperament.aggression), expansion: r2(c.temperament.expansion), trade: r2(c.temperament.trade), faith: r2(c.temperament.faith) },
@@ -67,7 +82,7 @@ export function makeDigest(world: World, countryId: number, focus: Focus = 'expa
     cities: world.structures.filter((s) => s.owner === countryId && (s.kind === 'city' || s.kind === 'capital' || s.kind === 'town')).length,
     armies: world.units.filter((u) => u.owner === countryId && u.kind === 'army').length, strength: Math.round(mine),
     techAge: c.techAge ?? 'ancient',
-    focus, neighbours, ...(terrain ? { terrain } : {}),
+    focus, neighbours, ...(terrain ? { terrain } : {}), movement: mv.name, politics,
     chronicle: lines(world.chronicle.filter((e) => e.countries.includes(countryId)).slice(-5)),
     events: lines(world.chronicle.filter((e) => BIG_KINDS.has(e.kind) && !e.countries.includes(countryId)).slice(-3)),
   };
@@ -83,7 +98,9 @@ const SYSTEM = [
 /** The system prompt plus the government's chronicle voice for the proclamation (A24). */
 function systemFor(digest: RulerDigest): string {
   const tone = chronicleToneOf(governmentKeyOf({ government: digest.government, ideology: digest.ideology, temperament: digest.temperament }));
-  return `${SYSTEM} Proclamation voice: ${tone}`;
+  const mv = digest.movement ? Object.values(MOVEMENTS).find((m) => m.name === digest.movement) : undefined;
+  const movement = mv ? ` Your nation is ruled by ${mv.name} (${mv.creed}); speak in its voice.` : '';
+  return `${SYSTEM} Proclamation voice: ${tone}${movement}`;
 }
 
 const decisionSchema: Schema = {

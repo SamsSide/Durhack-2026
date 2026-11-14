@@ -4,7 +4,7 @@
 // inside the tick loop; between calls, and whenever the ruler is silenced or fails, the rules run on
 // its last focus or on autopilotPolicy from its temperament.
 import {
-  applyEvent, applyTickBatch, autopilotPolicy, cloneWorld, hashString, mulberry32, nationTurn, newAgeMemory, newUnrestMemory, noteUnrestEvents, noteWarEvents, relationOf, rulerPresent,
+  applyEvent, applyTickBatch, autopilotPolicy, cloneWorld, hashString, mulberry32, nationTurn, newAgeMemory, newEconMemory, newUnrestMemory, noteUnrestEvents, noteWarEvents, relationOf, rulerPresent,
   type ChronicleKind, type NationPolicy, type WarLedger, type World, type WorldEvent,
 } from '@terra/shared';
 import type { MessageBus, BusEndpoint } from '../engine/bus';
@@ -50,6 +50,8 @@ export class NationAgent implements BusEndpoint {
   readonly unrestMemo = newUnrestMemory();
   /** Its progress towards the next age and the foreign merchant ships it has counted at its ports (row A23). */
   readonly ageMemo = newAgeMemory();
+  /** B11: the provinces it had lost in war when it last looked (a year it loses land radicalises it). */
+  readonly econMemo = newEconMemory();
 
   constructor(id: number, world: World, private bus: MessageBus, private opts: NationAgentOptions) {
     this.id = id;
@@ -83,7 +85,7 @@ export class NationAgent implements BusEndpoint {
     const events: WorldEvent[] = [
       ...this.rulerEvents(tick, year),
       ...this.noticeSilence(tick, year),
-      ...nationTurn(w, this.id, policy, tick, rng, { regionNames: this.opts.regionNames, wars: this.wars, unrest: this.unrestMemo, ages: this.ageMemo }),
+      ...nationTurn(w, this.id, policy, tick, rng, { regionNames: this.opts.regionNames, wars: this.wars, unrest: this.unrestMemo, ages: this.ageMemo, econ: this.econMemo }),
     ];
     for (const e of events) e.lamport = ++this.lamport;
     const onWire = this.bus.publish(this.id, events);
@@ -148,10 +150,19 @@ export class NationAgent implements BusEndpoint {
     const base = this.checkpoint ?? this.replica;
     this.checkpoint = null;
     const w = cloneWorld(base);
+    // The clocks it missed are not on the bus: ring each missed year before that year's batch, as the true
+    // world did, so the year-turn folds (B11 devastation) match the truth.
+    const ring = (to: number): void => {
+      for (let t = w.tick + 1; t <= to; t++) {
+        applyEvent(w, { id: `e-${this.id}-${t}-clock`, tick: t, actor: 'world', lamport: this.lamport, type: 'tick', year: year - tick + t });
+      }
+    };
     for (const batch of missedByIt) {
       for (const e of batch) if (e.lamport > this.lamport) this.lamport = e.lamport;
+      ring(Math.min(tick, batch.reduce((m, e) => Math.max(m, e.tick), 0)));
       applyTickBatch(w, batch);
     }
+    ring(tick);
     const settled = settle(w);
     for (const e of settled) if (e.lamport > this.lamport) this.lamport = e.lamport;
     applyTickBatch(w, settled);

@@ -55,7 +55,12 @@ export interface Country {
   population: number;
   treasury: number;
   council?: Council;                                     // row A29; missing on old replays
+  warReadiness?: number;                                 // #204 (B11): 0..100, missing means 0; bands 0-19 Peace, 20-49 Watchful, 50-79 Mobilised, 80-100 Total war
+  politics?: { axis: number; radicalism: number };       // #204: axis -100 far left..+100 far right, radicalism 0..100; missing means { axis: 0, radicalism: 10 }
 }
+
+// Goods (#204, B11): one good per province, derived from terrain and hashString (goodOf in sim/economy.ts), never stored.
+export type Good = 'grain' | 'fish' | 'timber' | 'stone' | 'ore' | 'salt' | 'gold' | 'furs' | 'oil' | 'uranium';
 
 // Council (row A29, owner decision on #146: ruler and general only).
 export type CouncilRole = 'ruler' | 'general';
@@ -102,6 +107,7 @@ export interface World {
   tiles: Tile[];
   regions: Region[];
   owner: number[];                                       // tile id to country id, -1 is unclaimed
+  devastation?: number[];                                // #204 (B11): tile id to 0..100, parallel to owner; missing means all 0; folded in applyEvent
   countries: Country[];
   structures: Structure[];
   units: Unit[];

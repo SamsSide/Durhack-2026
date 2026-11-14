@@ -29,7 +29,7 @@ while (!rr.finished) rr.advance(7);   // odd batch size on purpose
 const got = rr.getWorld();
 
 const pick = (w: typeof truth) => ({
-  tick: w.tick, year: w.year, owner: w.owner, units: w.units, structures: w.structures, relations: w.relations,
+  tick: w.tick, year: w.year, owner: w.owner, devastation: w.devastation ?? null, units: w.units, structures: w.structures, relations: w.relations,
   countries: w.countries, regions: w.regions, chronicle: w.chronicle,
   agents: w.agents.map((a) => ({ ...a, lastHeardTick: 0 })),
 });
@@ -38,7 +38,7 @@ const b = JSON.stringify(pick(got));
 const fields = Object.keys(pick(truth)).filter((k) => JSON.stringify((pick(truth) as any)[k]) !== JSON.stringify((pick(got) as any)[k]));
 console.log(`recorded ${file.events.length} events, ${file.agents.length} agents updates; truth tick ${truth.tick}, replay tick ${got.tick}`);
 console.log(`units ${got.units.length}, relations ${got.relations.length}, owned tiles ${got.owner.filter((o) => o >= 0).length}`);
-console.log(a === b ? 'REPLAY EQUALS ORIGINAL: owner, units, structures, relations, countries, regions, chronicle, agents' : `MISMATCH in: ${fields.join(', ')}`);
+console.log(a === b ? 'REPLAY EQUALS ORIGINAL: owner, devastation, units, structures, relations, countries, regions, chronicle, agents' : `MISMATCH in: ${fields.join(', ')}`);
 
 // Timing: the saved demo, as fast as the loop can go (no clock).
 const demo = loadReplay('demo-1', REPLAYS_DIR);

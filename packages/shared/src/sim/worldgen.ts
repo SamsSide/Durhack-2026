@@ -8,6 +8,7 @@ import { hashString, mulberry32, pick, type Rng } from '../rng';
 import type { WorldBible } from './bible';
 import { startAge } from './ages';
 import { foundingCouncil } from './council';
+import { startPolitics } from './economy';
 
 export interface WorldGenOptions { seed: number; seaLevel?: number; provinces?: number }
 
@@ -329,6 +330,7 @@ export function generateWorld(bible: WorldBible, opts: WorldGenOptions): World {
       population: 2000 * take.length + Math.floor(rng() * 4000), treasury: 100 + Math.floor(rng() * 60),
       techAge: startAge(bible.era),
       council: foundingCouncil({ ...cultureFields, id }, seed, 0),     // row A29: its leader and a general
+      warReadiness: 0, politics: startPolitics(cultureFields.temperament),   // B11 (#204): at peace, its politics from its temperament
     });
     structures.push({ id: `s-${structures.length}`, tile: cap, owner: id, kind: 'capital', builtTick: 0 });
     units.push({ id: `u-${units.length}`, owner: id, kind: 'settler', tile: cap, strength: 1 });

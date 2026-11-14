@@ -9,6 +9,7 @@ import type { Terrain, World, WorldEvent } from '../types';
 import { hashString } from '../rng';
 import { countryTiles, relationOf } from '../world';
 import { militaryStrength } from './war';
+import { SETTLE_YEARS, marketBills, marketPlan, type MarketPlan } from './economy';
 
 type Emit = (body: Record<string, unknown> & { type: WorldEvent['type'] }) => void;
 
@@ -33,18 +34,6 @@ export function mainGood(world: World, countryId: number): string {
   return GOODS[best];
 }
 
-/** The nation's next-best good that is not `not`, or null when its ground offers nothing else. */
-function secondGood(world: World, countryId: number, not: string): string | null {
-  const n = new Map<Terrain, number>();
-  for (const t of countryTiles(world, countryId)) {
-    const k = world.tiles[t]!.terrain;
-    if (k !== 'ocean' && GOODS[k] !== not) n.set(k, (n.get(k) ?? 0) + 1);
-  }
-  let best: Terrain | null = null, bn = -1;
-  for (const [k, v] of [...n].sort((a, b) => a[0].localeCompare(b[0]))) if (v > bn) { best = k; bn = v; }
-  return best ? GOODS[best] : null;
-}
-
 /** The place a peace treaty was named for, read back from the chronicle line that made it. */
 function treatyPlace(world: World, a: number, b: number, since: number): string {
   for (let i = world.chronicle.length - 1; i >= 0; i--) {
@@ -62,12 +51,14 @@ export interface PaymentInput {
   view: World; me: number; tick: number;
   /** What it remembers of each war it fought: provinces won and lost per enemy (see noteWarEvents). */
   ledger?: Map<number, { gained: number; lost: number }>;
+  /** This year's goods market (B11, sim/economy.ts); worked out from `view` when missing. */
+  market?: MarketPlan;
   emit: Emit;
 }
 
 /** One year of this nation's payments. Only ever pays out of its own treasury. */
 export function paymentTurn(p: PaymentInput): void {
-  const { view, me, tick, ledger, emit } = p;
+  const { view, me, tick, ledger, market, emit } = p;
   const c = view.countries[me];
   if (!c || !c.alive || c.treasury < 4) return;
   const name = (id: number): string => view.countries[id]?.name ?? 'a fallen people';
@@ -96,18 +87,15 @@ export function paymentTurn(p: PaymentInput): void {
     pay(foe, share, 'reparations', `Treaty of ${place}`, `${c.name} pays ${name(foe)} {amt} crowns in reparations under the Treaty of ${place}.`);
   }
 
-  // 2. Trade dues: every 10 years per pact, the poorer partner pays the richer for goods (one pact in three, by hash).
-  for (const r of view.relations) {
-    if (r.stance !== 'trade' || (r.a !== me && r.b !== me)) continue;
-    const o = r.a === me ? r.b : r.a;
-    const oc = view.countries[o];
-    const age = tick - r.since;
-    if (!oc?.alive || age <= 0 || age % 10 !== 0) continue;
-    if (roll(`trade:${r.a}:${r.b}:${tick}`) >= 0.34) continue;
-    if (c.treasury > oc.treasury || (c.treasury === oc.treasury && me > o)) continue;       // only the poorer pays
-    const got = mainGood(view, o); let give = mainGood(view, me);
-    if (give === got) give = secondGood(view, me, got) ?? `${got} and passage`;   // both sides always differ
-    pay(o, 0.04, 'trade', `${got} for ${give}`);
+  // 2. The goods market (B11, #204): every SETTLE_YEARS years per buyer, staggered by its id, it pays each
+  // seller one merged bill for the goods it bought (at most SETTLE_CAP of its treasury in all).
+  if ((tick + me) % SETTLE_YEARS === 0) {
+    for (const b of marketBills(view, market ?? marketPlan(view), me)) {
+      const amount = coins(Math.min(c.treasury - spent, b.amount));
+      if (amount < 1) break;
+      spent += amount;
+      emit({ type: 'payment', from: me, to: b.to, amount, reason: 'trade', note: b.note });
+    }
   }
 
   // 3. Allies at war. The war's start is the relation's `since`; each payment happens once per war.

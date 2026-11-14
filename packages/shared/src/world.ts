@@ -1,15 +1,20 @@
 // applyEvent is the only code that changes a World (server and browser both use it).
 import type { CouncilMember, CouncilRole, Relation, Vec3, World, WorldEvent } from './types';
+import { DEVASTATION, addDevastation, devastationTick } from './sim/economy';
 
 export function applyEvent(world: World, event: WorldEvent): void {
   const memo = councilMemo(world, event);
   switch (event.type) {
     case 'tick':
+      // B11 (#204): the turn of a NEW year scars occupied land and heals the rest (once per year, so a
+      // replica that re-applies the clock of the year it is in does not fold twice).
+      if (event.tick > world.tick) devastationTick(world);
       world.tick = event.tick;
       world.year = event.year;
       break;
     case 'tile_claimed':
       world.owner[event.tile] = event.owner;
+      if (event.cause === 'conquest' && event.owner >= 0 && event.from >= 0) addDevastation(world, event.tile, DEVASTATION.conquest);
       for (const s of world.structures) if (s.tile === event.tile && s.kind !== 'ruin') s.owner = event.owner;
       // Grievance (row A6): a lost province rankles; so does land grabbed along a shared border.
       if (event.owner >= 0 && event.from >= 0 && event.cause !== 'collapse') addGrievance(world, event.owner, event.from, 0.04);
@@ -70,6 +75,7 @@ export function applyEvent(world: World, event: WorldEvent): void {
         left -= take;
       }
       addGrievance(world, event.attacker, event.defender, 0.01);
+      addDevastation(world, event.tile, DEVASTATION.battle);
       break;
     }
     case 'relation_changed': {
@@ -90,7 +96,10 @@ export function applyEvent(world: World, event: WorldEvent): void {
     }
     case 'country_updated': {
       const c = world.countries[event.countryId];
-      if (c) Object.assign(c, event.patch);
+      if (c) {
+        Object.assign(c, event.patch);
+        if (event.patch.politics) c.politics = { ...event.patch.politics };   // a copy: replicas never share objects
+      }
       break;
     }
     case 'country_fell': {

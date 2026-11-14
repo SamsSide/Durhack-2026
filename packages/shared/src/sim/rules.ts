@@ -16,6 +16,10 @@ import { tradeTurn } from './trade';
 import { paymentTurn } from './payments';
 import { TERRAIN_EFFECTS } from './terrain';
 import { WONDER_BUILD_TICKS, WONDER_COST, planWonder, wonderBonusOf } from './wonders';
+import {
+  devastationOf, isShort, landDevastation, marketPlan, movementKey, outputMul, politicsOf, politicsStep, popCapMul, readinessOf,
+  readinessStep, seizureLine, upkeepMul,
+} from './economy';
 
 export type Focus = 'expand' | 'develop' | 'fortify' | 'attack';
 export interface NationPolicy { focus: Focus; targets?: number[] }
@@ -28,7 +32,11 @@ export interface TurnContext {
   unrest?: UnrestMemory;
   /** Its progress towards the next age and the foreign merchant ships it has seen dock (row A23). */
   ages?: AgeMemory;
+  /** B11: provinces it had lost in war when last it looked (to tell a year it lost land). */
+  econ?: EconMemory;
 }
+export interface EconMemory { lost: number }
+export const newEconMemory = (): EconMemory => ({ lost: -1 });
 
 // ---- tables ---------------------------------------------------------------------------------
 
@@ -39,9 +47,9 @@ const TRADE_KINDS: StructureKind[] = ['port', 'town', 'city', 'factory'];
 export const COST = { camp: 4, village: 28, town: 80, city: 220, farm: 12, port: 20, fort: 24, temple: 28, factory: 70, army: 22, fleet: 30 } as const;
 /** Upkeep a turn: bigger armies cost more (measured in the strength of its age, so better weapons cost no more to keep).
  *  Merchant ships pay their own way. */
-const upkeep = (u: Unit, ageMul: number, tiles: World['tiles']): number => (u.kind === 'trader' ? 0 : u.kind === 'settler' ? 0.1
+const upkeep = (u: Unit, ageMul: number, tiles: World['tiles'], wr = 0): number => (u.kind === 'trader' ? 0 : u.kind === 'settler' ? 0.1
   : ((u.kind === 'fleet' ? 0.15 : 0.1) + (u.strength / ageMul) * 0.015)
-    / (u.kind === 'army' ? TERRAIN_EFFECTS[tiles[u.tile]?.terrain ?? 'plains'].supply : 1));
+    / (u.kind === 'army' ? TERRAIN_EFFECTS[tiles[u.tile]?.terrain ?? 'plains'].supply / upkeepMul(wr) : 1));   // B11: a mobilised nation keeps its armies cheaper
 const claimCost = (owned: number): number => 14 + owned * 2.2;
 
 const isSettlement = (k: StructureKind): boolean => k === 'camp' || k === 'village' || k === 'town' || k === 'city' || k === 'capital';
@@ -51,20 +59,23 @@ export function nationIncome(world: World, countryId: number): number {
   if (!c) return 0;
   const tradeMul = 0.8 + 0.6 * c.temperament.trade;
   let inc = 0;
-  for (let i = 0; i < world.owner.length; i++) if (world.owner[i] === countryId) inc += TERRAIN_EFFECTS[world.tiles[i]!.terrain].income;
+  const wr = readinessOf(c);
+  for (let i = 0; i < world.owner.length; i++) {
+    if (world.owner[i] === countryId) inc += TERRAIN_EFFECTS[world.tiles[i]!.terrain].income * outputMul(devastationOf(world, i), wr);
+  }
   for (const s of world.structures) {
     if (s.owner !== countryId) continue;
     inc += STRUCT_INCOME[s.kind] * (TRADE_KINDS.includes(s.kind) ? tradeMul : 1);
   }
   inc *= 1 + wonderBonusOf(world.structures, countryId).income;
-  for (const u of world.units) if (u.owner === countryId) inc -= upkeep(u, ageStrength(c), world.tiles);
+  for (const u of world.units) if (u.owner === countryId) inc -= upkeep(u, ageStrength(c), world.tiles, wr);
   return inc;
 }
 
 export function populationCapacity(world: World, countryId: number): number {
   let cap = 0;
-  for (let i = 0; i < world.owner.length; i++) if (world.owner[i] === countryId) cap += TERRAIN_EFFECTS[world.tiles[i]!.terrain].pop;
-  for (const s of world.structures) if (s.owner === countryId) cap += STRUCT_POP[s.kind];
+  for (let i = 0; i < world.owner.length; i++) if (world.owner[i] === countryId) cap += TERRAIN_EFFECTS[world.tiles[i]!.terrain].pop * popCapMul(devastationOf(world, i));
+  for (const s of world.structures) if (s.owner === countryId) cap += STRUCT_POP[s.kind] * popCapMul(devastationOf(world, s.tile));
   return cap;
 }
 
@@ -209,6 +220,10 @@ export function nationTurn(
     }
   }
   const regionLabel = (): string => view.regions[capRegion]?.name || me.name;
+  // B11: this year's goods market, as every replica sees it; its shortages slow growth and dear ore dearer armies.
+  const market = marketPlan(view);
+  const foodShort = isShort(market, countryId, 'food');
+  const oreShort = isShort(market, countryId, 'ore');
 
   const spend = (cost: number): boolean => { if (treasury < cost) return false; treasury -= cost; return true; };
   const countKind = (k: StructureKind): number => myStructs.filter((s) => s.kind === k).length;
@@ -369,7 +384,7 @@ export function nationTurn(
     if (kind === 'army') {
       const base = armyStrengthFor({ ...me, treasury }, forts);
       const strength = ageScaled(me, base);
-      const cost = 10 + base * 0.6 * (1 + 0.15 * (ageStrength(me) - 1));
+      const cost = (10 + base * 0.6 * (1 + 0.15 * (ageStrength(me) - 1))) * (oreShort ? 1.25 : 1);
       if (treasury < cost || myUnits.filter((u) => u.kind === 'army').length >= wantArmies) return false;
       // Raised at a fort facing the enemy if there is one, else at the capital.
       const seats = [capital, ...myStructs.filter((s) => s.kind === 'fort').map((s) => s.tile)].filter((i) => own[i] === countryId);
@@ -447,7 +462,7 @@ export function nationTurn(
   // --- 4. diplomacy and war (row A6, sim/war.ts): alliances, peace, declarations, trade are the ruler's
   // call; then the general's step (row A29) moves the armies
   diplomacyTurn({ view, me: countryId, tick, rng, focus: policy.focus, targets: policy.targets ?? [], ledger: ctx.wars, own, emit });
-  paymentTurn({ view, me: countryId, tick, ledger: ctx.wars, emit });
+  paymentTurn({ view, me: countryId, tick, ledger: ctx.wars, market, emit });
   generalStep({ view, me: countryId, tick, rng, focus: policy.focus, targets: policy.targets ?? [], own, units: myUnits, emit, uid }, enemies.length > 0);
 
   // --- 4.1 attrition (row A28): an army outside its own land loses strength on hostile ground, in canonical unit order
@@ -469,21 +484,43 @@ export function nationTurn(
   unrestTurn(view, countryId, tick, emit, ctx.unrest, ctx.wars);
 
   // --- 5. money and people
+  // B11 (#204): devastation and a frightened people cut province income; mobilisation cuts army upkeep.
+  const wr = readinessOf(me);
   let income = 0;
-  for (let i = 0; i < own.length; i++) if (own[i] === countryId) income += TERRAIN_EFFECTS[view.tiles[i]!.terrain].income;
+  for (let i = 0; i < own.length; i++) {
+    if (own[i] === countryId) income += TERRAIN_EFFECTS[view.tiles[i]!.terrain].income * outputMul(devastationOf(view, i), wr);
+  }
   const tradeMul = 0.8 + 0.6 * t.trade;
   for (const s of myStructs) income += STRUCT_INCOME[s.kind] * (TRADE_KINDS.includes(s.kind) ? tradeMul : 1);
   income *= 1 + wonderBonusOf(myStructs, countryId).income;
-  for (const u of myUnits) if (u.tile >= 0) income -= upkeep(u, ageStrength(me), view.tiles);
+  for (const u of myUnits) if (u.tile >= 0) income -= upkeep(u, ageStrength(me), view.tiles, wr);
   treasury = Math.max(0, treasury + income * 0.4 - treasury * 0.01);
   let cap = 0;
-  for (let i = 0; i < own.length; i++) if (own[i] === countryId) cap += TERRAIN_EFFECTS[view.tiles[i]!.terrain].pop;
-  for (const s of myStructs) cap += STRUCT_POP[s.kind];
-  const newPop = Math.max(500, Math.round(pop + (cap - pop) * 0.05 + pop * 0.004 + (rng() - 0.5) * 20));
+  for (let i = 0; i < own.length; i++) if (own[i] === countryId) cap += TERRAIN_EFFECTS[view.tiles[i]!.terrain].pop * popCapMul(devastationOf(view, i));
+  for (const s of myStructs) cap += STRUCT_POP[s.kind] * popCapMul(devastationOf(view, s.tile));
+  let growth = (cap - pop) * 0.05 + pop * 0.004;
+  if (foodShort && growth > 0) growth /= 2;                       // B11: a hungry people grows at half the pace
+  const newPop = Math.max(500, Math.round(pop + growth + (rng() - 0.5) * 20));
   for (const m of [10000, 25000, 50000, 100000, 200000]) {
     if (pop < m && newPop >= m) notable = { kind: 'growth', text: `The people of ${me.name} number ${m.toLocaleString('en-GB')} and more.` };
   }
-  emit({ type: 'country_updated', countryId, patch: { population: newPop, treasury: Math.round(treasury * 10) / 10 } });
+  // B11: war readiness (rule 4), then politics (rule 5), from the shared view and its own war memory.
+  const atWar = enemies.length > 0;
+  const enemySet = new Set(enemies);
+  const enemyOnLand = view.units.some((u) => u.kind === 'army' && u.tile >= 0 && enemySet.has(u.owner) && own[u.tile] === countryId);
+  const prevPol = politicsOf(me);
+  const warReadiness = readinessStep(wr, { attack: policy.focus === 'attack', atWar, enemyOnLand, farRight: movementKey(prevPol.axis) === 'black_standard' });
+  let lostNow = 0;
+  for (const x of ctx.wars?.values() ?? []) lostNow += x.lost;
+  const lostLand = !!ctx.econ && ctx.econ.lost >= 0 && lostNow > ctx.econ.lost;
+  if (ctx.econ) ctx.econ.lost = lostNow;
+  const politics = politicsStep(prevPol, {
+    atWar, avgDevastation: landDevastation(view, countryId), warReadiness, poor: treasury < 10, lostLand, foodShort,
+    prosperous: !atWar && treasury > 100,
+  });
+  emit({ type: 'country_updated', countryId, patch: { population: newPop, treasury: Math.round(treasury * 10) / 10, warReadiness, politics } });
+  const seized = seizureLine(prevPol.axis, politics.axis, me.name.replace(/^The /, 'the '));
+  if (seized) emit({ type: 'chronicle', entry: { id: `c-${countryId}-${tick}-politics`, tick, year: view.year, kind: 'proclamation', countries: [countryId], text: seized } });
 
   // --- 5b. its age (row A23, sim/ages.ts): progress from its own state; one step at most a year
   const next = ageTurn(view, countryId, myStructs.filter((s) => own[s.tile] === countryId), treasury, ctx.ages);
