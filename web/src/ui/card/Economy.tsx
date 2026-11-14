@@ -21,7 +21,7 @@ export function shortGroups(plan: MarketPlan | null, id: number): GoodGroup[] {
 /** One line of small status chips under the facts row. */
 export function StatusChips({ world, countryId, plan }: { world: World; countryId: number; plan: MarketPlan | null }) {
   const c = world.countries[countryId];
-  if (!c) return null;
+  if (!c || !c.alive) return null;   // a fallen nation has no readiness, devastation or shortages to show
   const wr = readinessOf(c);
   const band = readinessBand(wr);
   const dev = landDevastation(world, countryId);
@@ -99,10 +99,10 @@ export function EconomyTab({ world, countryId, plan }: { world: World; countryId
         </>
       )}
       <p className="tn-market">{marketLine(plan, countryId)}</p>
-      <div className="tn-meter">
+      <div className="tn-gauge">
         <span className="tn-cap">Devastation</span>
-        <div className="tn-meter-bar" role="img" aria-label={`Devastation ${Math.round(dev)}%`}><div style={{ width: `${dev}%` }} className={dev > 5 ? 'tn-warn' : ''} /></div>
-        <span className="tn-meter-v">{Math.round(dev)}%</span>
+        <div className="tn-gauge-bar" role="img" aria-label={`Devastation ${Math.round(dev)}%`}><div style={{ width: `${dev}%` }} className={dev > 5 ? 'tn-warn' : ''} /></div>
+        <span className="tn-gauge-v">{Math.round(dev)}%</span>
       </div>
     </div>
   );
@@ -116,10 +116,10 @@ export function PoliticsBlock({ world, countryId }: { world: World; countryId: n
     <div className="tn-pol">
       <div className="tn-pol-name">{m.name}</div>
       <div className="tn-pol-creed">{m.creed}</div>
-      <div className="tn-meter">
+      <div className="tn-gauge">
         <span className="tn-cap">Radicalism</span>
-        <div className="tn-meter-bar" role="img" aria-label={`Radicalism ${Math.round(rad)} of 100`}><div style={{ width: `${rad}%` }} className={rad > 60 ? 'tn-warn' : ''} /></div>
-        <span className="tn-meter-v">{Math.round(rad)}</span>
+        <div className="tn-gauge-bar" role="img" aria-label={`Radicalism ${Math.round(rad)} of 100`}><div style={{ width: `${rad}%` }} className={rad > 60 ? 'tn-warn' : ''} /></div>
+        <span className="tn-gauge-v">{Math.round(rad)}</span>
       </div>
     </div>
   );

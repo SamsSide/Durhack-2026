@@ -34,6 +34,7 @@ budget, run them one at a time in the order below, on Sonnet.
 | C9 | Solana: `LedgerPanel` and `EconomyCounter` (exported, and shown as a "Treasury" tab in the network panel), and "Treasury on Solana" on `NationCard`; polls `GET /api/economy` | A27 (mocked) | | CP2 | testing | Owner request #144, MLH Best Use of Solana |
 | C10 | Visual event feed: picture cards with globe thumbnails for big moments | lane b `captureGlobe` | | CP2 | testing | Lane b's #148; owner asked in #151 |
 | C11 | Council on `NationCard`: ruler and general with generated portraits, years in office, a status chip, memory on hover, and Kill (two-click), Cut and Restore buttons per member | A29 | | CP2 | testing | Owner request #170 (Neptune North: resilience inside a nation) |
+| C13 | Economy on `NationCard` (B11-6): status chips (war readiness, devastation, shortages) under the facts, an Economy tab (goods, prices, shortages), politics movement in the Politics tab | B11 | | CP2 | testing | Lane a request #224 |
 | C12 | Prepare mode panel and Create toggle (built by lane a, owner decision 14 Nov) | X2 `prepare` message and control, X3 `prepare: true` (#200) | | CP2 | testing | `web/src/ui/prepare/`; dev mock behind `?mockPrepare=1` until the server sends `prepare` |
 
 ## Waiting on
@@ -56,4 +57,6 @@ budget, run them one at a time in the order below, on Sonnet.
 - 14 Nov · #150 · Browser QA at 1280 x 709: Create fits under the top bar, all timeline lanes fit, herald publishes --tn-herald-bottom, news clears the network panel, herald queue capped, war bands end at a fall
 - 14 Nov · #155 · C9 Solana: Treasury tab with the ledger and counter, treasury link on the card
 - 14 Nov · #159 · C10 visual event feed (EventFeed) for lane b to place
-- 14 Nov · this PR · C11 council on the card: cameo portraits, status chips, memory, Kill / Cut / Restore
+- 14 Nov · #174 · C11 council on the card: cameo portraits, status chips, memory, Kill / Cut / Restore
+- 14 Nov · #225 · Herald dispatches as small top-right tabs; network controls explained (#217)
+- 14 Nov · this PR · C13 economy on the card: status chips, Economy tab, politics movement

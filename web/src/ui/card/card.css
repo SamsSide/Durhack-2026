@@ -217,15 +217,16 @@
 .tn-down { color: var(--link-up); }
 .tn-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .tn-market { margin: 4px 0 8px; font-style: italic; font-size: 14.5px; line-height: 19px; color: var(--color-ink-muted); }
-.tn-meter { display: flex; align-items: center; gap: 8px; }
-.tn-meter-bar { flex: 1; height: 4px; background: var(--color-ink-faint); border-radius: var(--radius-1); overflow: hidden; }
-.tn-meter-bar > div { height: 100%; background: var(--color-ink-muted); transition: width 250ms ease; }
-.tn-meter-bar > div.tn-warn { background: var(--color-rubric); }
-.tn-meter-v { font-family: var(--font-mono); font-size: 13px; min-width: 32px; text-align: right; }
+.tn-gauge { display: flex; align-items: center; gap: 8px; }
+.tn-gauge-bar { flex: 1; height: 4px; background: var(--color-ink-faint); border-radius: var(--radius-1); overflow: hidden; }
+.tn-gauge-bar > div { height: 100%; background: var(--color-ink-muted); transition: width 250ms ease; }
+.tn-gauge-bar > div.tn-warn { background: var(--color-rubric); }
+.tn-gauge-v { font-family: var(--font-mono); font-size: 13px; min-width: 32px; text-align: right; }
 .tn-pol { margin-bottom: 8px; }
 .tn-pol-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .tn-pol-creed { font-style: italic; font-size: 14.5px; line-height: 19px; color: var(--color-ink-muted); margin: 1px 0 6px; }
 
 /* Five tabs at 380 px */
-.tn-tab { letter-spacing: 0.04em; padding: 4px 7px 5px; }
-.tn-tabs { justify-content: space-between; }
+/* Five tabs in 380 px: no side padding (the gap spaces them), tighter letters, a touch smaller. */
+.tn-tab { letter-spacing: 0.03em; padding: 4px 0 5px; font-size: 11px; flex: none; }
+.tn-tabs { justify-content: space-between; gap: 6px; }
