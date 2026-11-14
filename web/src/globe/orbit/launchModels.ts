@@ -90,23 +90,67 @@ export async function loadGlb(file: string, unit = true): Promise<{ parts: Model
   }
 }
 
-let kit: RocketKit = placeholder();
-let started = false;
+type Entry = { file?: string };
+interface Manifest { models: Record<string, Entry>; ages: Record<string, Record<string, Entry>> }
 
-/** The current kit: the placeholder until the manifest rocket loads, then that one for good. */
-export function rocketKit(): RocketKit {
-  if (!started) { started = true; void loadReal(); }
-  return kit;
+const PLACEHOLDER = placeholder();
+const kits = new Map<string, RocketKit>();   // loaded kits, by age bucket and by file pair
+const started = new Set<string>();
+const settled = new Set<string>();         // buckets whose load has finished, well or badly
+let manifestP: Promise<Manifest> | null = null;
+
+function manifest(): Promise<Manifest> {
+  manifestP ??= (async () => {
+    try {
+      const res = await fetch(`${BASE}models/manifest.json`);
+      if (res.ok) {
+        const j = (await res.json()) as Partial<Manifest>;
+        return { models: j.models ?? {}, ages: j.ages ?? {} };
+      }
+    } catch { /* fall through */ }
+    return { models: {}, ages: {} };
+  })();
+  return manifestP;
 }
 
-async function loadReal(): Promise<void> {
-  let models: Record<string, { file?: string }> = {};
-  try {
-    const res = await fetch(`${BASE}models/manifest.json`);
-    if (res.ok) models = ((await res.json()) as { models?: typeof models }).models ?? {};
-  } catch { return; }
-  const rf = models.rocket?.file;
+// future and stellar share the top-level rocket; modern and earlier share the 1960s one
+const bucket = (age: string | undefined): string => (age === 'future' || age === 'stellar' ? 'late' : 'early');
+
+/** Which rocket and booster files a nation of this age flies, falling back to whichever exists. */
+function pick(m: Manifest, age: string | undefined): { rocket?: string; booster?: string } {
+  const ageRocket = m.ages.modern?.rocket?.file;
+  const topRocket = m.models.rocket?.file;
+  const rocket = bucket(age) === 'early' ? (ageRocket ?? topRocket) : (topRocket ?? ageRocket);
+  const booster = m.ages[age ?? '']?.booster?.file ?? m.models.booster?.file;
+  return { rocket, booster };
+}
+
+/** The kit for a nation's age: the placeholder until its rocket loads, then that one for good (loaded once per age bucket). */
+export function rocketKit(age?: string): RocketKit {
+  const key = bucket(age);
+  const k = kits.get(key);
+  if (k) return k;
+  if (!started.has(key)) { started.add(key); void loadReal(age, key); }
+  return PLACEHOLDER;
+}
+
+/** True once this age's rocket has loaded (or failed to), so a lift-off does not catch the placeholder. */
+export function rocketKitReady(age?: string): boolean {
+  rocketKit(age);
+  return settled.has(bucket(age));
+}
+
+async function loadReal(age: string | undefined, key: string): Promise<void> {
+  try { await loadKit(age, key); } finally { settled.add(key); }
+}
+
+async function loadKit(age: string | undefined, key: string): Promise<void> {
+  const m = await manifest();
+  const { rocket: rf, booster: bf } = pick(m, age);
   if (!rf) return;
+  const pair = `file:${rf}|${bf ?? ''}`;
+  const shared = kits.get(pair);
+  if (shared) { kits.set(key, shared); return; }
   const rocket = await loadGlb(rf);
   if (!rocket) return;
   const sepNode = rocket.nodes.find((n) => n.name.startsWith('sep_point'));
@@ -118,12 +162,11 @@ async function loadReal(): Promise<void> {
     const mid = p.geometry.boundingBox ?? (p.geometry.computeBoundingBox(), p.geometry.boundingBox!);
     (mid.getCenter(new THREE.Vector3()).y > sep.y ? upper : lower).push(p);
   }
-  if (!upper.length || !lower.length) { console.warn('launch: rocket.glb has no meshes on one side of sep_point; using it whole'); }
+  if (!upper.length || !lower.length) { console.warn(`launch: ${rf} has no meshes on one side of sep_point; using it whole`); }
   const thrusters: Thruster[] = rocket.nodes.filter((n) => n.name.startsWith('fx_thruster')).map((n) => ({ pos: n.pos, dir: n.dir, upper: n.pos.y > sep.y }));
   if (!thrusters.some((t) => !t.upper)) thrusters.push({ pos: new THREE.Vector3(0, 0, 0), dir: new THREE.Vector3(0, -1, 0), upper: false });
   if (!thrusters.some((t) => t.upper)) thrusters.push({ pos: sep.clone(), dir: new THREE.Vector3(0, -1, 0), upper: true });
-  let falling = lower;
-  const bf = models.booster?.file;
+  let falling = lower;   // else the split at sep_point
   if (bf) {
     const b = await loadGlb(bf);
     if (b) {
@@ -133,7 +176,9 @@ async function loadReal(): Promise<void> {
       falling = b.parts;
     }
   }
-  kit = { upper: upper.length ? upper : rocket.parts, lower: upper.length ? lower : [], falling, thrusters, sep, real: true };
+  const kit: RocketKit = { upper: upper.length ? upper : rocket.parts, lower: upper.length ? lower : [], falling, thrusters, sep, real: true };
+  kits.set(pair, kit);
+  kits.set(key, kit);
 }
 
 /** One flying vehicle: the rocket (both stages) and the booster that drops away, materials its own. */
