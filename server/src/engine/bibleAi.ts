@@ -1,5 +1,6 @@
 // The world bible written by Gemini (row A5): one call to the lore model at world creation, strictly
 // validated and repaired, with the template bible (mockBible) as the fallback on any failure.
+import { BUILDING_STYLES, diversifyStyles, isBuildingStyle, isNomadic, pickBuildingStyle } from '@terra/shared';
 import type { BibleNation, FlagEmblem, FlagLayout, FlagSpec, WorldBible } from '@terra/shared';
 import { llmJson, bibleModel, currentMode, type Schema } from '../llm';
 import { createHash } from 'node:crypto';
@@ -37,6 +38,8 @@ const nationSchema: Schema = {
     flagColors: { type: 'array', items: str('hex colour'), description: '2 to 4 hex colours' },
     flagEmblem: { type: 'string', enum: EMBLEMS },
     regionNames: { type: 'array', items: str('place name'), description: '6 to 8 region names in this culture\'s style' },
+    buildingStyle: { type: 'string', enum: [...BUILDING_STYLES], description: 'Architecture: scrap for post-apocalyptic, industrial for modern; else from the culture (samurai east_asian, pharaoh desert, Inca mesoamerican, senate classical, feudal medieval, jarl norse, raja south_asian, griot sahel). At most 2 nations per style.' },
+    nomadic: { type: 'boolean', description: 'Herders, horse lords, steppe or caravan people' },
   },
 };
 const bibleSchema: Schema = {
@@ -100,7 +103,7 @@ function hashPalette(data: string, n: number): string[] {
 interface RawNation {
   name: string; adjective: string; color: string; leader: string; government: string; ideology: string;
   culture: string[]; foundingMyth: string; aggression: number; expansion: number; trade: number; faith: number;
-  anthemPrompt: string; voiceStyle: string; flagLayout: FlagLayout; flagColors: string[]; flagEmblem: FlagEmblem; regionNames: string[];
+  anthemPrompt: string; voiceStyle: string; flagLayout: FlagLayout; flagColors: string[]; flagEmblem: FlagEmblem; regionNames: string[]; buildingStyle?: string; nomadic?: boolean;
 }
 interface RawBible { name: string; era: string; startYear: number; nations: RawNation[]; imageReading?: ImageReading }
 
@@ -164,8 +167,14 @@ export function repairBible(raw: RawBible, fallback: WorldBible, n: number, extr
       temperament: { aggression: clamp01(r.aggression), expansion: clamp01(r.expansion), trade: clamp01(r.trade), faith: clamp01(r.faith) },
       anthemPrompt: clean(r.anthemPrompt, 160) || fb.anthemPrompt, voiceStyle: clean(r.voiceStyle, 60) || fb.voiceStyle,
       flag, regionNames: regionNames.slice(0, 8),
+      buildingStyle: isBuildingStyle(r.buildingStyle) ? r.buildingStyle : undefined,
+      nomadic: typeof r.nomadic === 'boolean' ? r.nomadic : undefined,
     });
   }
+  // Building styles (#91): Gemini's pick, else the rules; then at most two nations per style.
+  const worldText = `${raw.era ?? ''} ${raw.name ?? ''} ${fallback.era}`;
+  const styles = diversifyStyles(nations.map((n) => n.buildingStyle ?? pickBuildingStyle(worldText, n)));
+  nations.forEach((n, i) => { n.buildingStyle = styles[i]; if (n.nomadic === undefined) n.nomadic = isNomadic(n); });
   if (!raw.name.trim()) throw new Error('bible has no name');
   return {
     name: clean(raw.name, 60), era: clean(raw.era, 40) || fallback.era,
