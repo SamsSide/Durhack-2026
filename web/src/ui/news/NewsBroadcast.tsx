@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { requestBroadcastNow, useBroadcast } from './useBroadcast';
+import { AnchorWindow } from './AnchorWindow';
 import './news.css';
 
 /** Trigger one bulletin now (lane b's top-bar button). */
@@ -7,9 +8,9 @@ export const requestBroadcast = requestBroadcastNow;
 
 const SLIDE_MS = 200;
 
-/** The "Terra Nova News" lower-third. No props, no positioning: the parent places it. */
+/** "Terra Nova News": the broadcast window with the anchor, on top of the lower-third. No props, no positioning: the parent places it. */
 export function NewsBroadcast() {
-  const { bulletin, visible, duration, preparing, noSound } = useBroadcast();
+  const { bulletin, visible, duration, preparing, noSound, footage } = useBroadcast();
   const [mounted, setMounted] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
@@ -30,6 +31,8 @@ export function NewsBroadcast() {
   const showPreparing = preparing || !bulletin;
 
   return (
+    <div className={`tn-newscast ${visible ? 'tn-newscast-in' : 'tn-newscast-out'}`}>
+    <AnchorWindow bulletin={showPreparing ? null : bulletin} footage={footage} />
     <section
       className={`tn-news ${visible ? 'tn-news-in' : 'tn-news-out'}`}
       aria-label="Terra Nova News"
@@ -70,5 +73,6 @@ export function NewsBroadcast() {
         </div>
       )}
     </section>
+    </div>
   );
 }
