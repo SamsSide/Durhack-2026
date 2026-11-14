@@ -8,7 +8,8 @@ import { EventFeed } from './hud/lookup';
 import { BeliefBanner, ClosingCard, DiplomacyLegend, Minimap, MODES, TerrainLegend, TopBar, useTimelineOpen, WealthLegend, PoliticsLegend } from './hud';
 import { HoverTooltip } from './globe/hover/HoverTooltip';
 import { useEffect, useState } from 'react';
-import { TimelineScrubber } from './globe/timeline';   // B9 timeline (lane a)
+import { TimelineScrubber } from './globe/timeline';
+import { DemoPanel } from './hud/DemoPanel';   // B9 timeline (lane a)
 
 // Lane c's NewsBroadcast (X5); resolved at run time so the app builds before it lands.
 const NewsBroadcast = (ui as unknown as Record<string, ComponentType | undefined>).NewsBroadcast;
@@ -79,6 +80,7 @@ export function App() {
         <div className="news-slot"><NewsBroadcast key={epoch} /></div>
       )}
       {world && !showCreate && <PreparePanel />}
+      {import.meta.env.DEV && <DemoPanel />}
       <PresentationYear />
       <ClosingCard />
       {world && <HoverTooltip />}

@@ -11,11 +11,22 @@ import type { World } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import { tileHeight } from '../mesh/buildProvinceMesh';
 import { LIFT } from '../constants';
-import { deliver, omega, ringFor, ringPos, syncWorld } from './launchState';
+import { MAX_SLOTS, deliver, omega, ringFor, ringPos, satPhases, syncWorld } from './launchState';
+import { holdSun, sunDir } from '../celestial/sun';
+import { groundView } from '../camera/groundView';
 import type { Ring } from './launchState';
 import { C, Pool, pointScale } from './launchFx';
 import { buildVehicle, rocketKit } from './launchModels';
 import type { Vehicle } from './launchModels';
+
+// Demo camera (dev): distance from the subject at each beat, and how fast the shot follows.
+const DEMO_PAD_D = 0.3;
+const DEMO_FLY_D = 0.52;
+const DEMO_SAT_D = 0.42;
+const DEMO_FOLLOW = 2.6;     // 1/s
+const DEMO_TAIL = 3.5;       // s the satellite is followed after the booster burns up
+interface Demo { country: number; flight: Flight | null; F: THREE.Vector3 | null; D: number; end: number }
+const _m4 = new THREE.Matrix4(), _eye = new THREE.Vector3(), _tgt = new THREE.Vector3(), _upW = new THREE.Vector3();
 
 const ROCKET_H = 0.075;      // world units, bold enough to read from the default view
 const HOLD = 0.8;            // s on the pad, engines lit
@@ -95,6 +106,7 @@ export function Launch() {
     g.add(fx.norm.points, fx.add.points);
     return g;
   }, [fx]);
+  const demo = useRef<Demo | null>(null);
   const st = useRef({ flights: [] as Flight[], queue: [] as number[], lastStart: -99, seen: new Set<string>(), worldId: null as string | null, now: 0 });
 
   // start a launch for each satellite the chronicle reports (one '-sat' line per satellite)
@@ -125,7 +137,7 @@ export function Launch() {
     };
     scan();
     const off = useWorld.subscribe(scan);
-    let w: { __launch?: (id?: number) => number | null } | null = null;
+    let w: { __launch?: (id?: number) => number | null; __launchDemo?: (id?: number) => number | null } | null = null;
     if (import.meta.env.DEV) {
       w = window as unknown as { __launch?: (id?: number) => number | null };
       // Dev: launch from this nation, or from the capital nearest the middle of the view.
@@ -147,8 +159,31 @@ export function Launch() {
         enqueue(pick);
         return pick;
       };
+      // Dev and demo: launch from a sunlit capital at once and fly a scripted camera alongside the
+      // rocket (see the demo frame hook below) until the booster has burned up and the satellite circles.
+      w.__launchDemo = (id?: number) => {
+        const world = useWorld.getState().world;
+        if (!world) return null;
+        let pick = id ?? -1;
+        if (pick < 0) {
+          let best = -2;
+          group.updateWorldMatrix(true, false);
+          world.countries.forEach((c, i) => {
+            const t = world.tiles[c.capitalTile];
+            if (!c.alive || !t || satPhases(i).length >= MAX_SLOTS) return;
+            const d = group.localToWorld(_a.set(...t.center)).normalize().dot(sunDir);
+            if (d > best) { best = d; pick = i; }
+          });
+        }
+        if (pick < 0 || !world.countries[pick]) return null;
+        const r = st.current;
+        r.queue.unshift(pick);
+        r.lastStart = -99;
+        demo.current = { country: pick, flight: null, F: null, D: 0.3, end: 0 };
+        return pick;
+      };
     }
-    return () => { off(); if (w) delete w.__launch; };
+    return () => { off(); if (w) { delete w.__launch; delete w.__launchDemo; } };
   }, [camera, fx, group]);
 
   useEffect(() => () => {
@@ -174,6 +209,8 @@ export function Launch() {
         group.add(veh.root, veh.booster);
         r.flights.push({ ...p, veh });
         r.lastStart = t;
+        const dm = demo.current;
+        if (dm && !dm.flight && dm.country === id) dm.flight = r.flights[r.flights.length - 1]!;
       }
     }
 
@@ -314,6 +351,72 @@ export function Launch() {
     fx.add.update(now, dt * 1000, scale);
     fx.norm.update(now, dt * 1000, scale);
   });
+
+  // Dev demo camera: after the controls and the ground view have posed the camera (priorities -1 and
+  // -0.5), put it beside the flight, side on to the orbit plane with the ground at the bottom of the
+  // frame. It follows the rocket, then the pair after separation, then the satellite once the booster
+  // has burned up, and hands the view back to the controls at the end.
+  useFrame(({ clock, camera: cam }, delta) => {
+    const dm = demo.current;
+    if (!dm) return;
+    const cc = (window as unknown as { __cam?: { enabled: boolean; setLookAt: (...a: (number | boolean)[]) => unknown } }).__cam;
+    const f = dm.flight;
+    if (!f) return;
+    const t = clock.elapsedTime;
+    const e = t - f.t0;
+    const { root, booster } = f.veh;
+    // the subject (group space) and how far back to stand
+    const F = _tgt;
+    let D: number;
+    const sat = ringPos(f.ring, f.phase + omega(f.ring) * t, _b);
+    if (!f.deployed && !f.sep) {
+      F.copy(root.position);
+      D = e < HOLD + 0.6 ? DEMO_PAD_D : DEMO_FLY_D;
+    } else if (!f.deployed) {
+      F.copy(root.position).add(booster.position).multiplyScalar(0.5);
+      D = Math.max(DEMO_FLY_D, root.position.distanceTo(booster.position) * 1.1);
+    } else if (!f.broken) {
+      F.copy(sat).add(booster.position).multiplyScalar(0.5);
+      D = Math.max(DEMO_FLY_D, sat.distanceTo(booster.position) * 1.05);
+    } else {
+      F.copy(sat);
+      D = DEMO_SAT_D;
+      if (!dm.end) dm.end = t + DEMO_TAIL;
+    }
+    const k = 1 - Math.exp(-Math.min(0.1, delta) * DEMO_FOLLOW);
+    if (!dm.F) dm.F = F.clone();
+    else dm.F.lerp(F, k);
+    dm.D += (D - dm.D) * k;
+    // side on: the orbit plane's normal, signed so the flight runs left to right
+    const up = _c.copy(dm.F).normalize();
+    const side = _v.crossVectors(f.n, f.q).normalize();
+    const dir = _t.copy(f.q).sub(f.pad);
+    if (_a.crossVectors(side.clone().negate(), up).dot(dir) < 0) side.negate();
+    _eye.copy(dm.F).addScaledVector(side, dm.D * 0.95).addScaledVector(up, dm.D * 0.28);
+    group.updateWorldMatrix(true, false);
+    group.localToWorld(_eye);
+    const FW = group.localToWorld(_a.copy(dm.F));
+    _upW.copy(dm.F).add(up);
+    group.localToWorld(_upW).sub(FW).normalize();
+    // keep the sun over the shoulder of the camera so every stage reads
+    const sun = _q.setFromRotationMatrix(_m4.extractRotation(group.matrixWorld));
+    const sd = up.clone().multiplyScalar(0.75).addScaledVector(side, 0.6).addScaledVector(dir.normalize(), -0.25).applyQuaternion(sun).normalize();
+    holdSun([sd.x, sd.y, sd.z]);
+    if (cc) cc.enabled = false;
+    cam.position.copy(_eye);
+    cam.quaternion.setFromRotationMatrix(_m4.lookAt(_eye, FW, _upW));
+    cam.updateMatrixWorld();
+    groundView.height = Math.max(0.05, _eye.length() - 1.02);   // the clouds part round a low camera
+    if (dm.end && t > dm.end) {
+      demo.current = null;
+      holdSun(null);
+      if (cc) {
+        cc.enabled = true;
+        const back = _eye.clone().setLength(Math.max(1.6, _eye.length()));
+        cc.setLookAt(back.x, back.y, back.z, 0, 0, 0, true);
+      }
+    }
+  }, -0.4);
 
   return <primitive object={group} />;
 }
