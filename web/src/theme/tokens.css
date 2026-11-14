@@ -1,20 +1,47 @@
-/* X7 design tokens. Components use these variables only; a redesign is this one file. */
-:root {
-  --color-bg: #12100d;
-  --color-surface: #1d1913;
-  --color-parchment: #e8dcc0;
-  --color-ink: #2b2118;
-  --color-ink-muted: #7a6a52;
-  --color-accent: #c9a24b;
-  --color-danger: #b8432f;
-  --color-ok: #5b8a4a;
-  --color-border: #4a3d2a;
-  --color-text: #efe6d0;
-  --color-text-muted: #a8997d;
+/* Fonts: Cinzel (display capitals), EB Garamond (body serif), IBM Plex Mono (numbers).
+   Loaded here so nobody has to edit index.html. Offline, the fallbacks below take over.
+   If lane b prefers a <link>, move this URL into index.html and delete this line. */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
-  --font-serif: 'Georgia', 'Iowan Old Style', 'Palatino Linotype', serif;
-  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+/* X7 design tokens. Components use these variables only; a redesign is this one file.
+   Style: an old atlas (parchment, ink, serif) seen at night, with a hologram beam.
+   Figma: https://www.figma.com/design/7cKEqNpTmvmNd9CUSlxrA6 (collection "tokens"). */
+:root {
+  /* Night surround (space behind the globe, the top bar) */
+  --color-bg: #090b12;
+  --color-surface: #141823;
+  --color-surface-2: #1d2230;            /* raised controls on the dark surface */
+  --color-border: #343a4a;               /* hairlines on the dark surface */
+  --color-text: #efe6d0;                 /* parchment-coloured text on dark */
+  --color-text-muted: #9a9484;
+
+  /* Parchment and ink */
+  --color-parchment: #ecdfc0;
+  --color-parchment-light: #f6eedb;      /* highlights, inputs */
+  --color-parchment-dark: #d6c399;       /* aged edges, insets, hover */
+  --color-ink: #2a1f14;                  /* iron-gall ink: text and borders on parchment */
+  --color-ink-muted: #6e5b43;
+  --color-ink-faint: rgba(42, 31, 20, 0.18);  /* rules and dividers on parchment */
+  --color-rubric: #9c2f22;               /* manuscript red: section headings on parchment */
+  --color-accent: #c9a24b;               /* gilt: active state, the year, highlights */
+  --color-danger: #b3261e;
+  --color-ok: #4d7a3a;
+  --color-warn: #c7802a;
+
+  /* Fonts */
+  --font-display: 'Cinzel', 'Trajan Pro', 'Times New Roman', serif;          /* titles, nation names, small-caps labels */
+  --font-serif: 'EB Garamond', 'Garamond', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;  /* body */
+  --font-sans: 'EB Garamond', Georgia, serif;   /* kept for old code; the design has no sans */
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;  /* years, numbers, the token meter */
+
+  /* Type scale (px) */
+  --text-xs: 11px;    /* mono captions, chip labels */
+  --text-sm: 13px;    /* secondary lines, buttons */
+  --text-md: 15px;    /* body */
+  --text-lg: 18px;    /* lead text, row names */
+  --text-xl: 24px;    /* panel titles */
+  --text-2xl: 34px;   /* the Create screen title */
+  --tracking-caps: 0.08em;  /* letter-spacing for Cinzel labels */
 
   --space-1: 4px;
   --space-2: 8px;
@@ -23,15 +50,61 @@
   --space-5: 24px;
   --space-6: 40px;
 
-  --radius-1: 3px;
-  --radius-2: 6px;
-  --radius-3: 12px;
+  --radius-1: 2px;     /* buttons, inputs: almost square, like a printed plate */
+  --radius-2: 4px;     /* panels */
+  --radius-3: 10px;
+  --radius-pill: 999px; /* chips */
+
+  --border-ink: 1.5px solid var(--color-ink);
+  /* The atlas double rule: an outer ink line and an inner faint line, drawn with shadows. */
+  --rule-double: inset 0 0 0 4px var(--color-parchment), inset 0 0 0 5px rgba(42, 31, 20, 0.45);
+  --parchment-fill: radial-gradient(ellipse at 50% 40%, #f4e9cf 0%, #ecdfc0 55%, #dcc89c 100%);
 
   --shadow-1: 0 4px 18px rgba(0, 0, 0, 0.55);
+  --shadow-2: 0 12px 40px rgba(0, 0, 0, 0.7);
 
-  --holo-tint: #6fe3d6;
-  --holo-glow: 0 0 18px rgba(111, 227, 214, 0.55);
-  --holo-scanline: rgba(111, 227, 214, 0.12);
+  /* The hologram: a lit parchment page in a beam of light */
+  --holo-tint: #7fe6d8;                                   /* cyan beam, the default */
+  --holo-warm: #ffcf7a;                                   /* warm beam, while the card speaks or sings */
+  --holo-glow: 0 0 0 1px rgba(127, 230, 216, 0.75), 0 0 28px rgba(127, 230, 216, 0.45), 0 0 80px rgba(127, 230, 216, 0.18);
+  --holo-glow-warm: 0 0 0 1px rgba(255, 207, 122, 0.8), 0 0 28px rgba(255, 207, 122, 0.45), 0 0 80px rgba(255, 207, 122, 0.18);
+  --holo-scanline: rgba(127, 230, 216, 0.12);
+  --holo-scanlines: repeating-linear-gradient(0deg, var(--holo-scanline) 0 1px, transparent 1px 3px);
+  --holo-beam: linear-gradient(0deg, rgba(127, 230, 216, 0.05) 0%, rgba(127, 230, 216, 0.38) 100%);
+  --holo-beam-warm: linear-gradient(0deg, rgba(255, 207, 122, 0.05) 0%, rgba(255, 207, 122, 0.38) 100%);
+  --holo-opacity: 0.94;                                   /* the page is lit, not opaque */
+
+  /* Diplomatic stances (the diplomacy map mode and the card's relation chips) */
+  --stance-war: #b3261e;
+  --stance-hostile: #d0782a;
+  --stance-neutral: #9a9484;
+  --stance-trade: #3f8fb0;
+  --stance-alliance: #4d8a4a;
+
+  /* Chronicle entry kinds (a diamond marker on the ticker and the timeline) */
+  --kind-founding: #c9a24b;
+  --kind-proclamation: #8a7a5c;
+  --kind-growth: #6f8f4e;
+  --kind-war: #b3261e;
+  --kind-battle: #d0782a;
+  --kind-peace: #4d8a4a;
+  --kind-alliance: #3f8fb0;
+  --kind-betrayal: #7d3c8f;
+  --kind-fall: #3b3129;
+  --kind-secession: #2fa596;
+  --kind-silence: #7fe6d8;
+  --kind-return: #4fb7c9;
+  --kind-dispute: #c7802a;
+  --kind-decree: #9c2f22;
+
+  /* Network states */
+  --link-up: #4d7a3a;
+  --link-cut: #b3261e;
+  --ruler-llm: #c9a24b;
+  --ruler-autopilot: #6e7c8a;
+
+  --topbar-height: 52px;
+  --ticker-height: 40px;
 }
 
 * { box-sizing: border-box; }
@@ -40,38 +113,80 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-serif);
+  font-size: var(--text-md);
   overflow: hidden;
 }
 button, select, input, textarea { font: inherit; }
 
-/* Shared small controls, used by the seed UI. */
+/* Shared small controls. On the dark surface by default; inside .panel they turn to ink on parchment. */
 .btn {
-  background: var(--color-surface);
+  background: var(--color-surface-2);
   color: var(--color-text);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-1);
   padding: var(--space-1) var(--space-3);
   cursor: pointer;
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  line-height: 20px;
 }
-.btn:hover { border-color: var(--color-accent); }
+.btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
 .btn.active { background: var(--color-accent); color: var(--color-ink); border-color: var(--color-accent); }
-.btn.danger { border-color: var(--color-danger); color: var(--color-danger); }
-.btn:disabled { opacity: 0.5; cursor: default; }
+.btn.danger { border-color: var(--color-danger); color: #e4705f; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.primary { background: var(--color-ink); color: var(--color-parchment); border-color: var(--color-ink); }
+
 .panel {
-  background: var(--color-parchment);
+  background: var(--parchment-fill);
   color: var(--color-ink);
-  border: 2px solid var(--color-ink);
+  border: var(--border-ink);
   border-radius: var(--radius-2);
-  box-shadow: var(--shadow-1);
-  padding: var(--space-4);
+  box-shadow: var(--rule-double), var(--shadow-1);
+  padding: var(--space-4) var(--space-5);
 }
-.panel h2, .panel h3 { margin: 0 0 var(--space-2); font-variant: small-caps; letter-spacing: 0.04em; }
-.panel .muted { color: var(--color-ink-muted); }
-.panel .btn { background: var(--color-parchment); color: var(--color-ink); border-color: var(--color-ink); }
-.panel .btn:hover { background: var(--color-accent); }
+.panel h2, .panel h3 {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+}
+.panel h2 { font-size: var(--text-xl); }
+.panel h3 { font-size: var(--text-sm); color: var(--color-rubric); text-transform: uppercase; }
+.panel .muted { color: var(--color-ink-muted); font-style: italic; }
+.panel .btn { background: transparent; color: var(--color-ink); border-color: var(--color-ink); }
+.panel .btn:hover { background: var(--color-parchment-dark); color: var(--color-ink); }
+.panel .btn.active, .panel .btn.primary { background: var(--color-ink); color: var(--color-parchment); }
 .panel .btn.danger { color: var(--color-danger); border-color: var(--color-danger); }
 .panel input, .panel textarea, .panel select {
-  background: transparent; color: var(--color-ink);
+  background: var(--color-parchment-light); color: var(--color-ink);
   border: 1px solid var(--color-ink-muted); border-radius: var(--radius-1); padding: var(--space-1) var(--space-2);
 }
+.panel input:focus, .panel textarea:focus, .panel select:focus { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+
+/* Chips: presets, stances, culture tags. */
+.chip {
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  padding: 2px var(--space-3);
+  border: 1px solid var(--color-ink-muted); border-radius: var(--radius-pill);
+  font-family: var(--font-serif); font-size: var(--text-sm); color: var(--color-ink);
+  background: transparent; cursor: pointer;
+}
+.chip.active { background: var(--color-ink); color: var(--color-parchment); border-color: var(--color-ink); }
+
+/* The hologram page: put on the NationCard root when it is mounted in the beam. */
+.holo {
+  position: relative;
+  background: var(--parchment-fill);
+  opacity: var(--holo-opacity);
+  border: 1px solid rgba(42, 31, 20, 0.6);
+  border-radius: var(--radius-2);
+  box-shadow: var(--holo-glow);
+}
+.holo::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: var(--holo-scanlines);
+}
+.holo.speaking { box-shadow: var(--holo-glow-warm); }
