@@ -176,6 +176,8 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 - **An event feed** down the left: the world's news as cards with a picture of the place, wars,
   falls and decrees first, quiet growth rolled into one card a decade. **Dispatch tabs** at the
   top right carry wars, falls, returns from the Silence and decree results.
+- **A help screen** (the `?` button or `?` / `F1`) labels every control and icon for a newcomer;
+  it starts closed.
 - **Presentation mode** hides every panel and leaves the globe and the year; the screen starts
   collapsed.
 - A **closing card** shows what the world cost (calls and tokens), and every run is recorded and
@@ -275,7 +277,8 @@ Keys do nothing while you are typing in a text box.
 | `1` to `6` | Map mode: political, terrain, diplomacy, strength, wealth, politics | Anywhere |
 | `P` | Presentation mode on or off (hides every panel) | Anywhere |
 | `` ` `` (backquote) or `Shift+D` | Show or hide the demo panel (dev builds; or open with `?demo`) | Anywhere |
-| `Esc` | Clear the army or battle selection; leave presentation mode; close the chronicle timeline, the closing card or the prepare panel | Anywhere |
+| `?` / `F1` | Open or close the help screen | Anywhere |
+| `Esc` | Clear the army or battle selection; leave presentation mode; close the help screen, the chronicle timeline, the closing card or the prepare panel | Anywhere |
 | `S` | Spotlight tour of the world's big moments on or off | Anywhere |
 | `H` | Open or close the chronicle timeline | Anywhere |
 | `End` | Show the closing card (what this world cost) | Anywhere |
@@ -313,6 +316,7 @@ Keys do nothing while you are typing in a text box.
 | Hold the microphone button | Speak a decree |
 | Click the token meter | Show the closing card |
 | History button | Open the timeline scrubber |
+| Help button (`?`, bottom left) | Open the help screen: every control and icon, labelled |
 
 Clicking or scrolling on the globe pauses the spotlight tour for a moment.
 

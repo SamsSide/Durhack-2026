@@ -21,3 +21,5 @@ export { ScrollIcon, HourglassIcon, QuillIcon } from './collapse/icons';
 // #311: lane b's ArmyBattleDock (hud/) mounts these in the left dock when an army or battle is picked.
 export { ArmyCard } from './army/ArmyCard';
 export { BattleCard } from './army/BattleCard';
+export { HelpScreen, HelpButton } from './help/HelpScreen';
+export { useHelp, useHelpKeys } from './help/useHelp';
