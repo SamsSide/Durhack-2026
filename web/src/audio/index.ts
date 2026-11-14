@@ -26,8 +26,13 @@ const DUCK = 0.15;
 let warned = false;
 /** Duck the chant while narration speaks, restore it afterwards. */
 function applyDuck(): void {
-  const ducked = state === 'narration' || state === 'broadcast' || (state === 'loading' && (kindNow === 'narration' || kindNow === 'broadcast'));
+  const ducked = herald !== null || state === 'narration' || state === 'broadcast' || (state === 'loading' && (kindNow === 'narration' || kindNow === 'broadcast'));
   for (const c of chants) c.el.volume = ducked ? c.base * DUCK : c.base;
+}
+// The decree herald: its own element, so it never changes the X6 state; it only ducks chants.
+let herald = null as HTMLAudioElement | null;
+function stopHerald(): void {
+  if (herald) { herald.pause(); herald.src = ''; herald = null; applyDuck(); }
 }
 let kindNow = null as 'narration' | 'anthem' | 'broadcast' | null;
 let urlNow = null as string | null;
@@ -39,6 +44,7 @@ async function play(kind: 'narration' | 'anthem' | 'broadcast', id: number | nul
   if (kind === 'narration' && kindNow === 'narration' && countryId === id && (state === 'loading' || state === 'narration')) return;
   // An anthem is slow to generate the first time: a second press while it loads is a no-op.
   if (kind === 'anthem' && kindNow === 'anthem' && countryId === id && state === 'loading') return;
+  stopHerald();
   halt();
   kindNow = kind; urlNow = kind === 'broadcast' ? url ?? null : null;
   const mine = token;
@@ -63,9 +69,10 @@ export const audio = {
   playNarration: (id: number) => play('narration', id),
   playAnthem: (id: number) => play('anthem', id),
   playBroadcast: (audioUrl: string) => play('broadcast', null, audioUrl),
-  stop(): void { halt(); state = 'idle'; countryId = null; kindNow = null; applyDuck(); emit(); },
+  stop(): void { stopHerald(); halt(); state = 'idle'; countryId = null; kindNow = null; applyDuck(); emit(); },
   setMuted(m: boolean): void {
     muted = m; if (el) el.muted = m;
+    if (m) stopHerald();
     if (m) { for (const c of chants) c.el.pause(); chants.clear(); }
     emit();
   },
@@ -133,5 +140,30 @@ useWorld.subscribe((s) => {
   for (const e of fresh) {
     const ids = chantFor(e);
     if (ids.length) { playChants(ids); break; }
+  }
+});
+
+/** Read a decree aloud (once per entry). Skipped when muted, when a herald speaks, or when narration, an anthem or a bulletin plays or loads. */
+const heard = new Set<string>();
+function playHerald(entryId: string): void {
+  if (heard.has(entryId)) return;
+  heard.add(entryId);
+  if (muted || herald || state !== 'idle') return;
+  const a = new Audio(`/api/decree/${encodeURIComponent(entryId)}/herald`);
+  a.volume = 0.9;
+  herald = a;
+  const done = () => { if (herald === a) { herald = null; applyDuck(); } };
+  a.onended = done;
+  a.onerror = done;
+  applyDuck();
+  a.play().catch(done); // autoplay blocked or voice unavailable: silent
+}
+
+useWorld.subscribe((s) => {
+  const list = s.recentEvents;
+  if (list.length === 0) heard.clear(); // a new world: its entry ids start again
+  for (const e of list.slice(-10)) {
+    // A decree's own line has the plain id c-decree-N; its consequence line ends in -b.
+    if (e.type === 'chronicle' && e.entry.kind === 'decree' && !e.entry.id.endsWith('-b')) playHerald(e.entry.id);
   }
 });

@@ -31,3 +31,4 @@
 2026-11-14 16:40 · owner · Dispatches (war declared, return, fall) are drawn by lane c's Chronicle from recentEvents, top centre; the closing token card is lane b's (App.tsx), opened by clicking the token meter or the End key · each goes to the lane that already holds the data
 2026-11-14 16:55 · owner · Building styles (#91, option 1): six styles x five kinds (capital, city, town, temple, fort) = 30 models; Country.buildingStyle picked by Gemini in the bible, at most two nations per style; X4 manifest gains styles · judges should see cultures apart at a glance
 2026-11-14 17:35 · owner · ChronicleKind gains 'secession' for a region breaking away · the design already shows it; additive
+2026-11-14 17:20 · owner · The team's cloned ElevenLabs voices (Sam, Justin, Denis) are the Terra Nova News anchors (rotating), narrators for up to three nations per world, some war chants, and the royal herald who reads decrees aloud · the team presents its own world to the judges
