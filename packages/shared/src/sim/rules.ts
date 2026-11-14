@@ -577,7 +577,10 @@ export function nationTurn(
   }
 
   const sat = satelliteTurn(view, countryId, tick, ctx.ages);   // view still holds last year's age, so a launch comes the year after arrival
-  if (sat) emit({ type: 'chronicle', entry: { id: `c-${countryId}-${tick}-sat`, tick, year: view.year, kind: 'growth', countries: [countryId], text: sat } });
+  if (sat) {
+    emit({ type: 'country_updated', countryId, patch: { satellites: sat.satellites } });
+    emit({ type: 'chronicle', entry: { id: `c-${countryId}-${tick}-sat`, tick, year: view.year, kind: 'growth', countries: [countryId], text: sat.text } });
+  }
 
   // --- 6. the chronicle: milestones first, now and then a proclamation
   if (!notable && rng() < 0.014) notable = { kind: 'proclamation', text: fill(tone.proclaim[Math.floor(rng() * tone.proclaim.length)]!, me, regionLabel()) };

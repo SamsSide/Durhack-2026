@@ -50,6 +50,7 @@ export interface Country {
   buildingStyle?: BuildingStyle;                         // its architecture (X4 styles); missing means 'medieval'
   nomadic?: boolean;                                     // herders and horse lords: camps as yurts
   techAge?: TechAge;                                     // its weapons and ships; advances over time (missing means 'ancient')
+  satellites?: number;                                   // #317: satellites it has up (missing means 0); launched from the modern age, at most 1 / 2 / 4 by age
   voiceStyle: string;                                    // for narration voice choice
   alive: boolean;
   population: number;

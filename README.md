@@ -170,9 +170,10 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 
 ### The rocket launch
 
-- When a nation reaches the stellar age it launches satellites: each goes up on a **rocket with
-  stage separation, a satellite release and a booster burning up** on re-entry, then the
-  satellite circles the globe.
+- Satellites come with the modern age, from 1957 on: a modern nation launches one, a future-age
+  nation keeps two up and a stellar nation four. Each goes up on a **rocket with stage
+  separation, a satellite release and a booster burning up** on re-entry, then the satellite
+  circles the globe.
 
 | | |
 | --- | --- |

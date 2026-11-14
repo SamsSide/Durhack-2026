@@ -112,6 +112,7 @@ export interface Country {
   buildingStyle?: BuildingStyle;                         // its architecture (X4 styles); missing means 'medieval'
   nomadic?: boolean;                                     // herders and horse lords: camps as yurts
   techAge?: TechAge;                                     // its weapons and ships; advances over time (missing means 'ancient')
+  satellites?: number;                                   // #317 (owner, 14 Nov): satellites it has up, missing means 0; see "Satellites" below
   voiceStyle: string;                                    // for narration voice choice
   alive: boolean;
   population: number;
@@ -325,6 +326,13 @@ export type PaymentReason = 'trade' | 'reparations' | 'plunder' | 'seizure' | 'w
   in `@terra/shared` (income share, defence share for the whole nation, unrest change per year);
   lane b shows it in the tooltip. A captured wonder changes hands; a razed one is a `ruin`.
 
+- **Satellites (owner, #317 item 14, 14 Nov; replaces the #313 stellar-only rule):** a nation in
+  the `modern` age or later launches satellites from year 1957 on, up to a cap by age
+  (`SATELLITE_CAP`: modern 1, future 2, stellar 4; `MAX_SATELLITES` 4). The first comes a few years
+  after it may, then one every 60 years while below its cap. Each launch is the nation's own
+  `country_updated { satellites }` plus a chronicle line whose id ends in `-sat` (lane b's rocket
+  starts on that line).
+
 | Terrain | defence | supply | attrition | move | yields |
 | --- | --- | --- | --- | --- | --- |
 | ocean | 0 | 1 | 0 | 1 | fish, trade |
@@ -536,8 +544,9 @@ this table from `@terra/shared`.
   Buildings: a nation in the future or stellar age builds in the `arcology` style (domes,
   arcology towers, spires, a space elevator for the stellar capital) whatever its culture style:
   lane b picks `styles.arcology[kind]` when `techAge` is `future` or `stellar`, else the culture
-  style. A stellar nation also gets satellites circling the globe above its capital (lane b; no
-  model needed beyond a small `satellite` key in `models`). Lane b draws `ages[countries[unit.owner].techAge][unit.kind]`, then
+  style. A nation with satellites up (`Country.satellites`, from the modern age; X1) gets them
+  circling the globe above its capital (lane b; no model needed beyond a small `satellite` key in
+  `models`). Lane b draws `ages[countries[unit.owner].techAge][unit.kind]`, then
   `models[kind]`, then the cone. A nation's age advances during the run (a `country_updated` with
   `techAge` and a chronicle line), so every unit it owns changes look at once.
 

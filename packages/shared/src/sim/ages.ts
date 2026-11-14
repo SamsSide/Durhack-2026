@@ -44,7 +44,7 @@ export const AGE_AT = [0, 260, 1150, 2900, 4800, 8600, 13000] as const;
  */
 export const AGE_EARLIEST_YEAR = [-Infinity, 500, 1400, 1760, 1900, 2050, 2150] as const;
 
-/** Satellites need the stellar age and at least this calendar year (the first Sputnik). */
+/** Satellites need the modern age and at least this calendar year (the first Sputnik; owner, #317 item 14). */
 export const SATELLITE_EARLIEST_YEAR = 1957;
 
 /** What a nation's agent remembers between turns for its age and its trade (kept outside the World). */
@@ -53,8 +53,7 @@ export interface AgeMemory {
   progress?: number;
   /** Foreign merchant ships already counted as docked at its ports. */
   docked: Set<string>;
-  /** Satellites a stellar nation has launched, and the tick of its next launch. */
-  sats?: number;
+  /** The tick of its next satellite launch (the count up is `Country.satellites`, in the world). */
   satNext?: number;
 }
 export const newAgeMemory = (): AgeMemory => ({ docked: new Set() });
@@ -111,23 +110,34 @@ export function ageTurn(
   return { age, kind: 'growth', text: AGE_LINES[age].replace('{n}', c.name) };
 }
 
-/** How many satellites a stellar nation launches over its first years in the age. */
+/** The most satellites a nation keeps up in each age, parallel to `AGES` (owner, #317 item 14): the
+ *  first at `modern`, a second at `future`, four at `stellar`. */
+export const SATELLITE_CAP = [0, 0, 0, 0, 1, 2, 4] as const;
+/** The most satellites any nation keeps up (the stellar cap). */
 export const MAX_SATELLITES = 4;
 const SAT_GAP = 60;
 
+/** How many satellites a nation has up (missing means none). */
+export const satellitesOf = (c: Pick<Country, 'satellites'> | undefined): number => c?.satellites ?? 0;
+
 /**
- * A stellar nation launches satellites now and then (the first a few years after it arrives, then one
- * every `SAT_GAP` years, `MAX_SATELLITES` in all). Returns the chronicle text of a launch this year, or null.
+ * A modern-or-later nation launches satellites now and then, from 1957 on: the first a few years after
+ * it may, then one every `SAT_GAP` years while it is below its age's cap (`SATELLITE_CAP`). A satellite
+ * shot down (`satellite_lost`) frees a place, so it launches again on the same rhythm. Returns the new
+ * count and the chronicle text of a launch this year, or null.
  */
-export function satelliteTurn(view: World, me: number, tick: number, mem: AgeMemory | undefined): string | null {
+export function satelliteTurn(view: World, me: number, tick: number, mem: AgeMemory | undefined): { satellites: number; text: string } | null {
   const c = view.countries[me]!;
-  if (!mem || c.techAge !== 'stellar' || view.year < SATELLITE_EARLIEST_YEAR) return null;
+  const cap = SATELLITE_CAP[ageIndex(c.techAge)]!;
+  if (!mem || cap === 0 || view.year < SATELLITE_EARLIEST_YEAR) return null;
   mem.satNext ??= tick + 6;
-  const n = mem.sats ?? 0;
-  if (n >= MAX_SATELLITES || tick < mem.satNext) return null;
-  mem.sats = n + 1;
+  const n = satellitesOf(c);
+  if (n >= cap || tick < mem.satNext) return null;
   mem.satNext = tick + SAT_GAP;
-  return n === 0
-    ? `${c.name} launches its first satellites into orbit above its capital.`
-    : `${c.name} launches another satellite: ${n + 1} now circle its sky.`;
+  return {
+    satellites: n + 1,
+    text: n === 0
+      ? `${c.name} launches its first satellite into orbit: a new star crosses the sky above its capital.`
+      : `${c.name} launches another satellite: ${n + 1} now circle its sky.`,
+  };
 }

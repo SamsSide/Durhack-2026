@@ -1,13 +1,13 @@
 // Shared between Orbit.tsx (draws the satellites) and Launch.tsx (flies them up): each nation's orbit
-// ring, how many satellites are up this session, and the phase of each one. A nation already stellar
-// when a world arrives starts with one satellite; any later satellite only appears when its rocket
-// delivers it (#291). Lane b.
+// ring, how many satellites are up this session, and the phase of each one. A nation that already has
+// satellites up (`Country.satellites`, from the modern age on, #317) when a world arrives starts with
+// them; any later satellite only appears when its rocket delivers it (#291). Lane b.
 import * as THREE from 'three';
 import type { World } from '@terra/shared';
 
 export const ORBIT_R = 1.24;
 export const PERIOD_S = 70;
-/** Most satellites drawn per nation (the sim launches at most MAX_SATELLITES = 4). */
+/** Most satellites drawn per nation (the sim keeps at most MAX_SATELLITES = 4 up). */
 export const MAX_SLOTS = 4;
 
 export interface Ring { u: THREE.Vector3; v: THREE.Vector3; speed: number; matrix: THREE.Matrix4 }
@@ -45,13 +45,13 @@ let rev = 0;
 const subs = new Set<() => void>();
 const bump = () => { rev++; for (const f of subs) f(); };
 
-/** A different world resets the count: every nation already stellar gets its first satellite at once. */
+/** A different world resets the count: every nation gets the satellites it already has up, spread round its ring. */
 export function syncWorld(world: World | null): void {
   const id = world?.id ?? null;
   if (id === worldId) return;
   worldId = id;
   phases.clear();
-  world?.countries.forEach((c, i) => { if (c.techAge === 'stellar') phases.set(i, [0]); });
+  world?.countries.forEach((c, i) => { const n = Math.min(MAX_SLOTS, c.satellites ?? 0); if (n > 0) phases.set(i, Array.from({ length: n }, (_, k) => (k * Math.PI * 2) / n)); });
   bump();
 }
 
