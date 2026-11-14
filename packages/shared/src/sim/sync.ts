@@ -3,10 +3,15 @@
 // heard the same batches in the same order hold the same world, with no referee:
 //   1. order the batch canonically: lamport, then actor, then position (any replica gets the same order);
 //   2. settle claims of one free tile by several nations in the same tick with resolveClaim;
-//   3. apply each event that is still legal (isEventValid); drop the rest.
+//   3. apply each event that is still legal (isEventValid); drop the rest;
+//   4. an army's move into a province of a nation it is at war with is an attack: settleMove (sim/war.ts)
+//      settles the battle right there, against this replica, and the events it derives (battle, losses,
+//      capture, fall) are applied in place of the move. Same state, same order, same seeded hash: every
+//      replica derives the same battles (row A6).
 import type { World, WorldEvent } from '../types';
 import { applyEvent } from '../world';
 import { isEventValid, resolveClaim } from './rules';
+import { settleMove } from './war';
 
 const actorKey = (a: WorldEvent['actor']): number => (a === 'world' ? -2 : a === 'decree' ? -1 : a);
 
@@ -46,6 +51,11 @@ export function applyTickBatch(world: World, events: WorldEvent[]): WorldEvent[]
   const applied: WorldEvent[] = [];
   for (const e of ordered) {
     if (losers.has(e.id) || !isEventValid(world, e)) continue;
+    const settled = e.type === 'unit_moved' ? settleMove(world, e) : null;
+    if (settled) {
+      for (const d of settled) { applyEvent(world, d); applied.push(d); }
+      continue;
+    }
     applyEvent(world, e);
     applied.push(e);
   }

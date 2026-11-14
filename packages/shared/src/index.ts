@@ -8,3 +8,4 @@ export * from './sim/bible';
 export * from './sim/worldgen';
 export * from './sim/rules';
 export * from './sim/sync';
+export * from './sim/war';
