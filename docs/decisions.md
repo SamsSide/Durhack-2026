@@ -47,3 +47,5 @@
 - 2026-11-14 16:50 · Owner: wonders with a small bonus (#147), 2 to 4 per world, 8 models. Row A30.
 
 - 2026-11-14 17:10 · Owner: air escorts drawn into army models (a jet fighter above the modern tank, two rocket bikes of our own design for the future army; no new unit kind) and effect anchors in unit models for afterburners, thrusters, wakes, smoke, dust and contrails, drawn by lane b.
+
+- 2026-11-14 17:40 · Owner: keep lane c's visual event feed with globe thumbnails as row C10 (#151; built in #159, placed in #162).
