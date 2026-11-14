@@ -162,10 +162,12 @@ body:has(.tn-news) .minimap { opacity: 0; pointer-events: none; }
 .topbar.compact .speed-val { min-width: 34px; }
 
 /* Terrain legend: wider than the diplomacy one to fit the effects line */
-.legend-box.legend-terrain { width: 330px; }
-.legend-terrain .lg-row { font-size: 13px; }
+.legend-box.legend-terrain { width: 420px; max-width: calc(100vw - 2 * var(--space-3)); box-sizing: border-box; }
+.legend-terrain .lg-row { font-size: 13px; align-items: flex-start; }
 .legend-terrain .lg-name { width: 62px; flex: none; }
-.legend-terrain .lg-fx { color: var(--color-text-muted); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+.legend-terrain .lg-sw { margin-top: 4px; }
+/* The effects line wraps inside the panel rather than running past its edge. */
+.legend-terrain .lg-fx { flex: 1; min-width: 0; color: var(--color-text-muted); font-family: var(--font-mono); font-size: 12px; line-height: 1.35; padding-top: 3px; white-space: normal; overflow-wrap: anywhere; }
 
 /* Economy (A27): compact counter in the top bar, ledger panel on the left under the network panel */
 .econ-counter-slot { display: inline-flex; align-items: center; }

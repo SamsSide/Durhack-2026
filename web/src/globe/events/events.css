@@ -75,7 +75,9 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   opacity: 0;
   animation: ev-label 4.5s ease forwards;
+  translate: 0 calc(-1 * var(--ev-lift, 0px)); /* lifted clear of other captions and tags */
 }
+.ev-label.ev-hide { visibility: hidden; }
 /* 27 s timeline: pop in, hold big for 2 s, shrink to a small marker, fade out over the last 3 s */
 @keyframes ev-pin {
   0% { transform: scale(0); }

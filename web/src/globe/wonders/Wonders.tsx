@@ -1,4 +1,4 @@
-// Lane b, row A30 on the globe: wonders. A big model on the wonder's tile (2 tiles wide, still bigger than a
+// Lane b, row A30 on the globe: wonders. A model on the wonder's tile (about 1.3x a capital, still bigger than a
 // capital from orbit), scaffolding and dust while it is built, a gilt beam, ring and sparks when it is done, and
 // the Great Wall drawn along the nation's borders. Mount inside ProvinceMeshContext.
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -19,9 +19,9 @@ import { partsHeight, scaffoldGeometry } from './fallback';
 import { buildWall } from './greatWall';
 import { isWonderKind } from './types';
 
-const SIZE_TILES = 2;      // a wonder is about 2 tiles wide (a capital fills about 1)
-const MAX_SIZE = 0.14;     // absolute cap, times the surface radius (2x the structures cap)
-const ORBIT_BOOST = 1.3;   // capitals get 1.15 from orbit; this keeps a wonder about 2.3x a capital there
+const SIZE_TILES = 1.3;    // about 1.3x a capital's footprint (a capital is 1 tile width): the biggest thing in its province
+const MAX_SIZE = 0.091;    // absolute cap, times the surface radius (1.3x the structures cap)
+const ORBIT_BOOST = 1.2;   // capitals get 1.15 from orbit; a wonder stays modestly ahead of them there
 const STEPS = 8;           // the build rises in this many courses
 const REVEAL_S = 3.2;
 const GILT = '#e8c45a';
