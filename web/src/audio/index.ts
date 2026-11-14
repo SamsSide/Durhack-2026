@@ -22,26 +22,42 @@ function halt(): void {
   if (el) { el.pause(); el.src = ''; el = null; }
 }
 
+const DUCK = 0.15;
+let chantBase = 0.9;
+let warned = false;
+/** Duck the chant while narration speaks, restore it afterwards. */
+function applyDuck(): void {
+  if (chant) chant.volume = state === 'narration' || (state === 'loading' && kindNow === 'narration') ? chantBase * DUCK : chantBase;
+}
+let kindNow = null as 'narration' | 'anthem' | null;
+
 async function play(kind: 'narration' | 'anthem', id: number): Promise<void> {
+  // The same narration already loading or playing: nothing to do.
+  if (kind === 'narration' && kindNow === 'narration' && countryId === id && (state === 'loading' || state === 'narration')) return;
   halt();
+  kindNow = kind;
   const mine = token;
-  state = 'loading'; countryId = id; emit();
+  state = 'loading'; countryId = id; applyDuck(); emit();
   const a = new Audio(`/api/country/${id}/${kind}`);
   a.muted = muted;
   el = a;
-  a.onended = () => { if (mine === token) { state = 'idle'; countryId = null; el = null; emit(); } };
+  a.onended = () => { if (mine === token) { state = 'idle'; countryId = null; el = null; kindNow = null; applyDuck(); emit(); } };
   try {
     await a.play();
-    if (mine === token) { state = kind; emit(); }
+    if (mine === token) { state = kind; applyDuck(); emit(); }
   } catch (err) {
-    if (mine === token) { console.warn(`${kind} failed`, err); state = 'idle'; countryId = null; el = null; emit(); }
+    if (mine === token) {
+      // A 503 (voice unavailable) is normal: the panel shows text only. Log it once.
+      if (!warned) { warned = true; console.warn(`${kind} unavailable, showing text only`, err); }
+      state = 'idle'; countryId = null; el = null; kindNow = null; applyDuck(); emit();
+    }
   }
 }
 
 export const audio = {
   playNarration: (id: number) => play('narration', id),
   playAnthem: (id: number) => play('anthem', id),
-  stop(): void { halt(); state = 'idle'; countryId = null; emit(); },
+  stop(): void { halt(); state = 'idle'; countryId = null; kindNow = null; applyDuck(); emit(); },
   setMuted(m: boolean): void { muted = m; if (el) el.muted = m; emit(); },
   getState: () => snapshot,
   subscribe(listener: () => void): () => void {
@@ -69,8 +85,9 @@ function playChants(ids: number[]): void {
   const id = selected != null && ids.includes(selected) ? selected : ids[Math.floor(Math.random() * ids.length)]!;
   chant?.pause();
   const a = new Audio(`/api/country/${id}/chant`);
-  a.volume = id === selected ? 0.9 : 0.4;
+  chantBase = id === selected ? 0.9 : 0.4;
   chant = a;
+  applyDuck();
   a.play().catch(() => { /* autoplay blocked or route unavailable: silent */ });
 }
 

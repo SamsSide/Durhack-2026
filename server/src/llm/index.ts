@@ -46,6 +46,8 @@ let forcedMock = false;
 /** index.ts calls this for --mock so the flag beats the environment. */
 export function forceMockMode(on: boolean): void { forcedMock = on; }
 const mode = (): LlmMode => (forcedMock ? 'mock' : llmMode());
+/** The mode in force right now (--mock beats the environment). */
+export const currentMode = mode;
 
 // --- meter -------------------------------------------------------------------
 let calls = 0, tokensIn = 0, tokensOut = 0;
@@ -64,8 +66,13 @@ export function getBudget(): Budget {
   return { type: 'budget', calls, tokensIn, tokensOut, callsPerMin: recent.length, capped: isCapped(now), mode: mode() };
 }
 
+/** Painted-flag image calls this run (counted separately from the text meter). */
+let imageCalls = 0;
+export const imageCallCount = () => imageCalls;
+export function noteImageCall(): void { imageCalls++; calls++; recent.push(Date.now()); }
+
 /** A new world starts a fresh budget. */
-export function resetRun(): void { calls = 0; tokensIn = 0; tokensOut = 0; recent = []; }
+export function resetRun(): void { imageCalls = 0; calls = 0; tokensIn = 0; tokensOut = 0; recent = []; }
 
 // --- validation --------------------------------------------------------------
 export function validate<T>(value: unknown, schema: Schema, path = 'value'): T {

@@ -36,12 +36,12 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 | A11 | Stretch, prize: write events to a Tiger Data hypertable and serve one territory-over-time series | | | CP2 | todo | MLH Tiger Data |
 | A12 | Design the interface in Figma: the style, the Create screen, the hologram nation card, the chronicle, the network panel, the top bar; export the variables to `web/src/theme/tokens.css` and a screenshot of each screen to `docs/design/` | | X7 to b and c | Sat 18:00 | next | Owner's laptop has the Figma tools; lane c builds from this |
 | A13 | Lore route: Gemini writes culture, politics, history, relations and anthem lyrics from the nation's real chronicle; cached; a template version for mock mode | | X3 lore | CP1 | done | |
-| A14 | Narration: ElevenLabs speaks the lore in a voice chosen from `voiceStyle`, cached on disk; the real `web/src/audio/` module (X6) | A13 | X3 narration, X6 | CP1.5 | todo | MLH ElevenLabs |
-| A15 | Anthem: the music model sings the lyrics from A13 in the nation's style, cached; regenerated only when the lyrics change | A13 | X3 anthem | CP1.5 | todo | Check music access on our plan first |
+| A14 | Narration: ElevenLabs speaks the lore in a voice chosen from `voiceStyle`, cached on disk; the real `web/src/audio/` module (X6) | A13 | X3 narration, X6 | CP1.5 | done | MLH ElevenLabs |
+| A15 | Anthem: the music model sings the lyrics from A13 in the nation's style, cached; regenerated only when the lyrics change | A13 | X3 anthem | CP1.5 | todo | ElevenLabs Music API needs a paid plan (402 on free) |
 | A16 | War chants: one short chant per nation, cached; played automatically by the audio module when war is declared or a battle is fought | A6, A14 | X3 chant | CP1.5 | todo | |
 | A17 | Stretch: an image as input, read by Gemini for mood and palette | A5 | | CP2 | todo | Cut first if behind |
 | A18 | Regions and secession: nations name the regions they settle, unrest per region, a region breaking away as a new nation with its own agent and ruler (one at a time, with a cooldown) | A4, A6 | `country_founded`, `region_updated` events | CP1.5 | todo | Cut to names and flags only if unstable |
-| A19 | Flags: a `FlagSpec` for every nation and region from the world bible, `flagSvg` in the shared package, and the painted-flag route (Gemini image model, cached, capped) | A5 | X1 `flagSvg`, X3 flag | CP1 for drawn, CP1.5 for painted | todo | Painted flags need billing turned on |
+| A19 | Flags: a `FlagSpec` for every nation and region from the world bible, `flagSvg` in the shared package, and the painted-flag route (Gemini image model, cached, capped) | A5 | X1 `flagSvg`, X3 flag | CP1 for drawn, CP1.5 for painted | testing | Drawn flags done; painted-flag route built but Gemini image needs billing (429), returns 503 meanwhile |
 
 ## Waiting on
 
@@ -56,5 +56,8 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 - 14:49 · A8: 15 low-poly GLB models (structures, units, tree) with the X4 manifest and a preview sheet, built by headless Blender
 - 14:56 · A5 (part): Gemini world bible (flash-lite, about 5 s) and ruler decisions (about 1 s, 300 tokens in, 80 out) with a call scheduler; wired into the engine in A4
 - 14:57 · A3: per-nation rules (income, claims, settlers, building and upgrades, population, region names, chronicle), real events at 14 to 23 a second
+- 14:58 · A14 and A19 route: ElevenLabs narration in a voice chosen from voiceStyle, cached on disk, character cap; painted-flag route (off until Gemini billing)
+
+
 
 Mocks: `npm run mock` (MockRunner behind the `WorldRunner` interface in `server/src/runner.ts`) stands in for the engine until A3; lore, audio and replays are mocked until A13 to A16 and A9.
