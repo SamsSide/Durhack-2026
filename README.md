@@ -3,7 +3,7 @@
 Our entry for DurHack 2026 (Durham University, 24 hours, theme: Composition).
 
 Type one line ("a drowned post-apocalyptic world"), or drop in a picture, and watch a living 3D
-planet build itself. About 500 irregular provinces form on a globe you can spin and zoom. Every
+planet build itself. About 1,200 irregular provinces form on a globe you can spin and zoom. Every
 nation on it is ruled by its own independent AI: it settles land, builds towns and wonders,
 moves through the ages from bows to starships, trades, pays its debts and goes to war, province
 by province. A chronicle tells the story; each nation has its own narrated history, an anthem
@@ -22,11 +22,25 @@ The money is real, on Solana devnet: one Token-2022 world currency with a fixed 
 (trade dues, reparations, plunder, seizure, war chests, subsidies, pooled war funds) signed by
 the paying nation's own key.
 
-Screenshots: [`docs/shots/`](docs/shots/) (for example
-[a nation's payment on the Solana Explorer](docs/shots/solana-devnet-payment.jpg)) and the
-interface design in [`docs/design/`](docs/design/).
-
 The submission text and the demo shot list: [`docs/submission.md`](docs/submission.md).
+
+## Screenshots
+
+All in [`docs/shots/`](docs/shots/); the interface design is in [`docs/design/`](docs/design/).
+
+| What | Files |
+| --- | --- |
+| Calm UI: one left panel, war tabs, node-graph network | `calm-ui-1.jpg`, `calm-ui-2.jpg`, `calm-ui-3.jpg` |
+| The material system (depth, bevels, engraving), before and after | `materials-sheet.jpg`, `depth-card-*`, `depth-chron-*`, `depth-create-*`, `depth-hud-*`, `depth-labels-*`, `depth-net-*`, `depth-overlay-*` (`-before.jpg` and `-after.jpg`) |
+| Time gears up to ten years a second | `gears-10y.jpg` |
+| A living world: boats, caravans, birds, smoke, weather | `living-world-1.jpg`, `living-world-2.jpg`, `living-world-3.jpg` |
+| Terra Nova News with the animated anchor | `news-anchor-1.jpg`, `news-anchor-2.jpg`, `news-anchor-3.jpg` |
+| A confirmed payment on the Solana Explorer | `solana-devnet-payment.jpg` |
+
+![The calm UI](docs/shots/calm-ui-1.jpg)
+![A living world](docs/shots/living-world-1.jpg)
+![The news anchor](docs/shots/news-anchor-1.jpg)
+![The material system](docs/shots/materials-sheet.jpg)
 
 ## Run it
 
@@ -38,7 +52,7 @@ npm run dev     # server on http://localhost:8787, web on http://localhost:5173
 npm run mock    # a scripted world with no API calls, plus the web app
 ```
 
-Copy `.env.example` to `.env` (git-ignored) and fill in what you need. Every key is optional:
+Copy `.env.example` to `.env` (git-ignored; the file lists every variable name, get the values from the owner in person) and fill in what you need. Every key is optional:
 with none set the app runs fully in mock mode.
 
 | Variable | Values | What |
@@ -61,18 +75,22 @@ exactly with no API calls. `./check.sh` is the smoke gate (lint, build, the app 
 
 ## Architecture
 
-- **`packages/shared`**: the world types, the sphere (spherical Voronoi provinces), and the rules:
-  `applyEvent` (the only code that changes a world; used by server and browser alike), growth,
-  war, terrain, ages, regions and secession, council, wonders, trade and payments.
-- **`server`**: Node, Express and `ws`. The tick loop (one tick every half second), one agent per
-  nation and per general on a message bus with a switchable link each, resilience (cut, silence,
-  delete, kill, restore, reconciliation), Gemini (`server/src/llm`, rulers, world bible),
-  lore, narration, anthems, chants, news and decrees (`server/src/story`), replays, the Solana
-  bridge (`server/src/chain`) and Tiger Data (`server/src/tiger`).
-- **`web`**: Vite, React, three.js with react-three-fiber and drei, zustand. The globe (borders,
-  map modes, 100 low-poly GLB models, armies, battles, ships, sky), and the interface built from
-  the Figma design: Create screen, nation card with council and treasury, chronicle, network
-  panel, Terra Nova News, ledger.
+- **One event log.** Nothing changes in place; every change is an event and `applyEvent` in
+  `packages/shared` is the only code that changes a world, on the server and in the browser.
+- **`packages/shared`**: types, the sphere (spherical Voronoi provinces), and the pure rules:
+  growth, war, terrain, ages, secession, council, wonders, trade, payments, economy.
+- **Rules move the world, Gemini rules the nations.** The server ticks every half second; battles
+  are a seeded pure function, so replicas agree with no referee. Rulers ask Gemini rarely, for
+  schema-checked JSON, and fall back to autopilot on any failure.
+- **One agent per nation and per general** (`server/src/agents`), each with its own replica,
+  publishing on a message bus whose links can be cut (`server/src/engine`).
+- **Story and sound** (`server/src/story`): lore, narration, anthems, chants, news and decrees,
+  Gemini for words and ElevenLabs for voice and music, cached on disk by content hash.
+- **Money** (`server/src/chain`): the sim is the truth; a Solana devnet mirror settles every 5 s.
+- **Replays and memory:** every run is recorded to `server/replays/` and replays exactly; the
+  server keeps only a recent chronicle window and streams the full log from disk.
+- **`web`**: Vite, React, three.js (react-three-fiber), zustand: the globe, the map modes, 100
+  low-poly models, and the calm material-system interface built from the Figma design.
 
 ## Sponsor tech
 

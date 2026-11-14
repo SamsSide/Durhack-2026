@@ -1,9 +1,8 @@
-# Terra Nova: submission draft
+# Terra Nova: submission text
 
-*First draft, 14 Nov 2026, written by lane a for row C5. Lane c keeps the final edit and submits.
-Everything here is checked against the lane files (`docs/lanes/`), the code on `main` and the
-facts the owner verified on 14 Nov. Rows that are still `testing` are marked so in section 2;
-rows that are `todo` or `cut` are not claimed. British English, no emojis.*
+*Ready to paste, 14 Nov 2026, updated by lane a for row C5. Lane c keeps the final edit and
+submits. Checked against the lane files (`docs/lanes/`), `docs/decisions.md` and the code on
+`main`. Anything still needing a human look is marked `[check]`. British English, no emojis.*
 
 ---
 
@@ -13,10 +12,17 @@ rows that are `todo` or `cut` are not claimed. British English, no emojis.*
 
 Terra Nova
 
-### Tagline
+### Tagline (one line)
 
-Type one line and watch a living planet build itself, every nation ruled by its own AI, and the
-world keeps going when they cannot talk to each other.
+A new world composed live by AIs that keep working together when they cannot talk to each other.
+
+### Short description
+
+Type one line, or drop in a picture, and a living 3D planet builds itself. Every nation is ruled
+by its own independent Gemini agent with its own wallet on Solana: it settles, trades, pays and
+fights from bows to starships, with narrated histories, anthems sung from what really happened
+and a news broadcast in our own voices. Cut a nation off, silence its ruler, delete it or kill its
+general, and the world keeps building; restore it and its missing years merge in.
 
 ### Inspiration
 
@@ -39,19 +45,22 @@ a globe you can spin and zoom. Gemini writes a world bible: each nation gets a n
 government, an ideology, a founding myth, a flag and a building style. Place names quietly echo
 Durham colleges and North East towns.
 
-Then time runs. Each nation is an independent agent with its own copy of the world. It claims
+Then time runs, from a week a second to ten years a second (new worlds start at a month a
+second, and a director slows down for big moments). Each nation is an independent agent with its own copy of the world. It claims
 land, builds camps that become towns and cities, raises wonders, and moves through the ages, from
 bows and galleys to tanks, maglev freighters and starships. Merchant ships cross the oceans
 between trading partners. Armies march province by province, battles flash, fronts form, peace
 treaties hand over land, and restless regions break away as new nations with their own rulers.
-A chronicle tells the story as it happens.
+Roads of boats, caravans, birds and smoke fill the map, clouds and storms drift past, cities
+grow walls as they grow, armies go round mountains and stop at enemy lines, and rulers and
+generals grow old and die. A chronicle tells the story as it happens.
 
-Click a nation and its card slides in: its culture, politics, history with each neighbour, its
+Click a nation and its card docks on the left (one panel at a time, so the globe stays clear): its culture, politics, history with each neighbour, its
 ruler and general, and its treasury. A voice narrates its lore. Its anthem, written by Gemini
 from what has actually happened to it and sung by ElevenLabs Music, plays. When it goes to war
 you hear its war chant. Every couple of minutes "Terra Nova News" comes on: Gemini looks at a
-capture of the globe and writes a bulletin, read by a news anchor in one of our own cloned
-voices. You can speak a decree ("a plague in the north") and Gemini hears it and turns it into
+capture of the globe and writes a bulletin, read in one of our own cloned voices by an animated
+anchor in a studio window. You can speak a decree ("a plague in the north") and Gemini hears it and turns it into
 an event that strikes the world.
 
 Money is real, on Solana devnet. The world has one currency, a Token-2022 token with on-chain
@@ -59,7 +68,9 @@ metadata, a fixed supply of 1,000,000 and its mint authority revoked, so nobody 
 Every nation has its own wallet. Every payment between nations (trade dues, reparations, plunder,
 seized treasuries, war chests, subsidies, pooled war funds) is a memo plus a TransferChecked
 signed by the paying nation's own key. In a two-minute test run, 35 payments were confirmed on
-devnet with every nation's balance in step with the simulation (drift 0).
+devnet with every nation's balance in step with the simulation (drift 0) `[check: re-run on the
+final build]`. For a demo, prepare mode pauses a new world while its lore, narration, chants,
+anthems and first decisions are made, so nothing stutters when play starts.
 
 The best part is breaking it. The network panel lets you cut a nation's link, silence its ruler,
 delete it, or kill its general. A cut nation keeps building on what it last knew while its map
@@ -85,7 +96,7 @@ claims are settled on screen and the chronicle records the dispute.
 - **Agents and a message bus.** Each nation (and each nation's general) is its own agent with its
   own replica, publishing events on a bus whose link to each agent can be switched off. Cut,
   silence, delete, kill and restore are controls on that bus and on the agents.
-- **The globe** is a spherical Voronoi of about 500 convex provinces (quickhull on the sphere),
+- **The globe** is a spherical Voronoi of about 1,200 convex provinces (quickhull on the sphere),
   drawn as raised land with cliffs, borders, map modes, rivers, clouds, a day and night cycle and
   100 low-poly GLB models (buildings in ten styles, units for seven ages, wonders) made with
   headless Blender.
@@ -102,9 +113,13 @@ claims are settled on screen and the chronicle records the dispute.
 - **Tiger Data** (optional): every event and each nation's stats go into hypertables with a
   real-time continuous aggregate for territory over time.
 - **The interface** was designed in Figma in an old-atlas style (parchment, serif type, ink
-  borders) and built from that design.
+  borders), then calmed in the spirit of grand-strategy map games (one left panel, small war tabs,
+  a node-graph network panel, icon map modes) and given a shared material system (depth, bevels,
+  engraved names, plated badges) in a final polish pass.
+- **Built to stay small.** The server caps its memory: the chronicle is a recent window trimmed by
+  the shared `applyEvent`, and the full event log streams from disk, so long worlds stay small.
 - **Three people, many agents.** Each of us ran Claude Code agents on our own laptop, in our own
-  lane, coordinating only through GitHub issues and pull requests. About 180 pull requests landed
+  lane, coordinating only through GitHub issues and pull requests. About 270 pull requests landed
   in 24 hours. Agent sessions were captured with Entire.
 
 ### Challenges we ran into
@@ -123,6 +138,10 @@ claims are settled on screen and the chronicle records the dispute.
   polling, and back off; the overflow rolls into the next window.
 - **Speed of Gemini at world creation.** The world bible took about 28 seconds on flash; moving it
   to flash-lite cut it to about 5, which fits the 15-second demo step.
+- **A frozen browser tab.** A label loop on the payment arcs starved the page; we fixed it and
+  made the server ride out chain and socket errors instead of dying.
+- **Memory on long worlds.** Keeping every event on the heap grew without end; the chronicle is
+  now a window and the log lives on disk.
 - **Content filters.** The music model rejects prompts that say "national anthem", so the prompt
   never does.
 - **Many agents, one repo.** Three laptops and up to seven agents at once meant constant merge
@@ -139,6 +158,7 @@ claims are settled on screen and the chronicle records the dispute.
   nobody can inflate.
 - Gemini used three ways beyond text: it reads a picture, hears a voice and watches the map.
 - The team's own voices presenting the world to the judges.
+- A UI with real depth and material, not flat panels, in a single day.
 - A run that replays exactly, offline, from its event log.
 
 ### What we learned
@@ -158,10 +178,9 @@ claims are settled on screen and the chronicle records the dispute.
 ### What's next
 
 - Agents on separate machines, so a cut is a real network partition and not a software switch.
-- A timeline scrubber that rebuilds the globe at any past year from the event log.
+- Districts and farmers inside provinces, and more of the economy (loans, banks).
 - Letting a viewer play as one nation alongside the AIs.
 - AI-painted flags (built, waiting on image billing).
-- A live territory chart in the interface fed from the Tiger Data continuous aggregate.
 
 ### Built with
 
@@ -190,8 +209,9 @@ Polish and Completion.
 | Research and Learning | Research notes for every sponsor, Solana economy design, building styles, nation identity; "What we learned" above | `docs/prizes/`, `docs/research/` |
 | Polish and Completion | Figma design built to a 720 px projector; exact offline replay as a backup | `docs/design/`, `server/replays/demo-1.json` |
 
-Weak spots: `docs/documentation.md` (the judges' briefing) is still empty headings. Several
-rows are built but still `testing` (see Gaps).
+Extra polish to point at: the material-system UI pass (`docs/shots/depth-*-after.jpg`,
+`materials-sheet.jpg`), the calm UI (`calm-ui-*.jpg`), a living world (`living-world-*.jpg`) and the
+animated news anchor (`news-anchor-*.jpg`). Weak spots: many rows are still `testing` (see Gaps).
 
 ### 2.2 Neptune North: Actors work better together
 
@@ -246,7 +266,8 @@ it is a teaching tool for distributed systems and resilience.
   cloned voices, who also narrate up to three nations and herald decrees. Prompts are shaped by
   each nation's era and government. Cached on disk by content hash.
 - **Where:** `server/src/story/eleven.ts`, `anthem.ts`, `chant.ts`, `broadcast.ts`,
-  `teamVoices.ts`; `web/src/audio/` (rows A14 done, A15 and A16 `testing`, A21 done).
+  `teamVoices.ts`; `web/src/audio/` (rows A14 done, A15 and A16 `testing`). `[check]` listen to an anthem and a chant once, and
+  the animated anchor with sound.
 - In the write-up, name the features: TTS, eleven_v3 audio tags, Music API with composition plan,
   Instant Voice Cloning.
 
@@ -259,7 +280,7 @@ it is a teaching tool for distributed systems and resilience.
     anthem lyrics from the real chronicle.
   - Image in: a picture on the Create screen sets the world's mood, palette and setting (A17).
   - Audio in: a spoken decree is heard directly by Gemini and turned into an event with an effect
-    (A20).
+    (A20). `[check]` test with a real browser microphone.
   - Image in, voice out: Terra Nova News, Gemini watching a capture of the globe plus the recent
     chronicle (A21).
   - Models: `gemini-3.5-flash-lite` (rulers, bible, image and voice) and `gemini-3.5-flash`
@@ -273,10 +294,10 @@ it is a teaching tool for distributed systems and resilience.
   collaboration, clean code history, measurable token efficiency.
 - **How:** Entire is enabled for Claude Code on every laptop (`.entire/settings.json`, hooks in
   `.claude/settings.json`); sessions are captured and linked to commits with the
-  `Entire-Checkpoint` trailer. Clean history: about 180 squash-merged pull requests with plain
+  `Entire-Checkpoint` trailer. Clean history: about 270 squash-merged pull requests with plain
   subjects, lanes, contracts and an append-only decision log.
 - **Where:** `.entire/`, `docs/decisions.md`, `git log`, `docs/prizes/P3-entire.md`.
-- **Weak:** session push is off, and Graph, Brain, Trails and the entire.com mirror are not set
+- **Weak `[check]`:** session push is off, and Graph, Brain, Trails and the entire.com mirror are not set
   up yet (see Gaps). No token-efficiency numbers yet.
 
 ### 2.8 MLH Best Use of Solana
@@ -303,15 +324,15 @@ it is a teaching tool for distributed systems and resilience.
   (`world_events`, `nation_stats`) with a real-time continuous aggregate
   (`nation_territory_10s`), served at `GET /api/stats/territory` and `GET /api/stats/summary`.
   Off unless `TIGER_DATABASE_URL` is set; never blocks the tick.
-- **Where:** `server/src/tiger/store.ts`, `server/src/tiger/routes.ts` (row A11, `testing`).
-- **Weak:** nothing in the web app shows the territory chart yet, and the plan asked for one live
-  chart.
+- **Where:** `server/src/tiger/store.ts`, `server/src/tiger/routes.ts` (row A11), and the
+  `TerritoryChart` in `web/src/ui/stats/`: one live line per nation from `GET /api/stats/territory`,
+  refreshed every 5 s, captioned "Powered by Tiger Data". `[check]` needs a Tiger Cloud URL in the
+  demo `.env` and the chart seen once with real data; otherwise untick this prize.
 
 ### Gaps
 
-- **Main track:** `docs/documentation.md` is empty; B8 polish is `wip`, B9 timeline scrubber is
-  `todo`; many rows are `testing` (A15, A16, A19, A26, A28, A29, A30, B5, B7, C1 to C4, C6 to
-  C11) and need a human pass before the video.
+- **Main track:** many rows are `testing` (A15, A16, A19, A26, A28, A29, A30, B5, B7, B9, C1 to
+  C4, C6 to C15) and need a human pass before the video.
 - **Neptune North:** strong. Risk is only the question "is it really distributed?": all agents in
   one process, the cut is a software switch. Council kill (A29, C11) is `testing`.
 - **Marshall Wace:** framing only; needs the pitch to open with "New Worlds" and a visit to
@@ -324,54 +345,58 @@ it is a teaching tool for distributed systems and resilience.
   DurHack Devpost.
 - **Entire:** `push_sessions` is false; Graph, Brain, Trails and the mirror are not set up; no
   token numbers. This is the weakest MLH entry as things stand.
-- **Solana:** ledger rework awaits the owner's live run (A27 note); the Commons wallet must be
+- **Solana:** the owner's devnet run of the exact ledger (#180) was clean; B10 hand test is pending; the Commons wallet must be
   funded from the faucet before the demo; keep the saved signature file as the fallback.
-- **Tiger Data:** no chart in the interface; needs a Tiger Cloud URL in the demo `.env`.
+- **Tiger Data:** the chart exists; needs a Tiger Cloud URL in the demo `.env` and one look at it.
 
 ---
 
-## 3. Two-minute demo video: shot list
+## 3. Video plan: two minutes
 
-Matches the demo script in `docs/hackathon-plan.md` section 2. Record in live mode
-(`LLM_MODE=live`, `SOLANA_MODE=devnet`) with the demo world's audio already cached; keep the
-replay (`server/replays/demo-1.json`) as the backup take.
+Matches the demo script in `docs/hackathon-plan.md` section 2. Record at 1920x1080 in live mode
+(`LLM_MODE=live`, `SOLANA_MODE=devnet`) after prepare mode has finished (readiness panel green,
+audio cached). Keep `server/replays/demo-1.json` (`POST /api/replays/demo-1/play`) as the backup
+take. Record the voice-over separately and lay it over the screen capture. Total about 2:00.
 
-| Time | Shot | Voice-over (short) |
-| --- | --- | --- |
-| 0:00 to 0:08 | Title card, then the Create screen. Type "a drowned post-apocalyptic world", drop a picture, six nations | "Terra Nova. New Worlds, composed live by AIs." |
-| 0:08 to 0:20 | Press Create. The planet forms; six nations named and placed with flags and leaders | "Gemini reads the prompt and the picture and writes a world bible." |
-| 0:20 to 0:35 | Time runs fast. Borders spread, camps become cities, models pop up, ages advance, trader ships cross the sea, chronicle ticker | "Each nation is its own agent. Rules move the world; Gemini rules each nation." |
-| 0:35 to 0:48 | Click a nation. Border lights, card slides in. Narration in a team voice, then a few bars of its anthem | "Its anthem is written from what has actually happened to it." |
-| 0:48 to 1:00 | A war breaks out. Armies march, volleys, tiles change colour, war chant. Switch to diplomacy mode | "Wars are fought province by province, settled by a seeded function, no referee." |
-| 1:00 to 1:12 | Gold payment arcs on the globe; open the Treasury tab; cut to the Solana Explorer page of one payment (as in `docs/shots/solana-devnet-payment.jpg`): Success, devnet, the memo | "Every payment is a real devnet transfer, signed by the paying nation's own wallet. Fixed supply, nobody can print money." |
-| 1:12 to 1:30 | The moment. Network panel: cut one nation mid-war. Static ring, beliefs view drifting from the truth, neighbours notice the silence. Delete a second nation: it crumbles, neighbours carve the ruins | "Cut off, it keeps building on what it last knew." |
-| 1:30 to 1:40 | On a nation card, kill its general (two clicks). Stand-in covers, then a successor takes over with the old general's memory | "Even inside a nation, the actors recover." |
-| 1:40 to 1:50 | Restore the link. Missing years merge, disputes settled on screen, chronicle records the Silence. Hold a spoken decree ("a plague in the north") and see it strike | "Bring it back and the history merges in." |
-| 1:50 to 2:00 | Terra Nova News lower-third for a few seconds, then the closing card with the token meter; end on the repo URL and the Entire sessions page | "This whole world cost N tokens. Built by three people and their agents." |
+| Time | Shot | Click and do | Say |
+| --- | --- | --- | --- |
+| 0:00 to 0:08 | Title card, then the Create screen | Type "a drowned post-apocalyptic world", drop a picture on the drop zone, set six nations, tick Prepare | "Terra Nova. New Worlds, composed live by AIs." |
+| 0:08 to 0:18 | The planet forms | Press Create, wait for Prepare to finish, press Play. Pan across the six named nations with flags | "Gemini reads the prompt and the picture and writes a world bible. Every nation gets its own AI." |
+| 0:18 to 0:32 | Time runs | Gears at a few years a second. Borders spread, towns grow walls, boats and caravans move, ages advance, chronicle ticker scrolls | "Rules move the world; Gemini only rules each nation, a few words every half a minute." |
+| 0:32 to 0:45 | A nation card | Click a nation: its card docks left. Open the Council tab; play narration, then a few bars of the anthem | "Its anthem is written from what has actually happened to it, sung by ElevenLabs." |
+| 0:45 to 0:57 | War | A war starts: armies march round mountains, battles flash, war chant. Switch the minimap to the diplomacy icon | "Wars are settled province by province by a seeded function. No referee." |
+| 0:57 to 1:08 | Money | Click a gold payment arc, land on the Solana Explorer page (Success, devnet, memo); back, open the Treasury tab | "Every payment is a real devnet transfer signed by the paying nation. Fixed supply, nobody can print money." |
+| 1:08 to 1:28 | The moment | Open the Network panel (node graph). Cut one nation mid-war: static ring, press Show beliefs, drift visible. Delete a second nation: it crumbles | "Cut off, it keeps building on what it last knew. Delete one and its neighbours carve up the ruins." |
+| 1:28 to 1:38 | Inside a nation | On a card, Kill the general (two clicks). Stand-in covers, then a successor with the old memory | "Even inside a nation, the actors recover." |
+| 1:38 to 1:50 | Restore and decree | Restore the link: missing years merge, disputes settled, "the Silence" in the chronicle. Hold the mic: "a plague in the north" | "Bring it back and the history merges in. A spoken decree is heard by Gemini." |
+| 1:50 to 2:00 | Close | Terra Nova News with the animated anchor for a few seconds, then the token meter card (End key), then the repo URL and the Entire sessions page | "This whole world cost N tokens. Built by three people and their agents." |
+
+Safety shots to capture too: the Explorer page (`docs/shots/solana-devnet-payment.jpg`), the
+10-years-a-second gear (`gears-10y.jpg`) and the Tiger Data territory chart `[check]`.
 
 ---
 
 ## 4. What a human must still do to submit
 
 - [ ] Find the submission platform and deadline (Devpost page was not live on 14 Nov 13:35);
-      hacking ends Sunday 12:00.
-- [ ] Hand-test the `testing` rows that appear in the video (anthem, chant, council kill, war
-      look, ripple and crumble, spoken decree with a real microphone).
+      hacking ends Sunday 12:00 `[check]`.
+- [ ] Hand-test the `testing` rows that appear in the video: anthem, chant, council kill, spoken
+      decree with a real microphone, prepare mode, news anchor, Treasury tab `[check]`.
 - [ ] Fund the Commons wallet from the devnet faucet; run `SOLANA_MODE=devnet` once and save a
-      fresh Explorer link for the video and the write-up.
-- [ ] Record the 2-minute video to the shot list, upload it (YouTube or Vimeo, public or
-      unlisted) and paste the link.
-- [ ] Make the repository public (or confirm judges can see it) and paste the link. Before that,
-      decide on Entire session push: once on, transcripts become public with the repo.
+      fresh Explorer link for the video and the write-up `[check]`.
+- [ ] Re-confirm the "35 payments, drift 0" figure on the final build or drop the number `[check]`.
+- [ ] Record the video to the plan above, upload it (YouTube or Vimeo, unlisted is fine) and paste
+      the link.
+- [ ] Make the repository public (or confirm judges can see it). First decide on Entire session
+      push: once on, transcripts become public with the repo `[check]`.
 - [ ] Owner: turn on Entire `push_sessions`, set up Graph, Brain, the mirror and if possible one
-      Trail; take a screenshot of the sessions page and token numbers.
-- [ ] Optional: set `TIGER_DATABASE_URL` and add a territory chart, or untick Tiger Data.
-- [ ] Copy section 1 into the Devpost fields; add screenshots (globe, nation card, network panel
-      during a cut, Treasury tab, Explorer page) to `docs/shots/` and the gallery.
+      Trail; screenshot the sessions page and token numbers `[check]`.
+- [ ] Optional: set `TIGER_DATABASE_URL` and look at the chart, or untick Tiger Data.
+- [ ] Copy section 1 into the Devpost fields; use the gallery shots from `docs/shots/`.
 - [ ] Add all three team members to the Devpost project (SamsSide, CutGrass88, Justin-CODING-PY).
 - [ ] Tick the prizes: main track; Neptune North; Marshall Wace New Worlds; Waterstons; MLH
-      ElevenLabs, Gemini, Entire, Solana; Tiger Data only if it is shown.
-- [ ] Fill `docs/documentation.md` for judges who read the repo (`durhack-explain`).
+      ElevenLabs, Gemini, Entire, Solana; Tiger Data only if the chart works.
+- [ ] Check the MLH Gemini category label on the DurHack Devpost `[check]`.
 - [ ] Visit the Neptune North and Marshall Wace stands; rehearse the demo three times (CP3).
-- [ ] Bring a speaker for the audio and a saved replay as the offline backup.
+- [ ] Bring a speaker for the audio and the saved replay as the offline backup.
 - [ ] After the event: optional DEV post.
