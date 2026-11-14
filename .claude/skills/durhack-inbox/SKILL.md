@@ -18,23 +18,23 @@ tells their session. Load `durhack-dev` first if it isn't loaded.
 
 ## Watching (start this early in every working session)
 
-The watcher polls GitHub every 60 s in the background and prints one line per new event. It
-costs nothing while quiet and never blocks you.
+The watcher polls GitHub every 30 s in the background and reports new events. It costs nothing
+while quiet, never blocks you, and never stops on an error (a failed poll is skipped and tried
+again).
 
-**With the Monitor tool** (preferred):
+**Run it as a background shell command** (the normal way; it has no time limit):
 
 ```
-Monitor  command: scripts/durhack/inbox.sh --watch 60
-         description: "DurHack inbox (issues, replies, PRs)"
-         timeout_ms: 1800000
+Bash  command: scripts/durhack/inbox.sh --until-event 30
+      run_in_background: true
 ```
 
-Monitors expire after 30 minutes: when told it expired, re-arm it the same way. Don't
-mention re-arming to the user unless it fails.
+It exits as soon as there is at least one event and you are notified with the event lines.
+Handle them, then **start it again straight away, every time**. Do this without telling the
+user. If it ever exits with no event lines, just start it again.
 
-**Without Monitor:** Bash with `run_in_background: true`:
-`scripts/durhack/inbox.sh --until-event 60`. It exits on the first event (you get notified);
-handle it, then start it again.
+**Do not use the Monitor tool for the watcher.** Monitors expire after 30 minutes, which left
+sessions with no watcher on 14 Nov. (`--watch 30` still exists for a short manual watch.)
 
 **Never run the watcher in the foreground** and never `sleep`-poll yourself. To look right now:
 `scripts/durhack/inbox.sh --list` (everything open that concerns you) or `--once` (just what's
