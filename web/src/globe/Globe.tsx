@@ -16,10 +16,16 @@ import { HoverHighlight } from './camera/HoverHighlight';
 import { SelectionGlow } from './camera/SelectionGlow';
 import { Political } from './political/Political';
 import { Atmosphere } from './atmosphere/Atmosphere';
+import { Space } from './space/Space';
+import { Orbit } from './orbit';
+import { Trade } from './trade/Trade';
 import { Structures } from './structures/Structures';
 import { Units } from './units';
 import { Clouds } from './clouds';
 import { Towns } from './towns';
+import { EventBeacons, Spotlight } from './events';
+import { Council } from './council';
+import { Wonders } from './wonders';
 import { registerCapture } from './capture';
 import { setStatuses } from './status/statusTint';
 
@@ -149,8 +155,13 @@ function Scene({ world }: { world: World }) {
       <SelectionGlow />
       <Political />
       <Structures />
+      <Wonders />
       <Units />
+      <Trade />
       <Towns />
+      <EventBeacons />
+      <Council />
+      <Spotlight />
     </ProvinceMeshContext.Provider>
   );
 }
@@ -165,6 +176,8 @@ export function Globe() {
       <color attach="background" args={[space]} />
       <hemisphereLight args={['#fff6e0', '#33414a', 0.6]} />
       <CameraLight />
+      <Space />
+      <Orbit />
       <Atmosphere />
       <Clouds />
       {world && <Scene world={world} />}

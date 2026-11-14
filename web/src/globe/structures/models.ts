@@ -86,7 +86,7 @@ export function loadModels(): Promise<ModelSet> {
   return cache;
 }
 
-async function loadFile(set: ModelSet, file: string): Promise<ModelPart[] | null> {
+export async function loadFile(set: ModelSet, file: string): Promise<ModelPart[] | null> {
   const have = set.files.get(file);
   if (have) return have;
   if (set.failed.has(file)) return null;

@@ -87,9 +87,11 @@ body:has(.card-dock:not(.out)):has(.minimap) .legend-box { bottom: calc(var(--sp
   background: color-mix(in srgb, var(--color-bg) 92%, transparent); border: 1px solid var(--holo-tint); border-radius: var(--radius-1);
   color: var(--color-text); font-size: 14px; box-shadow: 0 0 18px var(--holo-scanline);
 }
-/* a herald dispatch (lane c, .tn-herald) owns top 64 px centre; sit the banner below it while one shows */
-body:has(.tn-herald) .belief-banner { top: 148px; }
-.belief-banner { transition: top 200ms var(--ease-out); }
+/* a herald dispatch (lane c, .tn-herald) owns top 64 px centre; it publishes its bottom edge + 8px as --tn-herald-bottom on :root while it shows */
+.belief-banner { top: var(--tn-herald-bottom, 64px); transition: top 200ms var(--ease-out); }
+/* the news lower-third (.tn-news) covers the minimap: fade the minimap out while it is on screen */
+.minimap { transition: right var(--dur-fast) var(--ease-out), bottom var(--dur-fast) var(--ease-out), opacity 200ms var(--ease-out); }
+body:has(.tn-news) .minimap { opacity: 0; pointer-events: none; }
 .belief-banner .cap { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--holo-tint); }
 .belief-banner .btn { background: transparent; color: var(--holo-tint); border-color: var(--holo-tint); }
 .belief-banner .btn:hover { background: var(--holo-scanline); color: var(--holo-tint); }
@@ -164,3 +166,18 @@ body:has(.tn-herald) .belief-banner { top: 148px; }
 .legend-terrain .lg-row { font-size: 13px; }
 .legend-terrain .lg-name { width: 62px; flex: none; }
 .legend-terrain .lg-fx { color: var(--color-text-muted); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+
+/* Economy (A27): compact counter in the top bar, ledger panel on the left under the network panel */
+.econ-counter-slot { display: inline-flex; align-items: center; }
+.ledger-slot { position: absolute; z-index: 5; left: var(--space-4); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3)); width: 280px; max-height: 40vh; display: flex; flex-direction: column; }
+.ledger-slot .ledger-toggle { align-self: flex-start; margin-bottom: 4px; }
+.ledger-slot .ledger-body { overflow: auto; min-height: 0; }
+
+/* Lane c's EventFeed (#148): left edge under the folded network tab; the open network panel sits above it. */
+.event-feed-slot {
+  position: absolute;
+  left: 16px;
+  top: calc(var(--topbar-height, 52px) + 72px);
+  z-index: 4;
+  pointer-events: none;
+}

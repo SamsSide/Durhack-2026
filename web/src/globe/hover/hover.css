@@ -27,3 +27,9 @@
 .ht-num { font-family: var(--font-mono); font-size: 15px; font-weight: 600; color: var(--color-accent); }
 @media (prefers-reduced-motion: reduce) { .hover-tip { transition: none; } }
 .ht-fx { margin-top: 4px; font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--color-text-muted); white-space: nowrap; }
+/* Wonder section (row A30). */
+.ht-wonder { margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--color-border); }
+.ht-wonder-name {
+  margin-top: 2px; font-family: var(--font-display); font-weight: 600; font-size: 14px; line-height: 18px;
+  color: var(--color-accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}

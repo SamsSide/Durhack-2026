@@ -6,6 +6,7 @@ import type { CameraControls as CameraControlsImpl } from '@react-three/drei';
 import { useCamera } from '../../state/camera';
 import { useWorld } from '../../state/world';
 import { CAM_MAX, CAM_MIN } from '../constants';
+import { flyControlsTo, onFocusTile } from '../events/focus';
 
 const NONE = 0; // camera-controls ACTION.NONE
 const FLY_DISTANCE = 1.6;
@@ -96,6 +97,15 @@ export function CameraRig() {
     void c.rotateTo(azimuth, polar, true);
     void c.dollyTo(FLY_DISTANCE, true);
   }, [nonce]);
+
+  // Fly to a single tile: beacon clicks, the spotlight tour, 'terra:focus-tile' from the feed.
+  useEffect(() => onFocusTile((tile) => {
+    const c = ref.current;
+    const centre = useWorld.getState().world?.tiles[tile]?.center;
+    if (!c || !centre) return;
+    flyingUntil.current = performance.now() + 1400;
+    flyControlsTo(c, centre);
+  }), []);
 
   return (
     <CameraControls

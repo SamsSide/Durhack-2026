@@ -167,7 +167,7 @@ export class Smoke {
 
 // ---------- pop badges ----------
 
-export type PopKind = 'clash' | 'scroll' | 'loss';
+export type PopKind = 'clash' | 'scroll' | 'loss' | 'attrition';
 const POPS = 32;
 
 interface Pop {
@@ -213,7 +213,10 @@ export class Pops {
       if (!f) continue;
       const ms = now - p.born;
       let s = 1, a = 1, cy = 0.5;
-      if (p.kind === 'loss') {
+      if (p.kind === 'attrition') {
+        cy = -0.3 - t * 1.1;
+        a = (t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4) * 0.8;
+      } else if (p.kind === 'loss') {
         cy = -0.6 - t * 2.2;
         a = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
         s = ms < 140 ? 0.6 + 0.4 * (ms / 140) : 1;

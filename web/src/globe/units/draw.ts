@@ -2,7 +2,7 @@
 // loss numbers, smoke puffs and spark dots. Lane b (B5).
 import * as THREE from 'three';
 
-export type IconKind = 'spear' | 'sword' | 'musket' | 'rifle' | 'tank' | 'drone' | 'buggy' | 'ship' | 'wagon';
+export type IconKind = 'spear' | 'sword' | 'musket' | 'rifle' | 'tank' | 'drone' | 'starship' | 'buggy' | 'ship' | 'wagon';
 
 export function canvas2d(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const c = document.createElement('canvas');
@@ -107,6 +107,11 @@ export function drawIcon(ctx: CanvasRenderingContext2D, kind: IconKind, cx: numb
       for (const [x, y] of [[-10, -10], [10, -10], [-10, 10], [10, 10]] as const) circle(ctx, x, y, 5, true);
       circle(ctx, 0, 0, 4.5);
       ctx.fillStyle = bg; circle(ctx, 0, 0, 1.6);
+      break;
+    case 'starship':
+      poly(ctx, [-15, 8, -4, 0, 0, -13, 4, 0, 15, 8, 6, 5, 0, 9, -6, 5]);
+      ctx.fillStyle = bg;
+      circle(ctx, 0, -2, 2);
       break;
     case 'buggy':
       poly(ctx, [-15, 3, -11, -4, 7, -4, 13, 3]);
@@ -296,6 +301,41 @@ export function drawLoss(text: string, war: string, ink: string): HTMLCanvasElem
   ctx.strokeText(text, 80, 38);
   ctx.fillStyle = war;
   ctx.fillText(text, 80, 38);
+  return c;
+}
+
+/** "-3" small and grey: slow attrition, quieter than a battle loss. */
+export function drawAttrition(text: string, ink: string): HTMLCanvasElement {
+  const [c, ctx] = canvas2d(112, 56);
+  ctx.font = 'bold 34px "IBM Plex Mono", ui-monospace, Menlo, monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 7;
+  ctx.strokeStyle = ink;
+  ctx.strokeText(text, 56, 30);
+  ctx.fillStyle = '#b4b0a6';
+  ctx.fillText(text, 56, 30);
+  return c;
+}
+
+/** A small shield with a terrain defence bonus ("+75%"), beside the clash badge. */
+export function drawShield(text: string, parchment: string, accent: string, ink: string): HTMLCanvasElement {
+  const [c, ctx] = canvas2d(120, 128);
+  ctx.beginPath();
+  ctx.moveTo(14, 12); ctx.lineTo(106, 12); ctx.lineTo(106, 62);
+  ctx.quadraticCurveTo(106, 100, 60, 120);
+  ctx.quadraticCurveTo(14, 100, 14, 62);
+  ctx.closePath();
+  ctx.fillStyle = parchment; ctx.fill();
+  ctx.lineWidth = 7; ctx.strokeStyle = ink; ctx.stroke();
+  ctx.lineWidth = 3; ctx.strokeStyle = accent;
+  ctx.stroke();
+  ctx.font = 'bold 34px "IBM Plex Mono", ui-monospace, Menlo, monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = ink;
+  ctx.fillText(text, 60, 54);
   return c;
 }
 

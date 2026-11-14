@@ -5,6 +5,8 @@ import { flagSvg } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import { effectsLine } from '../terrain/effects';
 import { useHover } from '../camera/usePicking';
+import { useWonders } from '../wonders/store';
+import { WONDER_LABEL, bonusText, wonderBonus } from '../wonders/types';
 import './hover.css';
 
 const SHOW_DELAY = 160; // ms on one tile before the tooltip appears
@@ -80,6 +82,12 @@ export function HoverTooltip() {
   const last = useRef(info);
   if (info) last.current = info;
   const shown = info ?? last.current;
+  // A wonder on this tile (row A30): its name, kind, and the bonus once @terra/shared has WONDER_BONUS.
+  const wonder = useWonders((s) => (tile >= 0 ? s.list.find((r) => r.tile === tile) : undefined));
+  const lastWonder = useRef(wonder);
+  if (info) lastWonder.current = wonder;
+  const ww = info ? wonder : lastWonder.current;
+  const wonderBonusLine = ww ? bonusText(wonderBonus(ww.kind)) : '';
 
   return (
     <div ref={box} className={`hover-tip${info ? ' on' : ''}`} aria-hidden>
@@ -94,6 +102,14 @@ export function HoverTooltip() {
           </div>
           <div className="ht-row"><span className="ht-cap">Provinces</span><span className="ht-num">{shown.provinces}</span></div>
           <div className="ht-fx">{shown.terrain}: {shown.fx}</div>
+          {ww && (
+            <div className="ht-wonder">
+              <div className="ht-cap">Wonder{ww.complete ? '' : ' · being built'}</div>
+              <div className="ht-wonder-name">{ww.name}</div>
+              <div className="ht-sub">{WONDER_LABEL[ww.kind]}</div>
+              {ww.complete && wonderBonusLine && <div className="ht-fx">{wonderBonusLine}</div>}
+            </div>
+          )}
         </>
       )}
       {shown?.kind === 'land' && (

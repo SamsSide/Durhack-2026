@@ -303,6 +303,7 @@ export class StructureField {
     let fresh = 0;
     for (const s of this.world.structures) {
       if (s.tile < 0 || s.tile >= this.world.tiles.length) continue;
+      if ((s.kind as string) === 'wonder') continue; // wonders are drawn by globe/wonders, not as a box here
       seen.add(s.id);
       const r = this.recs.get(s.id);
       if (!r) {

@@ -5,7 +5,18 @@ import type { AgentStatus, World, WorldEvent } from '@terra/shared';
 import { useBelief } from './belief';
 import { useCamera } from './camera';
 
+/** X2 `ledger` row (A27). Re-sent on each status change; the store keeps the latest per id. */
+export interface LedgerRow {
+  id: string; eventIds?: string[]; tick: number; year: number; from: number; to: number; amount: number;
+  reason: string; note?: string; status: 'queued' | 'sent' | 'confirmed' | 'failed' | 'simulated';
+  signature?: string | null; url?: string | null;
+}
+/** X2 `economy` message (A27). */
+export interface EconomyStatus { mode: string; online: boolean; pending: number; payments: number; volume: number; feesSol: number }
+
 export interface WorldStore {
+  ledger: LedgerRow[];            // newest last, at most 50
+  economy: EconomyStatus | null;
   world: World | null;
   version: number;
   agents: AgentStatus[];
@@ -40,6 +51,8 @@ export const useWorld = create<WorldStore>((set, get) => ({
   mapMode: 'political',
   recentEvents: [],
   clock: null,
+  ledger: [],
+  economy: null,
   setMapMode: (mapMode) => set({ mapMode }),
   select: (countryId, tileId = null) => {
     const region = tileId != null ? get().world?.tiles[tileId]?.region ?? -1 : -1;
@@ -61,7 +74,7 @@ function handle(msg: { type: string; [k: string]: unknown }): void {
   switch (msg.type) {
     case 'snapshot': {
       const world = msg.world as World;
-      useWorld.setState({ world, version: s.version + 1, agents: world.agents ?? [], recentEvents: [] });
+      useWorld.setState({ world, version: s.version + 1, agents: world.agents ?? [], recentEvents: [], ledger: [] });
       break;
     }
     case 'events': {
@@ -83,11 +96,26 @@ function handle(msg: { type: string; [k: string]: unknown }): void {
     case 'clock':
       useWorld.setState({ clock: { speed: msg.speed as number, target: msg.target as number, pacing: msg.pacing as 'auto' | 'manual', paused: !!msg.paused } });
       break;
+    case 'ledger': {
+      const rows = (msg.entries as LedgerRow[]) ?? [];
+      const next = [...s.ledger];
+      for (const r of rows) {
+        const i = next.findIndex((x) => x.id === r.id);
+        if (i >= 0) next[i] = r; else next.push(r);
+      }
+      useWorld.setState({ ledger: next.slice(-50) });
+      break;
+    }
+    case 'economy': {
+      const { type: _t, ...rest } = msg;
+      useWorld.setState({ economy: rest as unknown as EconomyStatus });
+      break;
+    }
     case 'belief':
       useBelief.getState().set(msg.countryId as number, msg.owner as number[]);
       break;
     case 'none':
-      useWorld.setState({ world: null, agents: [], recentEvents: [], selectedCountryId: null, selectedTileId: null, selectedRegionId: null });
+      useWorld.setState({ world: null, agents: [], recentEvents: [], ledger: [], economy: null, selectedCountryId: null, selectedTileId: null, selectedRegionId: null });
       break;
     case 'error':
       console.warn('server error:', msg.message);

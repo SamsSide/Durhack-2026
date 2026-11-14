@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useWorld } from '../state/world';
 import { TokenMeter } from '../ui';
+import { useEconomyOn } from './useEconomyOn';
+import { EconomyCounter } from './lookup';
 import { SpeedControl } from './SpeedControl';
 import type { WorldStore } from '../state/world';
 import './hud.css';
@@ -29,6 +31,7 @@ export function TopBar({ onCreate }: { onCreate: () => void }) {
   const setMapMode = useWorld((s) => s.setMapMode);
   const send = useWorld((s) => s.send);
   const compact = useCompact();
+  const econOn = useEconomyOn();
   const conn = connected ? 'live' : world ? 'reconnecting' : 'offline';
   const connLabel = { live: 'Live', reconnecting: 'Reconnecting', offline: 'Offline' }[conn];
   return (
@@ -70,6 +73,7 @@ export function TopBar({ onCreate }: { onCreate: () => void }) {
             <i className="onair-dot" />On air
           </button>
         )}
+        {world && econOn && EconomyCounter && <span className="econ-counter-slot"><EconomyCounter compact /></span>}
         <span className="meter-hit" role="button" tabIndex={0} title="What this world cost" onClick={openClosing} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openClosing(); }}><TokenMeter /></span>
         <button className="btn primary-dark" onClick={onCreate}>New world</button>
       </div>

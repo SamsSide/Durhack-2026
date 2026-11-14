@@ -14,7 +14,7 @@ const RULES: Array<[RegExp, IconKind]> = [
 
 const AGE_ICON: Record<TechAge, IconKind> = {
   ancient: 'spear', medieval: 'sword', gunpowder: 'musket', industrial: 'rifle', modern: 'tank',
-  future: 'tank', stellar: 'tank', // owner placeholder (14 Nov): lane b, swap in real icons for the two new ages
+  future: 'drone', stellar: 'starship',
 };
 
 export function eraIcon(era: string): IconKind {
