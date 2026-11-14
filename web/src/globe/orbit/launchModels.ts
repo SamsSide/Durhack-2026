@@ -51,8 +51,8 @@ function placeholder(): RocketKit {
   };
 }
 
-/** Sub-meshes and empty nodes of one GLB, mapped into the unit space. */
-async function loadGlb(file: string): Promise<{ parts: ModelPart[]; nodes: Array<{ name: string; pos: THREE.Vector3; dir: THREE.Vector3 }> } | null> {
+/** Sub-meshes and empty nodes of one GLB, mapped into the unit space (or left as authored with `unit` false). */
+export async function loadGlb(file: string, unit = true): Promise<{ parts: ModelPart[]; nodes: Array<{ name: string; pos: THREE.Vector3; dir: THREE.Vector3 }> } | null> {
   try {
     const set = await loadModels();
     const gltf = await set.loader.loadAsync(`${BASE}models/${file}`);
@@ -74,6 +74,7 @@ async function loadGlb(file: string): Promise<{ parts: ModelPart[]; nodes: Array
       parts.push({ geometry: m.geometry.clone().applyMatrix4(m.matrixWorld), material, team });
     });
     if (!parts.length) return null;
+    if (!unit) return { parts, nodes };
     const box = new THREE.Box3();
     for (const p of parts) { p.geometry.computeBoundingBox(); box.union(p.geometry.boundingBox!); }
     const size = box.getSize(new THREE.Vector3());
