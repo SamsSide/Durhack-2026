@@ -9,6 +9,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@google/genai": "^3.3.0",
     "@terra/shared": "*",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",

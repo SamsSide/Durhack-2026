@@ -7,6 +7,8 @@ import { attachWs } from './net/ws';
 import { MockRunner } from './mock/runner';
 import { EngineRunner } from './engine/runner';
 import type { LlmMode, WorldRunner } from './runner';
+import { forceMockMode, resetRun } from './llm';
+import { bindLore } from './story/loreAi';
 
 // .env lives at the repo root (may be missing).
 dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.env') });
@@ -17,6 +19,9 @@ const port = Number(process.env.PORT ?? 8787);
 
 // `npm run mock` plays the scripted mock world; `npm run dev` builds real worlds (rows A2, A3).
 const runner: WorldRunner = mockFlag ? new MockRunner() : new EngineRunner();
+if (mockFlag) forceMockMode(true);
+bindLore(runner);
+runner.subscribe({ snapshot: () => resetRun() });
 if (mockFlag) runner.newWorld({ prompt: 'a patchwork world of five young nations', seed: 1337 });
 
 const server = http.createServer(createApp(runner, mode));
