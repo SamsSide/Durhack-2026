@@ -34,6 +34,7 @@ budget, run them one at a time in the order below, on Sonnet.
 | C9 | Solana: `LedgerPanel` and `EconomyCounter` (exported, and shown as a "Treasury" tab in the network panel), and "Treasury on Solana" on `NationCard`; polls `GET /api/economy` | A27 (mocked) | | CP2 | testing | Owner request #144, MLH Best Use of Solana |
 | C10 | Visual event feed: picture cards with globe thumbnails for big moments | lane b `captureGlobe` | | CP2 | testing | Lane b's #148; owner asked in #151 |
 | C11 | Council on `NationCard`: ruler and general with generated portraits, years in office, a status chip, memory on hover, and Kill (two-click), Cut and Restore buttons per member | A29 | | CP2 | testing | Owner request #170 (Neptune North: resilience inside a nation) |
+| C12 | Prepare mode panel and Create toggle (built by lane a, owner decision 14 Nov) | X2 `prepare` message and control, X3 `prepare: true` (#200) | | CP2 | testing | `web/src/ui/prepare/`; dev mock behind `?mockPrepare=1` until the server sends `prepare` |
 
 ## Waiting on
 

@@ -2,7 +2,7 @@
 import type { ComponentType, CSSProperties } from 'react';
 import { Globe } from './globe';
 import * as ui from './ui';
-import { Chronicle, CreateScreen, DecreeBox, NationCard, NetworkPanel } from './ui';
+import { Chronicle, CreateScreen, DecreeBox, NationCard, NetworkPanel, PreparePanel } from './ui';
 import { useWorld } from './state/world';
 import { EventFeed, LedgerPanel } from './hud/lookup';
 import { BeliefBanner, useEconomyOn, ClosingCard, DiplomacyLegend, Minimap, MODES, TerrainLegend, TopBar, useTimelineOpen, WealthLegend } from './hud';
@@ -71,6 +71,7 @@ export function App() {
       {world && NewsBroadcast && (
         <div className="news-slot"><NewsBroadcast /></div>
       )}
+      {world && !showCreate && <PreparePanel />}
       <ClosingCard />
       {world && <HoverTooltip />}
       {showCreate && (

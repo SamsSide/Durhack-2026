@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useWorld } from '../state/world';
-import { TokenMeter } from '../ui';
+import { PreparePill, TokenMeter } from '../ui';
 import { SpeedControl } from './SpeedControl';
 import { Calendar } from './Calendar';
 import type { WorldStore } from '../state/world';
@@ -57,6 +57,7 @@ export function TopBar({ onCreate }: { onCreate: () => void }) {
         </div>
       )}
       <div className="tb-group">
+        {world && <PreparePill />}
         {world && <SpeedControl />}
         {world && (
           <button className="btn onair" title="Terra Nova News" onClick={() => window.dispatchEvent(new CustomEvent('terra:news-broadcast'))}>
