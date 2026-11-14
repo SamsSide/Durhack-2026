@@ -40,7 +40,7 @@ const schema: Schema = {
   type: 'object', required: ['headline', 'script', 'mood'],
   properties: {
     headline: { type: 'string', description: 'At most 8 words.' },
-    script: { type: 'string', description: 'A newsreader bulletin of 55 to 80 words, plain text.' },
+    script: { type: 'string', description: 'A newsreader bulletin of 45 to 65 words, plain text.' },
     mood: { type: 'string', enum: ['grave', 'triumphant', 'neutral'] },
   },
 };
@@ -48,7 +48,7 @@ const geminiSchema = {
   type: 'OBJECT', required: ['headline', 'script', 'mood'],
   properties: {
     headline: { type: 'STRING', description: 'At most 8 words.' },
-    script: { type: 'STRING', description: 'A newsreader bulletin of 55 to 80 words, plain text.' },
+    script: { type: 'STRING', description: 'A newsreader bulletin of 45 to 65 words, plain text.' },
     mood: { type: 'STRING', enum: ['grave', 'triumphant', 'neutral'] },
   },
 };
@@ -58,7 +58,7 @@ const SYSTEM = [
   'You are shown a picture of the world map right now, plus facts. Write a spoken news bulletin.',
   'Lead with the biggest story. Mention what can be SEEN on the map: colours spreading, a nation shrinking,',
   'a coastline contested. Add one human detail. Use only the facts given; never invent wars or deaths.',
-  'Speak in the voice of the world\'s era. 55 to 80 words, plain sentences for reading aloud, no markdown,',
+  'Speak in the voice of the world\'s era. 45 to 65 words, plain sentences for reading aloud, no markdown,',
   'no emojis, no stage directions, no sign-off name. Do not repeat the previous headline.',
 ].join(' ');
 
@@ -125,7 +125,7 @@ async function ask(w: World, f: ReturnType<typeof facts>, imageBase64: string, m
     model,
     contents: [{ role: 'user', parts: [
       { inlineData: { mimeType, data: imageBase64 } },
-      { text: `${f.text}\n\nWrite the bulletin as JSON: headline (max 8 words), script (55 to 80 words), mood.` },
+      { text: `${f.text}\n\nWrite the bulletin as JSON: headline (max 8 words), script (45 to 65 words), mood.` },
     ] }],
     config: {
       systemInstruction: SYSTEM,
