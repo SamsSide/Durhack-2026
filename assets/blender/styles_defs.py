@@ -5,11 +5,9 @@ wall, stone, roof, trim, dark, extra, team.
 """
 import math
 
+from styles_kit import hsh  # noqa: F401  (kept here for the scrap style and old imports)
+
 PI = math.pi
-
-
-def hsh(i):
-    return (math.sin(i * 12.9898 + 4.1) * 43758.5453) % 1.0
 
 
 class Base:
