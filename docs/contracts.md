@@ -461,6 +461,17 @@ this table from `@terra/shared`.
   under 3,000 triangles, with a `team` part. `great_wall` is one wall segment with a tower that
   lane b repeats along the nation's border edges.
 
+  **Effect anchors (owner decision 14 Nov):** unit models (`ages.*.*`, `models.army`, `models.fleet`,
+  `models.trader`, `models.satellite`) may hold empty nodes (no mesh) named `fx_thruster`,
+  `fx_wake`, `fx_exhaust`, `fx_contrail`, `fx_dust` (a suffix like `fx_thruster.001` is allowed for
+  several). Each sits where the effect starts, in the model's local space; its local -Z points the
+  way the effect streams out (backwards for flames, wakes and trails, up for smoke). Lane b attaches
+  its effects there: afterburner and thruster flames (orange-blue flicker, brighter while moving),
+  white V-wakes and foam behind ships under way, exhaust smoke for industrial and later units, dust
+  behind marching armies, white contrails behind jets and satellites. Models without anchors get no
+  effect. Escorts: the modern army has a jet fighter flying above the tank (`fx_thruster`,
+  `fx_contrail`); the future army has two rocket bikes (our own design) instead of drones.
+
 - **Mock:** until the files exist lane b draws a coloured box (structures) or cone (units) for
   any key missing from the manifest. That fallback stays in for good.
 - **Real by:** CP1 (row A8).
