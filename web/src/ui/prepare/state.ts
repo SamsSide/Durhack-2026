@@ -6,6 +6,16 @@ import type { PrepareItem, PrepareStatus } from '../../state/world';
 
 interface PrepareUi { hidden: boolean; played: boolean; hide(): void; show(): void; play(): void }
 
+// Played survives a page reload (per tab), so a later pause or the closing card does not bring the
+// finished panel back over a world that is already running.
+const PLAYED_KEY = 'tn-prepare-played';
+function rememberPlayed(worldId: string | null | undefined): void {
+  try { if (worldId) sessionStorage.setItem(PLAYED_KEY, worldId); else sessionStorage.removeItem(PLAYED_KEY); } catch { /* storage off */ }
+}
+export function playedBefore(worldId: string | null | undefined): boolean {
+  try { return !!worldId && sessionStorage.getItem(PLAYED_KEY) === worldId; } catch { return false; }
+}
+
 export const usePrepareUi = create<PrepareUi>((set) => ({
   hidden: false,
   played: false,
@@ -14,6 +24,7 @@ export const usePrepareUi = create<PrepareUi>((set) => ({
   /** Start the world now; anything unfinished carries on in the background (X2 Prepare). */
   play: () => {
     set({ played: true, hidden: false });
+    rememberPlayed(useWorld.getState().prepare?.worldId ?? useWorld.getState().world?.id);
     useWorld.getState().send({ type: 'control', action: 'pause', value: false });
   },
 }));
@@ -24,9 +35,9 @@ useWorld.subscribe((s, prev) => {
   const p = s.prepare;
   const q = prev.prepare;
   // A new run (first message, another world, or a run after a finished one) opens the panel again.
-  if (p && p !== q && !p.done && (!q || q.done || q.worldId !== p.worldId)) usePrepareUi.setState({ hidden: false, played: false });
+  if (p && p !== q && !p.done && (!q || q.done || q.worldId !== p.worldId)) { usePrepareUi.setState({ hidden: false, played: false }); rememberPlayed(null); }
   // The world was started some other way (the top bar's pause button): same as pressing Play.
-  else if (p && isPaused(prev) && !isPaused(s)) usePrepareUi.setState({ played: true });
+  else if (p && isPaused(prev) && !isPaused(s)) { usePrepareUi.setState({ played: true }); rememberPlayed(p.worldId); }
 });
 
 /** Ask the server to prepare the running world (X2 `prepare` control). */

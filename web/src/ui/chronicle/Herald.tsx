@@ -3,7 +3,7 @@ import { flagSvg } from '@terra/shared';
 import type { Country, WorldEvent } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import type { CutPeriod } from './Timeline';
-import { ofName } from './kinds';
+import { fallenOf, ofName } from './kinds';
 
 const SHOW_MS = 8000;   // each tab fades out about 8 s after it appears
 const LEAVE_MS = 400;   // the tab-out fade
@@ -151,7 +151,7 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
           line: e.reason, by: e.reason ? aggr.leader : '',
         });
       } else if (e.type === 'country_fell' || (e.type === 'chronicle' && e.entry.kind === 'fall')) {
-        const id = e.type === 'country_fell' ? e.countryId : e.entry.countries[0];
+        const id = e.type === 'country_fell' ? e.countryId : fallenOf(e.entry, world);
         const c = id != null ? country(id) : undefined;
         if (!c) continue;
         const key = `fall:${c.id}`;

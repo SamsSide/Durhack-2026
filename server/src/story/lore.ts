@@ -2,6 +2,9 @@
 // when Gemini is off, capped or fails). Everything here is derived from real world data.
 import { regionOwner, relationOf, type Country, type Stance, type World } from '@terra/shared';
 
+/** "a" or "an" before a government name. */
+const article = (w: string): string => (/^[aeiou]/i.test(w) ? 'an' : 'a');
+
 export interface RelationLore { with: number; stance: Stance; story: string }
 export interface CountryLore {
   countryId: number; asOfTick: number;
@@ -109,9 +112,9 @@ export function countryLore(world: World, id: number): CountryLore | null {
   return {
     countryId: id,
     asOfTick: world.tick,
-    summary: `${c.name} is a ${c.government} led by ${c.leader}. ${standing} ${pick(TRAIT_SUMMARY[trait], seed)}${warLine}`.trim(),
+    summary: `${c.name} is ${article(c.government)} ${c.government} led by ${c.leader}. ${standing} ${pick(TRAIT_SUMMARY[trait], seed)}${warLine}`.trim(),
     culture: `The people of ${c.name} are known for ${c.culture.join(', ')}. ${c.foundingMyth}`,
-    politics: `${c.leader} rules as head of a ${c.government}. ${c.ideology} ${pick(TRAIT_POLITICS[trait], seed + 1)}`,
+    politics: `${c.leader} rules as head of ${article(c.government)} ${c.government}. ${c.ideology} ${pick(TRAIT_POLITICS[trait], seed + 1)}`,
     history: history(world, id, c),
     anthemLyrics: anthem(world, id, c),
     relations: relationsLore(world, id, c),

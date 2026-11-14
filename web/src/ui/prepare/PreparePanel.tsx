@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { flagSvg } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import type { PrepareItem } from '../../state/world';
-import { isPaused, requestPrepare, usePrepareUi } from './state';
+import { isPaused, playedBefore, requestPrepare, usePrepareUi } from './state';
 import './prepare.css';
 
 const KINDS: { kind: PrepareItem['kind']; label: string }[] = [
@@ -27,7 +27,7 @@ function usePrepareView() {
   const prepare = useWorld((s) => s.prepare);
   const paused = useWorld(isPaused);
   const hidden = usePrepareUi((s) => s.hidden);
-  const played = usePrepareUi((s) => s.played);
+  const played = usePrepareUi((s) => s.played) || playedBefore(prepare?.worldId);
   const live = !!prepare && !played && (!prepare.done || paused);   // still worth a Play button
   return { prepare, panel: live && !hidden, pill: !!prepare && ((live && hidden) || (played && !prepare.done)) };
 }
