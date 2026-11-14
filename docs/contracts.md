@@ -224,7 +224,7 @@ export function flagSvg(spec: FlagSpec, width?: number, height?: number): string
 | Route | Giver | Request | Response |
 | --- | --- | --- | --- |
 | `GET /api/health` | a | none | `{ "ok": true, "mode": "mock", "world": "w-3f9a" }` |
-| `POST /api/world` | a | `{ "prompt": "a drowned post-apocalyptic world", "nations": 6, "era": "post-apocalyptic", "seaLevel": 0.55, "aggression": 0.5, "seed": 12345, "imageBase64": null }` (only `prompt` is required) | `{ "worldId": "w-3f9a" }`, then a `snapshot` on the socket |
+| `POST /api/world` | a | `{ "prompt": "a drowned post-apocalyptic world", "nations": 6, "era": "post-apocalyptic", "seaLevel": 0.55, "aggression": 0.5, "seed": 12345, "imageBase64": null }` (only `prompt` is required) | `{ "worldId": "w-3f9a" }`, then a `snapshot` on the socket. In live mode it answers after about 7 s (Gemini writes the world bible); the Create screen shows a loading state meanwhile |
 | `GET /api/replays` | a | none | `[ { "id": "demo-1", "name": "The Drowned Age", "events": 5210 } ]` |
 | `POST /api/replays/:id/play` | a | none | `{ "worldId": "w-3f9a" }`, then a `snapshot`; events replay with no API calls |
 | `GET /api/world/log` | a | none | `{ "initial": { "...": "the World at tick 0" }, "events": [ ] }`: the whole run, for the timeline scrubber |
