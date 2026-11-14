@@ -13,6 +13,7 @@ import { useProvinceMesh } from '../mesh/context';
 import { useEventStream } from '../status/useEventStream';
 import { ParticlePool } from './particles';
 import { markSacked, onRuinChange } from './ruins';
+import { applyWarDemoCamera, installWarDemo } from './warDemo';
 
 const MAX_BURSTS = 12;
 const MAX_COLUMNS = 24;
@@ -196,6 +197,9 @@ export function WarFx() {
     win.__warFx = (tile, age = 0) => burst(tile, age, performance.now());
     return () => { delete win.__warFx; };
   });
+  // Dev only: __warDemo() stages a war on a real border (warDemo.ts).
+  useEffect(() => (import.meta.env.DEV ? installWarDemo(fx.group) : undefined), [fx]);
+  useFrame(({ camera }) => { if (import.meta.env.DEV) applyWarDemoCamera(camera, performance.now()); }, -0.4);
 
   useEffect(() => onRuinChange((tile, ruin) => {
     if (!ruin) return;
