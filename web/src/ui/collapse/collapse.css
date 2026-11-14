@@ -1,0 +1,76 @@
+/* Start-collapsed panels and presentation mode (C16, #276). Tokens and material classes only. */
+
+/* Collapsed: one round lacquer icon (tn-button--round, enlarged to 36px) in a bottom corner, in the
+   ticker band, so it never touches the minimap (above the decree row) or the event feed (left edge). */
+.tn-collapsed-icon {
+  position: fixed; z-index: 6;
+  width: 36px; height: 36px;
+  bottom: calc(var(--space-4) + 2px);
+  color: var(--gilt-hi);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+/* Chronicle collapsed: the icons sit in the bottom band. Chronicle open: the ticker takes the band, so the
+   history and decree icons sit where their panels do, in the row above it. */
+.tn-collapsed-icon--chronicle { left: var(--space-4); }
+.tn-collapsed-icon--history {
+  left: calc(var(--space-4) + var(--net-width) + var(--space-3));
+  bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3));
+}
+.tn-collapsed-icon--decree {
+  right: var(--space-4);
+  bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3));
+}
+body:has(.tn-collapsed-chronicle) .tn-collapsed-icon--history { left: calc(var(--space-4) + 36px + var(--space-3)); bottom: calc(var(--space-4) + 2px); }
+body:has(.tn-collapsed-chronicle) .tn-collapsed-icon--decree { bottom: calc(var(--space-4) + 2px); }
+.tn-collapsed-chronicle .tn-ticker { display: none; }
+.tn-collapsed-icon--decree .tn-collapsed-tip { left: auto; right: 0; }
+.tn-collapsed-tip {
+  position: absolute; bottom: calc(100% + var(--space-2)); left: 0;
+  width: max-content; max-width: 220px; padding: 4px 10px;
+  opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease-out);
+}
+.tn-collapsed-icon:hover .tn-collapsed-tip,
+.tn-collapsed-icon:focus-visible .tn-collapsed-tip { opacity: 1; }
+
+/* Open: a small round chevron that folds the panel away again, outside the content. */
+.tn-collapse-chev.tn-button--round { width: 22px; height: 22px; color: var(--gilt-hi); display: inline-flex; align-items: center; justify-content: center; z-index: 8; }
+.tn-collapse-chev--corner { position: absolute; top: -11px; right: -11px; }
+.tn-collapse-chev--above-left {
+  position: fixed;
+  left: calc(var(--space-4) + var(--net-width) + var(--space-3));
+  bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 40px);
+}
+@media (max-width: 1280px) {
+  .tn-collapse-chev--above-left { left: calc(var(--space-3) + var(--net-width) + var(--space-3)); }
+}
+
+/* Presentation mode (P): hide every panel; the globe and the newest war tab stay. */
+.tn-present .topbar,
+.tn-present .belief-banner,
+.tn-present .left-net,
+.tn-present .left-dock,
+.tn-present .decree-slot,
+.tn-present .news-slot,
+.tn-present .event-feed-slot,
+.tn-present .minimap,
+.tn-present .mm-modes,
+.tn-present .legend-box,
+.tn-present .tls,
+.tn-present .tn-collapse-chev,
+.tn-present .tn-collapsed-icon,
+.tn-present .tn-ticker,
+.tn-present .tn-chron-timeline,
+.tn-present .tn-prep-veil { display: none !important; }
+.tn-present .tn-herald-slot .tn-herald:not(:first-child) { display: none; }
+
+.tn-present-year {
+  position: fixed; z-index: 9; top: var(--space-4); left: 50%; transform: translateX(-50%);
+  display: inline-flex; align-items: baseline; gap: var(--space-3);
+  padding: 6px var(--space-5);
+  font-family: var(--font-display);
+}
+.tn-present-year__cap { font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--color-text-muted); }
+.tn-present-year__num { font-size: var(--text-xl, 28px); font-weight: 700; line-height: 1; }
+.tn-present-year__month { font-size: var(--text-sm); letter-spacing: 0.08em; text-transform: uppercase; }
+
+@media (prefers-reduced-motion: reduce) { .tn-collapsed-tip { transition: none; } }

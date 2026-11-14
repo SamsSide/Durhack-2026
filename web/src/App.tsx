@@ -2,7 +2,7 @@
 import type { ComponentType, CSSProperties } from 'react';
 import { Globe } from './globe';
 import * as ui from './ui';
-import { Chronicle, CreateScreen, DecreeBox, NationCard, NetworkPanel, PreparePanel } from './ui';
+import { Chronicle, Collapsible, CreateScreen, DecreeBox, HourglassIcon, NationCard, NetworkPanel, PreparePanel, PresentationYear, QuillIcon, ScrollIcon, usePresentationKeys } from './ui';
 import { useWorld } from './state/world';
 import { EventFeed } from './hud/lookup';
 import { BeliefBanner, ClosingCard, DiplomacyLegend, Minimap, MODES, TerrainLegend, TopBar, useTimelineOpen, WealthLegend, PoliticsLegend } from './hud';
@@ -43,6 +43,7 @@ export function App() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+  usePresentationKeys();   // P toggles presentation mode, Esc leaves it (C16)
   useEffect(() => setCreating(false), [world?.id]);
   useEffect(() => { setDock(null); setDockOut(false); }, [epoch]);
   const showCreate = !world || creating;
@@ -60,16 +61,25 @@ export function App() {
       <TerrainLegend hidden={timelineOpen} />
       <WealthLegend hidden={timelineOpen} />
       <PoliticsLegend hidden={timelineOpen} />
-      {world && !timelineOpen && <div className="hud decree-slot"><DecreeBox key={epoch} /></div>}
+      {/* Start collapsed (C16, #276): the decree box is one quill icon until opened. */}
+      {world && !timelineOpen && (
+        <Collapsible id="decree" label="the decree box" icon={<QuillIcon />} wrapClass="hud decree-slot"><DecreeBox key={epoch} /></Collapsible>
+      )}
       {/* B9 timeline (lane a): the history scrubber, in the band above the chronicle ticker */}
-      {world && !showCreate && <TimelineScrubber />}
+      {world && !showCreate && (
+        <Collapsible id="history" label="the history strip" icon={<HourglassIcon />} chevron="above-left"><TimelineScrubber /></Collapsible>
+      )}
       {/* While the Chronicle timeline sheet is open it rides above the news slot (6) and the history scrubber (5). */}
-      {world && <div style={{ ...overlay, zIndex: timelineOpen ? 7 : 5, left: 'var(--space-4)', right: 'var(--space-4)', bottom: 'var(--space-4)' }}><Chronicle key={epoch} /></div>}
+      {/* The Chronicle stays mounted when collapsed (it also renders the war tabs and the timeline sheet); only its ticker hides. */}
+      {world && (
+        <Collapsible id="chronicle" label="the chronicle" icon={<ScrollIcon />} keepMounted wrapStyle={{ ...overlay, zIndex: timelineOpen ? 7 : 5, left: 'var(--space-4)', right: 'var(--space-4)', bottom: 'var(--space-4)' }}><Chronicle key={epoch} /></Collapsible>
+      )}
       {world && EventFeed && <div className="event-feed-slot"><EventFeed key={epoch} /></div>}
       {world && NewsBroadcast && (
         <div className="news-slot"><NewsBroadcast key={epoch} /></div>
       )}
       {world && !showCreate && <PreparePanel />}
+      <PresentationYear />
       <ClosingCard />
       {world && <HoverTooltip />}
       {showCreate && (
