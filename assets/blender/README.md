@@ -101,7 +101,7 @@ everything else, and renders `assets/preview-future.png`):
     python3 assets/blender/verify_styles.py     # the five arcology buildings
 
 - Units, in `ages_defs.py` (so `build_ages.py` builds them too): `future` is stealth grey with a glowing
-  rail (a hover tank under a drone swarm; a railgun stealth cruiser; an autonomous hydrofoil freighter
+  rail (a hover tank under two rocket bikes, our own design; a railgun stealth cruiser; an autonomous hydrofoil freighter
   with cargo pods), `stellar` is a white shell with teal (a walker mech; a starship; an orbital freighter
   with a ring of cargo pods). Things that fly keep a flat piece on y = 0 (the tank's lift field, the
   ships' wash on the water), so the origin is still the ground or the waterline.
@@ -138,3 +138,36 @@ renders `assets/preview-wonders.png`):
 - `footprint` is 2.0 (about two tiles wide), 1.6 for the two tall ones and 1.0 for the wall segment.
 - A quick look, nothing exported: `PREVIEW_ONLY=1 PREVIEW_OUT=/tmp/p.png` before the command;
   `PREVIEW_PX=70` renders at the size a wonder has from orbit, `PREVIEW_KINDS=pyramid,colossus` a subset.
+
+## Effect anchors and air escorts (contract X4 "Effect anchors")
+
+Every unit GLB (`ages/<age>/{army,fleet,trader}.glb`, `army.glb`, `fleet.glb`, `satellite.glb`) holds
+empty nodes (no mesh) under its one mesh node, where lane b starts an effect:
+
+| Anchor | Where | Streams |
+| --- | --- | --- |
+| `fx_dust` | on the ground behind a marching army (ancient to modern, and the stellar walker) | back |
+| `fx_wake` | at the stern on the waterline of every ship; under the stern of the hovering stellar ships' wash | back |
+| `fx_exhaust` | on top of each funnel (industrial and modern ships), at the back of the armoured car and the tank | up |
+| `fx_thruster` | the jet's nozzle, each rocket bike's ring, the hover tank's two lift pods (down), the stellar engine bells, the satellite's nozzle (down) | back |
+| `fx_contrail` | the jet's two wing tips, the satellite's nozzle | back |
+
+- A second anchor of a kind is `fx_thruster.001`, and so on. The anchor's local -Z in the GLB points the
+  way the effect streams. Units face +x, so "back" is -x.
+- In the code: `b.fx("fx_wake", (x, y, z))` in a model function (`ages_defs.py`), with `UP` or `DOWN` as
+  a third argument when it does not stream back. It follows `b.at()` and `b.lift()`, and `build()` moves
+  it with the mesh. `export_glb()` in `ages_kit.py` exports the mesh with its anchors (Blender keeps
+  names unique in the whole file, so an anchor only carries its contract name during its own export).
+  The exporter turns Blender's local +Y into glTF's local -Z, which is why `add_anchor` aims +Y.
+- `python3 assets/blender/verify_ages.py` lists the anchors of each model and the way each streams
+  (`-v` adds their positions); a node without a mesh is an anchor, not a mesh, and must be named `fx_*`.
+- The base `army.glb` and `fleet.glb` get theirs in `build_models.py` (`b.fx`). To refresh only those two
+  without touching the buildings, build into a scratch folder and copy them over:
+  `blender --background --factory-startup --python assets/blender/build_models.py -- /tmp/base`. The
+  base fleet's ships point to -x, so its three wakes stream to +x (away from the bows).
+- Escorts, part of the one mesh: `ages/modern/army` has a jet fighter above and behind the tank (`_jet`:
+  swept wings, twin `team` tail fins, one nozzle; about 120 triangles and one new colour so the file stays
+  under 60 KB). `ages/future/army` has two rocket bikes instead of the drone swarm (`_rocket_bike`, our
+  own design: a slim hover-bike body, a helmeted rider in `team` crouched forward, two short
+  forward-swept delta wings low on the sides, one round thruster ring, a teal light strip on the nose).
+  Both are drawn inside the old bounding box, so the tank and the hover tank keep their size.

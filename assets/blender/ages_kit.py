@@ -5,13 +5,18 @@ Everything is drawn with +x as "forward" (ship bows and soldiers face +x), z up,
 z = 0 is the waterline. AgeBuilder.build() scales each model so its longest side is 1.
 """
 import math
+from contextlib import contextmanager
 
 import bmesh
-from mathutils import Matrix, Vector
+import bpy
+from mathutils import Euler, Matrix, Vector
 
 from styles_kit import PALETTES, Builder
 
 PI = math.pi
+# Effect anchors (contract X4): the way an effect streams out, in drawing space (+x is forward).
+BACK, UP, DOWN = (-1, 0, 0), (0, 0, 1), (0, 0, -1)
+FX_NAMES = ("fx_thruster", "fx_wake", "fx_exhaust", "fx_contrail", "fx_dust")
 
 # One palette for every age. `team` is added by the kit (lane b recolours it).
 PALETTES["ages"] = dict(
@@ -30,6 +35,23 @@ PALETTES["ages"] = dict(
 class AgeBuilder(Builder):
     def __init__(self):
         super().__init__("ages")
+        self.anchors = []
+
+    @contextmanager
+    def lift(self, x, y, z, s=1.0, rot=(0, 0, 0)):
+        """Draw at (x, y, z), scaled by s and turned by rot: something that flies above the rest."""
+        self.stack.append(self.stack[-1] @ Matrix.Translation((x, y, z)) @ Euler(rot, "XYZ").to_matrix().to_4x4()
+                          @ Matrix.Scale(s, 4))
+        try:
+            yield
+        finally:
+            self.stack.pop()
+
+    def fx(self, name, p, d=BACK):
+        """An effect anchor (an empty in the GLB) at p; the effect streams out along d."""
+        assert name in FX_NAMES, name
+        m = self.stack[-1]
+        self.anchors.append((name, m @ Vector(p), (m.to_3x3() @ Vector(d)).normalized()))
 
     # ---- extra primitives
     def rod(self, p0, p1, r, mat, seg=4, r2=None):
@@ -87,7 +109,54 @@ class AgeBuilder(Builder):
         k = 0.9995 / max(ext)
         for v in bm.verts:
             v.co *= k
-        return super().build(name)
+        # the base build centres the mesh on x/y and drops it to z = 0: move the anchors the same way
+        lo = [min(v.co[i] for v in bm.verts) for i in range(3)]
+        hi = [max(v.co[i] for v in bm.verts) for i in range(3)]
+        off = Vector(((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, lo[2]))
+        obj = super().build(name)
+        for i, (fx, p, d) in enumerate(self.anchors):
+            add_anchor(obj, fx, p * k - off, d, i)
+        return obj
+
+
+# ---------------------------------------------------------------- effect anchors and export
+def add_anchor(obj, fx, p, d, i=0):
+    """An empty under obj at p (model space). The exporter turns Blender's local +Y into glTF's local
+    -Z, so +Y is aimed along d: in the GLB the anchor's local -Z is the way the effect streams."""
+    e = bpy.data.objects.new(f"_{obj.name}_fx{i}", None)   # its real name is set while it is exported
+    e["fx"] = fx
+    e.empty_display_size = 0.05
+    e.parent = obj
+    e.location = p
+    e.rotation_mode = "QUATERNION"
+    e.rotation_quaternion = Vector(d).to_track_quat("Y", "Z")
+    bpy.context.scene.collection.objects.link(e)
+    return e
+
+
+def export_glb(obj, path):
+    """Export obj and its anchors as one GLB. Blender keeps object names unique in the whole file, so
+    the anchors only carry their contract names (fx_wake, fx_thruster.001, ...) during their own export."""
+    for o in bpy.context.scene.objects:
+        o.select_set(False)
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    kids = [c for c in obj.children if c.type == "EMPTY" and "fx" in c]
+    keep, seen = {}, {}
+    for c in kids:
+        n = seen.get(c["fx"], 0)
+        seen[c["fx"]] = n + 1
+        keep[c] = c.name
+        c.name = c["fx"] if n == 0 else f"{c['fx']}.{n:03d}"
+        c.select_set(True)
+    bpy.ops.export_scene.gltf(
+        filepath=path, export_format="GLB", use_selection=True,
+        export_yup=True, export_apply=True, export_cameras=False, export_lights=False,
+        export_texcoords=False, export_normals=True, export_materials="EXPORT", export_extras=False,
+        export_animations=False,
+    )
+    for c, name in keep.items():
+        c.name = name
 
 
 # ---------------------------------------------------------------- ships
