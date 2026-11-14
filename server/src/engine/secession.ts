@@ -161,7 +161,7 @@ export function secessionBatch(world: World, plan: SecessionPlan, mk: (body: Bod
   add({ type: 'relation_changed', a: Math.min(id, plan.parent), b: Math.max(id, plan.parent), stance, reason: `${regionName} breaks away from ${mid(parent.name)}` });
   const line = (k: number, kind: ChronicleKind, countries: number[], text: string): void =>
     add({ type: 'chronicle', entry: { id: `${SECESSION_MARK}${tick}-r${plan.regionId}-${k}`, tick, year: world.year, kind, countries, text } });
-  line(0, 'founding', [id, plan.parent], `${regionName} rises against ${mid(parent.name)} and declares itself ${mid(name)}, with ${country.leader} at its head.`);
+  line(0, 'secession', [id, plan.parent], `${regionName} rises against ${mid(parent.name)} and declares itself ${mid(name)}, with ${country.leader} at its head.`);
   line(1, stance === 'war' ? 'war' : 'proclamation', [plan.parent, id], stance === 'war'
     ? `${cap(mid(parent.name))} will not let ${regionName} go: ${parent.leader} sends the armies to bring it back.`
     : `${cap(mid(parent.name))} closes its borders to the rebels of ${regionName}, but does not march.`);

@@ -65,7 +65,7 @@ export type Stance = 'war' | 'hostile' | 'neutral' | 'trade' | 'alliance';
 export interface Relation { a: number; b: number; stance: Stance; since: number; grievance: number } // a < b
 
 export type ChronicleKind = 'founding' | 'proclamation' | 'growth' | 'war' | 'battle' | 'peace'
-  | 'alliance' | 'betrayal' | 'fall' | 'silence' | 'return' | 'dispute' | 'decree';
+  | 'alliance' | 'betrayal' | 'fall' | 'silence' | 'return' | 'dispute' | 'decree' | 'secession';
 export interface ChronicleEntry { id: string; tick: number; year: number; kind: ChronicleKind; countries: number[]; text: string }
 
 export interface AgentStatus {
