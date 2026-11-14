@@ -27,6 +27,24 @@ DEMO_DIR="$ROOT/.demo"
 STATE="$DEMO_DIR/state"
 DEFAULT_PROMPT="Six rival kingdoms on a stormy ocean world, fighting over spice islands, sea roads and the ruins of a drowned empire"
 
+# load_env_file FILE: export KEY=VALUE lines from FILE, skipping comments, empty values and keys
+# that are already set (so the owner's keys file is not blanked by an empty .env template line).
+load_env_file() {
+  local f="$1" line key val
+  [ -f "$f" ] || return 0
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    case "$line" in ''|'#'*) continue ;; esac
+    line="${line#export }"
+    key="${line%%=*}"; val="${line#*=}"
+    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+    case "$val" in \"*\") val="${val:1:${#val}-2}" ;; \'*\') val="${val:1:${#val}-2}" ;; esac
+    [ -n "$val" ] || continue
+    [ -n "${!key:-}" ] && continue
+    export "$key=$val"
+  done < "$f"
+}
+
 say() { printf '%s\n' "$*"; }
 die() { printf 'FAILED: %s\n' "$*" >&2; exit 1; }
 
@@ -253,8 +271,9 @@ do_start() {
 
   if [ "$mode" = live ]; then
     # Keys come from these files; never printed.
-    if [ -f "$HOME/.config/durhack/keys.env" ]; then set -a; . "$HOME/.config/durhack/keys.env"; set +a; fi
-    if [ -f "$ROOT/.env" ]; then set -a; . "$ROOT/.env"; set +a; fi
+    # Earlier files win; an empty value (KEY=) never blanks a key set by an earlier file.
+    load_env_file "$HOME/.config/durhack/keys.env"
+    load_env_file "$ROOT/.env"
     # The mode is the command's, not a dev default from .env; only the caller's own env overrides it.
     export LLM_MODE="${caller_llm:-live}" SOLANA_MODE="${caller_sol:-devnet}"
     export GEMINI_MODEL_IMAGE="${caller_img:-${GEMINI_MODEL_IMAGE:-gemini-3.1-flash-image}}"
