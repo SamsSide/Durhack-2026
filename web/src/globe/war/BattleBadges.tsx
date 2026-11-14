@@ -10,6 +10,7 @@ import { formatSoldiers } from '../../state/armyInfo';
 import { useProvinceMesh } from '../mesh/context';
 import { Anchor } from '../status/Anchor';
 import { liftPoint } from '../status/geo';
+import { STACK } from '../status/cityStack';
 import type { P3 } from '../status/geo';
 import './battleBadge.css';
 
@@ -35,7 +36,7 @@ function Badge({ record, pos }: { record: BattleRecord; pos: P3 }) {
   if (!world) return null;
   const info = battleInfoOf(world, record);
   return (
-    <Anchor pos={pos} dy={-26} limb={0.25}>
+    <Anchor pos={pos} limb={0.25} stack={{ tile: record.tile, priority: STACK.battle }}>
       <button
         type="button"
         className={`bb-plate tn-plate${selected ? ' is-active' : ''}`}

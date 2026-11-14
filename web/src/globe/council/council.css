@@ -50,3 +50,10 @@
 .cn-pip { pointer-events: auto; }
 .gs-anchor.gs-hidden .cn-hit, .gs-anchor.gs-hidden .cn-pip { pointer-events: none; }
 .cn-tip { min-width: 0; z-index: 40; }
+/* #332: pips and the one transient badge each sit in their own slot of the city's marker column
+   (status/cityStack.ts), so they lose the fixed offsets above and stack without overlapping. */
+.cn-slot { position: relative; transform: scale(1.6); transform-origin: 50% 50%; pointer-events: none; }
+.cn-slot .cn-pips, .cn-slot .cn-banner, .cn-slot .cn-seal, .cn-slot .cn-coup { position: relative; left: auto; top: auto; display: block; }
+.cn-slot .cn-pips { display: flex; }
+.cn-sealbox { position: relative; }
+.cn-slot .cn-burst { left: 1px; top: 1px; }

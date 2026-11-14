@@ -6,6 +6,7 @@ import { onWorldReset, useWorld } from '../../state/world';
 import { useProvinceMesh } from '../mesh/context';
 import { Anchor } from '../status/Anchor';
 import { capitalPoint } from '../status/geo';
+import { STACK, cityKey } from '../status/cityStack';
 import { useEventStream } from '../status/useEventStream';
 import { useHover } from '../camera/usePicking';
 import { bannerIcon, crackedCrownIcon, pipIcon, sealIcon } from './icons';
@@ -94,6 +95,7 @@ function pipText(id: number, role: CouncilRole, state: CouncilState): string {
   return born !== undefined && year !== undefined ? `${name}, ${Math.max(0, year - born)}` : name;
 }
 
+const SCALE = 1.6;      // council marks are drawn at 1.6x their CSS size (council.css .cn-slot)
 const FRESH_MS = 3500; // how long a ring, a coup mark or a seal stays up
 
 // B8: memoised, so a council event re-renders the one mark it is about, not every mark on the globe (each
@@ -130,22 +132,44 @@ const Marker = memo(function Marker({ id, vis, pips, onTip }: { id: number; vis:
     ? `${ROLE[vis.sealRole]} back in contact`
     : vis.sealRole === 'ruler' ? 'New ruler crowned' : 'New general takes command';
   const coupName = memberName(id, vis.coupRole);
+  // #332: one transient badge per city, the newest of coup mark, succession seal and mourning banner
+  const badges: Array<[string, number]> = [];
+  if (fresh(vis.coup)) badges.push(['coup', vis.coup]);
+  if (fresh(vis.seal)) badges.push(['seal', vis.seal]);
+  if (vis.mourn !== 'off') badges.push(['mourn', vis.pulse]);
+  const badge = badges.reduce<[string, number] | null>((a, b) => (a == null || b[1] > a[1] ? b : a), null)?.[0];
+  const tile = cityKey(useWorld.getState().world, id);
   return (
-    <Anchor pos={pos}>
-      <div className="cn-root">
-        {fresh(vis.pulse) && <div key={`p${vis.pulse}`} className="cn-ring" />}
-        {fresh(vis.coup) && <div key={`c${vis.coup}`}><div className="cn-flash" /><img className="cn-coup cn-hit" src={crackedCrownIcon()} alt="Coup" {...hover('Coup', () => (coupName ? `${coupName} seizes power` : 'Coup'))} /></div>}
-        {fresh(vis.seal) && <div key={`s${vis.seal}`}><img className="cn-seal cn-hit" src={sealIcon()} alt={sealText} {...hover('Succession', () => sealText)} /><div className="cn-burst" /></div>}
-        {vis.mourn !== 'off' && <img className={`cn-banner cn-hit${vis.mourn === 'lowering' ? ' lower' : ''}`} src={bannerIcon()} alt="In mourning" {...hover('Council', () => vis.mournCause)} />}
-        {pips && (
-          <div className="cn-pips cn-hit" {...hover('Council', () => `Council of ${nation}`)}>
-            {(['ruler', 'general'] as CouncilRole[]).map((r) => (
-              <img key={r} className="cn-pip" src={pipIcon(r, vis[r])} alt={`${ROLE[r]}: ${pipText(id, r, vis[r])}`} {...hover(ROLE[r], () => pipText(id, r, vis[r]))} />
-            ))}
+    <>
+      {(fresh(vis.pulse) || fresh(vis.coup)) && (
+        <Anchor pos={pos}>
+          <div className="cn-root">
+            {fresh(vis.pulse) && <div key={`p${vis.pulse}`} className="cn-ring" />}
+            {fresh(vis.coup) && <div key={`c${vis.coup}`} className="cn-flash" />}
           </div>
-        )}
-      </div>
-    </Anchor>
+        </Anchor>
+      )}
+      {badge && (
+        <Anchor pos={pos} stack={{ tile, priority: STACK.council, scale: SCALE }}>
+          <div className="cn-slot">
+            {badge === 'coup' && <img key={`c${vis.coup}`} className="cn-coup cn-hit" src={crackedCrownIcon()} alt="Coup" {...hover('Coup', () => (coupName ? `${coupName} seizes power` : 'Coup'))} />}
+            {badge === 'seal' && <div key={`s${vis.seal}`} className="cn-sealbox"><img className="cn-seal cn-hit" src={sealIcon()} alt={sealText} {...hover('Succession', () => sealText)} /><div className="cn-burst" /></div>}
+            {badge === 'mourn' && <img className={`cn-banner cn-hit${vis.mourn === 'lowering' ? ' lower' : ''}`} src={bannerIcon()} alt="In mourning" {...hover('Council', () => vis.mournCause)} />}
+          </div>
+        </Anchor>
+      )}
+      {pips && (
+        <Anchor pos={pos} stack={{ tile, priority: STACK.pips, scale: SCALE }}>
+          <div className="cn-slot">
+            <div className="cn-pips cn-hit" {...hover('Council', () => `Council of ${nation}`)}>
+              {(['ruler', 'general'] as CouncilRole[]).map((r) => (
+                <img key={r} className="cn-pip" src={pipIcon(r, vis[r])} alt={`${ROLE[r]}: ${pipText(id, r, vis[r])}`} {...hover(ROLE[r], () => pipText(id, r, vis[r]))} />
+              ))}
+            </div>
+          </div>
+        </Anchor>
+      )}
+    </>
   );
 });
 

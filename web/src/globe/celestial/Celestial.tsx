@@ -50,7 +50,8 @@ function Sun() {
     flare.renderOrder = 998;
     const ghostTex = radialTexture([[0, 'rgba(255,255,255,0.0)'], [0.55, 'rgba(255,255,255,0.18)'], [0.8, 'rgba(255,255,255,0.5)'], [0.9, 'rgba(255,255,255,0.12)'], [1, 'rgba(255,255,255,0)']]);
     const spotTex = radialTexture([[0, 'rgba(255,255,255,0.7)'], [0.6, 'rgba(255,255,255,0.15)'], [1, 'rgba(255,255,255,0)']]);
-    const ghosts = ([[0.55, 0.05, spotTex, '#ffd29a'], [0.25, 0.022, ghostTex, '#9fd8ff'], [-0.3, 0.06, ghostTex, '#b4b8ff'], [-0.7, 0.03, spotTex, '#ffb37a'], [-1.05, 0.09, ghostTex, '#8fe0c8']] as const)
+    // #317 item 10: three faint warm ghosts only (the mint and pale blue ones read as stray green dots)
+    const ghosts = ([[0.55, 0.045, spotTex, '#ffd29a'], [-0.3, 0.06, ghostTex, '#ffc78f'], [-0.7, 0.03, spotTex, '#ffb37a']] as const)
       .map(([f, size, map, color]) => {
         const s = new THREE.Sprite(new THREE.SpriteMaterial({ map, color, ...additive, depthTest: false }));
         s.renderOrder = 999;
@@ -64,10 +65,10 @@ function Sun() {
     for (const s of [parts.disc, parts.corona, parts.flare, ...parts.ghosts]) { s.material.map?.dispose(); s.material.dispose(); }
   }, [parts]);
 
-  const tmp = useMemo(() => ({ ndc: new THREE.Vector3(), toSun: new THREE.Vector3(), toCentre: new THREE.Vector3(), v: new THREE.Vector3() }), []);
+  const tmp = useMemo(() => ({ ndc: new THREE.Vector3(), toSun: new THREE.Vector3(), toCentre: new THREE.Vector3(), v: new THREE.Vector3(), axis: new THREE.Vector3(), edge: new THREE.Vector3() }), []);
   useFrame(({ camera }) => {
     const { disc, corona, flare, ghosts } = parts;
-    const { ndc, toSun, toCentre, v } = tmp;
+    const { ndc, toSun, toCentre, v, axis, edge } = tmp;
     disc.position.copy(sunDir).multiplyScalar(SUN_DIST);
     corona.position.copy(disc.position);
     // How far the sun sits from the planet's limb, as angles seen from the camera.
@@ -77,10 +78,22 @@ function Sun() {
     toCentre.copy(camera.position).negate().normalize();
     const theta = Math.acos(THREE.MathUtils.clamp(toSun.dot(toCentre), -1, 1));
     const visible = smooth(limb - 0.004, limb + 0.03, theta); // 0 behind the planet, 1 in clear sky
-    const onLimb = Math.exp(-(((theta - limb) / 0.035) ** 2)); // peaks as the sun peeks past the limb
+    // Peaks as the sun peeks past the limb. One-sided (#317 item 9): it drops fast once the sun is behind
+    // the planet, so a hidden sun never flares over the disc.
+    const onLimb = Math.exp(-(((theta - limb) / (theta < limb ? 0.012 : 0.035)) ** 2));
     (corona.material as THREE.SpriteMaterial).opacity = Math.max(visible * 0.9, onLimb * 0.8);
     // Screen-space flare and ghosts, kept just in front of the camera.
     ndc.copy(disc.position).project(camera);
+    // Behind the limb, the flare sits on the limb point nearest the sun, not at the sun's hidden position.
+    if (theta < limb) {
+      axis.crossVectors(toCentre, toSun);
+      if (axis.lengthSq() > 1e-10) {
+        edge.copy(toCentre).applyAxisAngle(axis.normalize(), limb).add(camera.position);
+        const z = ndc.z;
+        ndc.copy(edge).project(camera);
+        ndc.z = z;
+      }
+    }
     const inFront = ndc.z < 1 ? 1 : 0;
     const onScreen = inFront * smooth(1.6, 1.0, Math.max(Math.abs(ndc.x), Math.abs(ndc.y)));
     const fovK = Math.tan(THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov ?? 45) / 2) * 2;
@@ -99,7 +112,7 @@ function Sun() {
     for (const g of ghosts) {
       const { f, size } = g.userData as { f: number; size: number };
       place(g, ndc.x * f, ndc.y * f, size * 1.4);
-      g.material.opacity = ghostK * 0.22;
+      g.material.opacity = ghostK * 0.18;
     }
   });
   return (

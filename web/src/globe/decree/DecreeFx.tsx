@@ -12,6 +12,7 @@ import { useWorld } from '../../state/world';
 import { useProvinceMesh } from '../mesh/context';
 import { useEventStream } from '../status/useEventStream';
 import { Anchor } from '../status/Anchor';
+import { STACK } from '../status/cityStack';
 import type { P3 } from '../status/geo';
 import { flyControlsTo, focusTile } from '../events/focus';
 import type { CameraControls as CameraControlsImpl } from '@react-three/drei';
@@ -30,7 +31,7 @@ const LABEL: Record<DecreeEffect, string> = {
   prophet: 'Prophet', goldrush: 'Gold rush', rebellion: 'Rebellion', none: 'Decree',
 };
 
-interface Caption { key: string; slot: number; pos: P3; label: string; effect: DecreeEffect; text: string }
+interface Caption { key: string; slot: number; tile: number; pos: P3; label: string; effect: DecreeEffect; text: string }
 interface Controls { currentAction?: number }
 const _size = new THREE.Vector2();
 const _c = new THREE.Vector3();
@@ -123,7 +124,7 @@ export function DecreeFx() {
     const len = Math.hypot(...t.center) || 1;
     const k = (slot >= 0 ? fx.slots[slot]!.centre.length() : 1.02) / len + 0.01;
     const cap: Caption = {
-      key: `d${++seq.current}`, slot, pos: [t.center[0] * k, t.center[1] * k, t.center[2] * k],
+      key: `d${++seq.current}`, slot, tile: first, pos: [t.center[0] * k, t.center[1] * k, t.center[2] * k],
       label: LABEL[d.effect], effect: d.effect, text: d.result,
     };
     const show = setTimeout(() => {
@@ -197,7 +198,7 @@ export function DecreeFx() {
     <>
       <primitive object={fx.group} />
       {captions.map((c) => (
-        <Anchor key={c.key} pos={c.pos} dy={-92}>
+        <Anchor key={c.key} pos={c.pos} stack={{ tile: c.tile, priority: STACK.decree }}>
           <div className={`dc-plate dc-${c.effect}`} style={{ animationDuration: `${CAPTION_MS}ms` }}>
             <div className="tn-sheet dc-paper">
               <span className="dc-label">{c.label}</span>

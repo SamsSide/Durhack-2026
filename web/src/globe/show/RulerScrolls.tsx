@@ -10,6 +10,7 @@ import { useWorld } from '../../state/world';
 import { useProvinceMesh } from '../mesh/context';
 import { Anchor } from '../status/Anchor';
 import { capitalPoint } from '../status/geo';
+import { STACK, cityKey } from '../status/cityStack';
 import type { P3 } from '../status/geo';
 import { useEventStream } from '../status/useEventStream';
 import './show.css';
@@ -20,7 +21,7 @@ const MIN_SHOWN_MS = 1400; // a scroll is not replaced by another nation's befor
 const MAX_CHARS = 90;
 const FACING = 0.2;        // cosine: skip a capital this close to the limb or past it
 
-interface Scroll { key: string; id: number; pos: P3; nation: string; text: string; ai: boolean; born: number }
+interface Scroll { key: string; id: number; tile: number; pos: P3; nation: string; text: string; ai: boolean; born: number }
 
 /** The ruler's own words: the quoted part of `X of Y proclaims: "..."`, else the whole line. */
 export function scrollText(entry: ChronicleEntry): string {
@@ -70,7 +71,7 @@ export function RulerScrolls() {
       if (facing < FACING) continue;
       const text = scrollText(entry);
       if (!text) continue;
-      add.push({ key: `p${++seq.current}`, id, pos, nation: c.name, text, ai: agent?.ruler === 'llm', born: now });
+      add.push({ key: `p${++seq.current}`, id, tile: cityKey(world, id), pos, nation: c.name, text, ai: agent?.ruler === 'llm', born: now });
     }
     if (add.length === 0) return;
     setScrolls((cur) => {
@@ -99,7 +100,7 @@ export function RulerScrolls() {
   return (
     <>
       {scrolls.map((sc) => (
-        <Anchor key={sc.key} pos={sc.pos} dy={-64}>
+        <Anchor key={sc.key} pos={sc.pos} stack={{ tile: sc.tile, priority: STACK.scroll }}>
           <div className="rs-scroll" style={{ animationDuration: `${LIFE_MS}ms` }}>
             <div className="rs-rod" />
             <div className="tn-sheet rs-paper">

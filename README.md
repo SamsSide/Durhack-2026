@@ -40,7 +40,8 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   an age before its calendar year (medieval 500, gunpowder 1400, industrial 1760, modern 1900,
   future 2050, stellar 2150); a world's starting era wins.
 - **A living world:** boats, caravans, birds and smoke, volumetric clouds with drifting weather,
-  rain and storms, a sun with a day and night cycle and a passing moon.
+  rain and storms, a sun with a day and night cycle and a passing moon. The lens flare only
+  shows while the sun is in view or peeking past the planet's edge.
 - **Close up**, the camera tilts to a ground view of walled towns, rivers and buildings in one of
   several identity styles; city walls grow from palisades to walled cores as cities grow.
 - **Wonders** from the Great Wall to a space elevator.
@@ -70,6 +71,8 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 - Every nation has a **ruler and a general**, each of whom you can cut off or kill. They grow
   old and die (natural death rises from 50); a successor inherits the dead general's memory,
   and the nation card shows the council, its ages and its succession.
+- Markers over one capital (council pips, the newest of mourning, succession or coup, the battle
+  plate, a ruler's proclamation and a decree caption) stack in a neat column and never overlap.
 - The **nation card** shows provinces, population, treasury, army, readiness, devastation,
   unrest, diplomacy, and tabs for culture, economy, politics, history and relations.
 
