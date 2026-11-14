@@ -17,6 +17,7 @@ const overlay: CSSProperties = { position: 'absolute', zIndex: 5 };
 
 export function App() {
   const world = useWorld((s) => s.world);
+  const epoch = useWorld((s) => s.epoch);   // new world: remount per-world panels so no old state survives
   const selected = useWorld((s) => s.selectedCountryId);
   const regionId = useWorld((s) => s.selectedRegionId);
   const [creating, setCreating] = useState(false);
@@ -43,27 +44,28 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
   useEffect(() => setCreating(false), [world?.id]);
+  useEffect(() => { setDock(null); setDockOut(false); }, [epoch]);
   const showCreate = !world || creating;
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
       <Globe />
       <TopBar onCreate={() => setCreating(true)} />
       <BeliefBanner />
-      {world && <div className="left-net" style={{ ...overlay, top: 64, left: 'var(--space-4)', bottom: 'calc(var(--space-4) + var(--ticker-height) + var(--space-3))' }}><NetworkPanel /></div>}
+      {world && <div className="left-net" style={{ ...overlay, top: 64, left: 'var(--space-4)', bottom: 'calc(var(--space-4) + var(--ticker-height) + var(--space-3))' }}><NetworkPanel key={epoch} /></div>}
       {world && <Minimap hidden={timelineOpen} />}
       {/* Calm UI (#245): the card docks on the LEFT, under the folded Network tab; only one left panel is open at a time */}
-      {world && dock && <div className={`hud left-dock${dockOut ? ' out' : ''}`}><NationCard countryId={dock.id} regionId={dock.regionId} /></div>}
+      {world && dock && <div className={`hud left-dock${dockOut ? ' out' : ''}`}><NationCard key={epoch} countryId={dock.id} regionId={dock.regionId} /></div>}
       <DiplomacyLegend hidden={timelineOpen} />
       <TerrainLegend hidden={timelineOpen} />
       <WealthLegend hidden={timelineOpen} />
       <PoliticsLegend hidden={timelineOpen} />
-      {world && !timelineOpen && <div className="hud decree-slot"><DecreeBox /></div>}
+      {world && !timelineOpen && <div className="hud decree-slot"><DecreeBox key={epoch} /></div>}
       {/* B9 timeline (lane a): the history scrubber, in the band above the chronicle ticker */}
       {world && !showCreate && <TimelineScrubber />}
-      {world && <div style={{ ...overlay, left: 'var(--space-4)', right: 'var(--space-4)', bottom: 'var(--space-4)' }}><Chronicle /></div>}
-      {world && EventFeed && <div className="event-feed-slot"><EventFeed /></div>}
+      {world && <div style={{ ...overlay, left: 'var(--space-4)', right: 'var(--space-4)', bottom: 'var(--space-4)' }}><Chronicle key={epoch} /></div>}
+      {world && EventFeed && <div className="event-feed-slot"><EventFeed key={epoch} /></div>}
       {world && NewsBroadcast && (
-        <div className="news-slot"><NewsBroadcast /></div>
+        <div className="news-slot"><NewsBroadcast key={epoch} /></div>
       )}
       {world && !showCreate && <PreparePanel />}
       <ClosingCard />

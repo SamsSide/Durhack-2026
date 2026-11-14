@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { flagSvg, goodOf, landDevastation, movementOf, politicsOf, readinessBand, readinessOf } from '@terra/shared';
 import type { Stance, World } from '@terra/shared';
-import { useWorld } from '../../state/world';
+import { onWorldReset, useWorld } from '../../state/world';
 import { audio } from '../../audio';
 import { useAudio } from '../../audio/useAudio';
 import { useEconomy } from '../economy/useEconomy';
@@ -18,6 +18,10 @@ const STANCE_ORDER: Stance[] = ['war', 'hostile', 'alliance', 'trade', 'neutral'
 
 // Painted flag results, once per country per page load. A string is an object URL, null is "none".
 const paintedCache = new Map<number, string | null>();
+onWorldReset(() => {
+  for (const u of paintedCache.values()) if (u) URL.revokeObjectURL(u);
+  paintedCache.clear();
+});
 
 function usePaintedFlag(countryId: number): string | null {
   const [url, setUrl] = useState<string | null>(paintedCache.get(countryId) ?? null);
