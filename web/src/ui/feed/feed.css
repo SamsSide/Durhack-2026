@@ -11,7 +11,7 @@
   gap: 8px;
   align-items: stretch;
   width: 260px;
-  height: 72px;
+  min-height: 72px;   /* grows to fit a three-line sentence */
   padding: 4px;
   box-sizing: border-box;
   text-align: left;
@@ -103,15 +103,18 @@
   text-shadow: var(--engrave-on-dark);
 }
 .tn-feed-title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: var(--text-xs);
-  line-height: 1.2;
+  /* the sentence reads in the body serif, sentence case, so two lines hold a whole sentence (#279) */
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.25;
+  text-transform: none;
+  letter-spacing: normal;
   color: var(--color-text);
   text-shadow: var(--engrave-on-dark);
   transition: color var(--dur-fast);
   /* two lines, no ellipsis (a full sentence); hover or focus lifts the clamp */
-  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3;
   overflow: hidden;
   overflow-wrap: anywhere;
 }

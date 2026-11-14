@@ -250,7 +250,8 @@ export function useFeed(): { cards: FeedCard[]; world: World | null } {
       }
       if (now - lastCardAt.current >= QUIET_MS && buckets.current.size > 0) {
         let top: [string, Bucket] | null = null;
-        for (const kv of buckets.current) if (!top || kv[1].count > top[1].count) top = kv;
+        // a lone item is not news: a DECADE card needs at least two of a kind
+        for (const kv of buckets.current) if (kv[1].count >= 2 && (!top || kv[1].count > top[1].count)) top = kv;
         if (top) {
           buckets.current.delete(top[0]);
           return { id: `low:${top[0]}@${now}`, tag: 'DECADE', title: lowText(top[1]), year: top[1].year, countries: [], thumb: null, born: now, gone: false, goneAt: 0 };
