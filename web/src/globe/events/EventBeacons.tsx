@@ -11,6 +11,7 @@ import { useEventStream } from '../status/useEventStream';
 import { buildStructureCache, classify } from './classify';
 import type { StructureCache } from './classify';
 import { focusTile } from './focus';
+import { underHud } from '../status/hudCover';
 import { iconUrl } from './icons';
 import { KIND_META } from './kinds';
 import { PILLAR_MS, clearBeacons, pruneBeacons, pushStory, useBeacons } from './store';
@@ -48,7 +49,7 @@ function layoutLabels(): void {
     if (shown.size >= MAX_LABELS) break;
     const lift = Number(el.dataset.lift ?? 0);
     const r = el.getBoundingClientRect();
-    if (r.width === 0) continue;
+    if (r.width === 0 || underHud(el, 0)) continue; // a caption never sits over a HUD panel (#175)
     const box: Box = { l: r.left, t: r.top + lift, r: r.right, b: r.bottom + lift }; // as if not lifted
     let up = 0;
     for (let i = 0; i < 6; i++) {
@@ -102,14 +103,16 @@ function BeaconView({ b, reduced }: { b: Beacon; reduced: boolean }) {
     const el = ref.current;
     if (!el) return;
     const facing = camera.position.dot(dir) / camera.position.length();
-    const show = facing > 0.2 && document.querySelector('.closing-veil') === null;
+    const pin = el.querySelector<HTMLElement>('.ev-pin');
+    // Below the HUD (#175): hidden while a panel (nation card, network, feed) covers it.
+    const show = facing > 0.2 && document.querySelector('.closing-veil') === null && !(pin && underHud(pin));
     if (el.classList.contains('away') === show) el.classList.toggle('away', !show);
   });
   const fresh = performance.now() - b.born < PILLAR_MS + 300;
   return (
     <>
       {fresh && !reduced && <Pillar key={`p${b.gen}`} b={b} />}
-      <Html position={b.pos} zIndexRange={[6, 0]} style={{ pointerEvents: 'none' }}>
+      <Html position={b.pos} zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}>
         <div ref={ref} className="ev-anchor away">
           <div key={b.gen} className={`ev-beacon${reduced ? ' still' : ''}`} style={{ ['--ev-color' as string]: KIND_META[b.kind].color }}>
             <span className="ev-label ev-hide" data-born={b.born}>{b.title}</span>
