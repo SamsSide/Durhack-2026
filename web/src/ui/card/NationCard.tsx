@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { flagSvg, goodOf, landDevastation, movementOf, politicsOf, readinessBand, readinessOf } from '@terra/shared';
 import type { Stance, World } from '@terra/shared';
 import { onWorldReset, useWorld } from '../../state/world';
+import { useSlowVersion } from '../useSlowVersion';
 import { audio } from '../../audio';
 import { useAudio } from '../../audio/useAudio';
 import { useEconomy } from '../economy/useEconomy';
@@ -63,7 +64,7 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** The numbers of the stats grid (#245), walked once per world version. */
 function useNationStats(world: World | null, countryId: number) {
-  const version = useWorld((s) => s.version);
+  const version = useSlowVersion();
   return useMemo(() => {
     if (!world) return null;
     let provinces = 0;
@@ -117,7 +118,7 @@ function Eq() {
 }
 
 function Nation({ countryId }: { countryId: number }) {
-  useWorld((s) => s.version);
+  useSlowVersion();
   const world = useWorld((s) => s.world);
   const select = useWorld((s) => s.select);
   const flyTo = useWorld((s) => s.flyTo);

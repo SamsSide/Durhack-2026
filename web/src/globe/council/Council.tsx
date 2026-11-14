@@ -1,6 +1,6 @@
 // The council on the globe: mourning banner, succession seal, coup flash and ruler/general pips by the capital.
 // Types come from @terra/shared (row A29). Mount inside the ProvinceMeshContext provider.
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { onWorldReset, useWorld } from '../../state/world';
 import { useProvinceMesh } from '../mesh/context';
@@ -28,6 +28,7 @@ type Action =
 type Table = Record<number, Vis>;
 
 const blank = (): Vis => ({ ruler: 'active', general: 'active', mourn: 'off', pulse: 0, seal: 0, coup: 0, sealRole: 'ruler', sealCause: 'succession', coupRole: 'ruler', mournCause: 'In mourning' });
+const BLANK = blank(); // for a mark with no entry yet: one object, so a memoised Marker sees the same props
 const troubled = (v: Vis) => v.ruler === 'vacant' || v.ruler === 'covering' || v.general === 'vacant' || v.general === 'covering';
 
 function reduce(t: Table, a: Action): Table {
@@ -93,14 +94,26 @@ function pipText(id: number, role: CouncilRole, state: CouncilState): string {
   return born !== undefined && year !== undefined ? `${name}, ${Math.max(0, year - born)}` : name;
 }
 
-function Marker({ id, vis, pips, onTip }: { id: number; vis: Vis; pips: boolean; onTip: (t: Tip | null) => void }) {
+const FRESH_MS = 3500; // how long a ring, a coup mark or a seal stays up
+
+// B8: memoised, so a council event re-renders the one mark it is about, not every mark on the globe (each
+// one is a drei Html with its own React root). The marks that expire take themselves down with a timer.
+const Marker = memo(function Marker({ id, vis, pips, onTip }: { id: number; vis: Vis; pips: boolean; onTip: (t: Tip | null) => void }) {
   const mesh = useProvinceMesh();
   const pos = useMemo(() => {
     const w = useWorld.getState().world;
     return mesh && w ? capitalPoint(mesh, w, id, 0.01) : null;
   }, [mesh, id]);
+  const [tick, bump] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    const now = Date.now();
+    const ends = [vis.pulse, vis.coup, vis.seal].filter((t) => t > 0 && t + FRESH_MS > now).map((t) => t + FRESH_MS);
+    if (ends.length === 0) return;
+    const timer = window.setTimeout(bump, Math.min(...ends) - now + 30);
+    return () => window.clearTimeout(timer);
+  }, [vis.pulse, vis.coup, vis.seal, tick]);
   if (!pos) return null;
-  const fresh = (t: number) => t > 0 && Date.now() - t < 3500;
+  const fresh = (t: number) => t > 0 && Date.now() - t < FRESH_MS;
   const nation = useWorld.getState().world?.countries[id]?.name ?? '';
   // Hover shows a tooltip, a click selects the nation, the same as clicking its land.
   const hover = (cap: string, text: () => string) => ({
@@ -134,7 +147,7 @@ function Marker({ id, vis, pips, onTip }: { id: number; vis: Vis; pips: boolean;
       </div>
     </Anchor>
   );
-}
+});
 
 const TIP_OFFSET = 16;
 
@@ -233,7 +246,7 @@ export function Council() {
   return (
     <>
       {[...ids].map((id) => (
-        <Marker key={id} id={id} vis={table[id] ?? blank()} pips={id === selected || id === hovered || id === tip?.id} onTip={onTip} />
+        <Marker key={id} id={id} vis={table[id] ?? BLANK} pips={id === selected || id === hovered || id === tip?.id} onTip={onTip} />
       ))}
     </>
   );

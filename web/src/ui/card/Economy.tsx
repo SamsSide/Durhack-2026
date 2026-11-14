@@ -2,13 +2,14 @@ import { useMemo } from 'react';
 import { GROUPS, PRICE_BASE, goodOf, isShort, landDevastation, marketPlan, movementOf, politicsOf, readinessBand, readinessOf } from '@terra/shared';
 import type { GoodGroup, MarketPlan, World } from '@terra/shared';
 import { useWorld } from '../../state/world';
+import { useSlowVersion } from '../useSlowVersion';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const price = (n: number) => n.toFixed(2);
 
 /** The goods market of the current world, computed once per world version (it walks the whole world). */
 export function useMarketPlan(world: World | null, enabled: boolean): MarketPlan | null {
-  const version = useWorld((s) => s.version);
+  const version = useSlowVersion();
   return useMemo(() => (enabled && world ? marketPlan(world) : null), [enabled, world, version]);
 }
 

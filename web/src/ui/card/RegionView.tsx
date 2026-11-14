@@ -1,11 +1,12 @@
 import { flagSvg, goodOf } from '@terra/shared';
 import { useRef } from 'react';
 import { useWorld } from '../../state/world';
+import { useSlowVersion } from '../useSlowVersion';
 import { CloseIcon, Lines as Placeholder, Meter, nameClass, useCardClass } from './shared';
 import { useRegionLore } from './useLore';
 
 export function RegionView({ regionId }: { regionId: number }) {
-  useWorld((s) => s.version);
+  useSlowVersion();
   const world = useWorld((s) => s.world);
   const select = useWorld((s) => s.select);
   const ref = useRef<HTMLDivElement>(null);

@@ -1,6 +1,5 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
-import { flushSync } from 'react-dom';
 import type { ChronicleEntry, World } from '@terra/shared';
 import { Chevron, Diamond } from './Diamond';
 import { displayKind } from './kinds';
@@ -17,6 +16,16 @@ const REFILL_AHEAD = 60; // px of content left beyond the right edge when the be
 const EASE_SPEED = 0.9;  // seconds, time constant for speeding up and slowing down
 const MAX_CATCH_UP = 1.5; // a late frame moves the belt at most this many usual frames
 const EASE_PAUSE = 0.3;  // seconds, time constant for stopping on hover and starting again
+const PENDING_MAX = 500; // ms a requested belt change may take to land before the loop asks again
+
+/** The layout the frame loop works from, measured when the belt or the track changes (never per frame). */
+interface Geometry {
+  keys: string[];  // the cells that were measured, in order
+  edge: number[];  // edge[i] is the left edge of cell i from the start of the belt; edge[keys.length] is the belt width
+  trackW: number;  // width of the track
+  viewW: number;   // distance from the start of the belt (at offset 0) to the right edge of the track
+}
+const NO_GEOMETRY: Geometry = { keys: [], edge: [0], trackW: 0, viewW: 0 };
 
 /** One cell on the belt. `seen` is set by the frame loop once the cell has entered the track. */
 interface BeltItem {
@@ -78,7 +87,7 @@ const Cell = memo(function Cell({ entry, kind, pick }: {
  * The collapsed chronicle: a news ticker. Entries sit on a belt in the order they happened and
  * scroll left at a steady speed; new ones join at the right-hand end. The offset only ever moves
  * with time: a cell that has left the track is removed and its width taken off the offset in the
- * same frame, so nothing on screen shifts.
+ * same paint, so nothing on screen shifts.
  */
 export function Ticker({ world, open, onToggle, onPick }: {
   world: World;
@@ -108,6 +117,8 @@ export function Ticker({ world, open, onToggle, onPick }: {
   const lastId = useRef<string | null>(newestId);
   const repeatAt = useRef(0); // which of the last SHOWN entries is repeated next
   const dirty = useRef(true); // the belt changed: the waiting queue needs a look
+  const geo = useRef<Geometry>(NO_GEOMETRY);
+  const pending = useRef(0);  // when the frame loop last asked for a belt change that has not landed; 0 when none
 
   // New chronicle entries join at the end of the belt. The offset is never touched here.
   useEffect(() => {
@@ -115,27 +126,90 @@ export function Ticker({ world, open, onToggle, onPick }: {
     const prev = lastId.current;
     lastId.current = newestId;
     if (newestId == null) { setItems([]); return; }
-    let i = len - 1;
-    while (i >= 0 && chron[i]!.id !== prev) i--;
+    // The chronicle is changed in place and can be shorter by now than it was at render: use its length now.
+    const n = chron.length;
+    let i = n - 1;
+    while (i >= 0 && chron[i]?.id !== prev) i--;
     // Not found: the first entries, or another stretch of history (a time scrub, a new world).
     const added = i >= 0 || prev == null
-      ? chron.slice(Math.max(i + 1, len - SHOWN)).map((e) => make(e, true, true))
+      ? chron.slice(Math.max(i + 1, n - SHOWN)).map((e) => make(e, true, true))
       : lastOf(chron, MAX_QUEUE).map((e) => make(e, true, false));
     repeatAt.current = 0;
     setItems((cur) => capped([...cur, ...added]));
   }, [newestId, len]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useLayoutEffect(() => { dirty.current = true; }, [items]);
+  // B8: everything the frame loop needs to know about the layout, read once when the belt or the track
+  // changes instead of on every frame (the loop used to force a layout sixty times a second).
+  const place = useRef(() => {
+    const belt = beltRef.current;
+    if (belt) belt.style.transform = `translateX(${-offset.current}px)`;
+  }).current;
+  // Called from a ResizeObserver (the belt's width changes whenever a cell joins or leaves), where the
+  // layout is already up to date, so these reads cost nothing.
+  const measure = useRef(() => {
+    const track = trackRef.current;
+    const belt = beltRef.current;
+    if (!track || !belt) { geo.current = NO_GEOMETRY; return; }
+    const list = itemsRef.current;
+    const n = Math.min(list.length, belt.children.length);
+    const keys: string[] = [];
+    const edge = [0];
+    for (let i = 0; i < n; i++) {
+      keys.push(list[i]!.key);
+      edge.push(edge[i]! + (belt.children[i] as HTMLElement).getBoundingClientRect().width);
+    }
+    const shift = /translateX\((-?[\d.e+-]+)px\)/.exec(belt.style.transform);
+    const start = belt.getBoundingClientRect().left - (shift ? Number(shift[1]) : 0);
+    geo.current = { keys, edge, trackW: track.clientWidth, viewW: track.getBoundingClientRect().right - start };
+  }).current;
 
-  // The scroll: one frame loop that owns the offset, the speed and what is on the belt.
+  // The belt changed. Cells taken off the front moved the rest left by exactly their width: take that off
+  // the offset here, before the browser paints, so nothing on screen shifts. No layout is read: what is
+  // still known of the old measure is kept, and the ResizeObserver below measures the rest.
+  useLayoutEffect(() => {
+    dirty.current = true;
+    pending.current = 0;
+    if (reduced) return;
+    const g = geo.current;
+    const first = items[0]?.key;
+    const at = first == null ? -1 : g.keys.indexOf(first);
+    if (at < 0) {
+      offset.current = 0;
+      geo.current = { ...g, keys: [], edge: [0] };
+    } else {
+      const base = g.edge[at]!;
+      offset.current = Math.max(0, offset.current - base);
+      let n = 0;
+      while (at + n < g.keys.length && n < items.length && items[n]!.key === g.keys[at + n]) n++;
+      geo.current = { ...g, keys: g.keys.slice(at, at + n), edge: g.edge.slice(at, at + n + 1).map((e) => e - base) };
+    }
+    place();
+  }, [items, reduced, place]);
+
+  // A resized window or a font that loads late changes the widths without changing the items.
+  const hasBelt = len > 0 && (reduced || items.length > 0);
+  useEffect(() => {
+    if (reduced || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => measure());
+    if (trackRef.current) ro.observe(trackRef.current);
+    if (beltRef.current) ro.observe(beltRef.current);
+    return () => ro.disconnect();
+  }, [reduced, hasBelt, measure]);
+
+  // The scroll: one frame loop that owns the offset, the speed and what is on the belt. It reads no
+  // layout and never renders synchronously: it asks for a belt change and the effect above lands it.
   useEffect(() => {
     if (reduced) return;
     offset.current = 0;
     speed.current = 0;
+    pending.current = 0;
     for (const it of itemsRef.current) it.seen = false;
+    measure();
+    place();
     let raf = 0;
     let last = performance.now();
     let frame = 1 / 60; // the usual frame time, smoothed
+    let unmeasured = 0; // frames in a row with cells on the belt that have no measured width
     const step = (t: number) => {
       raf = requestAnimationFrame(step);
       // A long frame (the globe is busy) moves the belt a little further, never a visible lurch.
@@ -143,19 +217,27 @@ export function Ticker({ world, open, onToggle, onPick }: {
       last = t;
       const dt = Math.min(raw, frame * MAX_CATCH_UP);
       frame += (raw - frame) * 0.05;
-      const track = trackRef.current;
       const belt = beltRef.current;
-      if (!track || !belt || belt.children.length === 0) { offset.current = 0; return; }
-      const trackRight = track.getBoundingClientRect().right;
-      const trackW = track.clientWidth;
+      let g = geo.current;
+      const list = itemsRef.current;
+      if (!belt || list.length === 0) { offset.current = 0; return; }
+      // Cells nobody has measured for a few frames (their arrival did not change the belt's width, so the
+      // ResizeObserver stayed quiet): measure here, once.
+      unmeasured = g.keys.length === list.length ? 0 : unmeasured + 1;
+      if (unmeasured > 3) { unmeasured = 0; measure(); g = geo.current; }
+      const n = g.keys.length;
+      const { edge, trackW, viewW } = g;
+      // A belt change that has not landed or has not been measured yet: only keep scrolling.
+      if (pending.current && t - pending.current > PENDING_MAX) pending.current = 0;
+      const steady = pending.current === 0 && list.length === n && list[0]!.key === g.keys[0];
+      let asked = false;
 
       // 1. Cells that have come into view: mark them, and give news its gilt wash.
-      let list = itemsRef.current;
       let unseen = list.length;
       while (unseen > 0 && !list[unseen - 1]!.seen) unseen--;
-      while (unseen < list.length) {
+      while (unseen < n && unseen < list.length) {
         const cell = belt.children[unseen] as HTMLElement | undefined;
-        if (!cell || cell.getBoundingClientRect().left >= trackRight) break;
+        if (!cell || edge[unseen]! - offset.current >= viewW) break;
         const it = list[unseen]!;
         it.seen = true;
         // Set on the node, not through React: the class must not change the cell's width or key.
@@ -167,7 +249,7 @@ export function Ticker({ world, open, onToggle, onPick }: {
       //    entries, and only the newest MAX_QUEUE wait. All of it is off screen, so nothing shifts.
       let waiting = 0;
       for (let i = unseen; i < list.length; i++) if (list[i]!.news) waiting++;
-      if (dirty.current) {
+      if (dirty.current && steady) {
         dirty.current = false;
         if (waiting > 0 && (waiting < list.length - unseen || waiting > MAX_QUEUE)) {
           let skip = waiting - MAX_QUEUE;
@@ -176,14 +258,14 @@ export function Ticker({ world, open, onToggle, onPick }: {
             const it = list[i]!;
             if (!it.news || skip-- > 0) drop.add(it.key);
           }
-          flushSync(() => setItems((cur) => cur.filter((it) => !drop.has(it.key))));
-          list = itemsRef.current;
+          setItems((cur) => cur.filter((it) => !drop.has(it.key)));
+          asked = true;
           waiting = Math.min(waiting, MAX_QUEUE);
         }
       }
 
       // 3. Speed: eased towards rest, a stop (hover, focus, a belt that fits) or a catch-up pace.
-      const beltW = belt.offsetWidth;
+      const beltW = edge[n]!; // at least this wide: cells still to be measured come on top
       const flowing = offset.current > 0.5 || beltW > trackW;
       const boost = Math.min(1, Math.max(0, (waiting - BOOST_FROM) / (BOOST_FULL - BOOST_FROM)));
       const stopped = hovered.current || focused.current || !flowing;
@@ -193,40 +275,35 @@ export function Ticker({ world, open, onToggle, onPick }: {
       if (Math.abs(target - speed.current) < 0.01) speed.current = target;
       offset.current += speed.current * dt;
 
-      // 4. Cells that have left the track on the left: remove them and take exactly the distance
-      //    the rest moved off the offset, before this frame is painted.
-      let gone = 0;
-      let goneW = 0;
-      while (gone < belt.children.length - 1) {
-        const w = (belt.children[gone] as HTMLElement).getBoundingClientRect().width;
-        if (goneW + w > offset.current) break;
-        goneW += w;
-        gone++;
-      }
-      if (gone > 0) {
-        const anchor = belt.children[gone] as HTMLElement;
-        const before = anchor.getBoundingClientRect().left;
-        const n = gone;
-        flushSync(() => setItems((cur) => cur.slice(n)));
-        offset.current = Math.max(0, offset.current - (before - anchor.getBoundingClientRect().left));
+      if (steady) {
+        // 4. Cells that have left the track on the left: ask for them to be removed. The offset is
+        //    corrected when the shorter belt lands (the layout effect), in the same paint.
+        let gone = 0;
+        while (gone < n - 1 && edge[gone + 1]! <= offset.current) gone++;
+        if (gone > 0) {
+          const first = g.keys[gone]!;
+          setItems((cur) => { const i = cur.findIndex((it) => it.key === first); return i > 0 ? cur.slice(i) : cur; });
+          asked = true;
+        }
+
+        // 5. Nothing new and the belt is about to run dry: repeat the most recent entries, in order.
+        if (!asked && flowing && beltW - offset.current - trackW < REFILL_AHEAD) {
+          const recent = lastOf(chronRef.current, SHOWN);
+          const again = recent[repeatAt.current % recent.length];
+          repeatAt.current = (repeatAt.current + 1) % recent.length;
+          if (again) { setItems((cur) => capped([...cur, make(again, false, false)])); asked = true; }
+        }
+        if (asked) pending.current = t;
       }
 
-      // 5. Nothing new and the belt is about to run dry: repeat the most recent entries, in order.
-      if (flowing && belt.offsetWidth - offset.current - trackW < REFILL_AHEAD) {
-        const recent = lastOf(chronRef.current, SHOWN);
-        const again = recent[repeatAt.current % recent.length];
-        repeatAt.current = (repeatAt.current + 1) % recent.length;
-        if (again) flushSync(() => setItems((cur) => capped([...cur, make(again, false, false)])));
-      }
-
-      belt.style.transform = `translateX(${-offset.current}px)`;
+      place();
     };
     raf = requestAnimationFrame(step);
     return () => {
       cancelAnimationFrame(raf);
       if (beltRef.current) beltRef.current.style.transform = '';
     };
-  }, [reduced]);
+  }, [reduced, measure, place]);
 
   const still = reduced ? lastOf(chron, SHOWN).reverse() : null; // reduced motion: a static list, newest first
 

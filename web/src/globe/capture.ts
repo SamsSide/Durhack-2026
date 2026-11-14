@@ -13,15 +13,84 @@ export function registerCapture(r: Rig | null): void {
 const FULL_W = 1280;
 const FULL_H = 720;
 
+type Shot = { imageBase64: string; mimeType: 'image/jpeg' };
+
+// B8: the encoder worker. undefined: not tried yet; null: not available here (the main thread encodes).
+let worker: Worker | null | undefined;
+let jobs = 0;
+const waiting = new Map<number, { resolve: (b64: string) => void; reject: (e: Error) => void }>();
+
+function encoder(): Worker | null {
+  if (worker !== undefined) return worker;
+  try {
+    if (typeof Worker === 'undefined' || typeof OffscreenCanvas === 'undefined' || typeof createImageBitmap === 'undefined') throw new Error('unsupported');
+    const w = new Worker(new URL('./captureWorker.ts', import.meta.url), { type: 'module' });
+    w.onmessage = (e: MessageEvent<{ id: number; imageBase64?: string; error?: string }>) => {
+      const job = waiting.get(e.data.id);
+      if (!job) return;
+      waiting.delete(e.data.id);
+      if (e.data.imageBase64) job.resolve(e.data.imageBase64); else job.reject(new Error(e.data.error ?? 'encode failed'));
+    };
+    w.onerror = () => {
+      worker = null;
+      for (const job of waiting.values()) job.reject(new Error('capture worker failed'));
+      waiting.clear();
+    };
+    worker = w;
+  } catch {
+    worker = null;
+  }
+  return worker;
+}
+
+/** Runs `fn` right after the globe's next frame, in the same task, while the drawing buffer is still valid. */
+function afterNextFrame<T>(fn: () => T, lateMs: number): Promise<T | null> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (run: boolean): void => {
+      if (settled) return;
+      settled = true;
+      off();
+      window.clearTimeout(timer);
+      try { resolve(run ? fn() : null); } catch (e) { reject(e instanceof Error ? e : new Error(String(e))); }
+    };
+    const off = addAfterEffect(() => finish(true));
+    const timer = window.setTimeout(() => finish(false), lateMs);
+  });
+}
+
+/** The worker path: a GPU-side copy of the frame here, the read-back and the JPEG in the worker. Null when it cannot be used. */
+async function captureInWorker(W: number, H: number): Promise<Shot | null> {
+  const w = encoder();
+  if (!w) return null;
+  try {
+    const pending = await afterNextFrame(() => (rig ? createImageBitmap(rig.gl.domElement) : null), 300);
+    const bitmap = pending ? await pending : null;
+    if (!bitmap) return null;   // no frame came (a hidden tab), or the globe went away
+    const id = ++jobs;
+    const imageBase64 = await new Promise<string>((resolve, reject) => {
+      waiting.set(id, { resolve, reject });
+      window.setTimeout(() => { if (waiting.delete(id)) reject(new Error('capture worker timed out')); }, 4000);
+      w.postMessage({ id, bitmap, width: W, height: H }, [bitmap]);
+    });
+    return { imageBase64, mimeType: 'image/jpeg' };
+  } catch (err) {
+    console.warn('globe capture: the worker path failed, encoding on the main thread', err);
+    return null;
+  }
+}
+
 /**
  * A JPEG (1280 x 720 unless a smaller size is asked for, quality 0.8) of the current globe view, without
- * any HUD on top. Encoding blocks the main thread for about 30 ms at full size: a caller that only shows
- * a thumbnail should pass its own size (16:9).
+ * any HUD on top. The frame is scaled and encoded in a worker, so the globe does not stall; where that is
+ * not possible it is encoded here, which blocks the main thread for 30 ms or more whatever the size.
  */
-export async function captureGlobe(size?: { width: number; height: number }): Promise<{ imageBase64: string; mimeType: 'image/jpeg' }> {
+export async function captureGlobe(size?: { width: number; height: number }): Promise<Shot> {
   if (!rig) throw new Error('globe is not mounted');
   const W = Math.max(16, Math.round(size?.width ?? FULL_W));
   const H = Math.max(9, Math.round(size?.height ?? FULL_H));
+  const shot = await captureInWorker(W, H);
+  if (shot) return shot;
   const out = document.createElement('canvas');
   out.width = W;
   out.height = H;
