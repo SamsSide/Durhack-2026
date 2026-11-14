@@ -9,17 +9,22 @@
 
 ## Where we are
 
-**Planning, 14 Nov 15:00. Nothing is built yet; building starts when the owner says so.** The
-project is Terra Nova (`hackathon-plan.md`). Contracts X1 to X7 are agreed. The work is split by
-agent budget: lane a carries the most, lane b a middling amount, lane c the least.
+**Planning, 14 Nov 15:40. Nothing is built yet; building starts when the owner says so.** The
+project is Terra Nova (`hackathon-plan.md`). Contracts X1 to X7 are agreed.
+
+**Nobody waits.** Lane a's first row, the seed (A1, about 30 minutes), puts every shared piece on
+`main`: types, mock server, mock routes, the store, the app shell, placeholders and default
+colours. After it, no row in any lane depends on another lane: lanes b and c build against the
+mock and swap in the real pieces as they merge. During those 30 minutes lanes b and c pull,
+read the plan and write their first lane plans.
 
 ## Up next, per lane
 
 | Lane | Person | Next row | Waiting on |
 | --- | --- | --- | --- |
-| a | @SamsSide | A1 scaffold and mock; then A8 models and A12 Figma design alongside A2 | the owner's go |
-| b | @CutGrass88 | B1 app shell, store and first globe | A1 on `main` |
-| c | @Justin-CODING-PY | C1 Create screen, then C2 nation card | A1 and B1 on `main` |
+| a | @SamsSide | A1 the seed; then four tracks at once (engine, story and sound, models, design) | the owner's go |
+| b | @CutGrass88 | Lane plan for B1 to B3 now; build B1 when A1 merges | A1 only (30 minutes) |
+| c | @Justin-CODING-PY | Lane plan for C1 and C2 now; build C1 when A1 merges | A1 only (30 minutes) |
 
 ## Checkpoints
 
@@ -27,7 +32,7 @@ Hacking ends Sunday 12:00.
 
 | CP | Time | Means | Status |
 | --- | --- | --- | --- |
-| CP0 | 1 hour after the owner's go | Scaffold and mock server on `main`; every lane building on the mock | todo |
+| CP0 | 30 minutes after the owner's go | The seed (A1) on `main`; every lane building on the mock, nobody waiting | todo |
 | CP1 | Sat 21:00 | First end-to-end: a prompt makes a world, nations grow live on the globe, a click opens a panel | todo |
 | CP1.5 | Sun 02:00 | Wars animate; cut, silence, delete and restore work; real lore, narration and anthem | todo |
 | CP2 | Sun 08:00 | Feature freeze: fixes, polish, the saved demo world, docs | todo |
@@ -35,14 +40,15 @@ Hacking ends Sunday 12:00.
 
 ## The lanes
 
-*One column per person. Dotted arrows are cross-lane needs (contracts X1 to X7).*
+*One column per person. The only cross-lane dependency is the seed (A1): everything else is
+built against the mock and swapped for the real piece when it merges.*
 
 ```mermaid
 flowchart LR
   CP0(["CP0 · Plan and mock on main"]):::cp
   subgraph A["Lane A · World, story and sound (@SamsSide)"]
     direction TB
-    A1["A1 · Scaffold, types, mock server"]:::next --> A2["A2 · World generation"]:::todo --> A3["A3 · Simulation tick"]:::todo --> A4["A4 · Nation agents and bus"]:::todo --> A5["A5 · Gemini rulers and budget"]:::todo
+    A1["A1 · The seed"]:::next --> A2["A2 · World generation"]:::todo --> A3["A3 · Simulation tick"]:::todo --> A4["A4 · Nation agents and bus"]:::todo --> A5["A5 · Gemini rulers and budget"]:::todo
     A5 --> A6["A6 · War and diplomacy"]:::todo --> A7["A7 · Cut, silence, delete, restore"]:::todo --> A9["A9 · Replays and demo world"]:::todo
     A8["A8 · Blender models"]:::next
     A12["A12 · Figma design"]:::next
@@ -69,15 +75,7 @@ flowchart LR
   CP3(["CP3 · Demo and submission"]):::cp
   CP0 --> A1
   A1 -.->|X1, X2 mock| B1
-  A1 -.->|X3 mock, X6 stub, X7| C1
-  B1 -.->|X5| C2
-  A12 -.->|X7 design| C1
-  A12 -.->|X7 design| B6
-  C2 -.->|NationCard| B6
-  A8 -.->|X4| B4
-  A6 -.->|war events| B5
-  A7 -.->|controls| B7
-  A14 -.->|X6| C2
+  A1 -.->|X3 mock, X5, X6 stub, X7| C1
   A5 --> CP1
   A13 --> CP1
   B4 --> CP1

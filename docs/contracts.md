@@ -206,6 +206,8 @@ export function flagSvg(spec: FlagSpec, width?: number, height?: number): string
 - **Errors:** an unknown message gets `{ "type": "error", "message": "..." }`; the socket stays open.
 - **Mock:** `npm run mock` starts the real server with `mockWorld()` and `mockEvents()` and
   accepts every control (cut and delete change the `agents` list; nothing else is simulated).
+  The mock stays in the repo for good: it is how lanes b and c build and test without waiting
+  for the engine, and it costs no API calls.
 - **Real by:** CP0 mock (A1); CP1 real events (A3); CP1.5 real controls (A7).
 - **Status:** agreed
 
@@ -252,6 +254,7 @@ export function flagSvg(spec: FlagSpec, width?: number, height?: number): string
   ElevenLabs fails (the panel then shows the text only).
 - **Mock:** with `LLM_MODE=mock`, lore is built from templates and the chronicle, and the three
   audio routes return a bundled sample file from `server/src/story/samples/`.
+- **Mock by:** CP0: row A1 ships a mock of every route in this table.
 - **Real by:** CP1 (`POST /api/world` A2, lore A13); CP1.5 (narration A14, anthem A15, chant A16); CP2 (replays and log A9).
 - **Status:** agreed
 
@@ -293,7 +296,7 @@ export function flagSvg(spec: FlagSpec, width?: number, height?: number): string
 - **Real by:** CP1 (row A8).
 - **Status:** agreed
 
-## X5 · Browser store (lane b gives to lane c)
+## X5 · Browser store and interface slots (written by lane a in the seed, owned by lane b)
 
 - **Kind:** `zustand` store in `web/src/state/world.ts`.
 - **Signature:**
@@ -324,8 +327,13 @@ export const useWorld: UseBoundStore<StoreApi<WorldStore>>;
   light beam, scan lines, flicker). Inside it lane b mounts lane c's `NationCard` component
   (`web/src/ui/index.ts`, props `{ countryId: number }`, plain DOM, 380 px wide, transparent
   background, colours from X7). On a narrow screen the same card docks to the side instead.
-- **Mock:** lane b ships the store first (row B1), connected to `npm run mock`.
-- **Real by:** CP0 plus one hour (row B1).
+- **Interface components (lane c gives to lane b):** `web/src/ui/index.ts` exports
+  `CreateScreen` (no props), `NationCard` (`{ countryId: number; regionId?: number | null }`),
+  `Chronicle` (no props) and `NetworkPanel` (no props). The seed ships a working placeholder for
+  each, already placed in `App.tsx`, so the names and props never change.
+- **Mock:** none needed: the seed (row A1) ships the real store, working against
+  `npm run mock`. Lane a writes it; lane b owns it from then on.
+- **Real by:** CP0 (row A1).
 - **Status:** agreed
 
 ## X6 · Sound (lane a gives to lanes b and c)

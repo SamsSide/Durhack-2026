@@ -137,9 +137,10 @@ so no two anthems are alike and each one is tied to that nation's history. *War 
 short chant per nation, played automatically when it declares war or fights a battle. The demo
 world's audio is generated once and kept.
 
-**Look and feel.** The interface is designed in Figma by the owner (contract X7) and built by
-lane c from that design. Selecting a nation projects a hologram from its capital (a beam, scan
-lines, a flicker) carrying its card. From grand-strategy map games such as Age of History we
+**Look and feel.** The style is an old atlas: parchment panels, serif type, ink borders, the
+planet as a painted political map. The interface is designed in Figma by the owner (contract
+X7) and built by lane c from that design. Selecting a nation projects its card above its
+capital in a beam of light (the hologram), styled as a lit parchment page to match. From grand-strategy map games such as Age of History we
 take the genre's conventions, not its art: the planet is a political map first, with map modes
 (political, terrain, diplomacy relative to the selected nation, army strength), army strength
 numbers on the map, wars fought tile by tile, peace treaties that hand over land, and a
@@ -198,11 +199,13 @@ a middling amount (9 rows), lane c the least (5 small rows, none of them touchin
 
 ## 6. Schedule
 
+Everyone stays up overnight. After the seed, no lane waits on another: see `roadmap.md`.
+
 Hacking ends Sunday 12:00 (confirmed by the owner).
 
 | Time | Checkpoint | Means |
 | --- | --- | --- |
-| 1 hour after the go | CP0 | Scaffold and mock server on `main`; every lane building against the mock |
+| 30 minutes after the go | CP0 | The seed (A1) on `main`; every lane building against the mock, nobody waiting |
 | Sat 21:00 | CP1 | First end-to-end on `main`: a prompt makes a world, nations grow live on the globe, a click opens a panel |
 | Sun 02:00 | CP1.5 | Wars animate; cut, silence, delete and restore work; real lore, narration and anthem |
 | Sun 08:00 | CP2 | Feature freeze: fixes, polish, the saved demo world, docs |
