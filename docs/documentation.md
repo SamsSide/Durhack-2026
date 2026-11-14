@@ -554,6 +554,9 @@ anthem sung from what really happened to it."
 
 ### The 2-minute demo
 
+Given live at the table on the owner's laptop, again for every judge (no video); the timed script
+and the reset routine are in `docs/submission.md` section 3. The outline:
+
 1. A judge gives a prompt (and a picture). Six nations, Create: a planet forms with named nations,
    leaders and flags (about 5 to 7 s).
 2. Speed up: borders spread, camps become cities, ages advance, ships cross the oceans; the director
@@ -654,6 +657,20 @@ payment: `docs/shots/solana-devnet-payment.jpg`.
 25. *Does it scale?* Comfortably at 500 provinces and up to 16 nations at 64x speed on one laptop;
     the rules scan provinces per nation, so much larger maps would need spatial indexes. We have not
     benchmarked beyond the demo size.
+
+### Table-demo questions (2 minutes, live, one judge at a time)
+
+- *Is this live or a recording?* Live: the real app on this laptop, with a prepared world so we do
+  not wait. A saved run can be replayed exactly, with no API calls, if the network fails.
+- *Can I give it a prompt?* Yes, on the Create screen; Prepare takes a short while to cache the
+  lore and audio, so we start from a prepared world for the two minutes and can build yours after.
+- *What am I looking at when you cut a nation?* The nation's own copy of the world, frozen at the
+  cut and drifting from the truth while it keeps ruling; the Show beliefs view paints what it no
+  longer knows.
+- *Is the Solana payment real?* A real devnet Token-2022 transfer signed by the paying nation's
+  wallet, with the reason in the memo; click an arc to open it in the Solana Explorer.
+- *How much of this is the LLM?* Little: rules and seeded functions move the world; Gemini sets
+  each nation's focus every 30 to 45 s and hears spoken decrees; every call has a fallback.
 
 ### Added on 14 Nov (afternoon and evening)
 
