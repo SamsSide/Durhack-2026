@@ -82,3 +82,6 @@
 @media (prefers-reduced-motion: reduce) {
   .tn-news-in, .tn-news-out, .tn-news-dot, .tn-news-prep { animation: none; }
 }
+
+/* The anchor reading this bulletin (#111), before the year. */
+.tn-news-anchor { font-family: var(--font-serif); font-style: italic; font-weight: 400; font-size: 13px; color: var(--color-ink-muted); margin-right: 8px; }

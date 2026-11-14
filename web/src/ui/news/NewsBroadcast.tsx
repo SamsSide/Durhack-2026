@@ -48,6 +48,7 @@ export function NewsBroadcast() {
           <div className="tn-news-head">
             <span className="tn-news-title">{bulletin.headline}</span>
             <span className="tn-news-year">
+              {bulletin.anchor && <span className="tn-news-anchor">with {bulletin.anchor}</span>}
               {noSound && <span className="tn-news-nosound">(no sound)</span>}
               Y{bulletin.year}
             </span>

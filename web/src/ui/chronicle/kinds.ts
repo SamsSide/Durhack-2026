@@ -1,5 +1,5 @@
-// Chronicle kinds as the design shows them. `secession` is a design-side kind: the shared
-// ChronicleKind has none, so a `founding` whose first nation has a parent is shown as one.
+// Chronicle kinds as the design shows them. `secession` is a real ChronicleKind since A18 (#109);
+// a `founding` whose first nation has a parent is still shown as one, for logs from before it.
 import type { ChronicleEntry, ChronicleKind, World } from '@terra/shared';
 
 export type DisplayKind = ChronicleKind | 'secession';
