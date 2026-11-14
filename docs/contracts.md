@@ -48,6 +48,12 @@ Real values go in `.env` at the repo root (git-ignored). The owner's keys file i
 | `IMAGE_MAX_PER_RUN` | lane a | Default 12. Painted flags per world |
 | `PORT` | lane a | Server port, default 8787 |
 | `TIGER_DATABASE_URL` | lane a | Optional, row A11 |
+| `SOLANA_MODE` | lane a | `off`, `mock` (default: fake signatures, no network) or `devnet` (row A27) |
+| `SOLANA_RPC_URL` | lane a | Default `https://api.devnet.solana.com` |
+| `SOLANA_WS_URL` | lane a | Default `wss://api.devnet.solana.com` |
+| `SOLANA_KEYS_DIR` | lane a | Keypair JSON files, default `~/.config/durhack/solana`; never in the repo |
+| `SOLANA_SETTLE_MS` | lane a | Settlement window, default 5000 |
+| `SOLANA_MAX_TX_PER_WINDOW` | lane a | Default 6; overflow nets into the next window |
 
 ## X1 · World types and `applyEvent` (lane a gives to lanes b and c)
 
@@ -160,6 +166,7 @@ export type WorldEvent = Base & (
   | { type: 'unit_moved'; unitId: string; from: number; to: number; arriveTick: number }
   | { type: 'unit_removed'; unitId: string; reason: 'battle' | 'disband' | 'collapse' }
   | { type: 'unit_attrition'; unitId: string; loss: number; terrain: Terrain }   // strength lost to hunger, cold and thirst in hostile land; applyEvent subtracts loss
+  | { type: 'payment'; from: number; to: number; amount: number; reason: PaymentReason; note: string }  // row A27; see below
   | { type: 'battle'; tile: number; attacker: number; defender: number; attackerUnit: string; winner: number; losses: { attacker: number; defender: number } }
   | { type: 'relation_changed'; a: number; b: number; stance: Stance; reason: string }
   | { type: 'country_updated'; countryId: number; patch: Partial<Country> }
@@ -188,7 +195,20 @@ export type TerrainEffect = {
 };
 export const TERRAIN_EFFECTS: Record<Terrain, TerrainEffect>;
 export const LANDING_PENALTY: number;  // 0.2: an army attacking from the sea fights at (1 - 0.2)
+
+// Payments (row A27, owner decision 14 Nov 19:20; design in docs/research/solana-economy.md).
+export type PaymentReason = 'trade' | 'reparations' | 'plunder' | 'seizure' | 'war_chest' | 'subsidy' | 'pooled';
 ```
+
+- **`payment`:** `from` and `to` are country ids; `amount` in coins with 2 decimals; `note` is a
+  short phrase for the ledger ("Treaty of Hatfield", "the sack of Elvet"). `applyEvent` moves
+  `amount` from `countries[from].treasury` to `countries[to].treasury`, clamped at the payer's
+  balance. The actor is the payer, except `plunder`, which is derived in `settleMove` with the
+  attacker as actor. Payments in a tick are applied after income and spending, so a treasury
+  never goes negative mid-tick. `trade`: dues every 10 years per trade pact; `reparations`: in a
+  peace treaty; `plunder`: a sacked city; `seizure`: a captured capital's treasury; `war_chest`:
+  an ally paying into a war; `subsidy`: a strong nation paying a weak friend; `pooled`: nations
+  that join forces and move together pay into one leader's fund.
 
 | Terrain | defence | supply | attrition | move | yields |
 | --- | --- | --- | --- | --- | --- |
@@ -228,7 +248,16 @@ this table from `@terra/shared`.
 { "type": "budget", "calls": 212, "tokensIn": 61200, "tokensOut": 18800, "callsPerMin": 14, "capped": false, "mode": "mock" }
 { "type": "belief", "countryId": 2, "owner": [ -1, 2, 2, 0 ] }
 { "type": "none" }
+{ "type": "ledger", "entries": [ { "id": "p-1042", "eventIds": ["e-1042"], "tick": 352, "year": 1052, "from": 2, "to": 0, "amount": 120, "reason": "reparations", "note": "Treaty of Hatfield", "status": "confirmed", "signature": "5Kx...", "url": "https://explorer.solana.com/tx/5Kx...?cluster=devnet" } ] }
+{ "type": "economy", "mode": "devnet", "online": true, "pending": 3, "payments": 1284, "volume": 18230.5, "feesSol": 0.0061 }
 ```
+
+- **`ledger` and `economy` (row A27):** every `payment` event becomes a ledger row. `status` is
+  `queued`, `sent`, `confirmed`, `failed` or `simulated` (mock mode); a row is sent again each time
+  its status changes, so the client keeps the latest by `id`. `signature` and `url` are present
+  from `sent` on (mock: fake values, `url` null). `economy` goes out when it changes, at most once a
+  second. Neither is sent with `SOLANA_MODE=off`. Replays send `ledger` rows with the saved
+  signatures and send nothing to the chain.
 
   A `snapshot` is sent on connect and whenever a new world is created. `events` arrive in
   batches, about four a second; apply each with `applyEvent`. `none` means no world exists yet.
@@ -290,6 +319,7 @@ this table from `@terra/shared`.
 | `POST /api/broadcast` | a | `{ "imageBase64": "...", "mimeType": "image/jpeg" }` (a capture of the globe, about 1280 x 720) | `{ "id": "b-7", "tick": 210, "year": 1210, "headline": "War on the Salt Marches", "anchor": "Sam", "script": "Good evening. ...", "audio": "/api/broadcast/b-7/audio" }`: Gemini looks at the image and the recent chronicle and writes a 20 to 30 s news bulletin. Gemini takes about 15 to 20 s with the image (show a "preparing bulletin" state). Over `BROADCAST_MAX_PER_RUN` or the LLM cap, or on any failure, it returns a template bulletin from the chronicle instead (never 503); mock mode does the same. `404` with no world, `400` without an image |
 | `GET /api/broadcast/:id/audio` | a | none | `audio/mpeg`: "Terra Nova News." and the bulletin read by a newsreader voice (ElevenLabs), cached; `503 { "error": "voice unavailable" }` over the cap or on failure; mock: a bundled sample |
 | `GET /api/decree/:entryId/herald` | a | none (`entryId` is the id of a `decree` chronicle entry) | `audio/mpeg`: the decree read out by the royal herald (one of the team's voices), cached; `503 { "error": "voice unavailable" }`; mock: a bundled sample. The X6 module plays it automatically when a decree entry arrives |
+| `GET /api/economy` | a | none | `{ "mode": "devnet", "cluster": "devnet", "currency": { "name": "Drowned Age Crown", "symbol": "TNC", "mint": "Ab1...", "url": "https://explorer.solana.com/address/Ab1...?cluster=devnet", "supply": 1000000, "mintAuthority": null }, "commons": { "address": "Co1...", "url": "...", "balance": 812000 }, "nations": [ { "countryId": 2, "address": "Na2...", "url": "...", "onChain": 151.2, "sim": 151.2, "inSync": true } ], "totals": { "payments": 1284, "volume": 18230.5, "transactions": 402, "feesSol": 0.0061 }, "recent": [ "the last 50 ledger rows, as in X2" ] }` (row A27). Mock mode answers at once with fake addresses and `simulated` rows; `503 { "error": "economy off" }` with `SOLANA_MODE=off` |
 
   Lore response:
 
