@@ -19,7 +19,7 @@ in `assets/` and `web/public/models/`) and *design* (A12, in Figma, `web/src/the
 | ID | Row | Needs (from other lanes) | Gives (to other lanes) | Checkpoint | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | A1 | **The seed (30 minutes, first, alone).** Everything the other lanes depend on, so that after it nobody waits: npm workspaces with every dependency all three lanes need; `packages/shared` with the X1 types, `applyEvent`, `flagSvg`, `mockWorld`, `mockEvents`; `npm run mock` serving X2 and mock versions of every X3 route (lore, region lore, sample audio, sample flag, world log); the X5 store, working against the mock; the app shell `App.tsx` with a slot for the globe and the four interface components placed (side dock for the card until the hologram exists); named placeholder exports for those components in `web/src/ui/index.ts`; the X6 audio stub; a default `tokens.css` (X7); a box-and-cone model fallback note in X4; stack steps in `check.sh` | | X1 to X7, all usable against the mock, to b and c | CP0 | done | After merging, `web/src/state/` and `App.tsx` pass to lane b and `web/src/ui/` to lane c |
-| A2 | World generation: about 500 irregular provinces on a sphere (spherical Voronoi), terrain and elevation from the seed and sea level, provinces grouped into regions, capitals spread apart; `POST /api/world` builds a world from a mock world bible | | X3 `POST /api/world` | CP1 | todo | |
+| A2 | World generation: about 500 irregular provinces on a sphere (spherical Voronoi), terrain and elevation from the seed and sea level, provinces grouped into regions, capitals spread apart; `POST /api/world` builds a world from a mock world bible | | X3 `POST /api/world` | CP1 | done | |
 | A3 | The simulation tick: income, claim land, build and upgrade structures by focus, population; real events on the socket; speed and pause | | X2 real events | CP1 | todo | |
 | A4 | Nation agents: one per country with its own replica, an autopilot policy from temperament, heartbeats, and a message bus with a switchable link per agent | | | CP1 | todo | No central decision-maker |
 | A5 | Gemini: the world bible at creation and ruler decisions as schema-checked JSON; `LLM_MODE=mock`; call and token meter, caps, autopilot on any failure; check the real free-tier limits with one call | | `budget` messages | CP1 | todo | Owner: pick the two model ids |
@@ -45,6 +45,7 @@ in `assets/` and `web/public/models/`) and *design* (A12, in Figma, `web/src/the
 ## Log
 
 <!-- One line per merged PR: time · PR # · what. Newest last. -->
-- 16:20 · seed PR · A1: shared types and mock world, mock server for X2 and every X3 route, store, app shell, placeholders, audio, tokens
+- 14:35 · #19 · A1: shared types and mock world, mock server for X2 and every X3 route, store, app shell, placeholders, audio, tokens
+- 14:47 · A2: about 500 provinces, terrain, regions, spread capitals from a seed; POST /api/world builds a world from a template bible
 
 Mocks: `npm run mock` (MockRunner behind the `WorldRunner` interface in `server/src/runner.ts`) stands in for the engine until A3; lore, audio and replays are mocked until A13 to A16 and A9.
