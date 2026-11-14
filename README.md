@@ -144,6 +144,9 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 - **Time gears** from a week a second to ten years a second, with a pacing director that slows
   down for big moments, a **timeline scrubber** that rebuilds the globe at any past year, and a
   **spotlight tour** of the world's big moments.
+- **An event feed** down the left: the world's news as cards with a picture of the place, wars,
+  falls and decrees first, quiet growth rolled into one card a decade. **Dispatch tabs** at the
+  top right carry wars, falls, returns from the Silence and decree results.
 - **Presentation mode** hides every panel and leaves the globe and the year; the screen starts
   collapsed.
 - A **closing card** shows what the world cost (calls and tokens), and every run is recorded and
@@ -258,6 +261,7 @@ Keys do nothing while you are typing in a text box.
 | Click or drag on the minimap | Turn the globe to that spot |
 | Click a map-mode icon by the minimap | Change the map mode |
 | Click a council marker on the globe | Select that nation |
+| Click a feed card or a dispatch tab | Fly to the place it reports on and select that nation |
 | Click a payment arc | Open that payment on the Solana Explorer |
 | Hold the microphone button | Speak a decree |
 | Click the token meter | Show the closing card |
