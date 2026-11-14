@@ -15,7 +15,7 @@ export function TokenMeter() {
   const label = state === 'capped' ? 'Capped' : state === 'live' ? 'Live' : 'Mock';
   return (
     <div className={`tn-meter tn-meter-${state}`}>
-      <span className="num">{calls(budget.calls)}</span> calls<span className="dot">·</span>
+      <span className="calls"><span className="num">{calls(budget.calls)}</span> calls<span className="dot">·</span></span>
       <span className="num">{short(budget.tokensIn + budget.tokensOut)}</span> tokens<span className="dot">·</span>
       <span className="mode">{label}</span>
     </div>
