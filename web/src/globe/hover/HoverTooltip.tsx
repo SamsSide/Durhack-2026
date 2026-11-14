@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { flagSvg } from '@terra/shared';
 import { useWorld } from '../../state/world';
+import { effectsLine } from '../terrain/effects';
 import { useHover } from '../camera/usePicking';
 import './hover.css';
 
@@ -66,14 +67,14 @@ export function HoverTooltip() {
     const owner = world.owner[tile] ?? -1;
     const country = owner >= 0 ? world.countries[owner] : undefined;
     if (!country) {
-      return { kind: 'land' as const, title: TERRAIN_NAMES[t.terrain] ?? t.terrain, sub: region?.name || 'Unclaimed land' };
+      return { kind: 'land' as const, title: TERRAIN_NAMES[t.terrain] ?? t.terrain, sub: region?.name || 'Unclaimed land', fx: effectsLine(t.terrain) };
     }
     let provinces = 0;
     for (const o of world.owner) if (o === owner) provinces++;
     const capRegion = world.tiles[country.capitalTile]?.region ?? -1;
     const place = region?.name || (capRegion >= 0 ? world.regions[capRegion]?.name : '') || '';
     const flag = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(flagSvg(country.flag, 60, 40));
-    return { kind: 'nation' as const, title: country.name, sub: place, provinces, flag };
+    return { kind: 'nation' as const, title: country.name, sub: place, provinces, flag, terrain: TERRAIN_NAMES[t.terrain] ?? t.terrain, fx: effectsLine(t.terrain) };
   }, [world, tile, version]);
   // Keep the last content while the panel fades out.
   const last = useRef(info);
@@ -92,12 +93,14 @@ export function HoverTooltip() {
             </div>
           </div>
           <div className="ht-row"><span className="ht-cap">Provinces</span><span className="ht-num">{shown.provinces}</span></div>
+          <div className="ht-fx">{shown.terrain}: {shown.fx}</div>
         </>
       )}
       {shown?.kind === 'land' && (
         <div className="ht-names">
           <div className="ht-title">{shown.title}</div>
           <div className="ht-sub">{shown.sub}</div>
+          <div className="ht-fx">{shown.fx}</div>
         </div>
       )}
     </div>

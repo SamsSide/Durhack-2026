@@ -124,14 +124,17 @@ export function buildProvinceMesh(world: World): ProvinceMesh {
         const ia = inset(tile.center, a), ib = inset(tile.center, b);
         push(ia, h, null, kind); push(a, hr, null, kind); push(b, hr, null, kind);
         push(ia, h, null, kind); push(b, hr, null, kind); push(ib, h, null, kind);
-        // Wall down to sea level, rock coloured with a darker foot.
+        // Wall: a coast drops to sea level (rock with a darker foot); between two land tiles it only
+        // drops to the lower neighbour's top, so inland steps stay small and no tall dark wall shows
+        // at the limb. A neighbour as high or higher gives a zero-height wall (kept for the layout).
         const an = norm(a), bn = norm(b);
         const d: Vec3 = [bn[0] - an[0], bn[1] - an[1], bn[2] - an[2]];
         const m = norm([an[0] + bn[0], an[1] + bn[1], an[2] + bn[2]]);
         const out = norm([d[1] * m[2] - d[2] * m[1], d[2] * m[0] - d[0] * m[2], d[0] * m[1] - d[1] * m[0]]);
-        const top = otherSea ? VK_COAST_TOP : VK_WALL_TOP, bot = otherSea ? VK_COAST_BOT : VK_WALL_BOT;
-        push(a, SEA_LEVEL, out, bot); push(b, SEA_LEVEL, out, bot); push(b, hr, out, top);
-        push(a, SEA_LEVEL, out, bot); push(b, hr, out, top); push(a, hr, out, top);
+        const top = otherSea ? VK_COAST_TOP : VK_WALL_TOP, bot = otherSea ? VK_COAST_BOT : VK_WALL_TOP;
+        const hb = otherSea ? SEA_LEVEL : Math.min(hr, ho);
+        push(a, hb, out, bot); push(b, hb, out, bot); push(b, hr, out, top);
+        push(a, hb, out, bot); push(b, hr, out, top); push(a, hr, out, top);
       }
     }
     tileVertexCount[tile.id] = vi - tileVertexStart[tile.id]!;

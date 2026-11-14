@@ -53,3 +53,4 @@ pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
 - 14 Nov · B5 + map look + styles · war counters, march and attack arrows, battles, fronts, treaties, falls; AoH names along nations (lifted, curved, never clipped, #106), hover tooltip, terrain relief, minimap; per-nation building styles (#91); status tag and ring fixes; self-hosted Cinzel
 - 14 Nov · identity + living map · per-nation identity (government tints, era density, mountain terraces, props, selection grade), units by tech age and trader ships (#122), speed slider and auto pacing (#124), clouds, generated rivers and lakes, model gallery (?gallery) with 4 prototype sets, research docs
 - 14 Nov · province lines, shading, cliff steps, region borders
+- 14 Nov · close-up walled towns with rivers inside (province-crossing rivers removed), AoH terrain map mode with effects legend and tooltip, names anchored on the visible land, lighter clouds, smaller interior cliffs

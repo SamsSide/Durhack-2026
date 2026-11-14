@@ -4,7 +4,7 @@ import { Globe } from './globe';
 import * as ui from './ui';
 import { Chronicle, CreateScreen, DecreeBox, NationCard, NetworkPanel } from './ui';
 import { useWorld } from './state/world';
-import { BeliefBanner, ClosingCard, DiplomacyLegend, Minimap, MODES, TopBar, useTimelineOpen } from './hud';
+import { BeliefBanner, ClosingCard, DiplomacyLegend, Minimap, MODES, TerrainLegend, TopBar, useTimelineOpen } from './hud';
 import { HoverTooltip } from './globe/hover/HoverTooltip';
 import { useEffect, useState } from 'react';
 
@@ -51,6 +51,7 @@ export function App() {
       {world && <Minimap hidden={timelineOpen} />}
       {world && dock && <div className={`hud card-dock${dockOut ? ' out' : ''}`}><NationCard countryId={dock.id} regionId={dock.regionId} /></div>}
       <DiplomacyLegend hidden={timelineOpen} />
+      <TerrainLegend hidden={timelineOpen} />
       {world && !timelineOpen && <div className="hud decree-slot"><DecreeBox /></div>}
       {world && <div style={{ ...overlay, left: 'var(--space-4)', right: 'var(--space-4)', bottom: 'var(--space-4)' }}><Chronicle /></div>}
       {world && NewsBroadcast && (

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { relationOf } from '@terra/shared';
 import type { World } from '@terra/shared';
-import { getPalette } from '../palette';
+import { BIOME_COLORS, getPalette } from '../palette';
 import { VK_COAST_BOT, VK_COAST_TOP, VK_LIP, VK_SLOPE, VK_WALL_BOT, VK_WALL_TOP } from './buildProvinceMesh';
 import type { ProvinceMesh } from './buildProvinceMesh';
 import { statusOf } from '../status/statusTint';
@@ -25,16 +25,43 @@ function strengthByCountry(world: World): { value: Float64Array; max: number } {
   return { value, max };
 }
 
+/** Terrain mode biome colour: dry band where desert meets non-desert, coast takes its land neighbour's tone. */
+function biomeColor(world: World, tileId: number, out: THREE.Color): THREE.Color {
+  const tile = world.tiles[tileId]!;
+  let t = tile.terrain;
+  if (t === 'coast') {
+    const seen: Record<string, number> = {};
+    let best = 'plains', n = 0;
+    for (const nb of tile.neighbors) {
+      const nt = world.tiles[nb]?.terrain;
+      if (!nt || nt === 'ocean' || nt === 'coast') continue;
+      const c = (seen[nt] = (seen[nt] ?? 0) + 1);
+      if (c > n) { n = c; best = nt; }
+    }
+    t = best as typeof t;
+  }
+  if (t === 'desert' || t === 'plains') {
+    let dry = false;
+    for (const nb of tile.neighbors) {
+      const nt = world.tiles[nb]?.terrain;
+      if (!nt || nt === 'ocean') continue;
+      if (t === 'desert' ? nt !== 'desert' && nt !== 'coast' : nt === 'desert') { dry = true; break; }
+    }
+    if (dry) return out.set(BIOME_COLORS.dryBand);
+  }
+  return out.set(t in BIOME_COLORS ? BIOME_COLORS[t as keyof typeof BIOME_COLORS] : BIOME_COLORS.plains);
+}
+
 function colorBase(
   world: World, tileId: number, owner: number, mode: MapMode, sel: number | null,
   out: THREE.Color, str: { value: Float64Array; max: number } | null,
 ): THREE.Color {
   const pal = getPalette();
   const tile = world.tiles[tileId]!;
-  if (tile.terrain === 'ocean') return out.set(pal.ocean);
+  if (tile.terrain === 'ocean') return out.set(mode === 'terrain' ? BIOME_COLORS.ocean : pal.ocean);
   const terrain = pal.terrain[tile.terrain];
   const country = owner >= 0 ? world.countries[owner] : undefined;
-  if (mode === 'terrain') return out.set(terrain);
+  if (mode === 'terrain') return biomeColor(world, tileId, out);
   if (mode === 'diplomacy' && sel != null) {
     if (!country) return out.set(terrain).lerp(WHITE, 0.2);
     if (owner === sel) return out.set(pal.selectedSelf);
@@ -147,7 +174,7 @@ const rockTmp2 = new THREE.Color();
 function wallColor(top: THREE.Color, kind: number, out: THREE.Color): THREE.Color {
   const coast = kind === VK_COAST_TOP || kind === VK_COAST_BOT;
   const foot = kind === VK_WALL_BOT || kind === VK_COAST_BOT;
-  out.copy(top).lerp(coast ? SAND_ROCK : ROCK, coast ? 0.5 : 0.6);
+  out.copy(top).lerp(coast ? SAND_ROCK : ROCK, coast ? 0.4 : 0.45);
   const g = out.r * 0.3 + out.g * 0.59 + out.b * 0.11;
   out.lerp(rockTmp.setRGB(g, g, g), 0.3);
   return out.multiplyScalar(foot ? 0.5 : 0.82);

@@ -19,7 +19,7 @@ import { Atmosphere } from './atmosphere/Atmosphere';
 import { Structures } from './structures/Structures';
 import { Units } from './units';
 import { Clouds } from './clouds';
-import { Rivers } from './rivers';
+import { Towns } from './towns';
 import { registerCapture } from './capture';
 import { setStatuses } from './status/statusTint';
 
@@ -150,7 +150,7 @@ function Scene({ world }: { world: World }) {
       <Political />
       <Structures />
       <Units />
-      <Rivers />
+      <Towns />
     </ProvinceMeshContext.Provider>
   );
 }

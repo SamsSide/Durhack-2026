@@ -1,5 +1,17 @@
 import type { Stance, Terrain } from '@terra/shared';
 
+/** Terrain map mode biome colours (Age of History style); the political atlas colours stay in `terrain`. */
+export const BIOME_COLORS = {
+  desert: '#d4b83a',
+  dryBand: '#b7862a',
+  plains: '#6f9a45',
+  forest: '#2f6a35',
+  hills: '#5d6b3c',
+  mountain: '#4a4a55',
+  ice: '#dbe9f2',
+  ocean: '#14284a',
+} as const;
+
 export interface Palette {
   terrain: Record<Terrain, string>;
   ocean: string;
