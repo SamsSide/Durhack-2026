@@ -113,6 +113,17 @@ const SYSTEM = [
   'Plain words, no markdown, no emojis. Reply with JSON only.',
 ].join(' ');
 
+// Durham and North East seasoning, passed compactly so Gemini weaves it into the world's own flavour.
+const LOCAL_NAMES = 'Hatfield, Collingwood, Grey, St Aidan, St Chad, St Cuthbert, Hild Bede, Stephenson, Trevelyan, Ustinov, Van Mildert, Josephine Butler, John Snow, '
+  + 'Elvet, Framwellgate, Gilesgate, Claypath, Neville\'s Cross, Palace Green, Prebends, Kingsgate, Houghall, Shincliffe, Pity Me, Belmont, Sherburn, Bowburn, '
+  + 'Wear, Tyne, Tees, Prince Bishops, Cuthbert, Bede, Miners\' Gala, Spennymoor, Newcastle, Gateshead, Sunderland, Chester-le-Street, Bishop Auckland, Barnard Castle, '
+  + 'Darlington, Hartlepool, Middlesbrough, Consett, Stanley, Seaham, Peterlee, Crook, Ferryhill, Brancepeth, Lanchester, Sedgefield, Coxhoe, Beamish, Penshaw, '
+  + 'Lindisfarne, Hexham, Tynemouth, Whitley Bay, Alnwick, Bamburgh, Hadrian\'s Wall, Angel of the North';
+const LOCAL_INSTRUCTION = `Durham flavour (required): the world is a playful nod to Durham and the North East of England. Draw at least half of every nation's region names, and some nation names, leader surnames and places, from these real names: ${LOCAL_NAMES}. `
+  + 'Adapt them to the world\'s era and culture and blend them with invented names so the world still reads as its own '
+  + '(e.g. "The Hatfield Concord", "Elvet Marches", "the Spennymoor Reach", "Prince-Bishopric of the Wear", "Old Framwellgate", "Van Mildert Isles", "High Speaker Cuthbert Brancepeth"). '
+  + 'Never use a real modern institution verbatim as a nation (not "St Mary\'s College"; but "the Marian Sisterhood of St Mary\'s Reach" is fine). Always adapt a name (add a title, a landform, an old or new form) rather than using it bare, and never use a real person\'s full name as a leader. Do not mention Durham or England by name.';
+
 const clamp01 = (x: number): number => (Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : 0.5);
 const clean = (s: string, max: number): string => s.replace(/\s+/g, ' ').trim().slice(0, max);
 
@@ -231,6 +242,7 @@ export async function makeBible(opts: NewWorldOptions, seed: number): Promise<Wo
         'Give each nation a distinct hex colour (far apart in hue, bright enough to read on a dark globe),',
         'a different flag layout and emblem, 3 to 5 culture traits, temperaments 0 to 1, and 6 to 8 region names in its own culture\'s naming style.',
         'Flag colours: 2 to 4 hex colours, the first being the nation colour. Keep every text short.',
+        LOCAL_INSTRUCTION,
       ].filter(Boolean).join('\n'),
     });
     const reading = withImage ? cleanReading(raw.imageReading) : undefined;

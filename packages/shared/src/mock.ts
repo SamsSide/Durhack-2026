@@ -67,10 +67,12 @@ const SEEDLINGS: Seedling[] = [
   },
 ];
 
-const REGION_PREFIX = ['Salt', 'Iron', 'Amber', 'Ember', 'Frost', 'Gale', 'Silent', 'Golden', 'Thorn', 'Crow',
-  'Misty', 'Red', 'Pale', 'Stone', 'Willow', 'Storm', 'Ashen', 'Lantern', 'Hollow', 'Wild', 'High', 'Low', 'Sunken', 'Bright'];
-const REGION_NOUN = ['Marches', 'Reach', 'Downs', 'Fells', 'Vale', 'Heights', 'Wolds', 'Fen', 'Steppe', 'Barrens',
-  'Coast', 'Woods', 'Uplands', 'Basin', 'Terraces', 'Moors', 'Shore', 'Expanse'];
+// Durham and North East names (colleges, the city, the county) mixed with invented ones.
+const REGION_PREFIX = ['Hatfield', 'Elvet', 'Framwellgate', 'Gilesgate', 'Claypath', 'Collingwood', 'Brancepeth', 'Spennymoor', 'Lanchester',
+  'Sedgefield', 'Shincliffe', 'Penshaw', 'Cuthbert', 'Houghall', 'Trevelyan', 'Wear', 'Salt', 'Iron', 'Amber', 'Ember', 'Frost', 'Silent', 'Golden', 'Thorn',
+  'Crow', 'Pale', 'Storm', 'Ashen'];
+const REGION_NOUN = ['Marches', 'Reach', 'Downs', 'Fells', 'Vale', 'Heights', 'Wolds', 'Fen', 'Moors', 'Coast', 'Uplands', 'Basin',
+  'Terraces', 'Shore', 'Bailey', 'Dale'];
 
 const LAYOUTS: FlagSpec['layout'][] = ['plain', 'horizontal2', 'horizontal3', 'vertical2', 'vertical3', 'cross', 'saltire', 'canton', 'diagonal', 'border'];
 const EMBLEMS: FlagSpec['emblem'][] = ['none', 'star', 'sun', 'moon', 'tree', 'tower', 'wave', 'mountain', 'sword', 'gear', 'eye', 'crown', 'anchor', 'flame', 'wheat', 'skull'];
