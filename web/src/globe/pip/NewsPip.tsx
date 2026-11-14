@@ -32,11 +32,27 @@ const STILL_EVERY_MS = 500;
 /** The live picture is filmed at about 30 frames a second (every other main frame): half the cost, and it reads as television. */
 const FRAME_EVERY_MS = 30;
 const SPRITES_EVERY_MS = 400;
+/**
+ * The shot's sun never sits lower over the filmed tile than this (sine of its elevation, about 24
+ * degrees): a beat on the night side is filmed in late-afternoon light, its bearing kept, for the PiP
+ * pass only. The main view's sun, key light and sky are restored before it is drawn.
+ */
+const PIP_MIN_SUN = Math.sin((24 * Math.PI) / 180);
 
 const smooth = (u: number): number => { const k = Math.min(1, Math.max(0, u)); return k * k * (3 - 2 * k); };
 const hash = (n: number): number => { const s = Math.sin(n * 127.1 + 31.7) * 43758.5453; return s - Math.floor(s); };
 
 interface Frame { n: THREE.Vector3; east: THREE.Vector3; north: THREE.Vector3; r: number; size: number; az: number }
+
+/** The sun the shot is lit by: the real one, raised to PIP_MIN_SUN over the tile when it is lower. Null when it is high enough. */
+function shotSun(f: Frame, out: THREE.Vector3): THREE.Vector3 | null {
+  const e = sunDir.dot(f.n);
+  if (e >= PIP_MIN_SUN) return null;
+  // its bearing over the tile: the camera starts 0.6 rad round from it (frameOf), so it stays behind the camera's shoulder
+  const b = f.az - 0.6;
+  out.copy(f.east).multiplyScalar(Math.cos(b)).addScaledVector(f.north, Math.sin(b));
+  return out.multiplyScalar(Math.sqrt(1 - PIP_MIN_SUN * PIP_MIN_SUN)).addScaledVector(f.n, PIP_MIN_SUN).normalize();
+}
 
 /** The tile's local frame and the side the camera starts on: sun behind its shoulder when there is one. */
 function frameOf(world: World, tile: number): Frame | null {
@@ -64,8 +80,8 @@ export function NewsPip() {
     c.matrixAutoUpdate = true;
     return c;
   }, []);
-  const live = useRef({ tile: -1, t0: 0, frame: null as Frame | null, lastStill: 0, spritesAt: 0, sprites: [] as THREE.Object3D[], pools: [] as THREE.InstancedMesh[], hidden: [] as THREE.Object3D[] });
-  const v = useMemo(() => ({ pos: new THREE.Vector3(), look: new THREE.Vector3(), off: new THREE.Vector3(), size: new THREE.Vector2() }), []);
+  const live = useRef({ tile: -1, t0: 0, frame: null as Frame | null, lastStill: 0, spritesAt: 0, sprites: [] as THREE.Object3D[], pools: [] as THREE.InstancedMesh[], keys: [] as THREE.DirectionalLight[], moved: [] as THREE.DirectionalLight[], hidden: [] as THREE.Object3D[] });
+  const v = useMemo(() => ({ pos: new THREE.Vector3(), look: new THREE.Vector3(), off: new THREE.Vector3(), size: new THREE.Vector2(), sun: new THREE.Vector3(), realSun: new THREE.Vector3(), keyPos: [] as THREE.Vector3[] }), []);
 
   useEffect(() => () => { pipLod.camera = null; }, []);
 
@@ -131,17 +147,34 @@ export function NewsPip() {
           st.spritesAt = now;
           st.sprites.length = 0;
           st.pools.length = 0;
+          st.keys.length = 0;
           scene.traverse((o) => {
             if ((o as THREE.Sprite).isSprite) st.sprites.push(o);
             else if ((o as THREE.InstancedMesh).isInstancedMesh) st.pools.push(o as THREE.InstancedMesh);
+            else if ((o as THREE.DirectionalLight).isDirectionalLight) st.keys.push(o as THREE.DirectionalLight);
           });
         }
-        // Hidden for this pass only: the sprites, and instanced pools with nothing in them (each one
-        // still costs a draw call; the building pools are mostly empty, so this halves the pass).
+        // Daylight for the shot: swing the shared sun (sky, city lights) and the key light that follows it.
+        const sun = shotSun(f, v.sun);
+        st.moved.length = 0;
+        if (sun) {
+          v.realSun.copy(sunDir);
+          for (const k of st.keys) {
+            const d = k.position.length();
+            if (d < 1e-6 || k.position.dot(sunDir) < 0.99 * d) continue; // only the light that follows the sun
+            (v.keyPos[st.moved.length] ??= new THREE.Vector3()).copy(k.position);
+            k.position.copy(sun).multiplyScalar(d);
+            st.moved.push(k);
+          }
+          sunDir.copy(sun);
+        }
+        // The layers' own hooks first (the armies fill their model pools here), then hidden for this
+        // pass only: the sprites, and instanced pools with nothing in them (each one still costs a draw
+        // call; the building pools are mostly empty, so this halves the pass).
+        runPipPass(true, cam);
         st.hidden.length = 0;
         for (const s of st.sprites) if (s.visible) { s.visible = false; st.hidden.push(s); }
         for (const m of st.pools) if (m.visible && m.count === 0) { m.visible = false; st.hidden.push(m); }
-        runPipPass(true, cam);
 
         gl.setViewport(0, 0, pw / pr, ph / pr);
         gl.setScissor(0, 0, pw / pr, ph / pr);
@@ -155,8 +188,12 @@ export function NewsPip() {
         gl.setViewport(0, 0, v.size.x, v.size.y);
         gl.setScissor(0, 0, v.size.x, v.size.y);
 
-        runPipPass(false, cam);
         for (const o of st.hidden) o.visible = true;
+        runPipPass(false, cam);
+        if (sun) {
+          sunDir.copy(v.realSun);
+          for (let i = 0; i < st.moved.length; i++) st.moved[i]!.position.copy(v.keyPos[i]!);
+        }
         pipFeed.frames++;
       }
       if (import.meta.env.DEV) pipFeed.ms += (performance.now() - t0 - pipFeed.ms) * 0.05;
@@ -167,4 +204,4 @@ export function NewsPip() {
   return null;
 }
 
-if (import.meta.env.DEV) Object.assign(window, { __tnPip: pipFeed, __tnPipLod: pipLod }); // dev only: frames, cost and the camera from the console
+if (import.meta.env.DEV) Object.assign(window, { __tnPip: pipFeed, __tnPipLod: pipLod, __tnSun: sunDir }); // dev only: frames, cost, the camera and the sun from the console

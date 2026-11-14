@@ -99,7 +99,9 @@ interface Front { a: number; b: number; mesh: THREE.Mesh; mat: THREE.ShaderMater
 interface Flash { mesh: THREE.Mesh; mat: THREE.Material; born: number; life: number; kind: 'pulse' | 'cede' }
 interface Column { pos: THREE.Vector3; n: THREE.Vector3; until: number; nextAt: number }
 
-const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _j = new THREE.Vector3(), _camDir = new THREE.Vector3();
+const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _j = new THREE.Vector3(), _camDir = new THREE.Vector3(), _mainDir = new THREE.Vector3();
+/** The news picture-in-picture draws models only this close to its camera (cosine of the angle at the centre, about 25 degrees). */
+const PIP_REACH = 0.9;
 const _n = new THREE.Vector3(), _side = new THREE.Vector3(), _mm = new THREE.Matrix4();
 const _p = new THREE.Vector3(), _fwd = new THREE.Vector3(), _right = new THREE.Vector3(), _fm = new THREE.Matrix4();
 const smooth = (e0: number, e1: number, x: number): number => {
@@ -152,6 +154,8 @@ export class UnitLayer {
   private readonly knownAge = new Map<number, TechAge>(); // last age we drew, to spot a real change
   private readonly teamCol = new Map<number, THREE.Color>();
   private near = 0;
+  /** True while the models are drawn for the news picture-in-picture: no exhaust or dust from those. */
+  private pipFill = false;
 
   private dirty = true;
   private lastFront = -1e9;
@@ -1053,6 +1057,39 @@ export class UnitLayer {
     this.pops.update(now, _camDir, zoom);
   }
 
+  /**
+   * The news picture-in-picture pass (web/src/globe/pip): its camera films one tile from close by while
+   * the main camera may be out in orbit, where armies show as counters only. For that pass, add the 3D
+   * armies, fleets and formations round the shot's tile to the model pools, after the main view's own;
+   * `pipEnd` drops them again before the main view is drawn. Counters are sprites, which the pass hides.
+   */
+  pipBegin(camera: THREE.Camera, now: number): void {
+    if (this.disposed) return;
+    const mainNear = this.near;
+    _mainDir.copy(_camDir);
+    _camDir.copy(camera.position).normalize();
+    this.field.mark();
+    this.near = 1;
+    this.pipFill = true;
+    const draw = (chip: Chip, k: number): void => {
+      if (chip.pos.lengthSq() === 0) return;
+      _v.copy(chip.pos).normalize();
+      if (_v.dot(_camDir) < PIP_REACH) return; // only round the shot: it sees a few tiles
+      if (mainNear > 0 && facing(chip.pos, _mainDir) > 0) return; // the main view drew it already
+      this.drawModel(chip, now, k);
+    };
+    for (const chip of this.chips.values()) draw(chip, 1);
+    for (const chip of this.dying) draw(chip, Math.max(0, 1 - (now - chip.dying!.start) / (chip.dying!.shatter ? 750 : 450)));
+    this.field.end();
+    this.pipFill = false;
+    this.near = mainNear;
+    _camDir.copy(_mainDir);
+  }
+
+  pipEnd(): void {
+    if (!this.disposed) this.field.rewind();
+  }
+
   private placeChip(chip: Chip, now: number, zoom: number): void {
     const lead = chip.moving ?? chip.units[0];
     if (!lead) { chip.sprite.visible = false; return; }
@@ -1117,7 +1154,7 @@ export class UnitLayer {
       _v.addScaledVector(_side, ((stack % 2) ? 1 : -1) * Math.ceil(stack / 2) * step);
     }
     const team = this.team(chip.owner);
-    const fx = this.near > 0.5 && k >= 1 && alpha >= 1;
+    const fx = !this.pipFill && this.near > 0.5 && k >= 1 && alpha >= 1;
     const moving = !!chip.moving && !lead.dissolve;
     if (front) {
       // the formation's own frame: forward along the march, right across it

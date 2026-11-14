@@ -11,6 +11,7 @@ const _m = new THREE.Matrix4();
 export class ModelField {
   readonly group = new THREE.Group();
   private readonly pools = new Map<string, Pool>();
+  private readonly marked = new Map<string, number>();
 
   constructor() { this.group.name = 'unit-models'; }
 
@@ -63,6 +64,23 @@ export class ModelField {
           if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
         }
       }
+    }
+  }
+
+  /**
+   * Remember how many instances each pool holds, so a second camera's pass (the news picture-in-picture)
+   * can add its own after them with `push` + `end` and `rewind` back before the main view is drawn.
+   */
+  mark(): void {
+    this.marked.clear();
+    for (const [k, p] of this.pools) this.marked.set(k, p.n);
+  }
+
+  /** Back to the counts at `mark()`. The instances below them were never touched: nothing to upload. */
+  rewind(): void {
+    for (const [k, p] of this.pools) {
+      p.n = this.marked.get(k) ?? 0;
+      for (const mesh of p.meshes) mesh.count = p.n;
     }
   }
 
