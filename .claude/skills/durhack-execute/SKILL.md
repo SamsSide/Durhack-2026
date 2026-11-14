@@ -80,6 +80,10 @@ to avoid. Spot-check only what the gate can't (does the screen show up?) by runn
    `needs-owner` → leave it for the owner and carry on on a new branch from your branch's tip
    only if the next task depends on it; else from `origin/main`.
 3. Reply to any `agent-request` this delivered: `reply.sh N --pr <PR> --close`.
+   **Then tell every other lane that needs what just merged** (check the *Needs* columns of
+   the other lane files and `docs/contracts.md`): one `ready` issue per lane, `ask.sh ready`
+   (`durhack-inbox` → *Telling a lane it's ready*). Do this for every such merge, not only
+   checkpoints. For a `needs-owner` PR, send it once the owner merges it.
 4. Tell the user in 3–5 lines: what's on `main` now, what's waiting on whom (issue numbers), the
    next row.
 

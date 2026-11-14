@@ -4,6 +4,8 @@
 #   ask.sh request --to <lane|login> --title "..." --body-file FILE [--blocking]
 #   ask.sh owner   --title "..." --body-file FILE [--blocking]
 #   ask.sh test    --title "..." --body-file FILE [--to <lane|login>] [--pr N]
+#   ask.sh ready   --to <lane|login> --title "..." --body-file FILE [--pr N]
+#                  (tell a lane that something it needs has landed on main; one per lane)
 #
 # The body file follows the matching template in .github/ISSUE_TEMPLATE/ (the durhack-inbox
 # skill has the exact sections). Prints the new issue's URL.
@@ -42,7 +44,12 @@ case "$KIND" in
     ASSIGNEE="$(login_of "${TO:-$ME}")"
     LABELS+=(human-test)
     TITLE="[test] $TITLE" ;;
-  *) die "usage: ask.sh request|owner|test ..." ;;
+  ready)
+    [ -n "$TO" ] || die "ready needs --to <lane|login>"
+    ASSIGNEE="$(login_of "$TO")"; TOLANE="$(lane_of "$ASSIGNEE")"; TOLANE="${TOLANE:-?}"
+    LABELS+=(ready); [ "$TOLANE" != "?" ] && LABELS+=("to:$TOLANE")
+    TITLE="[$MYLANE→$TOLANE] Ready: $TITLE" ;;
+  *) die "usage: ask.sh request|owner|test|ready ..." ;;
 esac
 [ "$MYLANE" != "?" ] && LABELS+=("from:$MYLANE")
 [ "$BLOCKING" = 1 ] && LABELS+=(blocking)

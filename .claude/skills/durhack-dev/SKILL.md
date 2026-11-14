@@ -66,6 +66,11 @@ make these changes directly — still through a PR.
 glue files (a root `package.json`, `pyproject.toml`, a router file) are edited by the lane named
 for them in `docs/contracts.md`; others ask.
 
+**Tell the lanes that need it.** Every merge that finishes something another lane needs (a row
+in its *Needs* column, a contract going from mock to real, a delivered `agent-request`, a seed
+or shared file it builds on) is followed at once by a `ready` issue to each such lane
+(`durhack-inbox` → *Telling a lane it's ready*). Never assume another lane will notice a merge.
+
 **Contracts before code.** Every cross-lane interface (HTTP route, function signature, event,
 JSON shape, file format) is written in `docs/contracts.md` before either side builds it. Code
 against it with a mock until the checkpoint. A contract change is a `needs-owner` issue that

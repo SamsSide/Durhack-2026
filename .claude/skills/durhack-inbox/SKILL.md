@@ -1,6 +1,6 @@
 ---
 name: durhack-inbox
-description: Use for any cross-lane communication in the DurHack repo through GitHub issues — needing something from another lane's agent (agent-request), asking the owner SamsSide to decide (needs-owner), handing a person something to test by hand (human-test), answering a request assigned to you, linking the commit or PR that delivers it, and running the background watcher that reports new issues, replies and PR events without slowing coding. Also when a "DURHACK [new]/[blocking]/[reply]/[closed]/[owner-review]/[pr]" event line arrives.
+description: Use for any cross-lane communication in the DurHack repo through GitHub issues — needing something from another lane's agent (agent-request), telling a lane that something it needs has landed on main (ready), asking the owner SamsSide to decide (needs-owner), handing a person something to test by hand (human-test), answering a request assigned to you, linking the commit or PR that delivers it, and running the background watcher that reports new issues, replies and PR events without slowing coding. Also when a "DURHACK [new]/[blocking]/[reply]/[closed]/[owner-review]/[pr]" event line arrives.
 ---
 
 # The DurHack inbox
@@ -14,6 +14,7 @@ tells their session. Load `durhack-dev` first if it isn't loaded.
 | Need something from another lane | `agent-request` (+ `from:x`, `to:y`) | that lane's person | `ask.sh request --to <lane>` |
 | A decision only the owner can make | `needs-owner` | SamsSide | `ask.sh owner` |
 | Something a person should test by hand | `human-test` | the person who'll test (default: you) | `ask.sh test` |
+| Something another lane needs has landed on `main` | `ready` (+ `from:x`, `to:y`) | that lane's person | `ask.sh ready --to <lane>` |
 | Any of them, and you're stuck until answered | + `blocking` | | `--blocking` |
 
 ## Watching (start this early in every working session)
@@ -48,6 +49,7 @@ Finish the step you're on (don't abandon an edit mid-file), then:
 | --- | --- |
 | `[new]` / `[blocking]` new `agent-request` for you | `gh issue view N`. Small and in your lane → do it next (`[blocking]` first). Big → reply with an ETA or a question; tell the user one line. |
 | `[new]` `needs-owner` (you are the owner) | Tell the owner in one line and ask them (clickable) with the issue's options. Post their decision with `reply.sh --close`. Never decide for the owner. |
+| `[new]` `ready` for you | `git pull` on `main` (rebase your branch), read what landed and swap your mock for it, update your lane file's *Waiting on*, then close it: `reply.sh N --close` with one line ("picked up"). Tell the user one line. |
 | `[new]` `human-test` for you | Tell the user one line; it's on the board for a person. Don't test it yourself unless asked. |
 | `[reply]` reply on an issue you opened | Read it (`gh issue view N --comments`). If it delivers what you asked: pull `main` (or the linked branch), swap your mock for the real thing, close the issue if they didn't. |
 | `[closed]` your issue closed | Same as above: pull, integrate, update your lane file's *Waiting on*. |
@@ -56,6 +58,25 @@ Finish the step you're on (don't abandon an edit mid-file), then:
 
 Each event gets **one short line to the user**, not a report. A `[blocking]` request or a
 `needs-owner` decision is worth a `PushNotification` if that tool exists.
+
+## Telling a lane it's ready (always, after every merge another lane needs)
+
+Whenever a PR merged to `main` finishes something another lane needs (a row in that lane's
+*Needs* column, a contract going from mock to real, a delivered `agent-request`, a seed or
+shared file it builds on), open one `ready` issue per lane that needs it, straight after the
+merge. Don't rely on them noticing the merge.
+
+```markdown
+### What landed
+<one line> (PR #N, now on main)
+### What it unblocks
+<their row ids, contract ids>
+### What to do
+<pull main; what to swap the mock for; files you now own, if any>
+```
+
+`scripts/durhack/ask.sh ready --to <lane> --title "<what landed>" --body-file FILE --pr N`.
+If it also delivers an `agent-request` of theirs, reply on that issue too (`reply.sh --close`).
 
 ## Asking another lane
 
