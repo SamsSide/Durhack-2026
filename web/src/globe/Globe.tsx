@@ -43,6 +43,8 @@ function CaptureBridge() {
   const camera = useThree((s) => s.camera);
   useEffect(() => {
     registerCapture({ gl, scene, camera });
+    // Dev only: lets a browser review read draw calls and time a frame (window.__rig.gl.info).
+    if (import.meta.env.DEV) (window as unknown as { __rig?: unknown }).__rig = { gl, scene, camera };
     return () => registerCapture(null);
   }, [gl, scene, camera]);
   return null;
@@ -181,8 +183,10 @@ export function Globe() {
   const space = typeof document !== 'undefined'
     ? getComputedStyle(document.documentElement).getPropertyValue('--globe-space').trim() || SPACE
     : SPACE;
+  // B8: at most 1.5 device pixels per CSS pixel (a 2x screen would draw 78% more pixels for little gain).
+  // Shader error checks stay on in dev only: reading the link log blocks the frame a new material first draws in.
   return (
-    <Canvas dpr={[1, 2]} camera={{ position: [0, 0.8, 2.48], fov: 45 }}>
+    <Canvas dpr={[1, 1.5]} camera={{ position: [0, 0.8, 2.48], fov: 45 }} onCreated={({ gl }) => { gl.debug.checkShaderErrors = import.meta.env.DEV; }}>
       <color attach="background" args={[space]} />
       <Celestial />
       <Space />
