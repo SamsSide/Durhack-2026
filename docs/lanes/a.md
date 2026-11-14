@@ -33,7 +33,7 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 | A8 | Low-poly models with headless Blender: all 15 keys in X4, exported as GLB with the manifest and a preview sheet | | X4 to b | CP1 | done | Owner's laptop has Blender |
 | A9 | Replays: save every run's event log, list and play them back with no API calls, `GET /api/world/log`; record the demo world | A14 to A16 (audio cached) | X3 replays and log | CP2 | todo | The backup plan |
 | A10 | Nation agents on other laptops over the socket | | | | cut | Owner, 14 Nov: it runs and demos on one device |
-| A11 | Stretch, prize: write events to a Tiger Data hypertable and serve one territory-over-time series | | | CP2 | todo | MLH Tiger Data |
+| A11 | Stretch, prize: write events to a Tiger Data hypertable and serve one territory-over-time series | | | CP2 | testing | Needs a Tiger Cloud database URL in keys.env; wire two lines in index.ts after A4 |
 | A12 | Design the interface in Figma: the style, the Create screen, the hologram nation card, the chronicle, the network panel, the top bar; export the variables to `web/src/theme/tokens.css` and a screenshot of each screen to `docs/design/` | | X7 to b and c | Sat 18:00 | done | Figma: https://www.figma.com/design/7cKEqNpTmvmNd9CUSlxrA6 |
 | A13 | Lore route: Gemini writes culture, politics, history, relations and anthem lyrics from the nation's real chronicle; cached; a template version for mock mode | | X3 lore | CP1 | done | |
 | A14 | Narration: ElevenLabs speaks the lore in a voice chosen from `voiceStyle`, cached on disk; the real `web/src/audio/` module (X6) | A13 | X3 narration, X6 | CP1.5 | done | MLH ElevenLabs |
@@ -63,5 +63,6 @@ polish) runs on Fable 5.2 (`model: "fable"` on `Agent`). Everything else keeps t
 - 15:04 · A16: a shouted war chant per nation (Gemini line, ElevenLabs v3), cached, pre-warmed for likely belligerents, both sides played on war and battle
 
 - 15:07 · A15: each nation's anthem sung by ElevenLabs Music from its lyrics (composition plan, 30 s), cached, capped
+- 15:11 · A11 (code): every event and nation stats into Tiger Data hypertables with a continuous aggregate; territory and summary routes; wired after A4, live once the database URL exists
 
 Mocks: `npm run mock` (MockRunner behind the `WorldRunner` interface in `server/src/runner.ts`) stands in for the engine until A3; lore, audio and replays are mocked until A13 to A16 and A9.
