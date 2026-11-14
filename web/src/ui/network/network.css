@@ -1,0 +1,75 @@
+/* Network panel: an old atlas ledger. Variables from tokens.css only. */
+.tn-net {
+  --c-ink-faint: color-mix(in srgb, var(--color-ink) 60%, transparent);
+  --c-rule: color-mix(in srgb, var(--color-ink) 28%, transparent);
+  --c-wash: color-mix(in srgb, var(--color-ink) 7%, transparent);
+
+  width: 300px; height: 100%; display: flex; flex-direction: column;
+  background: var(--color-parchment); color: var(--color-ink);
+  border: 2px solid var(--color-ink); border-radius: var(--radius-2); box-shadow: var(--shadow-1);
+  font-family: var(--font-serif); line-height: 1.4; overflow: hidden;
+}
+.tn-net-head { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4) var(--space-2); }
+.tn-net-title { margin: 0; font-size: 18px; font-variant: small-caps; letter-spacing: 0.06em; }
+.tn-net-sec { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--c-rule); display: flex; flex-direction: column; gap: var(--space-2); }
+.tn-net-big { font-size: 28px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tn-net-unit { font-size: 12px; font-variant: small-caps; letter-spacing: 0.08em; color: var(--c-ink-faint); margin-left: var(--space-2); }
+.tn-net-meta { display: flex; align-items: center; gap: var(--space-3); font-size: 12px; color: var(--c-ink-faint); }
+.tn-net-tag {
+  font-size: 11px; font-variant: small-caps; letter-spacing: 0.06em; color: var(--c-ink-faint);
+  border: 1px solid var(--c-rule); border-radius: var(--radius-1); padding: 0 var(--space-2);
+}
+.tn-net-banner {
+  background: var(--color-danger); color: var(--color-parchment); font-size: 13px;
+  border-radius: var(--radius-1); padding: var(--space-1) var(--space-2);
+}
+.tn-net-btn, .tn-net-wide {
+  background: transparent; color: var(--color-ink); cursor: pointer; font-family: inherit; font-size: 13px;
+  border: 1px solid var(--color-ink); border-radius: var(--radius-1); padding: var(--space-1) var(--space-2);
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+.tn-net-wide { width: 100%; padding: var(--space-2); font-variant: small-caps; letter-spacing: 0.06em; font-size: 14px; }
+.tn-net-btn:hover:not(:disabled), .tn-net-wide:hover:not(:disabled) { background: var(--color-accent); }
+.tn-net-btn:disabled, .tn-net-wide:disabled { opacity: 0.45; cursor: default; }
+.tn-net-btn:focus-visible, .tn-net-wide:focus-visible, .tn-net-name:focus-visible, .tn-net input:focus-visible {
+  outline: 2px solid var(--color-accent); outline-offset: 1px;
+}
+.tn-danger { color: var(--color-danger); border-color: var(--color-danger); }
+.tn-danger.tn-armed, .tn-danger.tn-armed:hover:not(:disabled) { background: var(--color-danger); color: var(--color-parchment); }
+.tn-net-wide.tn-on { background: var(--color-accent); }
+.tn-net-hint { font-size: 12px; font-style: italic; color: var(--c-ink-faint); min-height: 1.4em; }
+
+.tn-net-list { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow-y: auto; border-top: 1px solid var(--c-rule); scrollbar-width: thin; }
+.tn-net-row {
+  padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--c-rule);
+  border-left: 3px solid transparent; border-right: 1px solid transparent; border-top: 1px solid transparent;
+  transition: opacity 200ms ease, background 200ms ease, border-color 200ms ease;
+}
+.tn-net-row.tn-sel { background: var(--c-wash); border-left-color: var(--color-accent); }
+.tn-net-row.tn-cut { border: 1px dashed var(--color-ink); border-left-width: 3px; }
+.tn-net-row.tn-gone { opacity: 0.45; }
+.tn-net-line1 { display: flex; align-items: center; gap: var(--space-2); }
+.tn-net-flag { width: 24px; height: 16px; flex: none; border: 1px solid var(--c-rule); line-height: 0; }
+.tn-net-name {
+  flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 0; cursor: pointer;
+  font: inherit; font-size: 15px; color: var(--color-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: color 150ms ease;
+}
+.tn-net-row.tn-sel .tn-net-name { font-weight: 600; }
+.tn-net-name:hover { color: var(--tn-nation); }
+.tn-net-status { font-size: 12px; color: var(--c-ink-faint); margin: 2px 0 0 calc(24px + var(--space-2)); }
+.tn-net-switches { display: flex; gap: var(--space-1); margin: var(--space-2) 0 0 calc(24px + var(--space-2)); flex-wrap: wrap; }
+
+.tn-net-decree-row { display: flex; gap: var(--space-2); }
+.tn-net-decree-row input {
+  flex: 1; min-width: 0; background: transparent; color: var(--color-ink);
+  border: 1px solid var(--color-ink-muted); border-radius: var(--radius-1); padding: var(--space-1) var(--space-2); font-size: 13px;
+}
+
+.tn-net-folded {
+  width: 36px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  gap: var(--space-3); padding: var(--space-3) 0; cursor: pointer; font-size: 15px;
+}
+.tn-net-folded:hover { background: var(--color-accent); }
+.tn-net-vert { writing-mode: vertical-rl; font-variant: small-caps; letter-spacing: 0.1em; }
+.tn-net-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-danger); flex: none; }
