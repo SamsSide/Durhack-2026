@@ -421,7 +421,7 @@ export class EngineRunner implements WorldRunner {
         const cutNow: number[] = [];
         for (const id of this.bus.ids()) {
           const a = live(id);
-          if (!a) continue;
+          if (!a || !w.countries[id]?.alive) continue;   // a fallen nation has no towers to silence
           if (msg.value) { if (cut(a)) cutNow.push(id); } else this.bus.restore(id);
         }
         if (cutNow.length) this.announceSilence(cutNow);
