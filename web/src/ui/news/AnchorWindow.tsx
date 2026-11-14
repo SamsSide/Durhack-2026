@@ -186,7 +186,8 @@ export function AnchorWindow({ bulletin, footage }: Props) {
   }, []);
 
   return (
-    <div className="tn-anchorwin" aria-hidden="true">
+    <div className="tn-anchorwin tn-lacquer tn-frame" aria-hidden="true">
+      <span className="tn-cartouche">{bulletin?.anchor ?? 'Terra Nova News'}</span>
       <canvas ref={canvasRef} className="tn-anchorwin-pic" />
       {speaking && <span className="tn-anchorwin-speaking"><span className="tn-anchorwin-speaking-dot" />Speaking</span>}
     </div>

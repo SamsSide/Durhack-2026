@@ -231,8 +231,8 @@ export function Ticker({ world, open, onToggle, onPick }: {
   const still = reduced ? lastOf(chron, SHOWN).reverse() : null; // reduced motion: a static list, newest first
 
   return (
-    <div className="tn-ticker">
-      <span className="tn-t-label">Chronicle</span>
+    <div className="tn-ticker tn-lacquer tn-lacquer--bar-bottom">
+      <span className="tn-t-label tn-cartouche tn-cartouche--inline">Chronicle</span>
       <div
         className="tn-t-track"
         ref={trackRef}
@@ -251,7 +251,7 @@ export function Ticker({ world, open, onToggle, onPick }: {
           </div>
         )}
       </div>
-      <button type="button" className="tn-btn" onClick={onToggle} aria-expanded={open}>
+      <button type="button" className="tn-button tn-button--lacquer tn-t-toggle" onClick={onToggle} aria-expanded={open}>
         Timeline <Chevron up={!open} />
       </button>
     </div>

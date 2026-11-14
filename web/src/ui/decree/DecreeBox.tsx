@@ -87,7 +87,7 @@ export function DecreeBox() {
   const isPressKey = (k: string) => k === ' ' || k === 'Enter';
 
   return (
-    <div className="tn-decree">
+    <div className="tn-decree tn-sheet tn-frame tn-frame--slim">
       {note?.kind === 'hint' && <span className="tn-decree-done" role="status">Hold the button while you speak.</span>}
       {note?.kind === 'listen' && <span className="tn-decree-done" role="status">The herald listens...</span>}
       {note?.kind === 'fail' && <span className="tn-decree-done" role="status">{note.transcript || 'The herald could not hear you.'}</span>}
@@ -104,7 +104,7 @@ export function DecreeBox() {
         <span className="tn-decree-count" role="timer" aria-live="off">{clock(remainingMs)}</span>
       ) : (
         <input
-          className="tn-decree-input"
+          className="tn-decree-input tn-input"
           value={text}
           maxLength={140}
           placeholder="A plague, a meteor, a prophet..."
@@ -117,7 +117,7 @@ export function DecreeBox() {
       {supported && (
         <button
           type="button"
-          className={`btn tn-decree-mic${recording ? ' recording' : ''}`}
+          className={`tn-button tn-button--round tn-decree-mic${recording ? ' recording' : ''}`}
           aria-label="Hold to speak a decree"
           title="Hold to speak a decree"
           aria-pressed={recording}
@@ -138,7 +138,7 @@ export function DecreeBox() {
           </svg>
         </button>
       )}
-      <button className="btn primary" disabled={!connected || !text.trim()} onClick={proclaim}>Proclaim</button>
+      <button className="tn-button tn-button--gilt tn-decree-go" disabled={!connected || !text.trim()} onClick={proclaim}>Proclaim</button>
     </div>
   );
 }
