@@ -48,6 +48,7 @@ export class MockRunner implements WorldRunner {
   }
 
   async newWorld(opts: NewWorldOptions): Promise<World> {
+    this.beliefs.clear();
     const w = mockWorld(opts.seed ?? Math.floor(Math.random() * 1e6));
     w.prompt = opts.prompt;
     if (opts.era) w.era = opts.era;
@@ -137,12 +138,12 @@ export class MockRunner implements WorldRunner {
     if (!w) return;
     const agent = (id: number): AgentStatus | undefined => w.agents.find((a) => a.countryId === id);
     switch (msg.action) {
-      case 'cut': { const a = agent(msg.countryId); if (a && !a.deleted) a.link = 'cut'; break; }
-      case 'restore': { const a = agent(msg.countryId); if (a && !a.deleted) a.link = 'up'; break; }
+      case 'cut': { const a = agent(msg.countryId); if (a && !a.deleted) { a.link = 'cut'; this.freezeBelief(msg.countryId); } break; }
+      case 'restore': { const a = agent(msg.countryId); if (a && !a.deleted) { a.link = 'up'; this.beliefs.delete(msg.countryId); } break; }
       case 'silence': { const a = agent(msg.countryId); if (a && !a.deleted) a.ruler = 'autopilot'; break; }
       case 'wake': { const a = agent(msg.countryId); if (a && !a.deleted) a.ruler = 'llm'; break; }
-      case 'delete': { const a = agent(msg.countryId); if (a) { a.deleted = true; a.link = 'cut'; } break; }
-      case 'blackout': for (const a of w.agents) if (!a.deleted) a.link = msg.value ? 'cut' : 'up'; break;
+      case 'delete': { const a = agent(msg.countryId); if (a) { a.deleted = true; a.link = 'cut'; this.freezeBelief(msg.countryId); } break; }
+      case 'blackout': for (const a of w.agents) if (!a.deleted) { a.link = msg.value ? 'cut' : 'up'; if (msg.value) this.freezeBelief(a.countryId); else this.beliefs.delete(a.countryId); } break;
       case 'speed': this.setSpeed(msg.value); break;
       case 'pacing': this.clock.setPacing(msg.value); break;
       case 'pause': this.setPaused(msg.value); break;
@@ -171,9 +172,15 @@ export class MockRunner implements WorldRunner {
     this.pushAgents(true);
   }
 
+  /** A cut nation keeps the map it last saw (row A7's belief view under `npm run mock`, #230). */
+  private beliefs = new Map<number, number[]>();
+  private freezeBelief(countryId: number): void {
+    if (this.world && !this.beliefs.has(countryId)) this.beliefs.set(countryId, [...this.world.owner]);
+  }
+
   belief(countryId: number): number[] | null {
     if (!this.world || !this.world.countries[countryId]) return null;
-    return [...this.world.owner];
+    return [...(this.beliefs.get(countryId) ?? this.world.owner)];
   }
 
   subscribe(listener: RunnerListener): () => void {
