@@ -70,12 +70,15 @@ same PR as the work.
 
 ## The stack
 
-**Not chosen yet.** It is decided at kickoff and written here and in `docs/hackathon-plan.md`
-§Architecture (Python, Electron, web, anything). Until then, `./check.sh` only checks the repo's
-own scripts. Whoever sets up the stack updates `./check.sh` to a fast smoke gate for it.
+The project is **Terra Nova**: a living 3D planet whose nations are each ruled by an
+independent AI. Read `docs/hackathon-plan.md` section 4 ("How the world works") before building.
 
-- **Stack:** _TBD at kickoff_
-- **Run it:** _TBD_
+- **Stack:** TypeScript everywhere. Node 22, npm workspaces: `packages/shared` (types, hex
+  sphere, `applyEvent`, rules), `server` (Express, `ws`, Gemini, ElevenLabs), `web` (Vite, React,
+  three.js with react-three-fiber, zustand).
+- **Run it:** `npm install`, then `npm run dev` (server on 8787, web on 5173). `npm run mock`
+  runs a scripted world with no API calls. `LLM_MODE=mock` is the default; use `live` only for
+  demos, because the Gemini and ElevenLabs budgets are shared by the whole team.
 - **Smoke gate:** `./check.sh` (< 1 minute: lint, build, the app starts)
 
 ## Entire (session capture, for the MLH "Best Use of Entire" prize)

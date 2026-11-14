@@ -5,24 +5,36 @@
   "lanes": [
     {
       "id": "a",
-      "name": "Lane A (role TBD)",
+      "name": "Lane A (World engine and agents)",
       "github": "SamsSide",
-      "focus": "TBD: set by durhack-plan once the idea is chosen",
-      "paths": []
+      "focus": "The event-sourced world, the simulation, nation agents, Gemini rulers, war, resilience, replay, 3D assets",
+      "paths": [
+        "packages/shared/",
+        "server/ (except server/src/story/)",
+        "assets/",
+        "web/public/models/",
+        "package.json",
+        "tsconfig.base.json"
+      ]
     },
     {
       "id": "b",
-      "name": "Lane B (role TBD)",
+      "name": "Lane B (The globe)",
       "github": "CutGrass88",
-      "focus": "TBD: set by durhack-plan once the idea is chosen",
-      "paths": []
+      "focus": "The 3D planet: tiles, camera, borders, buildings, war animation, status visuals, performance",
+      "paths": [
+        "web/ (except web/src/ui/ and web/public/models/)"
+      ]
     },
     {
       "id": "c",
-      "name": "Lane C (role TBD)",
+      "name": "Lane C (Story, sound and interface)",
       "github": "Justin-CODING-PY",
-      "focus": "TBD: set by durhack-plan once the idea is chosen",
-      "paths": []
+      "focus": "The Create screen, nation panel, lore, narration, anthem, chronicle, network controls, submission",
+      "paths": [
+        "web/src/ui/",
+        "server/src/story/"
+      ]
     }
   ],
   "board": {
