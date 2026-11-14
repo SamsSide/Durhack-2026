@@ -243,3 +243,9 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
 @media (prefers-reduced-motion: reduce) {
   .tn-tl.panel, .tn-t-new, .tn-herald, .tn-herald.tn-leaving { animation: none; }
 }
+
+/* 720 px projector: the lanes get the room, so six nations fit without scrolling. */
+@media (max-height: 800px) {
+  .tn-tl-list { display: none; }
+  .tn-tl-lane { height: 28px; }
+}

@@ -48,4 +48,5 @@ budget, run them one at a time in the order below, on Sonnet.
 - 14 Nov · #100 · TokenMeter call count in a .calls span for the compact top bar (#98)
 - 14 Nov · #105 · C7 on the real A20: the voice route's own error lines, mimeType sent with codecs
 - 14 Nov · #110 · Network rows never overflow; the deleted stamp freezes at the year of deletion (#108)
-- 14 Nov · this PR · News lower-third names its anchor (#111); secession is a real kind (A18)
+- 14 Nov · #119 · News lower-third names its anchor (#111); secession is a real kind (A18)
+- 14 Nov · this PR · Browser QA at 1280 x 709: Create fits under the top bar, all timeline lanes fit, herald publishes --tn-herald-bottom, news clears the network panel, herald queue capped, war bands end at a fall

@@ -6,7 +6,8 @@ import { KIND_LABEL, LEGEND_ORDER, displayKind, ofName } from './kinds';
 import type { DisplayKind } from './kinds';
 
 const NAME_W = 200;  // the left column of nation names
-const LANE_H = 34;
+const LANE_H_FULL = 34;
+const LANE_H_SHORT = 28;   // 720 px projector: see the max-height block in chronicle.css
 const PAD = 14;      // room inside the track so the first and last diamonds are not clipped
 const MIN_PX = 6;    // px a year; below this the track scrolls sideways
 const DIA = 6.5;     // half the 13 px diamond
@@ -64,6 +65,13 @@ function buildLayout(world: World): Layout {
         if (w) { w.to = e.year; openWar.delete(key); }
       }
     }
+    if (e.kind === 'fall' && e.countries.length > 0) {
+      // A fallen (or deleted, which ends in a fall) nation's wars and silence end with it.
+      const gone = e.countries[0]!;
+      for (const [key, w] of openWar) if (w.a === gone || w.b === gone) { w.to = e.year; openWar.delete(key); }
+      const s = openSilence.get(gone);
+      if (s) { s.to = e.year; openSilence.delete(gone); }
+    }
     if (e.kind === 'silence' || e.kind === 'return') {
       for (const c of e.countries) {
         if (e.kind === 'silence' && !openSilence.has(c)) {
@@ -97,6 +105,16 @@ export function Timeline({ world, agents, observed, selectedId, onPick, onClose 
   const pinned = useRef(true);
   const [avail, setAvail] = useState(0);
   const [hover, setHover] = useState<number | null>(null);
+  const [short, setShort] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-height: 800px)').matches);
+  const LANE_H = short ? LANE_H_SHORT : LANE_H_FULL;
+
+  useLayoutEffect(() => {
+    const mq = window.matchMedia('(max-height: 800px)');
+    const on = () => setShort(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -188,7 +206,7 @@ export function Timeline({ world, agents, observed, selectedId, onPick, onClose 
   for (let y = Math.ceil(start / 10) * 10; y <= end; y += 10) ticks.push(y);
 
   return (
-    <div className="panel tn-tl" role="dialog" aria-label="The Chronicle">
+    <div className="panel tn-tl tn-chron-timeline" role="dialog" aria-label="The Chronicle">
       <div className="tn-tl-head">
         <div className="tn-tl-title">
           <h2>The Chronicle</h2>

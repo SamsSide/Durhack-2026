@@ -3,7 +3,8 @@
 .tn-news {
   display: flex;
   width: 640px;
-  max-width: calc(100vw - 32px);
+  /* Clear the network panel on the left and its mirror on the right, never narrower than 480px. */
+  max-width: min(calc(100vw - 32px), max(480px, calc(100vw - 2 * (var(--net-width, 320px) + 28px))));
   height: 84px;
   background: var(--parchment-fill);
   color: var(--color-ink);

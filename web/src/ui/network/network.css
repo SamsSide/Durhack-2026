@@ -70,6 +70,7 @@
 .tn-is-cut .tn-nr-btns .btn.restore { background: var(--holo-tint); color: var(--color-night-inset); border-color: var(--holo-tint); }
 .tn-is-cut .tn-nr-btns .btn.danger { color: var(--color-danger); border-color: transparent; }
 .tn-nrow.tn-gone .tn-nr-name { text-decoration: line-through; color: var(--color-ink-muted); font-weight: 400; }
+.tn-nrow.tn-gone .tn-nr-name { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
 .tn-nrow.tn-gone .tn-sw { opacity: 0.4; }
 
 /* Folded tab */

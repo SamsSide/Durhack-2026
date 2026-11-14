@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flagSvg } from '@terra/shared';
 import type { Country, WorldEvent } from '@terra/shared';
 import { useWorld } from '../../state/world';
@@ -8,6 +8,9 @@ import { ofName } from './kinds';
 const SHOW_MS = 6000;   // about six seconds on screen
 const LEAVE_MS = 500;   // the herald-out keyframes
 const WAR_WINDOW_MS = 60_000;
+const QUEUE_CAP = 2;       // a busy world must not pile dispatches up
+const STALE_MS = 20_000;   // a dispatch that waited this long is old news
+const RANK = { war: 0, return: 1, fall: 2 } as const;   // drop the lowest first
 
 interface Stats { years: number; merged: number; settled: number }
 type Dispatch =
@@ -69,7 +72,8 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
   const events = useWorld((s) => s.recentEvents);
   const [current, setCurrent] = useState<Dispatch | null>(null);
   const [leaving, setLeaving] = useState(false);
-  const queue = useRef<Dispatch[]>([]);
+  const queue = useRef<{ d: Dispatch; at: number }[]>([]);
+  const slotRef = useRef<HTMLDivElement | null>(null);
   const seen = useRef<Set<string>>(new Set());
   const shown = useRef<Map<string, number>>(new Map());
   const worldId = useRef<string | null>(null);
@@ -79,9 +83,23 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
   const obs = useRef(observed);
   obs.current = observed;
 
+  const enqueue = (d: Dispatch) => {
+    queue.current.push({ d, at: Date.now() });
+    while (queue.current.length > QUEUE_CAP) {
+      // Lowest priority goes (fall > return > war); between equals the oldest (first in line).
+      let drop = 0;
+      for (let i = 1; i < queue.current.length; i++) {
+        if (RANK[queue.current[i]!.d.kind] < RANK[queue.current[drop]!.d.kind]) drop = i;
+      }
+      queue.current.splice(drop, 1);
+    }
+  };
+
   const pump = () => {
     if (busy.current) return;
-    const next = queue.current.shift();
+    const t = Date.now();
+    queue.current = queue.current.filter((q) => t - q.at <= STALE_MS);
+    const next = queue.current.shift()?.d;
     if (!next) return;
     busy.current = true;
     setLeaving(false);
@@ -149,7 +167,7 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
         if (!accept(key, WAR_WINDOW_MS)) continue;
         const aggr = e.actor === e.b ? b : a;
         const prey = aggr === a ? b : a;
-        queue.current.push({
+        enqueue({
           key, kind: 'war', year: world.year, a: aggr, b: prey,
           title: `${aggr.name} marches on ${ofName(prey.name)}`,
           line: e.reason, by: e.reason ? aggr.leader : '',
@@ -161,7 +179,7 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
         const key = `fall:${c.id}`;
         if (!accept(key, Infinity)) continue;
         const by = e.type === 'country_fell' && e.conqueror != null ? country(e.conqueror) : undefined;
-        queue.current.push({
+        enqueue({
           key, kind: 'fall', year: world.year, c,
           line: by ? `Conquered by ${by.name}. Its lands are being divided.` : 'Deleted from the world. Its neighbours are carving up its lands.',
         });
@@ -183,7 +201,7 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
           }
           stats = { years, merged, settled };
         }
-        queue.current.push({
+        enqueue({
           key, kind: 'return', year: e.entry.year, c, stats,
           line: 'Where both claimed the same land, whoever holds it on the ground keeps it.',
         });
@@ -192,9 +210,24 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
     pump();
   }, [events, world]);
 
+  // Publish the dispatch's bottom edge so other overlays (the belief banner) can sit below it.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const el = slotRef.current;
+    if (!current || !el) {
+      root.style.removeProperty('--tn-herald-bottom');
+      return;
+    }
+    const publish = () => root.style.setProperty('--tn-herald-bottom', `${Math.round(el.getBoundingClientRect().bottom) + 8}px`);
+    publish();
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => { ro.disconnect(); root.style.removeProperty('--tn-herald-bottom'); };
+  }, [current]);
+
   if (!current) return null;
   return (
-    <div className="tn-herald-slot">
+    <div className="tn-herald-slot" ref={slotRef}>
       <Card d={current} leaving={leaving} />
     </div>
   );
