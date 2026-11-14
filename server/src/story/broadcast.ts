@@ -162,9 +162,16 @@ async function ask(w: World, f: ReturnType<typeof facts>, ps: Place[], imageBase
 interface Place { countryId: number | null; tile: number; caption: string; names: string[] }
 
 const WORDS_PER_SECOND = 2.6;
+/** The caption, or its other wording when the place name already holds the noun (#317: never
+ *  "Ormand City grows into a city" or "A new harbour in Harbour Bay"). */
+const unless = (word: RegExp, r: string, plain: string, other: string): string => (word.test(r) ? other : plain);
 const BUILT_CAPTION: Partial<Record<StructureKind, (where: string) => string>> = {
-  factory: (r) => `Steel works rise in ${r}`, city: (r) => `${r} grows into a city`, temple: (r) => `A temple rises in ${r}`,
-  fort: (r) => `New walls rise in ${r}`, port: (r) => `A new harbour in ${r}`, town: (r) => `${r} grows into a town`,
+  factory: (r) => unless(/\b(steel|works?)\b/i, r, `Steel works rise in ${r}`, `Mills and furnaces rise in ${r}`),
+  city: (r) => unless(/\b(city|town)\b/i, r, `${r} grows into a city`, `${r} comes of age`),
+  temple: (r) => unless(/\btemple\b/i, r, `A temple rises in ${r}`, `A new shrine in ${r}`),
+  fort: (r) => unless(/\b(walls?|fort)\b/i, r, `New walls rise in ${r}`, `${r} is fortified`),
+  port: (r) => unless(/\b(harbou?r|port)\b/i, r, `A new harbour in ${r}`, `New quays in ${r}`),
+  town: (r) => unless(/\b(city|town)\b/i, r, `${r} grows into a town`, `${r} starts to bustle`),
 };
 const KIND_CAPTION: Partial<Record<ChronicleKind, (nation: string) => string>> = {
   founding: (n) => `${n} is founded`, proclamation: (n) => `${n} proclaims`, growth: (n) => `${n} grows`,
