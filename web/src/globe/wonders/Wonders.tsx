@@ -24,6 +24,7 @@ const MAX_SIZE = 0.091;    // absolute cap, times the surface radius (1.3x the s
 const ORBIT_BOOST = 1.2;   // capitals get 1.15 from orbit; a wonder stays modestly ahead of them there
 const STEPS = 8;           // the build rises in this many courses
 const REVEAL_S = 3.2;
+const RUIN_HEIGHT = 0.58;  // a razed wonder stands this share of its height, darkened
 const GILT = '#e8c45a';
 const SPARKS = 90;
 
@@ -99,6 +100,7 @@ function Wonder({ rec, geo, mesh }: { rec: WonderRec; geo: TileGeo; mesh: Provin
     for (const p of model.parts) {
       const m = p.material.clone();
       if (p.team && 'color' in m) (m as THREE.MeshStandardMaterial).color.set(team);
+      if (rec.ruined && 'color' in m) (m as THREE.MeshStandardMaterial).color.multiplyScalar(0.38); // burnt and grey
       m.clippingPlanes = [plane];
       mats.push(m);
       const mm = new THREE.Mesh(p.geometry, m);
@@ -152,7 +154,7 @@ function Wonder({ rec, geo, mesh }: { rec: WonderRec; geo: TileGeo; mesh: Provin
       beamGeo.dispose(); beamMat.dispose(); ringGeo.dispose(); ringMat.dispose(); sparkGeo.dispose(); sparkMat.dispose();
     };
     return { anchor, body, plane, scafPlane, height, scaffold, dust, fx, beam, beamMat, ring, ringMat, sparks, sparkMat, sparkPos, sparkVel, dispose };
-  }, [model, geo, rec.id, team]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [model, geo, rec.id, team, rec.ruined]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => built.dispose(), [built]);
 
   const f = useRef(0);
@@ -163,15 +165,15 @@ function Wonder({ rec, geo, mesh }: { rec: WonderRec; geo: TileGeo; mesh: Provin
     const target = smoothstep(CLOSE + 0.2, CLOSE - 0.2, camera.position.length());
     f.current += (target - f.current) * Math.min(1, Math.min(dt, 0.1) * 7);
     const base = Math.min(SIZE_TILES * geo.width, MAX_SIZE * geo.h);
-    const s = base * (1 + (ORBIT_BOOST - 1) * (1 - f.current));
+    const s = (base * (1 + (ORBIT_BOOST - 1) * (1 - f.current))) / (model.footprint || 1); // models come as footprint tiles wide
     b.body.scale.setScalar(s);
     b.anchor.updateMatrixWorld(true);
 
-    const p = stepped(progress(rec, nowMs, useWorld.getState().world?.tick));
-    const building = p < 1;
+    const p = rec.ruined ? RUIN_HEIGHT : stepped(progress(rec, nowMs, useWorld.getState().world?.tick));
+    const building = p < 1 && !rec.ruined;
     // Clip planes in world space: keep what is below the current course.
     v.up.set(0, 1, 0).transformDirection(b.body.matrixWorld);
-    v.pt.set(0, p * b.height + (building ? 0 : 50), 0).applyMatrix4(b.body.matrixWorld);
+    v.pt.set(0, p * b.height + (building || rec.ruined ? 0 : 50), 0).applyMatrix4(b.body.matrixWorld);
     b.plane.setFromNormalAndCoplanarPoint(v.up.clone().negate(), v.pt);
     v.pt.set(0, Math.min(p * b.height + 0.12, 1.4), 0).applyMatrix4(b.body.matrixWorld);
     b.scafPlane.setFromNormalAndCoplanarPoint(v.up.clone().negate(), v.pt);
@@ -191,7 +193,7 @@ function Wonder({ rec, geo, mesh }: { rec: WonderRec; geo: TileGeo; mesh: Provin
     });
 
     // Reveal: beam up, ring out, sparks thrown and falling.
-    const since = rec.builtMs != null ? (nowMs - rec.builtMs) / 1000 : Infinity;
+    const since = rec.builtMs != null && !rec.ruined ? (nowMs - rec.builtMs) / 1000 : Infinity;
     const on = since >= 0 && since < REVEAL_S;
     b.fx.visible = on;
     if (on) {
@@ -217,7 +219,7 @@ function Wonder({ rec, geo, mesh }: { rec: WonderRec; geo: TileGeo; mesh: Provin
   return (
     <>
       <primitive object={built.anchor} />
-      {rec.kind === 'great_wall' && <GreatWall rec={rec} geo={geo} mesh={mesh} team={team} />}
+      {rec.kind === 'great_wall' && !rec.ruined && <GreatWall rec={rec} geo={geo} mesh={mesh} team={team} />}
     </>
   );
 }

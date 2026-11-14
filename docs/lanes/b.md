@@ -58,3 +58,4 @@ pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
 - 14 Nov · #164 · vehicle effects from model anchors
 - 14 Nov · sun behind the planet with corona, limb flare and lens ghosts; day/night cycle (120 s, SUN_CYCLE, reduced-motion freeze) lit from the sun with dusk fill, warm terminator band and sunward rim; night-side city lights; passing cratered moon (zoomed out only)
 - 14 Nov · polish: nation names from orbit with darker ink and stronger halo, wonders 1.3x a capital and a town-height Great Wall, denser stars and three faint nebula clouds (the nebula shader never compiled: 'patch' is reserved in GLSL ES 3), towns fade in from 1.85, bigger plated council marks, beacon captions never overlap (max 2), terrain legend fits, globe tags stay below the HUD (#175)
+- 14 Nov · #169 #173 · real council and wonder types, wonder GLBs, ruined wonders, no default vehicle effects

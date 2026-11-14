@@ -1,5 +1,5 @@
 // The council on the globe: mourning banner, succession seal, coup flash and ruler/general pips by the capital.
-// Reads events by type string; types are local until row A29 lands. Mount inside the ProvinceMeshContext provider.
+// Types come from @terra/shared (row A29). Mount inside the ProvinceMeshContext provider.
 import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import { useWorld } from '../../state/world';
 import { useProvinceMesh } from '../mesh/context';
@@ -8,7 +8,7 @@ import { capitalPoint } from '../status/geo';
 import { useEventStream } from '../status/useEventStream';
 import { useHover } from '../camera/usePicking';
 import { bannerIcon, crackedCrownIcon, pipIcon, sealIcon } from './icons';
-import type { CouncilChanged, CouncilData, CouncilRole, CouncilState, CouncilStatus } from './types';
+import type { CouncilChanged, CouncilRole, CouncilState, CouncilStatus } from './types';
 import './council.css';
 
 interface Vis {
@@ -60,8 +60,6 @@ function reduce(t: Table, a: Action): Table {
   return { ...t, [e.countryId]: v };
 }
 
-type AnyCountry = { council?: Partial<CouncilData> };
-const councilOf = (c: unknown): Partial<CouncilData> | undefined => (c as AnyCountry | undefined)?.council;
 const isCouncilEvent = (e: { type: string }): boolean => e.type === 'council_changed' || e.type === 'council_status';
 
 let demoDispatch: ((a: Action) => void) | null = null;
@@ -108,8 +106,8 @@ export function Council() {
       if (!w) return;
       let s = '';
       const items: Array<[number, CouncilState, CouncilState]> = [];
-      for (const c of Object.values(w.countries) as Array<{ id: number }>) {
-        const cn = councilOf(c);
+      for (const c of Object.values(w.countries)) {
+        const cn = c?.council;
         if (!cn?.state) continue;
         items.push([c.id, cn.state.ruler ?? 'active', cn.state.general ?? 'active']);
         s += `${c.id}${cn.state.ruler}${cn.state.general};`;

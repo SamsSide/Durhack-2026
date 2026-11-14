@@ -1,14 +1,9 @@
-// Local mirror of the wonder contract (docs/contracts.md X1, row A30) until @terra/shared has it.
-// Everything is read defensively: the fields may be missing on an older server. Lane b.
-import * as shared from '@terra/shared';
+// Wonder helpers on top of the @terra/shared contract (docs/contracts.md X1, row A30). Lane b.
+import { WONDER_BONUS, WONDER_KINDS, wonderKindFor } from '@terra/shared';
+import type { WonderKind } from '@terra/shared';
+export { WONDER_BONUS, WONDER_KINDS, wonderKindFor };
 
-export type WonderKind = 'great_wall' | 'mausoleum' | 'pyramid' | 'colossus' | 'cathedral'
-  | 'palace_of_soviets' | 'skyscraper' | 'space_elevator';
-
-export const WONDER_KINDS: readonly WonderKind[] = [
-  'great_wall', 'mausoleum', 'pyramid', 'colossus', 'cathedral', 'palace_of_soviets', 'skyscraper', 'space_elevator',
-];
-
+export type { WonderKind };
 export const WONDER_LABEL: Record<WonderKind, string> = {
   great_wall: 'Great Wall', mausoleum: 'Mausoleum', pyramid: 'Pyramid', colossus: 'Colossus',
   cathedral: 'Cathedral', palace_of_soviets: 'Palace of Soviets', skyscraper: 'Skyscraper', space_elevator: 'Space Elevator',
@@ -20,18 +15,12 @@ export function isWonderKind(k: unknown): k is WonderKind {
   return typeof k === 'string' && (WONDER_KINDS as readonly string[]).includes(k);
 }
 
-/** The structure fields A30 adds, read off any structure-shaped object. */
-export interface WonderStructureLike { id: string; tile: number; owner: number; kind: string; builtTick?: number; wonder?: unknown; name?: unknown; complete?: unknown }
-
-/** `WONDER_BONUS[kind]` from @terra/shared once A30 lands; null until then. */
-export function wonderBonus(kind: WonderKind): WonderBonus | null {
-  const table = (shared as unknown as Record<string, unknown>).WONDER_BONUS as Record<string, WonderBonus> | undefined;
-  const b = table?.[kind];
-  return b && typeof b === 'object' ? b : null;
+export function wonderBonus(kind: WonderKind): WonderBonus {
+  return WONDER_BONUS[kind];
 }
 
 /** "+5% income, +10% defence, -1 unrest a year" (only the non-zero parts). */
-export function bonusText(b: WonderBonus | null): string {
+export function bonusText(b: WonderBonus | null | undefined): string {
   if (!b) return '';
   const pct = (x: number) => `${x > 0 ? '+' : ''}${Math.round(x * 100)}%`;
   const parts: string[] = [];
