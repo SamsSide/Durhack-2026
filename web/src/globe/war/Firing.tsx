@@ -343,10 +343,12 @@ export function Firing() {
       for (const [key, enemy] of s.target) {
         const i = s.index.get(key), j = s.index.get(enemy);
         if (i === undefined || j === undefined) continue;
+        F.markFight(key, now); // the formation braces and its front rank fights (UnitLayer)
         const next = s.nextAt.get(key) ?? now + Math.random() * 300; // a fresh line opens fire within a moment
         if (now < next) { if (!s.nextAt.has(key)) s.nextAt.set(key, next); continue; }
         s.nextAt.set(key, now + VOLLEY_MS + Math.random() * VOLLEY_JITTER);
         volley(i, j, now);
+        F.markShot(key, now);  // and recoils with the shot
       }
       if (s.nextAt.size > 200) s.nextAt.clear();
     }

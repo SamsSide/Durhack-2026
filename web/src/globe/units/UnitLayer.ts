@@ -10,17 +10,19 @@ import { getPalette } from '../palette';
 import { COUNTER_H, COUNTER_W, drawAttrition, drawClash, drawCounter, drawLoss, drawScroll, drawSettler, drawShield, toTexture } from './draw';
 import { terrainEffects } from '../terrain/effects';
 import { unitIcon } from './era';
-import { ModelField, standMatrix } from './ModelField';
+import { ModelField, poseMatrix, standMatrix } from './ModelField';
+import { FALL_MS, GAIT_RAMP_MS, RISE_MS, ROUT_MS, STEPS_FAST, STEPS_SLOW, gaitOf, gaitPose, hullPose, phaseOf, reducedMotion } from './motion';
 import { VehicleFx } from './vehicleFx';
 import { Traders } from './traders';
 import { clockNow, msPerYear } from '../../state/calendar';
 import { UnitModels } from './unitModels';
 import { formationSlots } from './formation';
+import type { Slot } from './formation';
 import { ROLE_BACK, ROLE_FLANK, ROLE_FRONT, firingFeed } from '../war/firingFeed';
 import { Pops, Smoke, Sparks, facing, tangentJitter } from './effects';
 import { arcHump, arcPoint, arrowGeometry, arrowMaterial, lineGeometry, lineMaterial, tileFanGeometry, writeArrow } from './ribbons';
 
-import { DISSOLVE_MS, DWELL_MS, dissolveAlpha, tooFast, viewHeight } from './speed';
+import { DISSOLVE_MS, DWELL_MS, dissolveAlpha, speedCap, tooFast, viewHeight } from './speed';
 
 const MOVE_MAX_MS = 160_000;    // the longest march: a three-year move at one week a second is 156 s
 const CHIP_LIFT = 0.004;
@@ -73,6 +75,15 @@ interface UState {
   ghost: THREE.Vector3 | null;  // a glide cut short by a speed change fades out from here
   landAt: number;               // when the last dissolve finished (the unit rests a moment before the next)
   inAt: number;                 // when it last began to fade in
+  // lifelike motion (motion.ts): all of it is drawn over the march, none of it moves the unit
+  seed: number;                 // this unit's own phase, so no two step together
+  stride: number;               // march phase in radians (pi a step), run on by its speed
+  amp: number;                  // how much it is marching: eases 0..1 as a march starts and back as it ends
+  surge: number;                // +1 setting off, 0 at full stride, -1 pulling up
+  routAt: number;               // when it last lost a battle: it flinches, or hurries away with loose ranks
+  /** Where each of the seven formation places stands now: x, z, presence 0..1, wanted (see formOf). */
+  form: Float32Array | null;
+  formAt: number;
 }
 
 interface Chip {
@@ -211,6 +222,7 @@ export class UnitLayer {
       model: (owner) => this.models.resolve(this.ageFor(owner), 'trader'),
       team: (owner) => this.team(owner),
       pop: (owner, now) => this.popScale(owner, now),
+      sky: (owner) => ageIndex(this.ageFor(owner)) >= 6,
     }, p.parchment, this.unitSize * 0.8);
     this.group.add(this.frontGroup, this.arrowGroup, this.field.group, this.fx.group, this.traders.group, this.smoke.group, this.sparks.points, this.chipGroup, this.pops.group);
     this.group.name = 'units';
@@ -410,7 +422,7 @@ export class UnitLayer {
       seen.add(u.id);
       let st = this.states.get(u.id);
       if (!st) {
-        st = { id: u.id, owner: u.owner, kind: u.kind, strength: u.strength, from: u.tile, to: u.tile, t0: 0, t1: 0, years: 1, hopAt: -1e9, arrow: null, head: new THREE.Vector3(), face: new THREE.Vector3(), dissolve: false, ghost: null, landAt: -1e9, inAt: -1e9 };
+        st = { id: u.id, owner: u.owner, kind: u.kind, strength: u.strength, from: u.tile, to: u.tile, t0: 0, t1: 0, years: 1, hopAt: -1e9, arrow: null, head: new THREE.Vector3(), face: new THREE.Vector3(), dissolve: false, ghost: null, landAt: -1e9, inAt: -1e9, seed: phaseOf(u.id), stride: 0, amp: 0, surge: 0, routAt: -1e9, form: null, formAt: 0 };
         this.states.set(u.id, st);
         const pm = this.pendingMoves.get(u.id);
         if (pm && pm.to === u.tile) this.startMove(st, pm.from, pm.to, (pm.arriveTick - pm.tick) * this.msPerTick(), now);
@@ -764,6 +776,10 @@ export class UnitLayer {
     loss(e.losses.attacker, -1.0, 250);
     loss(e.losses.defender, 1.0, 350);
 
+    // the loser breaks: its figures flinch back where they stand, or hurry off with loose ranks
+    if (e.winner === e.defender && st) st.routAt = now;
+    else if (e.winner === e.attacker) for (const u of this.states.values()) if (u.owner === e.defender && u.to === e.tile) u.routAt = now;
+
     // the winner's counter hops
     const hopAt = now + 320;
     if (e.winner === e.attacker && st) st.hopAt = hopAt;
@@ -945,7 +961,20 @@ export class UnitLayer {
       if (st.head.lengthSq() > 1e-12) {
         _w.copy(st.head).normalize();
         if (st.face.lengthSq() < 1e-12) st.face.copy(_w);
-        else st.face.lerp(_w, 1 - Math.exp(-dt / (st.kind === 'fleet' ? 420 : 160))).normalize();
+        else st.face.lerp(_w, 1 - Math.exp(-dt / (st.kind === 'fleet' ? 420 : 230))).normalize(); // a short wheel, as a block
+      }
+      // the step: eases in as the march sets off and out as it settles, quicker the faster it goes
+      if (now < st.t1 && st.from !== st.to && !st.dissolve) {
+        const a = Math.min(1, Math.max(0, (now - st.t0) / GAIT_RAMP_MS)), b = Math.min(1, Math.max(0, (st.t1 - now) / GAIT_RAMP_MS));
+        st.amp = smooth(0, 1, Math.min(a, b));
+        st.surge = b - a;
+        const da = this.dirs[st.from], db = this.dirs[st.to];
+        const pace = da && db ? Math.min(1, (da.angleTo(db) / Math.max(0.001, (st.t1 - st.t0) / 1000)) / speedCap(st.kind, this.viewH)) : 0;
+        const steps = (STEPS_SLOW + (STEPS_FAST - STEPS_SLOW) * pace) * (now - st.routAt < ROUT_MS ? 1.45 : 1);
+        st.stride += dt * 0.001 * Math.PI * steps;
+      } else if (st.amp > 0) {
+        st.amp = st.amp < 0.01 ? 0 : st.amp * Math.exp(-dt / 120);
+        st.surge = 0;
       }
     }
     if (this.dirty) this.rebuildChips(now);
@@ -1134,17 +1163,16 @@ export class UnitLayer {
     const model = this.models.resolve(age, chip.kind);
     const alpha = this.alphaOf(lead, now);
     if (alpha <= 0.02) return;
-    const scale = this.near * k * this.popScale(chip.owner, now) * (0.35 + 0.65 * alpha);
-    const size = this.unitSize * (model.footprint / 0.5) * scale;
     const front = chip.kind === 'army' ? this.models.resolveFigure(age, 'front') : null;
+    const calm = reducedMotion();
+    // a formation beaten in battle goes down figure by figure, not as one shrinking block
+    const felled = !!front && !!chip.dying?.shatter && !calm;
+    const scale = this.near * (felled ? 1 : k) * this.popScale(chip.owner, now) * (0.35 + 0.65 * alpha);
+    const size = this.unitSize * (model.footprint / 0.5) * scale;
     _n.copy(chip.pos).normalize();
     _v.copy(chip.pos).addScaledVector(_n, 0.0003 - CHIP_LIFT);
-    let hop = 0;
-    for (const u of chip.units) {
-      const t = (now - u.hopAt) / 380;
-      if (t >= 0 && t < 1) hop = Math.max(hop, Math.sin(Math.PI * t));
-    }
-    if (hop) _v.addScaledVector(_n, hop * size * 0.5);
+    let hopAt = -1e9;
+    for (const u of chip.units) if (u.hopAt > hopAt) hopAt = u.hopAt;
     const face = lead.face.lengthSq() > 1e-12 ? lead.face : lead.head;
     // several counters on one tile: step the models sideways so they do not overlap
     const stack = Math.max(0, chip.stack);
@@ -1156,6 +1184,7 @@ export class UnitLayer {
     const team = this.team(chip.owner);
     const fx = !this.pipFill && this.near > 0.5 && k >= 1 && alpha >= 1;
     const moving = !!chip.moving && !lead.dissolve;
+    const ai = ageIndex(age);
     if (front) {
       // the formation's own frame: forward along the march, right across it
       standMatrix(_mm, _v, face, 1);
@@ -1166,26 +1195,120 @@ export class UnitLayer {
       let strength = 0;
       for (const u of chip.units) strength += u.strength;
       const slots = formationSlots(strength);
-      const fa = k >= 1 && alpha >= 1 ? firingFeed.army(chip.key, chip.owner, ageIndex(age), chip.tile, _v) : -1;
-      for (let i = 0; i < slots.length; i++) {
-        const s = slots[i]!;
-        const fig = s.role === 'front' ? front : this.models.resolveFigure(age, s.role) ?? model;
-        // a little step in time per figure, so the line does not march as one block
-        const sway = moving ? Math.sin(now * 0.012 + i * 1.7) * 0.06 : 0;
-        _p.copy(_v).addScaledVector(_right, s.x * gap).addScaledVector(_fwd, (s.z + sway) * gap).setLength(r);
-        const fs = this.unitSize * (fig.footprint / 0.5) * scale * FIGURE_K;
-        this.field.push(fig, standMatrix(_fm, _p, face, fs), team);
-        if (fa >= 0) firingFeed.figure(fa, s.role === 'front' ? ROLE_FRONT : s.role === 'flank' ? ROLE_FLANK : ROLE_BACK, _p, fs);
+      const form = this.formOf(lead, slots, now);
+      const fa = k >= 1 && alpha >= 1 ? firingFeed.army(chip.key, chip.owner, ai, chip.tile, _v) : -1;
+      const fight = !calm && !moving && k >= 1 && firingFeed.fighting(chip.key, now);
+      const shotMs = fight ? firingFeed.sinceShot(chip.key, now) : 1e9;
+      const rout = calm ? 0 : Math.min(1, Math.max(0, 1 - (now - lead.routAt) / ROUT_MS));
+      // followers set off a moment after the leaders, and close up on them as the march ends
+      const lag = calm ? 0 : Math.sin(Math.PI * Math.abs(lead.surge)) * (lead.surge > 0 ? -0.22 : 0.12);
+      let order = 0;
+      for (let j = 0; j < 7; j++) {
+        const p = form[j * 4 + 2]!;
+        if (p <= 0.01) continue;
+        const role = j < 3 ? 'front' : j < 5 ? 'flank' : 'back';
+        const fig = role === 'front' ? front : this.models.resolveFigure(age, role) ?? model;
+        const seed = lead.seed + j * 2.399;
+        const P = gaitPose(gaitOf(ai, role), lead.stride, lead.amp, lead.surge, seed, now);
+        let x = form[j * 4]!, z = form[j * 4 + 1]!;
+        z += (0.55 - z) * lag;
+        if (rout) {
+          // beaten: the ranks loosen; standing, they reel back a pace, marching, they lean into the run
+          x *= 1 + 0.3 * rout;
+          z += 0.3 * rout * Math.sin(seed * 7.3);
+          if (moving) P.pitch += 0.07 * rout;
+          else { z -= 0.55 * rout * rout; P.pitch -= 0.1 * rout * rout; }
+        }
+        if (fight) {
+          // the recoil of this figure's shot, a beat after the volley so the line fires raggedly
+          const t = shotMs - order * 45;
+          const kick = t >= 0 && t < 600 ? Math.exp(-t / 130) : 0;
+          if (role === 'front') {
+            if (ai < 2) {
+              // spears and swords: each man lunges in his own time and falls back into line
+              const u = (now / 950 + seed * 0.37) % 1;
+              const l = u < 0.3 ? Math.sin((Math.PI * u) / 0.3) : 0;
+              P.fwd += 0.55 * l; P.pitch += 0.05 + 0.2 * l;
+            } else { P.pitch += 0.07 - 0.1 * kick; P.fwd -= 0.08 * kick; } // muskets and rifles: braced, then the kick
+          } else if (role === 'flank') {
+            if (ai < 3) {
+              // horse and chariot: wheel and rear at the enemy line
+              const u = (now / 2300 + seed * 0.21) % 1;
+              const l = u < 0.22 ? Math.sin((Math.PI * u) / 0.22) : 0;
+              P.pitch -= 0.3 * l; P.lift += 0.08 * l; P.fwd += 0.25 * l;
+            } else { P.fwd -= 0.14 * kick; P.pitch -= 0.07 * kick; }
+          } else if (ai === 0) P.pitch -= 0.14 * kick;                       // archers lean back to loose
+          else if (ai === 1) P.pitch += 0.2 * kick;                          // the trebuchet rocks with its throw
+          else if (ai <= 4) { P.fwd -= 0.3 * kick; P.pitch -= 0.1 * kick; }  // guns run back on their wheels
+          else if (ai === 5) P.pitch -= 0.08 * kick;
+          else P.sy += 0.14 * kick;                                          // the beacon pulses
+        }
+        const ht = (now - hopAt - order * 55) / 380;
+        if (ht >= 0 && ht < 1) P.lift += Math.sin(Math.PI * ht) * 0.5;      // the winners cheer down the line
+        // a casualty tips over and sinks away; a reinforcement stands up into its place
+        let q = form[j * 4 + 3]! ? 0 : 1 - p;
+        let grow = form[j * 4 + 3]! ? p * p * (3 - 2 * p) : 1;
+        if (felled) q = Math.max(q, Math.min(1, Math.max(0, (1 - k) * 2 - order / 7)));
+        if (q > 0) {
+          if (calm) grow = 1 - q;
+          else {
+            const e = q * q * (3 - 2 * q);
+            P.roll = ((j & 1) ? 1 : -1) * e * 1.5; P.pitch *= 1 - e; P.lift *= 1 - e; P.sy = 1;
+            grow = q > 0.7 ? 1 - (q - 0.7) / 0.3 : 1;
+          }
+        }
+        const fs = this.unitSize * (fig.footprint / 0.5) * scale * FIGURE_K * grow;
+        _p.copy(_v).addScaledVector(_right, x * gap).addScaledVector(_fwd, z * gap + P.fwd * fs).setLength(r + P.lift * fs);
+        this.field.push(fig, poseMatrix(_fm, _p, face, fs, P.pitch, P.roll, P.sy), team);
+        order++;
+        if (q > 0 || grow < 1) continue; // down, or not yet up: it neither fires nor smokes
+        if (fa >= 0) firingFeed.figure(fa, role === 'front' ? ROLE_FRONT : role === 'flank' ? ROLE_FLANK : ROLE_BACK, _p, fs);
         if (fx && fig.anchors.length) this.fx.emit({ anchors: fig.anchors, stand: _fm, size: fs, moving, facing: f }, now, this.lastDt);
       }
       return;
     }
     const sea = chip.kind === 'fleet';
-    const bob = sea ? Math.sin(now * 0.002 + chip.tile) * 0.07 : 0;
-    if (sea) _v.addScaledVector(_n, Math.sin(now * 0.0016 + chip.tile * 1.3) * size * 0.035); // riding the swell
-    this.field.push(model, standMatrix(_mm, _v, face, size, bob), team);
-    if (!sea && k >= 1 && alpha >= 1) firingFeed.figure(firingFeed.army(chip.key, chip.owner, ageIndex(age), chip.tile, _v), ROLE_BACK, _v, size * 0.5);
+    const P = sea ? hullPose(lead.amp, lead.seed, now, ai >= 6) : gaitPose(gaitOf(ai, 'whole'), lead.stride, lead.amp, lead.surge, lead.seed, now);
+    const ht = (now - hopAt) / 380;
+    if (ht >= 0 && ht < 1) P.lift += Math.sin(Math.PI * ht) * 0.5;
+    if (P.lift) _v.addScaledVector(_n, P.lift * size);
+    this.field.push(model, poseMatrix(_mm, _v, face, size, P.pitch, P.roll, P.sy), team);
+    if (!sea && k >= 1 && alpha >= 1) firingFeed.figure(firingFeed.army(chip.key, chip.owner, ai, chip.tile, _v), ROLE_BACK, _v, size * 0.5);
     if (fx) this.fx.emit({ anchors: model.anchors, stand: _mm, size, moving, facing: f }, now, this.lastDt);
+  }
+
+  /**
+   * The seven places of a formation (three in front, two flanks, two behind), eased towards the layout
+   * for its strength: figures shuffle to their new spots instead of jumping, a place no longer wanted
+   * empties one figure at a time (presence runs down while it falls), a new one fills as it stands up.
+   * Kept on the unit, so the main view and the news picture-in-picture draw the same line.
+   */
+  private formOf(st: UState, slots: readonly Slot[], now: number): Float32Array {
+    let f = st.form;
+    const fresh = !f;
+    if (!f) f = st.form = new Float32Array(28);
+    const dt = fresh ? 0 : Math.min(100, Math.max(0, now - st.formAt));
+    st.formAt = now;
+    const ease = 1 - Math.exp(-dt / 260);
+    f[3] = f[7] = f[11] = f[15] = f[19] = f[23] = f[27] = 0;
+    let nf = 0, nk = 0, nb = 0;
+    for (let i = 0; i < slots.length; i++) {
+      const s = slots[i]!;
+      const j = (s.role === 'front' ? nf++ : s.role === 'flank' ? 3 + nk++ : 5 + nb++) * 4;
+      if (j >= 28) continue;
+      f[j + 3] = 1;
+      if (fresh || f[j + 2]! <= 0) { f[j] = s.x; f[j + 1] = s.z; }
+      else { f[j] = f[j]! + (s.x - f[j]!) * ease; f[j + 1] = f[j + 1]! + (s.z - f[j + 1]!) * ease; }
+    }
+    let falling = false;
+    for (let j = 0; j < 28; j += 4) if (!f[j + 3] && f[j + 2]! > 0 && f[j + 2]! < 1) falling = true;
+    for (let j = 0; j < 28; j += 4) {
+      const p = f[j + 2]!;
+      if (f[j + 3]) f[j + 2] = fresh ? 1 : Math.min(1, p + dt / RISE_MS);
+      else if (fresh) f[j + 2] = 0;
+      else if (p > 0 && (p < 1 || !falling)) { falling = true; f[j + 2] = Math.max(0, p - dt / FALL_MS); } // one at a time
+    }
+    return f;
   }
 
   dispose(): void {

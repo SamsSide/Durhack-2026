@@ -143,6 +143,7 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 - **Army formations** of front, flank and back figures for every age, from spearmen and
   catapults to tanks and beyond; armies fire at each other by era: arrows, crossbows and
   trebuchets, cannon, artillery, tank tracers, drones and orbital strike.
+  Troops move like troops: foot soldiers step and sway, horses canter, guns recoil, mechs stomp, ships roll on the swell, and the fallen drop one by one.
 - **Select an army or a battle:** click an army chip or its figures for its troops, general and
   status; click a battle badge for both sides, losses and the battle-line grid.
 - **War effects:** explosions by era, smoke over the front, and cities turning to ruins and rebuilding; devastation, war
