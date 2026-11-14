@@ -555,8 +555,11 @@ export const useWorld: UseBoundStore<StoreApi<WorldStore>>;
 ```
 
 - **The nation card:** selecting a nation makes lane b slide lane c's `NationCard` component
-  (`web/src/ui/index.ts`, props `{ countryId: number }`, plain DOM, 380 px wide, colours from X7)
-  in, docked to the right side of the screen. No hologram (dropped by the owner on 14 Nov). The
+  (`web/src/ui/index.ts`, props `{ countryId: number }`, plain DOM, `--left-panel-width` (340 px)
+  wide, colours from X7) in, docked to the LEFT side of the screen (calm UI, #245, owner 14 Nov).
+  The card and the Network panel share that one left slot (class `left-dock`); which one shows is
+  `useLeftPanel` / `useLeftPanelKind`, exported from `web/src/ui/index.ts`. Overlays that avoid
+  the card (`hudCover.ts`, `NationLabels.tsx`, `CameraRig.tsx`) look for `.left-dock:not(.out)`. No hologram (dropped by the owner on 14 Nov). The
   `.holo` class and `--holo-*` variables stay defined but are no longer used.
 - **Map labels:** nation and region names on the globe are billboarded: they always face the
   camera, stay upright and readable from any angle and zoom (lane b).

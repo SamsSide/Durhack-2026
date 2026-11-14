@@ -1,9 +1,9 @@
 /* Nation card (X5, C2): an atlas page, always docked as .panel (the hologram was dropped, PR #75).
    Variables from tokens.css only. */
 .tn-card {
-  width: 380px;
+  width: var(--left-panel-width);
   max-width: 100%;
-  max-height: 72vh;
+  max-height: 100%;   /* the left dock gives the height (#245) */
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -14,7 +14,8 @@
 .tn-card-body {
   position: relative;
   overflow-y: auto;
-  padding: var(--space-4) 20px var(--space-4);
+  overflow-x: hidden;
+  padding: 14px var(--space-4) var(--space-3);
   scrollbar-width: thin;
   scrollbar-color: var(--color-ink-muted) transparent;
 }
@@ -230,3 +231,43 @@
 /* Five tabs in 380 px: no side padding (the gap spaces them), tighter letters, a touch smaller. */
 .tn-tab { letter-spacing: 0.03em; padding: 4px 0 5px; font-size: 11px; flex: none; }
 .tn-tabs { justify-content: space-between; gap: 6px; }
+
+/* ---- Calm UI (#245): the left info card. Ruler line, two facts, a stats grid, diplomacy as flags ---- */
+.tn-flag { width: 60px; height: 40px; }
+.tn-name { font-size: 19px; line-height: 23px; }
+.tn-ruler { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 5px 8px; background: var(--color-ink-faint); border-radius: var(--radius-1); }
+.tn-ruler-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.tn-ruler-name { font-size: 16px; font-weight: 600; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tn-ruler-age { flex: none; font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-ink-muted); }
+.tn-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 8px 0 7px; }
+.tn-pair > div { display: flex; flex-direction: column; min-width: 0; }
+.tn-pair-v { font-size: 16px; font-weight: 600; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tn-grid { border-top: 1px solid var(--color-ink-faint); border-bottom: 1px solid var(--color-ink-faint); }
+.tn-grid-row { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0 5px; }
+.tn-grid-row + .tn-grid-row { border-top: 1px dotted var(--color-ink-faint); }
+.tn-grid-row > div { display: flex; flex-direction: column; min-width: 0; }
+.tn-grid .tn-cap { font-size: 9.5px; letter-spacing: 0.08em; }
+.tn-grid .tn-v { font-size: 15px; line-height: 20px; white-space: nowrap; }
+.tn-grid .tn-v small { font-size: 10px; font-weight: 500; color: var(--color-ink-muted); }
+.tn-grid .tn-v.tn-bad { color: var(--color-rubric); }
+.tn-dip { padding: 8px 0 4px; }
+.tn-dip-row { display: flex; align-items: center; gap: 8px; min-height: 26px; padding-left: 8px; border-left: 3px solid var(--stance-neutral); }
+.tn-dip-row + .tn-dip-row { margin-top: 4px; }
+.tn-dip-war { border-left-color: var(--stance-war); }
+.tn-dip-alliance { border-left-color: var(--stance-alliance); }
+.tn-dip-trade { border-left-color: var(--stance-trade); }
+.tn-dip-label { flex: none; width: 88px; font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.tn-dip-flags { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
+.tn-dip-flag { padding: 0; line-height: 0; cursor: pointer; background: none; border: 1px solid var(--color-ink); border-radius: 1px; transition: transform var(--dur-fast) var(--ease-out); }
+.tn-dip-flag svg { display: block; }
+.tn-dip-flag:hover { transform: translateY(-1px); box-shadow: 0 0 0 2px var(--color-accent); }
+.tn-dip-flag:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.tn-dip-none { margin: 0; font-style: italic; font-size: var(--text-sm); color: var(--color-ink-muted); }
+.tn-held-flag { display: inline-block; vertical-align: -2px; margin-right: 6px; line-height: 0; border: 1px solid var(--color-ink); }
+.tn-held-flag svg { display: block; }
+.tn-tab-body .tn-ideology { margin: 0 0 8px; }
+.tn-short .tn-ruler { margin-top: 7px; padding: 3px 8px; }
+.tn-short .tn-pair { padding: 5px 0 4px; }
+/* Five tabs in the 340 px left panel */
+.tn-tab { letter-spacing: 0.01em; font-size: 10.5px; }
+.tn-tabs { gap: 4px; }

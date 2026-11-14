@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { useWorld } from '../../state/world';
 import { useBelief } from '../../state/belief';
-import { NationRow } from './NationRow';
+import { AutoIcon, NetworkGraph } from './NetworkGraph';
+import { NodeTray } from './NodeTray';
+import { useLeftPanel } from '../leftPanel';
+import { useShort } from '../card/shared';
 import { PrepareSwitch } from '../prepare/PreparePanel';
 import { LedgerPanel } from '../economy/LedgerPanel';
 import { EconomyCounter } from '../economy/EconomyCounter';
@@ -9,11 +12,6 @@ import { useEconomy } from '../economy/useEconomy';
 import { TerritoryChart } from '../stats/TerritoryChart';
 import { useStats } from '../stats/useStats';
 import './network.css';
-
-const FOLD_KEY = 'tn-network-folded';
-function readFolded(): boolean {
-  try { const v = localStorage.getItem(FOLD_KEY); return v == null ? true : v === '1'; } catch { return true; }
-}
 
 const TAB_KEY = 'tn-network-tab';
 type NetTab = 'network' | 'treasury' | 'stats';
@@ -25,7 +23,6 @@ export function NetworkPanel() {
   useWorld((s) => s.version);
   const world = useWorld((s) => s.world);
   const agents = useWorld((s) => s.agents);
-  const selected = useWorld((s) => s.selectedCountryId);
   const beliefOf = useWorld((s) => s.beliefOf);
   const select = useWorld((s) => s.select);
   const flyTo = useWorld((s) => s.flyTo);
@@ -33,7 +30,11 @@ export function NetworkPanel() {
   const showBelief = useWorld((s) => s.showBelief);
   const belief = useBelief();
 
-  const [folded, setFolded] = useState(readFolded);
+  // The fold state lives in the left-panel store (#245): opening the Network closes the nation card.
+  const folded = !useLeftPanel((st) => st.networkOpen);
+  const setNetworkOpen = useLeftPanel((st) => st.setNetworkOpen);
+  const [pickedId, setPicked] = useState<number | null>(null);
+  const isShort = useShort();
   const [tab, setTabState] = useState<NetTab>(readTab);
   const economy = useEconomy();
   const economyOn = economy.status === 'ok';
@@ -45,10 +46,9 @@ export function NetworkPanel() {
 
   if (!world) return null;
 
-  const setFold = (v: boolean) => {
-    setFolded(v);
-    try { localStorage.setItem(FOLD_KEY, v ? '1' : '0'); } catch { /* storage unavailable */ }
-  };
+  const setFold = (v: boolean) => setNetworkOpen(!v);
+  // The node picked on the graph. It is not the map selection: selecting a nation opens its card instead.
+  const picked = pickedId != null && world.countries[pickedId] ? pickedId : null;
 
   const live = agents.filter((a) => !a.deleted);
   const anyCutOrDeleted = agents.some((a) => a.link === 'cut' || a.deleted);
@@ -79,22 +79,24 @@ export function NetworkPanel() {
     : 0;
 
   const nationName = beliefCountry?.name ?? 'the nation';
-  let beliefSub = "The selected nation's map, not the truth";
+  let beliefSub = "The picked nation's map, not the truth";
   if (beliefOf != null) {
     beliefSub = beliefReady
       ? `What ${nationName} thinks is true · ${drift} ${drift === 1 ? 'province' : 'provinces'} out of date`
       : `What ${nationName} thinks is true · waiting for its view...`;
   }
-  const beliefDisabled = beliefOf == null && selected == null;
+  const beliefDisabled = beliefOf == null && picked == null;
+
+  const pickedCountry = picked != null ? world.countries[picked] : undefined;
 
   const showTab: NetTab = (tab === 'treasury' && economyOn) || (tab === 'stats' && statsOn) ? tab : 'network';
 
   return (
-    <aside className="tn-net panel">
+    <aside className={`tn-net panel${isShort ? ' tn-net-short' : ''}`}>
       <header className="tn-net-head">
         <div>
-          <h2 className="tn-net-title">The Network</h2>
-          <p className="tn-net-sub">Each nation thinks for itself. Cut one off and watch.</p>
+          <h2 className="tn-net-title" title="Cut a nation off, silence its AI or delete it, and watch the rest carry on.">The Network</h2>
+          <p className="tn-net-sub">Cut a nation off, silence its AI or delete it, and watch the rest carry on.</p>
         </div>
         <button className="tn-net-fold" onClick={() => setFold(true)} aria-label="Fold the network panel"><svg width="6" height="10" viewBox="0 0 6 10" aria-hidden="true"><path d="M5 1L1 5L5 9" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg></button>
       </header>
@@ -108,50 +110,62 @@ export function NetworkPanel() {
       )}
 
       {showTab === 'stats' ? <TerritoryChart /> : showTab === 'treasury' ? <LedgerPanel /> : (<>
-      <button
-        className={`tn-switch tn-blackout ${blackedOut ? 'on' : ''}`}
-        role="switch"
-        aria-checked={blackedOut}
-        disabled={live.length === 0}
-        onClick={() => send({ type: 'control', action: 'blackout', value: anyUp })}
-      >
-        <span>
-          <span className="tn-sw-title">Blackout</span>
-          <span className="tn-sw-sub">{blackedOut ? 'Every link is cut' : 'Cut every link at once'}</span>
-        </span>
-        <span className={`tn-toggle danger ${blackedOut ? 'on' : ''}`}><i /></span>
-      </button>
+      <NetworkGraph countries={world.countries} agents={agents} picked={picked} compact={isShort} onPick={(id) => { setPicked(id); flyTo(id); }} />
+      <div className="tn-graph-key" aria-hidden="true">
+        <span><i className="tn-key up" />link up</span>
+        <span><i className="tn-key cut" />cut</span>
+        <span><i className="tn-key count">3</i>queued</span>
+        <span className="tn-key-auto"><AutoIcon size={11} />autopilot</span>
+      </div>
 
-      <button
-        className={`tn-switch ${beliefOf != null ? 'on' : ''}`}
-        role="switch"
-        aria-checked={beliefOf != null}
-        disabled={beliefDisabled}
-        onClick={() => showBelief(beliefOf != null ? null : selected)}
-      >
-        <span>
-          <span className="tn-sw-title">Show beliefs</span>
-          <span className="tn-sw-sub">{beliefSub}</span>
-        </span>
-        <span className={`tn-toggle ${beliefOf != null ? 'on' : ''}`}><i /></span>
-      </button>
+      {pickedCountry ? (
+        <NodeTray
+          country={pickedCountry}
+          agent={agents.find((a) => a.countryId === pickedCountry.id)}
+          tick={world.tick}
+          year={world.year}
+          onControl={control}
+          onOpenCard={(id) => { select(id); flyTo(id); }}
+        />
+      ) : (
+        <p className="tn-tray-empty">Pick a nation on the graph to cut it off, silence it, delete it or reach its council.</p>
+      )}
+
+      <div className="tn-net-world">
+        <button
+          className={`tn-switch tn-blackout ${blackedOut ? 'on' : ''}`}
+          role="switch"
+          aria-checked={blackedOut}
+          title="Cut every link at once"
+          aria-label="Blackout: cut every link at once"
+          disabled={live.length === 0}
+          onClick={() => send({ type: 'control', action: 'blackout', value: anyUp })}
+        >
+          <span>
+            <span className="tn-sw-title">Blackout</span>
+            <span className="tn-sw-sub">{blackedOut ? 'Every link is cut' : 'Cut every link at once'}</span>
+          </span>
+          <span className={`tn-toggle danger ${blackedOut ? 'on' : ''}`}><i /></span>
+        </button>
+
+        <button
+          className={`tn-switch ${beliefOf != null ? 'on' : ''}`}
+          role="switch"
+          aria-checked={beliefOf != null}
+          title={beliefDisabled ? 'Pick a nation on the graph first' : "Show the picked nation's own map instead of the truth"}
+          aria-label="Show beliefs: show the picked nation's own map instead of the truth"
+          disabled={beliefDisabled}
+          onClick={() => showBelief(beliefOf != null ? null : picked)}
+        >
+          <span>
+            <span className="tn-sw-title">Show beliefs</span>
+            <span className="tn-sw-sub">{beliefSub}</span>
+          </span>
+          <span className={`tn-toggle ${beliefOf != null ? 'on' : ''}`}><i /></span>
+        </button>
+      </div>
 
       <PrepareSwitch />
-
-      <ul className="tn-net-list">
-        {world.countries.map((c) => (
-          <NationRow
-            key={c.id}
-            country={c}
-            agent={agents.find((a) => a.countryId === c.id)}
-            tick={world.tick}
-            year={world.year}
-            selected={c.id === selected}
-            onSelect={(id) => { select(id); flyTo(id); }}
-            onControl={control}
-          />
-        ))}
-      </ul>
       </>)}
     </aside>
   );

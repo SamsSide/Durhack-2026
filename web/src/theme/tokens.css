@@ -63,7 +63,8 @@
 
   /* Fixed widths, so every lane lays out against the same numbers */
   --card-width: 380px;
-  --net-width: 320px;
+  --net-width: 340px;                    /* the one left panel (#245): the Network panel and the nation card share it */
+  --left-panel-width: var(--net-width);
   --herald-width: 320px;
 
   /* Motion: one curve, two speeds */
