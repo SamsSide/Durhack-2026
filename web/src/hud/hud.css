@@ -3,55 +3,63 @@
 
 .topbar {
   position: absolute; z-index: 6; left: 0; top: 0; right: 0; height: var(--topbar-height);
-  display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
   padding: 0 var(--space-4);
   background: linear-gradient(180deg, var(--color-surface-2) 0%, var(--color-surface) 100%);
   border-bottom: 1px solid var(--color-accent);
   box-shadow: 0 6px 20px var(--color-bg);
 }
-.tb-group { display: flex; align-items: center; gap: var(--space-3); flex: none; min-width: 0; }
+.tb-group { display: flex; align-items: center; gap: 10px; flex: none; }
+/* The left group gives way first: the era truncates, nothing else moves. */
+.tb-group.tb-left { flex: 0 1 auto; min-width: 0; }
 .tb-name, .tb-era, .wordmark, .conn { white-space: nowrap; }
-.wordmark { font-family: var(--font-display); font-weight: 700; font-size: var(--text-sm); letter-spacing: 0.22em; text-transform: uppercase; color: var(--color-accent); }
-.vsep { width: 1px; height: 26px; background: var(--color-border); }
-.tb-world { max-width: 170px; overflow: hidden; }
+.wordmark { font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--color-accent); flex: none; }
+.vsep { width: 1px; height: 26px; background: var(--color-border); flex: none; }
+.tb-world { max-width: 138px; min-width: 0; overflow: hidden; flex: 0 1 auto; }
 .tb-name { font-family: var(--font-display); font-size: 17px; font-weight: 600; letter-spacing: 0.04em; color: var(--color-text); line-height: 20px; overflow: hidden; text-overflow: ellipsis; }
-.tb-era { font-size: 12px; font-style: italic; color: var(--color-text-muted); line-height: 14px; overflow: hidden; text-overflow: ellipsis; }
-.tb-year { display: flex; align-items: baseline; gap: 6px; padding: 3px 10px; border: 1px solid var(--color-accent); border-radius: var(--radius-1); }
-.tb-year .cap { font-family: var(--font-display); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-text-muted); }
-.tb-year .num { font-family: var(--font-mono); font-size: 16px; font-weight: 600; color: var(--color-accent); }
-.conn { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-sm); color: var(--color-text-muted); }
+.tb-era { font-size: 13px; font-style: italic; color: var(--color-text-muted); line-height: 15px; overflow: hidden; text-overflow: ellipsis; }
+.tb-year { display: flex; align-items: baseline; gap: 7px; padding: 2px 10px; border: 1px solid var(--color-accent); border-radius: var(--radius-1); flex: none; }
+.tb-year .cap { font-family: var(--font-display); font-size: var(--text-cap); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
+.tb-year .num { font-family: var(--font-mono); font-size: 20px; font-weight: 600; color: var(--color-accent); line-height: 28px; }
+.conn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--color-text-muted); flex: none; }
 .conn i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.conn-live { color: var(--color-text); }
-.conn-live i { background: var(--color-ok); box-shadow: 0 0 6px var(--color-ok); }
+.conn-live, .conn-reconnecting, .conn-offline { color: var(--color-text); }
+.conn-live i { background: var(--color-ok-bright); box-shadow: 0 0 6px var(--color-ok-bright); }
 .conn-reconnecting i { background: var(--color-warn); box-shadow: 0 0 6px var(--color-warn); }
 .conn-offline i { background: var(--color-danger); }
+/* 1280 px and narrower: no era, no call count, no word "Live". */
+.topbar.compact .tb-era, .topbar.compact .tn-meter .calls, .topbar.compact .conn-live .conn-word { display: none; }
+.topbar.compact .tb-name { line-height: 28px; }
+.topbar.compact .tb-world { max-width: 170px; }
+.topbar.compact .seg { padding: 0 9px; }
+.topbar.compact .seg.mono, .topbar.compact .seg.icon { padding: 0 8px; }
 
 .segs { display: flex; border: 1px solid var(--color-border); border-radius: var(--radius-1); background: var(--color-surface); }
 .seg {
   appearance: none; border: 0; border-left: 1px solid var(--color-border); background: transparent; cursor: pointer;
-  font-family: var(--font-display); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--color-text-muted); padding: 0 11px; line-height: 26px; display: flex; align-items: center;
+  font-family: var(--font-display); font-size: var(--text-cap); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--color-text-muted); padding: 0 10px; line-height: 28px; height: 28px; display: flex; align-items: center;
 }
 .seg:first-child { border-left: 0; }
 .seg:hover { color: var(--color-accent); }
-.seg.mono { font-family: var(--font-mono); letter-spacing: 0; font-size: 12px; padding: 0 9px; }
+.seg.mono { font-family: var(--font-mono); letter-spacing: 0; font-size: 13px; padding: 0 8px; }
 .seg.icon { padding: 0 10px; }
 .seg.on, .seg.on:hover { background: var(--color-parchment); color: var(--color-ink); }
 .seg:disabled { opacity: 0.45; cursor: default; }
 
 
-.btn.primary-dark { background: var(--color-parchment); color: var(--color-ink); border-color: var(--color-parchment); }
-.btn.primary-dark:hover { background: var(--color-parchment-light); color: var(--color-ink); border-color: var(--color-accent); }
+.btn.primary-dark { background: transparent; color: var(--color-text); border-color: var(--color-text-muted); padding: 4px 10px; }
+.btn.primary-dark:hover { background: transparent; color: var(--color-accent); border-color: var(--color-accent); }
 
-/* Decree slot: bottom right, just above the ticker. Lane c's DecreeBox fills it. */
+/* Decree slot: bottom right, 380 x 48, just above the ticker (design gap 12). Lane c's DecreeBox fills it. */
 .decree-slot {
-  right: var(--space-4); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-2));
+  right: var(--space-4); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3));
   width: 380px; height: 48px;
 }
 
-/* Diplomacy legend sits above the decree box. */
+/* Diplomacy legend sits just above the decree box. */
 .legend-box {
-  right: var(--space-4); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-2) + 48px + var(--space-2));
+  right: var(--space-4); bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 48px + var(--space-3));
   width: 220px; padding: 12px 16px;
 }
 .legend-box .muted { font-size: var(--text-sm); margin-bottom: 6px; }
@@ -59,22 +67,24 @@
 .lg-sw { width: 14px; height: 14px; border: 1px solid var(--color-ink); border-radius: var(--radius-1); flex: none; }
 
 .belief-banner {
-  position: absolute; z-index: 6; left: 50%; top: calc(var(--topbar-height) + var(--space-4)); transform: translateX(-50%);
+  position: absolute; z-index: 6; left: 50%; top: 64px; transform: translateX(-50%);
   display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 14px;
   background: color-mix(in srgb, var(--color-bg) 92%, transparent); border: 1px solid var(--holo-tint); border-radius: var(--radius-1);
   color: var(--color-text); font-size: 14px; box-shadow: 0 0 18px var(--holo-scanline);
 }
+/* a herald dispatch (lane c, .tn-herald) owns top 64 px centre; sit the banner below it while one shows */
+body:has(.tn-herald) .belief-banner { top: 148px; }
+.belief-banner { transition: top 200ms var(--ease-out); }
 .belief-banner .cap { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--holo-tint); }
 .belief-banner .btn { background: transparent; color: var(--holo-tint); border-color: var(--holo-tint); }
 .belief-banner .btn:hover { background: var(--holo-scanline); color: var(--holo-tint); }
 
-/* Nation card dock: right side, below the top bar, above the ticker; slides in on selection. */
-.card-dock { bottom: calc(var(--ticker-height) + var(--space-4)); overflow-y: auto; animation: card-slide-in 220ms ease-out; top: calc(var(--topbar-height) + var(--space-3)); right: var(--space-3); background: color-mix(in srgb, var(--color-bg) 82%, transparent); border-radius: var(--radius-2); box-shadow: var(--shadow-1); }
-@media (max-width: 1099px) {
-  .card-dock { right: 0; top: var(--topbar-height); background: transparent; box-shadow: none; }
-  .decree-slot, .legend-box { right: var(--space-2); }
-  .topbar { gap: var(--space-2); padding: 0 var(--space-2); }
-  .tb-era, .vsep { display: none; }
+/* Nation card dock: right 16, top 64. No box of its own: the card is lane c's .panel. */
+.card-dock { right: var(--space-4); top: 64px; width: var(--card-width); animation: card-in 240ms var(--ease-out) both; }
+.card-dock.out { animation: card-out 240ms var(--ease-out) both; pointer-events: none; }
+@keyframes card-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(28px); } }
+@media (max-width: 1280px) {
+  .decree-slot, .legend-box { right: var(--space-3); }
 }
 
 /* Terra Nova News: lower-third slot above the chronicle ticker, below the cards and dialogs */
@@ -89,7 +99,32 @@
 }
 .news-slot > * { pointer-events: auto; }
 .onair { display: inline-flex; align-items: center; gap: 6px; }
-.onair-dot { width: 7px; height: 7px; border-radius: 50%; background: #e5484d; }
+.onair-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--color-danger); }
 
-@keyframes card-slide-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .card-dock { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .card-dock, .card-dock.out { animation: none; } }
+
+/* Closing card: what the world cost (docs/design/reference.html) */
+.closing-veil {
+  position: absolute; inset: 0; z-index: 12; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--color-bg) 72%, transparent);
+  animation: closing-fade var(--dur-slow) var(--ease-out) both;
+}
+@keyframes closing-fade { from { opacity: 0; } to { opacity: 1; } }
+.closing { width: 760px; max-width: calc(100vw - 2 * var(--space-4)); padding: 30px 40px 24px; text-align: center; }
+.closing .cap { font-family: var(--font-display); font-size: var(--text-cap); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+.closing .rub { color: var(--color-rubric); }
+.closing h1 { font-family: var(--font-display); font-weight: 700; letter-spacing: var(--tracking-caps); font-size: 26px; line-height: 34px; margin: 6px 0 0; }
+.cl-hero { display: flex; align-items: baseline; justify-content: center; gap: 16px; margin-top: 2px; }
+.cl-num { font-family: var(--font-mono); font-size: var(--text-hero); line-height: 104px; font-weight: 600; letter-spacing: -0.06em; }
+.cl-unit { font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-rubric); }
+.cl-stats { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: var(--space-2); border-top: 1px solid var(--color-ink); border-bottom: 1px solid var(--color-ink); }
+.cl-stats div { display: flex; flex-direction: column; align-items: center; padding: 12px 10px 13px; border-left: 1px solid var(--color-ink-faint); }
+.cl-stats div:first-child { border-left: none; }
+.cl-stats b { font-family: var(--font-mono); font-size: 30px; line-height: 34px; font-weight: 600; }
+.cl-stats span { font-size: 15px; line-height: 19px; font-style: italic; color: var(--color-ink-muted); margin-top: 2px; }
+.cl-foot { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: var(--space-4); text-align: left; }
+.cl-foot .muted { font-size: 15px; }
+
+.meter-hit { display: inline-flex; cursor: pointer; border-radius: var(--radius-1); }
+.meter-hit:hover > * { border-color: var(--color-accent); }
+.meter-hit:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }

@@ -14,6 +14,9 @@ export interface Palette {
   accent: string;
   background: string;
   holo: string;
+  night: string;
+  silence: string;
+  ruin: string;
   /** Share of the nation colour in the political fill (rest is terrain). */
   nationFill: number;
 }
@@ -35,6 +38,9 @@ const DEFAULTS: Palette = {
   accent: '#c9a24b',
   background: '#090b12',
   holo: '#7fe6d8',
+  night: '#0d1620',
+  silence: '#1e6b63',
+  ruin: '#7b776f',
   nationFill: 0.88,
 };
 
@@ -55,6 +61,9 @@ export function getPalette(): Palette {
     p.selectedSelf = p.accent;
     p.background = tok('--color-bg', p.background);
     p.holo = tok('--holo-tint', p.holo);
+    p.night = tok('--color-night-inset', p.night);
+    p.silence = tok('--silence-ink', p.silence);
+    p.ruin = tok('--color-ruin', p.ruin);
     for (const s of Object.keys(p.stance) as Stance[]) p.stance[s] = tok(`--stance-${s}`, p.stance[s]);
     for (const t of Object.keys(p.terrain) as Terrain[]) {
       if (t === 'ocean') continue;

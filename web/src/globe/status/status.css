@@ -1,0 +1,50 @@
+/* Agent status on the globe: tags and badges. Colours come from tokens.css. Lane b (B7). */
+.gs-anchor { pointer-events: none; transition: opacity 0.2s; }
+.gs-tag {
+  position: relative;
+  padding: 4px 9px 5px;
+  white-space: nowrap;
+  font-family: var(--font-serif);
+  font-size: 13px;
+  line-height: 16px;
+  border-radius: 1px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  background: var(--color-parchment-light);
+  color: var(--color-ink);
+  border: 1px solid var(--color-ink);
+  border-left: 4px solid var(--color-accent);
+}
+.gs-tag .cap {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 10px;
+  line-height: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6b4e12;
+}
+.gs-tag.cut {
+  background: var(--color-night-inset);
+  color: var(--color-text);
+  border-color: var(--silence-ink);
+  border-left-color: var(--holo-tint);
+}
+.gs-tag.cut .cap { color: var(--holo-tint); }
+.gs-tag.cut .yrs { font-family: var(--font-mono); font-size: 12px; }
+.gs-tag.dispute { animation: gs-tag-life 3s ease forwards; }
+@keyframes gs-tag-life {
+  0% { opacity: 0; transform: translateY(4px); }
+  10% { opacity: 1; transform: none; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.gs-auto {
+  width: 16px; height: 16px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--color-parchment-light);
+  color: var(--color-ink);
+  border: 1px solid var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 10px; line-height: 1; font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}

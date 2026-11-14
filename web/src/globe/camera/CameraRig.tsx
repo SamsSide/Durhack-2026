@@ -12,9 +12,31 @@ const FLY_DISTANCE = 1.6;
 const FLY_SMOOTH = 0.4; // about 1.2 s to settle
 const SMOOTH = 0.25;
 
+// Pixels to shift the view sideways so the selected nation sits in the free space between the
+// folded network tab (left) and the nation card (right). 0 with no selection or on narrow screens.
+function readPx(name: string, fallback: number): number {
+  try {
+    const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
+    return Number.isFinite(v) && v > 0 ? v : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function focalOffsetPx(selected: boolean): number {
+  if (!selected || typeof window === 'undefined' || window.innerWidth < 1100) return 0;
+  const card = readPx('--card-width', 380);
+  const tab = readPx('--net-tab-width', 40);
+  const margin = 16;
+  return (card + margin - (tab + margin)) / 2; // card side minus tab side, halved
+}
+
 export function CameraRig() {
   const ref = useRef<CameraControlsImpl>(null);
   const flyingUntil = useRef(0);
+  const selected = useWorld((s) => s.selectedCountryId != null);
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
+  const lastOff = useRef({ d: -1, h: -1, w: -1, sel: false, t: 0 });
 
   useEffect(() => {
     const c = ref.current;
@@ -34,6 +56,22 @@ export function CameraRig() {
     const speed = 0.25 + 0.75 * Math.min(1, Math.max(0, (d - CAM_MIN) / (CAM_MAX - CAM_MIN)));
     c.azimuthRotateSpeed = speed;
     c.polarRotateSpeed = speed;
+    // Keep the sideways view shift right as zoom, window size and selection change (throttled).
+    const now = performance.now();
+    const last = lastOff.current;
+    const sel = selectedRef.current;
+    const h = window.innerHeight;
+    const w = window.innerWidth;
+    const changed =
+      sel !== last.sel || h !== last.h || w !== last.w || Math.abs(d - last.d) > 0.02 * Math.max(d, 0.1);
+    if (changed && now - last.t > 100) {
+      const cam = c.camera as { fov?: number };
+      const fov = ((cam.fov ?? 45) * Math.PI) / 180;
+      const px = focalOffsetPx(sel);
+      const world = (px / Math.max(h, 1)) * 2 * d * Math.tan(fov / 2);
+      void c.setFocalOffset(world, 0, 0, true);
+      lastOff.current = { d, h, w, sel, t: now };
+    }
     if (flyingUntil.current && performance.now() > flyingUntil.current) {
       flyingUntil.current = 0;
       c.smoothTime = SMOOTH;

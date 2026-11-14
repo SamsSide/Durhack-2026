@@ -18,6 +18,7 @@ import { Political } from './political/Political';
 import { Atmosphere } from './atmosphere/Atmosphere';
 import { Structures } from './structures/Structures';
 import { registerCapture } from './capture';
+import { setStatuses } from './status/statusTint';
 
 const SPACE = '#0b0f14';
 
@@ -79,7 +80,7 @@ function Planet({ world, mesh }: { world: World; mesh: ProvinceMesh }) {
       const tiles = new Map<number, string>();
       for (let i = start; i < events.length; i++) {
         const e = events[i]!;
-        if (e.type === 'country_founded' || e.type === 'country_fell') return null;
+        if (e.type === 'country_founded') return null;
         if (e.type === 'tile_claimed' && e.tile != null) tiles.set(e.tile, e.cause ?? 'expand');
       }
       return tiles;
@@ -92,13 +93,17 @@ function Planet({ world, mesh }: { world: World; mesh: ProvinceMesh }) {
       const modeChanged = s.mapMode !== lastMode || s.selectedCountryId !== lastSel;
       lastMode = s.mapMode;
       lastSel = s.selectedCountryId;
+      const statusChanged = setStatuses(s.agents); // a cut or deleted nation dims or greys its land
       const changed = s.version !== seenVersion ? diff(events) : new Map<number, string>();
       seenVersion = s.version;
       lastEventId = events.length ? events[events.length - 1]!.id : lastEventId;
-      if (modeChanged || changed === null || seenVersion < 0) paintAll(modeChanged);
+      if (modeChanged || statusChanged || changed === null || seenVersion < 0) paintAll(modeChanged || statusChanged);
       else if (changed.size > 0) {
         fx.repaint(() => writeColors(mesh, world, ownerFn(), s.mapMode, s.selectedCountryId, changed.keys()), changed.keys(), false);
-        if (s.beliefOf == null) for (const [tile, cause] of changed) fx.pulse(tile, cause);
+        if (s.beliefOf == null) {
+          let nCollapse = 0;
+          for (const [tile, cause] of changed) fx.pulse(tile, cause, cause === 'collapse' ? Math.min(nCollapse++ * 70, 2800) : 0);
+        }
         lastPaint.current = performance.now();
       }
     };
@@ -106,6 +111,7 @@ function Planet({ world, mesh }: { world: World; mesh: ProvinceMesh }) {
     // initial paint
     {
       const s = useWorld.getState();
+      setStatuses(s.agents);
       seenVersion = s.version;
       lastEventId = s.recentEvents.length ? s.recentEvents[s.recentEvents.length - 1]!.id : null;
       paintAll();
