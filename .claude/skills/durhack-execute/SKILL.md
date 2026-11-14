@@ -50,6 +50,8 @@ Task 3  Wire upload to real C1        -> durhack-builder (sonnet)   alone, after
 ## After each batch
 
 1. **Gate once:** `./check.sh`, quote the last lines.
+   **README:** if the batch added or changed something a user can see or run, update `README.md`
+   (feature line, a screenshot in `docs/shots/`, controls table, commands) before the PR.
 2. **Red →** one fix round: a fresh agent (Opus if a Sonnet agent wrote it) with the failing
    output and the files involved. Gate again. **Still red → stop the task:** revert or leave it
    out of the commit, ledger it, open a `human-test` or ask the user (clickable): Skip it ·
