@@ -118,6 +118,7 @@ export function secessionBatch(world: World, plan: SecessionPlan, mk: (body: Bod
     anthemPrompt: `a defiant rebel marching song with drums, after ${parent.anthemPrompt}`.slice(0, 160),
     voiceStyle: 'young, fierce, a rebel leader',
     alive: true, population, treasury,
+    techAge: parent.techAge ?? 'ancient',
   };
 
   const events: WorldEvent[] = [];

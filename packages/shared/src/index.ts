@@ -11,3 +11,5 @@ export * from './sim/sync';
 export * from './sim/war';
 export * from './sim/style';
 export * from './sim/regions';
+export * from './sim/ages';
+export * from './sim/trade';

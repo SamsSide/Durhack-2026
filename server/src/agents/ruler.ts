@@ -1,7 +1,7 @@
 // The ruler (row A5): one nation's Gemini decision, from a compact digest to a schema-checked JSON
 // decision. On any failure it throws RulerFailed and the caller (row A4) runs the nation on autopilot.
 // It never retries. RulerScheduler decides when each nation is next due, spreading calls under the cap.
-import { relationOf, type Stance, type World, type WorldEvent } from '@terra/shared';
+import { isCombatant, relationOf, type Stance, type TechAge, type World, type WorldEvent } from '@terra/shared';
 import { getBudget, llmJson, rulerModel, type Schema } from '../llm';
 import { chronicleToneOf, governmentKeyOf } from '../story/identity';
 
@@ -18,6 +18,7 @@ export interface RulerDigest {
   id: number; name: string; government: string; ideology: string; year: number;
   temperament: { aggression: number; expansion: number; trade: number; faith: number };
   treasury: number; population: number; tiles: number; cities: number; armies: number; strength: number;
+  techAge: TechAge;                      // its weapons and ships (row A23)
   focus: Focus;
   neighbours: RulerNeighbour[];          // alive nations that share a border; strength is relative to ours (1 = equal)
   chronicle: string[];                   // the last few lines involving this nation
@@ -37,7 +38,7 @@ const r2 = (x: number): number => Math.round(x * 100) / 100;
 export function makeDigest(world: World, countryId: number, focus: Focus = 'expand'): RulerDigest {
   const c = world.countries[countryId];
   if (!c) throw new RulerFailed(`no country ${countryId}`, countryId);
-  const strengthOf = (id: number) => world.units.filter((u) => u.owner === id && u.kind !== 'settler').reduce((s, u) => s + u.strength, 0);
+  const strengthOf = (id: number) => world.units.filter((u) => u.owner === id && isCombatant(u)).reduce((s, u) => s + u.strength, 0);
   const mine = strengthOf(countryId);
   const tiles = world.owner.reduce((n, o) => n + (o === countryId ? 1 : 0), 0);
   const border = new Set<number>();
@@ -61,6 +62,7 @@ export function makeDigest(world: World, countryId: number, focus: Focus = 'expa
     treasury: Math.round(c.treasury), population: Math.round(c.population), tiles,
     cities: world.structures.filter((s) => s.owner === countryId && (s.kind === 'city' || s.kind === 'capital' || s.kind === 'town')).length,
     armies: world.units.filter((u) => u.owner === countryId && u.kind === 'army').length, strength: Math.round(mine),
+    techAge: c.techAge ?? 'ancient',
     focus, neighbours,
     chronicle: lines(world.chronicle.filter((e) => e.countries.includes(countryId)).slice(-5)),
     events: lines(world.chronicle.filter((e) => BIG_KINDS.has(e.kind) && !e.countries.includes(countryId)).slice(-3)),
