@@ -12,11 +12,12 @@ import type { Ring } from './launchState';
 import { loadGlb } from './launchModels';
 import type { ModelPart } from '../structures/models';
 
-const SAT = 0.03;
+const SAT_SCALE = 0.7; // #317 item 11: satellites at 70 percent of their first size
+const SAT = 0.03 * SAT_SCALE;
 const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 // the modelled satellite (manifest `models.satellite`) is scaled so its widest side (the solar booms)
 // matches the old code-built one's span on screen, and turned so its dish faces the planet
-const SPAN = 0.03 * 3.2;
+const SPAN = SAT * 3.2;
 const ORIENT = new THREE.Euler(0, 0, 0);
 
 let satParts: ModelPart[] | null = null;

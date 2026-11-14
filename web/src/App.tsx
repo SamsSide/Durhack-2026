@@ -2,7 +2,7 @@
 import type { ComponentType, CSSProperties } from 'react';
 import { Globe } from './globe';
 import * as ui from './ui';
-import { Chronicle, Collapsible, CreateScreen, DecreeBox, HourglassIcon, NationCard, NetworkPanel, PreparePanel, PresentationYear, QuillIcon, ScrollIcon, usePresentationKeys, HelpButton, HelpScreen, useHelpKeys } from './ui';
+import { Chronicle, Collapsible, CreateScreen, DecreeBox, HourglassIcon, NationCard, NetworkPanel, PreparePanel, PresentationYear, QuillIcon, ScrollIcon, usePresentationKeys } from './ui';
 import { useWorld } from './state/world';
 import { EventFeed } from './hud/lookup';
 import { BeliefBanner, ClosingCard, DiplomacyLegend, Minimap, MODES, TerrainLegend, TopBar, useTimelineOpen, WealthLegend, PoliticsLegend } from './hud';
@@ -45,7 +45,6 @@ export function App() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
-  useHelpKeys();   // ? and F1 toggle the help screen, Esc closes it (C19)
   usePresentationKeys();   // P toggles presentation mode, Esc leaves it (C16)
   useEffect(() => setCreating(false), [world?.id]);
   useEffect(() => { setDock(null); setDockOut(false); }, [epoch]);
@@ -85,7 +84,6 @@ export function App() {
       {world && !showCreate && <PreparePanel />}
       {import.meta.env.DEV && <DemoPanel />}
       <PresentationYear />
-      <HelpButton /><HelpScreen />
       <ClosingCard />
       {world && <HoverTooltip />}
       {showCreate && (

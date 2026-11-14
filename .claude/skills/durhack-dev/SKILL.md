@@ -66,12 +66,6 @@ make these changes directly — still through a PR.
 glue files (a root `package.json`, `pyproject.toml`, a router file) are edited by the lane named
 for them in `docs/contracts.md`; others ask.
 
-**Polish mode (toggle in `CLAUDE.md`).** When `CLAUDE.md` has `## Polish mode: ON`, build only
-polish, fixes, performance, docs and already-approved features. A new major feature (a new
-screen, panel, system, mechanic, data model or integration, anything that adds a new thing to
-explain in the 2-minute demo) needs the owner's yes first: a `needs-owner` issue from other
-lanes, a clickable question from the owner's session. When unsure, ask. OFF means no limit.
-
 **Keep the README current.** The repo will be public. Every PR that adds or changes something a
 user can see or run (a feature, a screen, a key binding, a command) updates `README.md` in the
 same PR: the feature list, a screenshot in `docs/shots/` for visual work, the controls table,

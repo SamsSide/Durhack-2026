@@ -39,7 +39,5 @@ useWorld.subscribe((s, prev) => {
 export function useLeftPanelKind(): LeftPanel {
   const networkOpen = useLeftPanel((s) => s.networkOpen);
   const selected = useWorld((s) => s.selectedCountryId);
-  // An army or battle card also fills the left slot, so the camera makes room for it too.
-  const army = useWorld((s) => s.selectedUnitId != null || s.selectedBattleTile != null);
-  return selected != null || army ? 'card' : networkOpen ? 'network' : 'none';
+  return selected != null ? 'card' : networkOpen ? 'network' : 'none';
 }

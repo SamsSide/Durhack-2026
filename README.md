@@ -40,7 +40,8 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   an age before its calendar year (medieval 500, gunpowder 1400, industrial 1760, modern 1900,
   future 2050, stellar 2150); a world's starting era wins.
 - **A living world:** boats, caravans, birds and smoke, volumetric clouds with drifting weather,
-  rain and storms, a sun with a day and night cycle and a passing moon.
+  rain and storms, a sun with a day and night cycle and a passing moon. The lens flare only
+  shows while the sun is in view or peeking past the planet's edge.
 - **Close up**, the camera tilts to a ground view of walled towns, rivers and buildings in one of
   several identity styles; city walls grow from palisades to walled cores as cities grow.
 - **Wonders** from the Great Wall to a space elevator.
@@ -70,6 +71,8 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 - Every nation has a **ruler and a general**, each of whom you can cut off or kill. They grow
   old and die (natural death rises from 50); a successor inherits the dead general's memory,
   and the nation card shows the council, its ages and its succession.
+- Markers over one capital (council pips, the newest of mourning, succession or coup, the battle
+  plate, a ruler's proclamation and a decree caption) stack in a neat column and never overlap.
 - The **nation card** shows provinces, population, treasury, army, readiness, devastation,
   unrest, diplomacy, and tabs for culture, economy, politics, history and relations.
 
@@ -129,17 +132,6 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   status; click a battle badge for both sides, losses and the battle-line grid.
 - **War effects:** explosions by era, smoke over the front, and cities turning to ruins and rebuilding; devastation, war
   readiness and politics that drift to extremes under war.
-- **Army and battle cards:** click an army's counter to see its flag, status (marching,
-  fighting or garrisoned), general, soldiers, war readiness and its front, flank and back troops
-  by age. Click a battle's badge to see "Battle of" the province, how long it has raged, both
-  sides' generals, strength at the start and now, losses, and a battle grid whose front line
-  thins and flanks fold in as the losses mount. To preview them without a war, add `?mockArmy=1`
-  or `?mockBattle=1` to the URL.
-
-| | |
-| --- | --- |
-| ![The army card: flag, status, general, soldiers, readiness and front, flank and back troops](docs/shots/army-card.jpg) | ![The battle card: both sides, their losses and the battle grid between them](docs/shots/battle-card.jpg) |
-| The army card | The battle card |
 
 ### The rocket launch
 
@@ -176,8 +168,6 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 - **An event feed** down the left: the world's news as cards with a picture of the place, wars,
   falls and decrees first, quiet growth rolled into one card a decade. **Dispatch tabs** at the
   top right carry wars, falls, returns from the Silence and decree results.
-- **A help screen** (the `?` button or `?` / `F1`) labels every control and icon for a newcomer;
-  it starts closed.
 - **Presentation mode** hides every panel and leaves the globe and the year; the screen starts
   collapsed.
 - A **closing card** shows what the world cost (calls and tokens), and every run is recorded and
@@ -277,8 +267,7 @@ Keys do nothing while you are typing in a text box.
 | `1` to `6` | Map mode: political, terrain, diplomacy, strength, wealth, politics | Anywhere |
 | `P` | Presentation mode on or off (hides every panel) | Anywhere |
 | `` ` `` (backquote) or `Shift+D` | Show or hide the demo panel (dev builds; or open with `?demo`) | Anywhere |
-| `?` / `F1` | Open or close the help screen | Anywhere |
-| `Esc` | Clear the army or battle selection; leave presentation mode; close the help screen, the chronicle timeline, the closing card or the prepare panel | Anywhere |
+| `Esc` | Clear the army or battle selection; leave presentation mode; close the chronicle timeline, the closing card or the prepare panel | Anywhere |
 | `S` | Spotlight tour of the world's big moments on or off | Anywhere |
 | `H` | Open or close the chronicle timeline | Anywhere |
 | `End` | Show the closing card (what this world cost) | Anywhere |
@@ -316,7 +305,6 @@ Keys do nothing while you are typing in a text box.
 | Hold the microphone button | Speak a decree |
 | Click the token meter | Show the closing card |
 | History button | Open the timeline scrubber |
-| Help button (`?`, bottom left) | Open the help screen: every control and icon, labelled |
 
 Clicking or scrolling on the globe pauses the spotlight tour for a moment.
 

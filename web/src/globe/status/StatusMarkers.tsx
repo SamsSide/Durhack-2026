@@ -6,6 +6,7 @@ import { LetterPile } from '../show/LetterPile';
 import { useProvinceMesh } from '../mesh/context';
 import { Anchor } from './Anchor';
 import { capitalPoint } from './geo';
+import { STACK, cityKey } from './cityStack';
 
 const FAR = 2.5;       // camera distance past which a cut tag shrinks to its letter pile
 const LIMB = 0.3;      // cut tags hide well before the horizon (a blackout cuts every nation)
@@ -45,12 +46,12 @@ export function StatusMarkers() {
     const auto = living.filter((r) => r.ruler === 'autopilot').length;
     // Autopilot is the default in the mock, so it only shows in live mode or when it is the odd one out.
     const showAuto = live || auto * 2 < living.length;
-    const out: { key: string; id: number; kind: 'cut' | 'auto'; pos: [number, number, number] }[] = [];
+    const out: { key: string; id: number; kind: 'cut' | 'auto'; tile: number; pos: [number, number, number] }[] = [];
     for (const r of living) {
       const pos = capitalPoint(mesh, world, r.id);
       if (!pos) continue;
-      if (r.st === 'cut') out.push({ key: `c${r.id}`, id: r.id, kind: 'cut', pos });
-      else if (r.ruler === 'autopilot' && showAuto) out.push({ key: `a${r.id}`, id: r.id, kind: 'auto', pos });
+      if (r.st === 'cut') out.push({ key: `c${r.id}`, id: r.id, kind: 'cut', tile: cityKey(world, r.id), pos });
+      else if (r.ruler === 'autopilot' && showAuto) out.push({ key: `a${r.id}`, id: r.id, kind: 'auto', tile: cityKey(world, r.id), pos });
     }
     return out;
   }, [mesh, world, sig, live]);
@@ -59,7 +60,7 @@ export function StatusMarkers() {
     <>
       {items.map((it) => it.kind === 'cut'
         ? <SignalLost key={it.key} countryId={it.id} pos={it.pos} />
-        : <Anchor key={it.key} pos={it.pos} dx={13} dy={-12}><div className="gs-auto" title="On autopilot">A</div></Anchor>)}
+        : <Anchor key={it.key} pos={it.pos} stack={{ tile: it.tile, priority: STACK.auto }}><div className="gs-auto" title="On autopilot">A</div></Anchor>)}
     </>
   );
 }
