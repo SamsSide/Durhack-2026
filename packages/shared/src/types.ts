@@ -28,6 +28,9 @@ export interface Region {                                // a fixed group of nei
   unrest: number;                                        // 0 to 1; high unrest can end in secession
 }
 
+export type BuildingStyle = 'medieval' | 'classical' | 'desert' | 'east_asian' | 'mesoamerican' | 'scrap'
+  | 'norse' | 'south_asian' | 'sahel' | 'industrial';
+
 export interface Country {
   id: number;                                            // index into World.countries; new nations are appended
   flag: FlagSpec;
@@ -43,6 +46,8 @@ export interface Country {
   foundingMyth: string;                                  // one or two sentences
   temperament: { aggression: number; expansion: number; trade: number; faith: number }; // each 0 to 1
   anthemPrompt: string;                                  // for the music model
+  buildingStyle?: BuildingStyle;                         // its architecture (X4 styles); missing means 'medieval'
+  nomadic?: boolean;                                     // herders and horse lords: camps as yurts
   voiceStyle: string;                                    // for narration voice choice
   alive: boolean;
   population: number;

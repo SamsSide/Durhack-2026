@@ -2,7 +2,7 @@
 // mockEvents is valid when applied in order to the world mockWorld() returned.
 import type {
   ChronicleEntry, ChronicleKind, Country, FlagSpec, Region, Stance, Structure, StructureKind,
-  Terrain, Tile, Unit, Vec3, World, WorldEvent,
+  Terrain, Tile, Unit, Vec3, World, WorldEvent, BuildingStyle,
 } from './types';
 import { generateProvinces } from './sphere';
 import { hashString, mulberry32, pick, type Rng } from './rng';
@@ -15,6 +15,9 @@ interface Seedling {
   culture: string[]; myth: string; temperament: Country['temperament']; anthem: string; voice: string;
   flag: FlagSpec;
 }
+
+// Different building styles so lane b can see them all against the mock (X4 styles).
+const MOCK_STYLES: BuildingStyle[] = ['classical', 'medieval', 'east_asian', 'desert', 'mesoamerican', 'scrap'];
 
 const SEEDLINGS: Seedling[] = [
   {
@@ -195,6 +198,7 @@ export function mockWorld(seed = 1337): World {
     id, flag: s.flag, parent: null, name: s.name, adjective: s.adjective, color: s.color, capitalTile: caps[id]!,
     leader: s.leader, government: s.government, ideology: s.ideology, culture: s.culture, foundingMyth: s.myth,
     temperament: s.temperament, anthemPrompt: s.anthem, voiceStyle: s.voice, alive: true,
+    buildingStyle: MOCK_STYLES[id % MOCK_STYLES.length],
     population: 20000 + Math.floor(rng() * 20000), treasury: 100 + Math.floor(rng() * 100),
   }));
 

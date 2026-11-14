@@ -1,5 +1,6 @@
 // Mock world bible (row A2): template nations and region names, no API calls. Seeded, so the same
 // (options, seed) gives the same bible. Row A5 replaces this with a Gemini-written bible.
+import { diversifyStyles, isNomadic, pickBuildingStyle } from '@terra/shared';
 import { mulberry32, pick, type BibleNation, type FlagSpec, type Rng, type WorldBible } from '@terra/shared';
 import type { NewWorldOptions } from '../runner';
 
@@ -135,5 +136,8 @@ export function mockBible(opts: NewWorldOptions, seed: number): WorldBible {
       regionNames,
     });
   }
+  // Building styles (#91): rules from the prompt and each nation, then at most two per style.
+  const styles = diversifyStyles(nations.map((n) => pickBuildingStyle(text, n)));
+  nations.forEach((n, i) => { n.buildingStyle = styles[i]; n.nomadic = isNomadic(n); });
   return { name: worldName, era: opts.era?.trim() || kit.name, startYear: kit.startYear + Math.floor(rng() * 40), nations };
 }

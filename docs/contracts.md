@@ -81,6 +81,9 @@ export interface Region {                                // a fixed group of nei
   unrest: number;                                        // 0 to 1; high unrest can end in secession
 }
 
+export type BuildingStyle = 'medieval' | 'classical' | 'desert' | 'east_asian' | 'mesoamerican' | 'scrap'
+  | 'norse' | 'south_asian' | 'sahel' | 'industrial';
+
 export interface Country {
   id: number;                                            // index into World.countries; new nations are appended
   flag: FlagSpec;
@@ -96,6 +99,8 @@ export interface Country {
   foundingMyth: string;                                  // one or two sentences
   temperament: { aggression: number; expansion: number; trade: number; faith: number }; // each 0 to 1
   anthemPrompt: string;                                  // for the music model
+  buildingStyle?: BuildingStyle;                         // its architecture (X4 styles); missing means 'medieval'
+  nomadic?: boolean;                                     // herders and horse lords: camps as yurts
   voiceStyle: string;                                    // for narration voice choice
   alive: boolean;
   population: number;
@@ -298,6 +303,15 @@ export function flagSvg(spec: FlagSpec, width?: number, height?: number): string
   }
 }
 ```
+
+  **Building styles (owner decision #91):** the manifest also has
+  `"styles": { "<style>": { "<kind>": { "file": "<style>/<kind>.glb", "footprint": n } } }` for six
+  styles (`medieval`, `classical`, `desert`, `east_asian`, `mesoamerican`, `scrap`) and five kinds
+  (`capital`, `city`, `town`, `temple`, `fort`). Lane b picks `styles[country.buildingStyle][kind]`,
+  then `styles[STYLE_FALLBACK[style]][kind]` (`norse` to medieval, `south_asian` and `sahel` to
+  desert, `industrial` to scrap; exported from `@terra/shared`), then `models[kind]`, then the box.
+  Every other kind stays shared. Gemini picks each nation's style in the world bible (at most two
+  nations per style); `mockWorld()` gives its nations five different styles.
 
   Keys are every `StructureKind` and `UnitKind` plus `tree`. Each model: +Y up, origin at the
   centre of its base, fits a 1 x 1 x 1 box, under 1,500 triangles, flat-shaded vertex colours or
