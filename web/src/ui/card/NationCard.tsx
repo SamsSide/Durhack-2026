@@ -6,6 +6,7 @@ import { audio } from '../../audio';
 import { useAudio } from '../../audio/useAudio';
 import { useEconomy } from '../economy/useEconomy';
 import '../economy/economy.css';
+import { Council } from './Council';
 import { RegionView } from './RegionView';
 import { useLore } from './useLore';
 import { CloseIcon, Lines, useCardClass, useShort } from './shared';
@@ -180,6 +181,10 @@ function Nation({ countryId }: { countryId: number }) {
             <span className="tn-treasury-bal">{fmt(treasury.onChain)} {economy.data!.currency.symbol}</span>
             <span className={`tn-treasury-sync${treasury.inSync ? '' : ' no'}`}>{treasury.inSync ? '\u2713 in sync' : 'syncing'}</span>
           </div>
+        )}
+
+        {country.council && (
+          <Council countryId={countryId} council={country.council} color={country.color} tick={world.tick} short={isShort} frozen={!country.alive || !!agent?.deleted} />
         )}
 
         {!isShort && (

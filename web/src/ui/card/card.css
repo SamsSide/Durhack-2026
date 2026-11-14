@@ -144,3 +144,52 @@
 @media (prefers-reduced-motion: reduce) {
   .tn-shimmer, .tn-fade, .tn-progress div, .tn-eq i { animation: none; }
 }
+
+/* The Council (row A29): one row per role */
+.tn-council { padding: 8px 0 6px; border-bottom: 1px solid var(--color-ink-faint); }
+.tn-council h3 { margin-bottom: 4px; }
+.tn-cm { position: relative; display: flex; align-items: center; gap: 10px; padding: 4px 4px; border-radius: var(--radius-1); }
+.tn-cm + .tn-cm { border-top: 1px dotted var(--color-ink-faint); }
+.tn-por { flex: none; display: block; }
+.tn-cm-info { flex: 1; min-width: 0; outline: none; }
+.tn-cm-info:focus-visible { box-shadow: 0 0 0 1.5px var(--color-accent); border-radius: var(--radius-1); }
+.tn-cm-role { display: flex; align-items: center; gap: 6px; font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-ink-muted); line-height: 15px; }
+.tn-cm-name { display: flex; align-items: baseline; gap: 6px; min-width: 0; line-height: 19px; }
+.tn-cm-n { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tn-cm-vac { font-style: italic; color: var(--color-ink-muted); font-size: 16px; }
+.tn-cm-yrs { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-ink-muted); white-space: nowrap; flex: none; }
+.tn-cm-chip {
+  flex: none; font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  line-height: 13px; padding: 0 5px; border-radius: var(--radius-1); border: 1px solid transparent; white-space: nowrap;
+}
+.tn-cm-chip-active { color: var(--link-up); border-color: var(--link-up); }
+.tn-cm-chip-covering { color: var(--color-ink); background: var(--color-accent); border-color: var(--color-accent); }
+.tn-cm-chip-vacant { color: var(--color-rubric); border-color: var(--color-rubric); }
+.tn-cm-chip-cut { color: var(--color-parchment-light); background: var(--link-cut); border-color: var(--link-cut); }
+.tn-cm-btns { flex: none; display: flex; gap: 4px; }
+.tn-card .btn.xs { font-size: var(--text-cap); padding: 0 7px; line-height: 20px; }
+.tn-card .btn.xs.danger { color: var(--color-danger); border-color: var(--color-danger); }
+.tn-card .btn.xs.danger:hover { background: var(--color-danger); color: var(--color-parchment-light); }
+
+.tn-cm-tip {
+  display: none; position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 2px); padding: 8px 10px;
+  background: var(--color-parchment-light); color: var(--color-ink); border: 1px solid var(--color-ink); box-shadow: var(--shadow-1);
+  font-size: 14px; line-height: 18px; pointer-events: none;
+}
+.tn-cm-tip-h { font-style: italic; color: var(--color-rubric); margin-bottom: 3px; }
+.tn-cm-info:hover .tn-cm-tip, .tn-cm-info:focus .tn-cm-tip, .tn-cm-info:focus-within .tn-cm-tip { display: block; }
+
+.tn-flash { animation: tn-cm-flash 600ms var(--ease-out); }
+@keyframes tn-cm-flash {
+  0% { background: color-mix(in srgb, var(--color-accent) 70%, transparent); }
+  100% { background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .tn-flash { animation: none; } }
+
+/* Short viewports: one line per row, a smaller portrait, no years */
+.tn-short .tn-council { padding: 5px 0 3px; }
+.tn-short .tn-cm { padding: 2px 4px; gap: 8px; }
+/* The role and its status chip sit on a small line above the name, so the name gets the row's width. */
+.tn-short .tn-cm-n, .tn-short .tn-cm-vac { font-size: 15px; }
+.tn-short .tn-cm-name { line-height: 17px; }
+.tn-short .tn-cm-yrs { display: none; }
