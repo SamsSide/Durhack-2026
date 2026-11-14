@@ -5,3 +5,4 @@ export { Chronicle } from './chronicle/Chronicle';
 export { NetworkPanel } from './network/NetworkPanel';
 export { DecreeBox } from './decree/DecreeBox';
 export { TokenMeter } from './meter/TokenMeter';
+export { NewsBroadcast, requestBroadcast } from './news/NewsBroadcast';

@@ -1,7 +1,9 @@
 // C1: the Create panel. App.tsx (lane b) mounts it over a scrim and closes it when world.id changes.
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties, FormEvent, KeyboardEvent } from 'react';
+import type { CSSProperties, DragEvent, FormEvent, KeyboardEvent } from 'react';
 import { useWorld } from '../../state/world';
+import { pickImage } from './imagePick';
+import type { PickedImage } from './imagePick';
 import './create.css';
 
 interface Replay { id: string; name: string; events: number }
@@ -52,6 +54,10 @@ export function CreateScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [replays, setReplays] = useState<Replay[]>([]);
+  const [picture, setPicture] = useState<(PickedImage & { name: string }) | null>(null);
+  const [pictureError, setPictureError] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
   const timer = useRef<number | undefined>(undefined);
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
@@ -87,9 +93,30 @@ export function CreateScreen() {
     }, WAIT_MS);
   };
 
+  const takeFile = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const img = await pickImage(file);
+      setPicture({ ...img, name: file.name });
+      setPictureError(false);
+    } catch {
+      setPictureError(true);
+    }
+  };
+  const onDrop = (e: DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    void takeFile(e.dataTransfer.files[0]);
+  };
+  const onZoneKey = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.current?.click(); }
+  };
+  const removePicture = () => { setPicture(null); setPictureError(false); };
+
   const submit = () => {
     if (busy || !prompt.trim()) return;
     const body: Record<string, unknown> = { prompt: prompt.trim(), nations, seaLevel, aggression };
+    if (picture) body.imageBase64 = picture.base64;
     if (era) body.era = era.toLowerCase();
     void run(() => postJson('/api/world', body));
   };
@@ -130,6 +157,36 @@ export function CreateScreen() {
             onChange={(e) => { setPrompt(e.target.value); setPreset(null); }}
             onKeyDown={onKey}
           />
+        </div>
+
+        <div className="tn-create-field">
+          <span className="tn-cap">Picture (optional)</span>
+          <input
+            ref={fileInput}
+            type="file"
+            hidden
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(e) => { void takeFile(e.target.files?.[0]); e.target.value = ''; }}
+          />
+          {picture ? (
+            <div className="tn-create-picked">
+              <img className="tn-create-thumb" src={picture.previewUrl} alt="" />
+              <span className="tn-create-pname">{picture.name}</span>
+              <button type="button" className="tn-create-remove" onClick={removePicture}>Remove</button>
+            </div>
+          ) : (
+            <div
+              className={`tn-create-drop${dragging ? ' over' : ''}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => fileInput.current?.click()}
+              onKeyDown={onZoneKey}
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={onDrop}
+            >Drop a picture to set the mood, or choose one</div>
+          )}
+          {pictureError && <span className="tn-create-picerr" role="alert">That picture could not be read.</span>}
         </div>
 
         <div className="tn-create-field">
