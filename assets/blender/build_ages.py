@@ -136,7 +136,11 @@ def main():
         with open(mpath) as f:
             manifest = json.load(f)
         manifest["models"]["trader"] = {"file": "ages/medieval/trader.glb", "footprint": FOOTPRINT["trader"]}
+        old = manifest.get("ages", {})
         manifest["ages"] = {a: {k: {"file": f"ages/{a}/{k}.glb", "footprint": FOOTPRINT[k]} for k in KINDS} for a in AGES}
+        for a in AGES:                                                    # build_formations.py owns these
+            if "formation" in old.get(a, {}):
+                manifest["ages"][a]["formation"] = old[a]["formation"]
         with open(mpath, "w") as f:
             json.dump(manifest, f, indent=2)
             f.write("\n")
