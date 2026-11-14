@@ -9,11 +9,11 @@ const STANCES: [string, string][] = [
   ['Alliance', 'var(--stance-alliance)'],
 ];
 
-export function DiplomacyLegend() {
+export function DiplomacyLegend({ hidden = false }: { hidden?: boolean }) {
   const world = useWorld((s) => s.world);
   const selected = useWorld((s) => s.selectedCountryId);
   const mapMode = useWorld((s) => s.mapMode);
-  if (!world || mapMode !== 'diplomacy') return null;
+  if (hidden || !world || mapMode !== 'diplomacy') return null;
   const country = selected != null ? world.countries.find((c) => c.id === selected) : undefined;
   return (
     <div className="hud legend-box panel">

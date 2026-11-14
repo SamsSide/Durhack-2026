@@ -3,23 +3,10 @@ import type { CSSProperties } from 'react';
 import { Globe } from './globe';
 import { Chronicle, CreateScreen, DecreeBox, NationCard, NetworkPanel } from './ui';
 import { useWorld } from './state/world';
-import { BeliefBanner, DiplomacyLegend, MODES, TopBar } from './hud';
+import { BeliefBanner, DiplomacyLegend, MODES, TopBar, useTimelineOpen } from './hud';
 import { useEffect, useState } from 'react';
 
 const overlay: CSSProperties = { position: 'absolute', zIndex: 5 };
-
-// The chronicle's timeline sits where the decree box is, so hide the box while it is open.
-function useTimelineOpen(): boolean {
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const check = () => setOpen(!!document.querySelector('.tn-chron-timeline'));
-    check();
-    const mo = new MutationObserver(check);
-    mo.observe(document.body, { childList: true, subtree: true });
-    return () => mo.disconnect();
-  }, []);
-  return open;
-}
 
 export function App() {
   const world = useWorld((s) => s.world);
@@ -48,7 +35,7 @@ export function App() {
       <BeliefBanner />
       {world && <div style={{ ...overlay, top: 'calc(var(--topbar-height) + var(--space-3))', left: 'var(--space-3)', bottom: 170 }}><NetworkPanel /></div>}
       {world && selected != null && <div className="hud card-dock" data-hologram><NationCard countryId={selected} regionId={regionId} /></div>}
-      <DiplomacyLegend />
+      <DiplomacyLegend hidden={timelineOpen} />
       {world && !timelineOpen && <div className="hud decree-slot"><DecreeBox /></div>}
       {world && <div style={{ ...overlay, left: 'var(--space-3)', right: 'var(--space-3)', bottom: 'var(--space-3)' }}><Chronicle /></div>}
       {showCreate && (
