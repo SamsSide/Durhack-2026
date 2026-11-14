@@ -15,7 +15,9 @@ export function Anchor({ pos, dx = 0, dy = 0, children }: { pos: P3; dx?: number
     if (!el) return;
     const facing = camera.position.dot(dir) / camera.position.length();
     const covered = document.querySelector('.closing-veil') !== null;
-    el.style.opacity = facing > 0.15 && !covered && !underHud(el) ? '1' : '0'; // never over a HUD panel (#175)
+    const shown = facing > 0.15 && !covered && !underHud(el);
+    el.style.opacity = shown ? '1' : '0'; // never over a HUD panel (#175)
+    el.classList.toggle('gs-hidden', !shown); // and never clickable while hidden
   });
   return (
     <Html position={pos} center zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}>

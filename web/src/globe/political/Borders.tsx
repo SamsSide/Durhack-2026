@@ -7,6 +7,7 @@ import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeome
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import type { World } from '@terra/shared';
 import { useWorld } from '../../state/world';
+import { useBelief } from '../../state/belief';
 import { CAM_MAX, CAM_MIN } from '../constants';
 import { getPalette } from '../palette';
 import { useProvinceMesh } from '../mesh/context';
@@ -68,7 +69,8 @@ function setLayer(layer: Layer, positions: number[], colors?: number[]): void {
 
 interface Layers { nation: Layer; coastOwned: Layer; coastFree: Layer; region: Layer; province: Layer; provinceFree: Layer }
 
-function rebuild(layers: Layers, world: World, mesh: ProvinceMesh): void {
+/** `owner` is the truth, or a nation's beliefs while the belief view is on (the fill shows them too). */
+function rebuild(layers: Layers, world: World, mesh: ProvinceMesh, owner: ArrayLike<number>): void {
   const nationP: number[] = [], nationC: number[] = [];
   const coastOwnedP: number[] = [], coastFreeP: number[] = [];
   const regionP: number[] = [], provinceP: number[] = [], provinceFreeP: number[] = [];
@@ -78,7 +80,7 @@ function rebuild(layers: Layers, world: World, mesh: ProvinceMesh): void {
   for (const e of mesh.edges) {
     const ta = world.tiles[e.tileA], tb = world.tiles[e.tileB];
     if (!ta || !tb) continue;
-    const oa = world.owner[e.tileA] ?? -1, ob = world.owner[e.tileB] ?? -1;
+    const oa = owner[e.tileA] ?? -1, ob = owner[e.tileB] ?? -1;
     const seaA = ta.terrain === 'ocean', seaB = tb.terrain === 'ocean';
     const pts = [...e.a, ...e.b];
     if (seaA && seaB) continue;
@@ -125,25 +127,35 @@ function BordersInner({ mesh }: { mesh: ProvinceMesh }) {
     let last = 0;
     let lastVersion = -1;
     let lastWorld: World | null = null;
+    let lastOwner: ArrayLike<number> | null = null;
+    const ownerNow = (): ArrayLike<number> | null => {
+      const s = useWorld.getState();
+      if (!s.world) return null;
+      return (s.beliefOf != null ? useBelief.getState().owner : null) ?? s.world.owner;
+    };
     const run = () => {
       timer = null;
       const s = useWorld.getState();
-      if (!s.world) return;
+      const owner = ownerNow();
+      if (!s.world || !owner) return;
       last = performance.now();
       lastVersion = s.version;
       lastWorld = s.world;
-      rebuild(layers, s.world, mesh);
+      lastOwner = owner;
+      rebuild(layers, s.world, mesh, owner);
     };
     const onChange = () => {
       const s = useWorld.getState();
-      if (!s.world || (s.version === lastVersion && s.world === lastWorld) || timer) return;
+      if (!s.world || (s.version === lastVersion && s.world === lastWorld && ownerNow() === lastOwner) || timer) return;
       const wait = Math.max(0, REBUILD_MS - (performance.now() - last));
       timer = setTimeout(run, wait);
     };
     run();
     const unsub = useWorld.subscribe(onChange);
+    const unsubBelief = useBelief.subscribe(onChange);
     return () => {
       unsub();
+      unsubBelief();
       if (timer) clearTimeout(timer);
     };
   }, [layers, mesh]);

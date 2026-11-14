@@ -1,6 +1,7 @@
 // The council on the globe: mourning banner, succession seal, coup flash and ruler/general pips by the capital.
 // Types come from @terra/shared (row A29). Mount inside the ProvinceMeshContext provider.
-import { useCallback, useEffect, useMemo, useReducer } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { useWorld } from '../../state/world';
 import { useProvinceMesh } from '../mesh/context';
 import { Anchor } from '../status/Anchor';
@@ -9,12 +10,14 @@ import { useEventStream } from '../status/useEventStream';
 import { useHover } from '../camera/usePicking';
 import { bannerIcon, crackedCrownIcon, pipIcon, sealIcon } from './icons';
 import type { CouncilChanged, CouncilRole, CouncilState, CouncilStatus } from './types';
+import '../hover/hover.css';
 import './council.css';
 
 interface Vis {
   ruler: CouncilState; general: CouncilState;
   mourn: 'off' | 'on' | 'lowering';
   pulse: number; seal: number; coup: number; // timestamps that retrigger the CSS animations
+  sealRole: CouncilRole; sealCause: 'succession' | 'restored'; coupRole: CouncilRole;
 }
 type Action =
   | { k: 'event'; e: CouncilChanged | CouncilStatus }
@@ -22,7 +25,7 @@ type Action =
   | { k: 'off'; id: number; stamp: number };
 type Table = Record<number, Vis>;
 
-const blank = (): Vis => ({ ruler: 'active', general: 'active', mourn: 'off', pulse: 0, seal: 0, coup: 0 });
+const blank = (): Vis => ({ ruler: 'active', general: 'active', mourn: 'off', pulse: 0, seal: 0, coup: 0, sealRole: 'ruler', sealCause: 'succession', coupRole: 'ruler' });
 const troubled = (v: Vis) => v.ruler === 'vacant' || v.ruler === 'covering' || v.general === 'vacant' || v.general === 'covering';
 
 function reduce(t: Table, a: Action): Table {
@@ -50,10 +53,10 @@ function reduce(t: Table, a: Action): Table {
         v[e.role] = 'vacant'; v.mourn = 'on'; v.pulse = now; break;
       case 'disconnect': v[e.role] = 'cut'; break;
       case 'succession': case 'restored':
-        v[e.role] = 'active'; v.seal = now;
+        v[e.role] = 'active'; v.seal = now; v.sealRole = e.role; v.sealCause = e.cause;
         if (!troubled(v) && v.mourn === 'on') v.mourn = 'lowering';
         break;
-      case 'coup': v[e.role] = 'active'; v.coup = now; break;
+      case 'coup': v[e.role] = 'active'; v.coup = now; v.coupRole = e.role; break;
       default: v[e.role] = 'active';
     }
   }
@@ -64,7 +67,24 @@ const isCouncilEvent = (e: { type: string }): boolean => e.type === 'council_cha
 
 let demoDispatch: ((a: Action) => void) | null = null;
 
-function Marker({ id, vis, pips }: { id: number; vis: Vis; pips: boolean }) {
+/** What a hovered council mark says: a small caption and a line, in the province tooltip style. */
+export interface Tip { cap: string; text: string; sub: string; x: number; y: number; id: number }
+
+const ROLE: Record<CouncilRole, string> = { ruler: 'Ruler', general: 'General' };
+
+function memberName(id: number, role: CouncilRole): string | null {
+  return useWorld.getState().world?.countries[id]?.council?.[role]?.name ?? null;
+}
+
+function pipText(id: number, role: CouncilRole, state: CouncilState): string {
+  const name = memberName(id, role);
+  if (state === 'vacant' || !name) return role === 'ruler' ? 'The throne is empty' : 'No one commands the armies';
+  if (state === 'covering') return `${name}, standing in`;
+  if (state === 'cut') return `${name}, out of contact`;
+  return name;
+}
+
+function Marker({ id, vis, pips, onTip }: { id: number; vis: Vis; pips: boolean; onTip: (t: Tip | null) => void }) {
   const mesh = useProvinceMesh();
   const pos = useMemo(() => {
     const w = useWorld.getState().world;
@@ -72,16 +92,34 @@ function Marker({ id, vis, pips }: { id: number; vis: Vis; pips: boolean }) {
   }, [mesh, id]);
   if (!pos) return null;
   const fresh = (t: number) => t > 0 && Date.now() - t < 3500;
+  const nation = useWorld.getState().world?.countries[id]?.name ?? '';
+  // Hover shows a tooltip, a click selects the nation, the same as clicking its land.
+  const hover = (cap: string, text: () => string) => ({
+    onPointerEnter: (e: ReactPointerEvent) => onTip({ cap, text: text(), sub: nation, x: e.clientX, y: e.clientY, id }),
+    onPointerMove: (e: ReactPointerEvent) => onTip({ cap, text: text(), sub: nation, x: e.clientX, y: e.clientY, id }),
+    onPointerLeave: () => onTip(null),
+    onClick: (e: ReactMouseEvent) => {
+      e.stopPropagation();
+      const w = useWorld.getState().world;
+      useWorld.getState().select(id, w?.countries[id]?.capitalTile ?? null);
+    },
+  });
+  const sealText = vis.sealCause === 'restored'
+    ? `${ROLE[vis.sealRole]} back in contact`
+    : vis.sealRole === 'ruler' ? 'New ruler crowned' : 'New general takes command';
+  const coupName = memberName(id, vis.coupRole);
   return (
     <Anchor pos={pos}>
       <div className="cn-root">
         {fresh(vis.pulse) && <div key={`p${vis.pulse}`} className="cn-ring" />}
-        {fresh(vis.coup) && <div key={`c${vis.coup}`}><div className="cn-flash" /><img className="cn-coup" src={crackedCrownIcon()} alt="" /></div>}
-        {fresh(vis.seal) && <div key={`s${vis.seal}`}><img className="cn-seal" src={sealIcon()} alt="" /><div className="cn-burst" /></div>}
-        {vis.mourn !== 'off' && <img className={`cn-banner${vis.mourn === 'lowering' ? ' lower' : ''}`} src={bannerIcon()} alt="" />}
+        {fresh(vis.coup) && <div key={`c${vis.coup}`}><div className="cn-flash" /><img className="cn-coup cn-hit" src={crackedCrownIcon()} alt="Coup" {...hover('Coup', () => (coupName ? `${coupName} seizes power` : 'Coup'))} /></div>}
+        {fresh(vis.seal) && <div key={`s${vis.seal}`}><img className="cn-seal cn-hit" src={sealIcon()} alt={sealText} {...hover('Succession', () => sealText)} /><div className="cn-burst" /></div>}
+        {vis.mourn !== 'off' && <img className={`cn-banner cn-hit${vis.mourn === 'lowering' ? ' lower' : ''}`} src={bannerIcon()} alt="In mourning" {...hover('Council', () => 'In mourning')} />}
         {pips && (
-          <div className="cn-pips">
-            {(['ruler', 'general'] as CouncilRole[]).map((r) => <img key={r} className="cn-pip" src={pipIcon(r, vis[r])} alt={`${r} ${vis[r]}`} />)}
+          <div className="cn-pips cn-hit" {...hover('Council', () => `Council of ${nation}`)}>
+            {(['ruler', 'general'] as CouncilRole[]).map((r) => (
+              <img key={r} className="cn-pip" src={pipIcon(r, vis[r])} alt={`${ROLE[r]}: ${pipText(id, r, vis[r])}`} {...hover(ROLE[r], () => pipText(id, r, vis[r]))} />
+            ))}
           </div>
         )}
       </div>
@@ -89,8 +127,53 @@ function Marker({ id, vis, pips }: { id: number; vis: Vis; pips: boolean }) {
   );
 }
 
+const TIP_OFFSET = 16;
+
+/**
+ * The tooltip, a plain DOM node on the body: this component renders inside the three.js canvas,
+ * where React DOM portals do not work. Reuses the province tooltip classes (hover.css).
+ */
+function useCouncilTip(tip: Tip | null): void {
+  const el = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const d = document.createElement('div');
+    d.className = 'hover-tip cn-tip';
+    d.setAttribute('role', 'tooltip');
+    const cap = document.createElement('div'); cap.className = 'ht-cap';
+    const title = document.createElement('div'); title.className = 'ht-title';
+    const sub = document.createElement('div'); sub.className = 'ht-sub';
+    d.append(cap, title, sub);
+    return d;
+  }, []);
+  useEffect(() => {
+    if (!el) return;
+    document.body.appendChild(el);
+    return () => el.remove();
+  }, [el]);
+  useEffect(() => {
+    if (!el) return;
+    el.classList.toggle('on', !!tip);
+    if (!tip) return;
+    const [cap, title, sub] = el.children as unknown as HTMLElement[];
+    cap!.textContent = tip.cap;
+    title!.textContent = tip.text;
+    sub!.textContent = tip.sub;
+    const w = el.offsetWidth, h = el.offsetHeight;
+    const left = tip.x + TIP_OFFSET + w > window.innerWidth - 8 ? tip.x - TIP_OFFSET - w : tip.x + TIP_OFFSET;
+    const top = tip.y + TIP_OFFSET + h > window.innerHeight - 8 ? tip.y - TIP_OFFSET - h : tip.y + TIP_OFFSET;
+    el.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
+  }, [el, tip]);
+}
+
 export function Council() {
   const [table, dispatch] = useReducer(reduce, {} as Table);
+  const [tip, setTip] = useState<Tip | null>(null);
+  useCouncilTip(tip);
+  const onTip = useCallback((t: Tip | null) => {
+    setTip(t);
+    // the province tooltip steps aside while a council mark has its own
+    if (t) useHover.setState({ tile: -1 });
+  }, []);
   const selected = useWorld((s) => s.selectedCountryId);
   const hovered = useHover((s) => useWorld.getState().world?.owner[s.tile] ?? -1);
 
@@ -135,10 +218,11 @@ export function Council() {
   for (const [k, v] of Object.entries(table)) if (v.mourn !== 'off' || v.pulse || v.seal || v.coup) ids.add(Number(k));
   if (selected != null) ids.add(selected);
   if (hovered >= 0) ids.add(hovered);
+  if (tip) ids.add(tip.id); // keep the hovered mark up while its tooltip shows
   return (
     <>
       {[...ids].map((id) => (
-        <Marker key={id} id={id} vis={table[id] ?? blank()} pips={id === selected || id === hovered} />
+        <Marker key={id} id={id} vis={table[id] ?? blank()} pips={id === selected || id === hovered || id === tip?.id} onTip={onTip} />
       ))}
     </>
   );

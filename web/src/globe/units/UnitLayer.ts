@@ -39,6 +39,11 @@ const AGE_POP_MS = 750;         // bounce when a nation reaches a new age
 const CLASH_MS = 2500;          // battle badge, smoke and loss numbers linger so a judge sees them
 const BATTLE_SMOKE_MS = 3000;
 const LOSS_MS = 2000;
+// Screen-space declutter: same-nation counters whose anchors fall within MERGE_PX show as one
+// counter with the summed strength; other overlapping counters are lifted one slot at a time.
+const MERGE_PX = 24;
+const DECLUTTER_MS = 150;
+const MAX_LIFT = 4;
 
 function tok(name: string, fallback: string): string {
   if (typeof document === 'undefined') return fallback;
@@ -64,6 +69,12 @@ interface Chip {
   stack: number;
   pos: THREE.Vector3;
   dying: { start: number; shatter: boolean } | null;
+  /** Hidden this frame because a nearby counter of the same nation shows its strength. */
+  absorbed: boolean;
+  /** Screen slot from the declutter pass (replaces the per-tile stack while set). */
+  lift: number | null;
+  /** The merged texture this counter holds (summed strength), '' when it shows its own. */
+  mergeKey: string;
 }
 
 interface Arrow {
@@ -131,6 +142,7 @@ export class UnitLayer {
   private dirty = true;
   private lastFront = -1e9;
   private lastNow = 0;
+  private declutterAt = -1e9;
   private lastDt = 16;
   private clockMs = msPerYear();   // real ms a year took at the last frame
   private lastClockAt = 0;
@@ -382,6 +394,7 @@ export class UnitLayer {
         chip = {
           key, owner: g.owner, kind: g.kind, tile: g.tile, units: g.units, moving: g.moving,
           sprite, mat, texKey: '', aspect: 1, height: CHIP_H, stack: 0, pos: new THREE.Vector3(), dying: null,
+          absorbed: false, lift: null, mergeKey: '',
         };
         this.chips.set(key, chip);
       }
@@ -395,6 +408,7 @@ export class UnitLayer {
         ? `s|${color}`
         : `c|${g.owner}|${color}|${unitIcon(g.kind, era, this.ageOf(g.owner))}|${Math.round(strength)}|${g.units.length}|${flag ? 1 : 0}`;
       if (texKey !== chip.texKey) {
+        this.unmerge(chip);
         const p = this.pal;
         const tex = g.kind === 'settler'
           ? this.acquire(texKey, () => drawSettler(color, p.ink, p.parchment))
@@ -424,9 +438,91 @@ export class UnitLayer {
     }
 
     for (const id of [...this.removedReason.keys()]) if (!this.states.has(id)) this.removedReason.delete(id);
+    this.declutterAt = -1e9;
+  }
+
+  private counterKey(owner: number, kind: UnitKind, strength: number, count: number): string {
+    const era = this.world.era ?? '';
+    return `c|${owner}|${this.colorOf(owner)}|${unitIcon(kind, era, this.ageOf(owner))}|${Math.round(strength)}|${count}|${this.flag(owner) ? 1 : 0}`;
+  }
+
+  private drawCounterTex(key: string, owner: number, kind: UnitKind, strength: number, count: number): THREE.CanvasTexture {
+    const p = this.pal;
+    const era = this.world.era ?? '';
+    return this.acquire(key, () => drawCounter({
+      color: this.colorOf(owner), flag: this.flag(owner), icon: unitIcon(kind, era, this.ageOf(owner)), strength, count,
+      night: p.night, ink: p.ink, parchment: p.parchment, accent: p.accent,
+    }));
+  }
+
+  /** Back to its own texture and no screen slot. */
+  private unmerge(chip: Chip): void {
+    chip.absorbed = false;
+    if (!chip.mergeKey) return;
+    const own = this.texCache.get(chip.texKey)?.tex ?? null;
+    if (own && chip.mat.map !== own) { chip.mat.map = own; chip.mat.needsUpdate = true; }
+    this.release(chip.mergeKey);
+    chip.mergeKey = '';
+  }
+
+  /**
+   * Cheap screen-space declutter of the resting army and fleet counters. Greedy, strongest first:
+   * a counter of the same nation and kind whose anchor is within MERGE_PX is folded into the
+   * leader, which then shows the summed strength and unit count; any other counter whose box
+   * overlaps one already placed is lifted a slot. Runs a few times a second, not every frame.
+   */
+  private declutter(camera: THREE.Camera, viewW: number, viewH: number, now: number): void {
+    const p11 = (camera as THREE.PerspectiveCamera).projectionMatrix.elements[5] ?? 1;
+    const items: { chip: Chip; x: number; y: number; w: number; h: number; str: number }[] = [];
+    for (const chip of this.chips.values()) {
+      chip.lift = null;
+      if (chip.kind === 'settler' || chip.moving || !chip.units.length || facing(chip.pos, _camDir) <= 0) { this.unmerge(chip); continue; }
+      _v.copy(chip.pos).project(camera);
+      if (_v.z > 1) { this.unmerge(chip); continue; }
+      const hPx = chip.sprite.scale.y * p11 * viewH / 2;
+      const x = (_v.x + 1) * viewW / 2;
+      const y = (1 - _v.y) * viewH / 2;
+      items.push({ chip, x, y, w: hPx * chip.aspect, h: hPx, str: chip.units.reduce((s, u) => s + u.strength, 0) });
+    }
+    items.sort((a, b) => b.str - a.str || (a.chip.key < b.chip.key ? -1 : 1));
+    const leaders: { chip: Chip; x: number; y: number; w: number; h: number; str: number; count: number; members: number }[] = [];
+    for (const it of items) {
+      const lead = leaders.find((l) => l.chip.owner === it.chip.owner && l.chip.kind === it.chip.kind && Math.hypot(l.x - it.x, l.y - it.y) < MERGE_PX);
+      if (lead) {
+        lead.str += it.str;
+        lead.count += it.chip.units.length;
+        lead.members++;
+        this.unmerge(it.chip);
+        it.chip.absorbed = true;
+        continue;
+      }
+      it.chip.absorbed = false;
+      leaders.push({ ...it, count: it.chip.units.length, members: 1 });
+    }
+    // lift overlapping boxes, lowest on screen first so the stack grows upwards
+    leaders.sort((a, b) => b.y - a.y || (a.chip.key < b.chip.key ? -1 : 1));
+    const placed: { x: number; y: number; w: number; h: number }[] = [];
+    for (const l of leaders) {
+      let slot = 0;
+      while (slot < MAX_LIFT && placed.some((q) => Math.abs(q.x - l.x) < (q.w + l.w) * 0.45 && Math.abs(q.y - (l.y - slot * l.h * 0.92)) < (q.h + l.h) * 0.45)) slot++;
+      placed.push({ x: l.x, y: l.y - slot * l.h * 0.92, w: l.w, h: l.h });
+      l.chip.lift = slot;
+      if (l.members > 1) {
+        const key = this.counterKey(l.chip.owner, l.chip.kind, l.str, l.count);
+        if (key !== l.chip.mergeKey) {
+          const tex = this.drawCounterTex(key, l.chip.owner, l.chip.kind, l.str, l.count);
+          if (l.chip.mergeKey) this.release(l.chip.mergeKey);
+          l.chip.mergeKey = key;
+          l.chip.mat.map = tex;
+          l.chip.mat.needsUpdate = true;
+        }
+      } else this.unmerge(l.chip);
+    }
+    this.declutterAt = now;
   }
 
   private dropChip(chip: Chip): void {
+    this.unmerge(chip);
     this.chipGroup.remove(chip.sprite);
     chip.mat.dispose();
     if (chip.texKey) this.release(chip.texKey);
@@ -718,7 +814,7 @@ export class UnitLayer {
 
   // ---------- frame ----------
 
-  update(camera: THREE.Camera, now: number): void {
+  update(camera: THREE.Camera, now: number, viewW = 1280, viewH = 800): void {
     if (this.disposed) return;
     const dt = this.lastNow ? Math.min(100, now - this.lastNow) : 16;
     this.lastNow = now;
@@ -738,6 +834,10 @@ export class UnitLayer {
 
     // counters
     for (const chip of this.chips.values()) this.placeChip(chip, now, zoom);
+    if (now - this.declutterAt > DECLUTTER_MS) {
+      this.declutter(camera, viewW, viewH, now);
+      for (const chip of this.chips.values()) this.placeChip(chip, now, zoom);
+    }
     for (let i = this.dying.length - 1; i >= 0; i--) {
       const chip = this.dying[i]!;
       const d = chip.dying!;
@@ -852,7 +952,8 @@ export class UnitLayer {
     }
     const h = chip.height * zoom;
     chip.sprite.scale.set(h * chip.aspect, h, 1);
-    const stack = chip.kind === 'settler' ? 0 : Math.max(0, chip.stack);
+    if (chip.absorbed && !chip.moving) { chip.sprite.visible = false; return; }
+    const stack = chip.kind === 'settler' ? 0 : chip.lift ?? Math.max(0, chip.stack);
     // settlers sit on the tile, counters just above it, and above the model when it shows; a
     // little higher from orbit so they clear the nation names
     const base = chip.kind === 'settler' ? 0.5 : -0.18 - 0.85 * this.near - 0.25 * (1 - zoom / 1.25);
