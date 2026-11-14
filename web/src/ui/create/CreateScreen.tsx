@@ -22,6 +22,12 @@ const PRESETS: { label: string; era: string; prompt: string }[] = [
   { label: 'Jungle city-states', era: 'Medieval', prompt: 'Vine-choked city-states of stepped pyramids, river traders and feuding sun cults' },
 ];
 const WAIT_MS = 30000;
+const STEP_MS = 1200;
+const SPEED_UP_MS = 350;   // the first two steps tick at once, so a mock world still shows progress
+
+function foundingSteps(n: number): string[] {
+  return ['Raising the continents', `Drawing ${n} borders`, 'Naming the nations and their rulers', 'Writing their founding myths', `Raising ${n} flags`];
+}
 
 async function postJson(url: string, body?: object): Promise<{ ok: boolean; error?: string }> {
   try {
@@ -52,6 +58,8 @@ export function CreateScreen() {
   const [seaLevel, setSeaLevel] = useState(0.55);
   const [aggression, setAggression] = useState(0.5);
   const [busy, setBusy] = useState(false);
+  const [founding, setFounding] = useState(false);
+  const [stage, setStage] = useState(2);
   const [error, setError] = useState<string | null>(null);
   const [replays, setReplays] = useState<Replay[]>([]);
   const [picture, setPicture] = useState<(PickedImage & { name: string }) | null>(null);
@@ -61,6 +69,19 @@ export function CreateScreen() {
   const timer = useRef<number | undefined>(undefined);
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  // The founding steps run on a timer, not real progress: the last one waits for the snapshot.
+  useEffect(() => {
+    if (!founding) return;
+    setStage(2);
+    let current = 2;
+    let id = window.setTimeout(function tick() {
+      current += 1;
+      setStage(current);
+      if (current < 4) id = window.setTimeout(tick, STEP_MS);
+    }, SPEED_UP_MS);
+    return () => window.clearTimeout(id);
+  }, [founding]);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -76,19 +97,22 @@ export function CreateScreen() {
     return () => ctrl.abort();
   }, []);
 
-  const run = async (request: () => Promise<{ ok: boolean; error?: string }>) => {
+  const run = async (request: () => Promise<{ ok: boolean; error?: string }>, scroll = false) => {
     setBusy(true);
+    setFounding(scroll);
     setError(null);
     window.clearTimeout(timer.current);
     const result = await request();
     if (!result.ok) {
       setBusy(false);
+      setFounding(false);
       setError(result.error ?? 'Could not reach the server');
       return;
     }
     // Stay busy until the snapshot arrives (this panel then unmounts).
     timer.current = window.setTimeout(() => {
       setBusy(false);
+      setFounding(false);
       setError('The world is taking a while. Try again.');
     }, WAIT_MS);
   };
@@ -118,7 +142,7 @@ export function CreateScreen() {
     const body: Record<string, unknown> = { prompt: prompt.trim(), nations, seaLevel, aggression };
     if (picture) body.imageBase64 = picture.base64;
     if (era) body.era = era.toLowerCase();
-    void run(() => postJson('/api/world', body));
+    void run(() => postJson('/api/world', body), true);
   };
 
   const pick = (p: (typeof PRESETS)[number]) => {
@@ -134,7 +158,32 @@ export function CreateScreen() {
   };
   const pct = (v: number) => `${Math.round(v * 100)}%`;
   const fill = (v: number, min: number, max: number) => ({ '--tn-fill': `${((v - min) / (max - min)) * 100}%` }) as CSSProperties;
-  const modeNote = mode === 'mock' ? 'Mock mode: no API calls' : mode === 'live' ? 'Live: Gemini' : '';
+  const modeNote = mode === 'mock' ? 'Mock mode \u00b7 no tokens will be spent' : mode === 'live' ? 'Live \u00b7 Gemini' : '';
+
+  if (founding) {
+    const steps = foundingSteps(nations);
+    return (
+      <section className="panel tn-founding" aria-live="polite" aria-busy="true">
+        <span className="tn-cap tn-create-kicker">Founding</span>
+        <h2>The scribes are writing your world</h2>
+        <p className="tn-fo-prompt">&ldquo;{prompt.trim()}&rdquo;</p>
+        <ol className="tn-fo-steps">
+          {steps.map((label, i) => {
+            const state = i < stage ? 'done' : i === stage ? 'doing' : '';
+            return (
+              <li key={label} className={`tn-fo-step${state ? ` ${state}` : ''}`}>
+                <i aria-hidden="true">
+                  {state === 'done' && <svg width="12" height="10" viewBox="0 0 12 10"><path d="M1 5L4.5 8.5L11 1" stroke="currentColor" strokeWidth="1.8" fill="none" /></svg>}
+                </i>
+                {label}
+                {state === 'doing' && <span className="tn-fo-pen" aria-hidden="true" />}
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+    );
+  }
 
   return (
     <form className="panel tn-create" onSubmit={onSubmit} aria-busy={busy}>
@@ -246,7 +295,7 @@ export function CreateScreen() {
       <div className="tn-create-foot">
         <span className="tn-create-mode">{modeNote}</span>
         <button type="submit" className="btn primary tn-create-go" disabled={busy || !prompt.trim()}>
-          {busy ? 'Founding the world...' : 'Create world'}
+          Create world
         </button>
       </div>
 

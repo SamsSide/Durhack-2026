@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AgentStatus, World } from '@terra/shared';
 import { useWorld } from '../../state/world';
+import { Herald } from './Herald';
 import { Ticker } from './Ticker';
 import { Timeline } from './Timeline';
 import type { CutPeriod } from './Timeline';
@@ -84,6 +85,7 @@ export function Chronicle() {
 
   return (
     <div className="tn-chronicle">
+      <Herald observed={observed} />
       {open && (
         <Timeline
           world={world}

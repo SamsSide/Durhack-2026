@@ -17,6 +17,7 @@
 .tn-sw { display: inline-block; width: 12px; height: 12px; border: 1px solid var(--color-ink); flex: none; }
 
 /* The kind colours: one class per kind, used by the diamonds in SVG and HTML alike. */
+.tn-ico polygon, .tn-tl-ev { stroke: var(--color-ink); stroke-width: 0.75; }
 .tn-k-founding { fill: var(--kind-founding); }
 .tn-k-proclamation { fill: var(--kind-proclamation); }
 .tn-k-growth { fill: var(--kind-growth); }
@@ -60,23 +61,23 @@
   align-self: stretch; display: flex; align-items: center; flex: none;
   padding: 0 14px;
   background: var(--color-ink); color: var(--color-parchment);
-  font-family: var(--font-display); font-size: 11px; font-weight: 700;
+  font-family: var(--font-display); font-size: 12px; font-weight: 700;
   letter-spacing: 0.16em; text-transform: uppercase;
 }
-.tn-t-track { flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: center; overflow: hidden; white-space: nowrap; font-size: 15px; }
+.tn-t-track { flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: center; overflow: hidden; white-space: nowrap; font-size: 16px; }
 .tn-t-belt { display: flex; flex: none; will-change: transform; }
 .tn-t-measure { display: flex; flex: none; }
 .tn-t-copy { display: flex; flex: none; align-items: center; gap: 14px; padding-right: 14px; }
 .tn-t-cell { display: inline-flex; align-items: center; gap: 14px; flex: none; }
 .tn-t-item {
   display: inline-flex; align-items: center; gap: 7px;
-  background: none; border: 0; padding: 0; margin: 0; color: inherit; font: inherit; cursor: pointer;
+  background: none; border: 0; padding: 3px 8px; margin: 0 -8px; border-radius: var(--radius-1);
+  color: inherit; font: inherit; cursor: pointer;
 }
 .tn-t-item:disabled { cursor: default; }
 .tn-t-item:not(:disabled):hover .tn-t-txt { text-decoration: underline; text-decoration-color: var(--color-ink-muted); }
 .tn-t-item:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.tn-t-new { animation: tn-t-in 600ms ease-out both; }
-@keyframes tn-t-in { from { opacity: 0; } to { opacity: 1; } }
+.tn-t-new { font-weight: 500; animation: ticker-new 2s ease-out both; }  /* a gilt wash that fades (keyframes in tokens.css) */
 .tn-t-sep { width: 4px; height: 4px; transform: rotate(45deg); background: var(--color-ink-muted); flex: none; }
 .tn-t-empty { color: var(--color-ink-muted); font-style: italic; font-size: 14px; }
 
@@ -145,11 +146,10 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
 
 /* The one SVG over the lanes: bands, the now line and every diamond. */
 .tn-tl-svg { position: absolute; top: 0; z-index: 1; overflow: visible; pointer-events: none; }
-.tn-tl-silence { fill: color-mix(in srgb, var(--kind-silence) 18%, transparent); }
-.tn-tl-silence-edge { stroke: color-mix(in srgb, var(--kind-secession) 80%, var(--color-ink)); stroke-width: 1; stroke-dasharray: 3 2; }
+.tn-tl-silence { fill: var(--color-night-inset); }
 .tn-tl-silence-label {
-  font-family: var(--font-display); font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-  fill: color-mix(in srgb, var(--kind-secession) 60%, var(--color-ink));
+  font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  fill: var(--holo-tint);
 }
 .tn-tl-war {
   fill: color-mix(in srgb, var(--kind-war) 18%, transparent);
@@ -157,7 +157,7 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
 }
 .tn-tl-nowline { stroke: var(--color-accent); stroke-width: 2; }
 .tn-tl-ev { pointer-events: all; cursor: pointer; }
-.tn-tl-ev:hover { stroke: var(--color-ink); stroke-width: 1.5; }
+.tn-tl-ev:hover { stroke-width: 1.75; }
 
 /* Tooltip (reference: .tip, .tip-k) */
 .tn-tl-tip {
@@ -191,6 +191,55 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
   .tn-tl-head { justify-content: space-between; }
 }
 
+/* Dispatches (reference: .herald, .h-*). Fixed top centre under the top bar, one at a time. */
+.tn-herald-slot {
+  position: fixed; top: 64px; left: 50%; transform: translateX(-50%);
+  z-index: 40; pointer-events: none;
+}
+.tn-herald {
+  width: var(--herald-width);
+  background: var(--parchment-fill); color: var(--color-ink);
+  border: 1.5px solid var(--color-ink); border-radius: var(--radius-1);
+  box-shadow: var(--shadow-2); overflow: hidden;
+  font-family: var(--font-serif);
+  animation: herald-in 600ms var(--ease-out) both;
+}
+.tn-herald.tn-leaving { animation: herald-out 500ms ease-in both; }
+.tn-h-band {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px; line-height: 28px;
+  font-family: var(--font-display); font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--color-parchment-light); background: var(--color-ink);
+}
+.tn-h-band .tn-h-year { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0; font-weight: 600; }
+.tn-herald.tn-war .tn-h-band { background: var(--color-danger); }
+.tn-herald.tn-return .tn-h-band { background: var(--color-night-inset); color: var(--holo-tint); }
+.tn-h-body { padding: 12px 14px 13px; text-align: center; }
+.tn-h-vs { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.tn-h-vs.tn-gone { opacity: 0.45; filter: grayscale(1); }
+.tn-h-flag { display: block; line-height: 0; }
+.tn-h-flag svg { display: block; }
+.tn-h-x { font-style: italic; font-size: 15px; color: var(--color-ink-muted); }
+.tn-h-title {
+  font-family: var(--font-display); font-size: 18px; font-weight: 700; line-height: 23px; letter-spacing: 0.03em; margin-top: 9px;
+}
+.tn-h-quote { font-style: italic; font-size: 15px; line-height: 19px; color: var(--color-ink-muted); margin-top: 6px; }
+.tn-h-quote span {
+  display: block; font-style: normal; font-family: var(--font-display); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase; margin-top: 3px;
+}
+.tn-h-stats {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; margin-top: 10px;
+  border-top: 1px solid var(--color-ink-faint); border-bottom: 1px solid var(--color-ink-faint);
+}
+.tn-h-stats div { display: flex; flex-direction: column; padding: 6px 0 7px; border-left: 1px solid var(--color-ink-faint); }
+.tn-h-stats div:first-child { border-left: none; }
+.tn-h-stats b { font-family: var(--font-mono); font-size: 24px; line-height: 28px; font-weight: 600; color: var(--silence-ink); }
+.tn-h-stats span {
+  font-family: var(--font-display); font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .tn-tl.panel, .tn-t-new { animation: none; }
+  .tn-tl.panel, .tn-t-new, .tn-herald, .tn-herald.tn-leaving { animation: none; }
 }

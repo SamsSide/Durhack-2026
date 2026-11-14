@@ -43,4 +43,5 @@ budget, run them one at a time in the order below, on Sonnet.
 - 14 Nov · #38 · C3 chronicle and C4 network panel (testing: #39, #40)
 - 14 Nov · #58 · C1 to C4 rebuilt to the Figma design (A12); new DecreeBox and TokenMeter exports for lane b
 - 14 Nov · #81 · C6 picture prompt, C7 spoken decrees, C8 Terra Nova News; card always docked (#78)
-- 14 Nov · this PR · C8 on the real A21: preparing state, real playBroadcast, text-only when audio fails
+- 14 Nov · #89 · C8 on the real A21: preparing state, real playBroadcast, text-only when audio fails
+- 14 Nov · this PR · C1 to C4 to the polished design (#88): founding scroll, card states, herald dispatches, folded network tab

@@ -6,7 +6,7 @@ import './network.css';
 
 const FOLD_KEY = 'tn-network-folded';
 function readFolded(): boolean {
-  try { return localStorage.getItem(FOLD_KEY) === '1'; } catch { return false; }
+  try { const v = localStorage.getItem(FOLD_KEY); return v == null ? true : v === '1'; } catch { return true; }
 }
 
 export function NetworkPanel() {
@@ -33,11 +33,16 @@ export function NetworkPanel() {
   const live = agents.filter((a) => !a.deleted);
   const anyCutOrDeleted = agents.some((a) => a.link === 'cut' || a.deleted);
 
+  const upCount = live.filter((a) => a.link === 'up').length;
+  const cutCount = live.filter((a) => a.link === 'cut').length;
+
   if (folded) {
     return (
-      <button className="tn-net tn-net-folded" onClick={() => setFold(false)} aria-label="Open the network panel">
-        {anyCutOrDeleted && <span className="tn-net-dot" />}
-        <span className="tn-net-vert">Network</span>
+      <button className="tn-net-tab" onClick={() => setFold(false)} aria-label="Open the network panel">
+        <span className="tn-nt-title">The Network</span>
+        <span className="tn-state up"><i />{upCount} up</span>
+        {cutCount > 0 && <span className="tn-state cut"><i />{cutCount} cut</span>}
+        <svg width="6" height="10" viewBox="0 0 6 10" aria-hidden="true"><path d="M1 1L5 5L1 9" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg>
       </button>
     );
   }
@@ -53,7 +58,7 @@ export function NetworkPanel() {
     : 0;
 
   const nationName = beliefCountry?.name ?? 'the nation';
-  let beliefSub = "Draw the selected nation's map, not the truth";
+  let beliefSub = "The selected nation's map, not the truth";
   if (beliefOf != null) {
     beliefSub = beliefReady
       ? `What ${nationName} thinks is true · ${drift} ${drift === 1 ? 'province' : 'provinces'} out of date`
@@ -66,13 +71,13 @@ export function NetworkPanel() {
       <header className="tn-net-head">
         <div>
           <h2 className="tn-net-title">The Network</h2>
-          <p className="tn-net-sub">Each nation thinks for itself. Cut its link, silence its ruler, or delete it.</p>
+          <p className="tn-net-sub">Each nation thinks for itself. Cut one off and watch.</p>
         </div>
-        <button className="btn xs tn-net-fold" onClick={() => setFold(true)} aria-label="Fold the network panel">Fold</button>
+        <button className="tn-net-fold" onClick={() => setFold(true)} aria-label="Fold the network panel"><svg width="6" height="10" viewBox="0 0 6 10" aria-hidden="true"><path d="M5 1L1 5L5 9" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg></button>
       </header>
 
       <button
-        className={`tn-switch ${blackedOut ? 'on' : ''}`}
+        className={`tn-switch tn-blackout ${blackedOut ? 'on' : ''}`}
         role="switch"
         aria-checked={blackedOut}
         disabled={live.length === 0}
@@ -80,7 +85,7 @@ export function NetworkPanel() {
       >
         <span>
           <span className="tn-sw-title">Blackout</span>
-          <span className="tn-sw-sub">Cut every link at once</span>
+          <span className="tn-sw-sub">{blackedOut ? 'Every link is cut' : 'Cut every link at once'}</span>
         </span>
         <span className={`tn-toggle danger ${blackedOut ? 'on' : ''}`}><i /></span>
       </button>
