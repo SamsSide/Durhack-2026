@@ -7,31 +7,48 @@ import type { NewWorldOptions } from '../runner';
 interface EraKit {
   key: string; match: RegExp; name: string; startYear: number; tone: string;
   places: string[]; features: string[];
+  /** Region-name patterns for Durham and North East roots ({r} is the root), adapted to the era. */
+  local: string[];
 }
 
 const ERAS: EraKit[] = [
   { key: 'bronze', match: /bronze|ancient|stone/i, name: 'Bronze Age', startYear: -2400, tone: 'ancient',
-    places: ['Ur', 'Kesh', 'Arrat', 'Dun', 'Mesh', 'Tarn', 'Hatt', 'Sumer', 'Akad', 'Nin'],
-    features: ['Ford', 'Mound', 'Threshing Plain', 'Bronze Hills', 'Reed Marsh', 'Cedar Slope', 'Clay Banks', 'Salt Pan'] },
+    places: ['Ur', 'Hatfield', 'Arrat', 'Elvet', 'Mesh', 'Tarn', 'Wearmouth', 'Akad', 'Cuthra', 'Nin'],
+    features: ['Ford', 'Mound', 'Threshing Plain', 'Bronze Hills', 'Reed Marsh', 'Cedar Slope', 'Clay Banks', 'Salt Pan'],
+    local: ['{r} Ford', '{r} Mound', 'Tell {r}', 'Old {r}', '{r} Clay Banks', 'Threshing Plain of {r}'] },
   { key: 'medieval', match: /medieval|feudal|knight/i, name: 'Medieval', startYear: 1100, tone: 'feudal',
-    places: ['Aldermere', 'Wessing', 'Carrow', 'Haldane', 'Ormond', 'Brackwater', 'Thornby', 'Kestrel'],
-    features: ['Shire', 'March', 'Wold', 'Fenland', 'Hundred', 'Dale', 'Heath', 'Barony'] },
+    places: ['Aldermere', 'Hatfield', 'Carrow', 'Brancepeth', 'Ormond', 'Elvet', 'Thornby', 'Sedgefield'],
+    features: ['Shire', 'March', 'Wold', 'Fenland', 'Hundred', 'Dale', 'Heath', 'Barony'],
+    local: ['{r} Marches', '{r} Wold', 'Barony of {r}', '{r} Hundred', 'Old {r}', 'Prince-Bishopric of {r}', '{r} Dale'] },
   { key: 'industrial', match: /industrial|steam|victorian|machine/i, name: 'Industrial Age', startYear: 1865, tone: 'industrial',
-    places: ['Ironbridge', 'Calder', 'Smeltham', 'Gaswick', 'Brassford', 'Coalport', 'Riveton', 'Cogsworth'],
-    features: ['Works', 'Basin', 'Sidings', 'Furnace Reach', 'Canal District', 'Mill Valley', 'Foundry Coast', 'Rail Junction'] },
+    places: ['Ironbridge', 'Stephenson', 'Smeltham', 'Consett', 'Brassford', 'Seaham', 'Riveton', 'Tyneworth'],
+    features: ['Works', 'Basin', 'Sidings', 'Furnace Reach', 'Canal District', 'Mill Valley', 'Foundry Coast', 'Rail Junction'],
+    local: ['{r} Works', '{r} Sidings', '{r} Foundry Coast', '{r} Colliery', '{r} Rail Junction', 'Old {r} Mill', '{r} Canal District'] },
   { key: 'post', match: /post.?apoc|apocalyp|drown|ruin|wasteland|fallout/i, name: 'Post-Apocalyptic Age', startYear: 2210, tone: 'ruined',
-    places: ['Rustholm', 'Last Light', 'Gantry', 'Ember Rest', 'Salvage', 'Dredge', 'Cinder', 'Tidemark'],
-    features: ['Drowned Quarter', 'Rust Flats', 'Salvage Shore', 'Ash Terraces', 'Broken Causeway', 'Glass Fields', 'Wreck Bay', 'Sunken Mile'] },
+    places: ['Rustholm', 'Last Light', 'Framwell', 'Ember Rest', 'Penshaw', 'Dredge', 'Gilesgate', 'Tidemark'],
+    features: ['Drowned Quarter', 'Rust Flats', 'Salvage Shore', 'Ash Terraces', 'Broken Causeway', 'Glass Fields', 'Wreck Bay', 'Sunken Mile'],
+    local: ['Drowned {r}', '{r} Wreck Bay', 'Sunken {r}', 'New {r} Salvage', '{r} Broken Causeway', 'Old {r}', '{r} Rust Flats'] },
   { key: 'ice', match: /ice|frozen|glacial|snow|winter/i, name: 'Age of Ice', startYear: 40, tone: 'frozen',
-    places: ['Skarn', 'Hrimholt', 'Vinter', 'Kald', 'Nordfrost', 'Isfjall', 'Glimmer', 'Rime'],
-    features: ['Glacier', 'Frostfell', 'Whiteout Reach', 'Ice Shelf', 'Aurora Hollow', 'Snowcap', 'Rime Valley', 'Floe Coast'] },
+    places: ['Skarn', 'Hrimholt', 'Vinter', 'Kaldwear', 'Nordfrost', 'Cuthfjall', 'Tyneholt', 'Rime'],
+    features: ['Glacier', 'Frostfell', 'Whiteout Reach', 'Ice Shelf', 'Aurora Hollow', 'Snowcap', 'Rime Valley', 'Floe Coast'],
+    local: ['{r} Glacier', 'Frozen {r}', '{r} Floe', '{r} Frostfell', 'Old {r}', '{r}fjall', '{r} Whiteout Reach'] },
   { key: 'float', match: /float|archipelago|sky|island/i, name: 'Age of Archipelagos', startYear: 612, tone: 'island',
-    places: ['Nalu', 'Moana', 'Kehi', 'Ilo', 'Tavai', 'Lani', 'Rua', 'Samar'],
-    features: ['Lagoon', 'Reef', 'Atoll', 'Drift', 'Cloudbank', 'Trade Wind', 'Coral Shelf', 'Palm Shore'] },
+    places: ['Nalu', 'Moana', 'Kehi', 'Hatfield', 'Tavai', 'Lani', 'Wearo', 'Samar'],
+    features: ['Lagoon', 'Reef', 'Atoll', 'Drift', 'Cloudbank', 'Trade Wind', 'Coral Shelf', 'Palm Shore'],
+    local: ['{r} Atoll', '{r} Lagoon', 'Isles of {r}', '{r} Reef', 'Old {r}', '{r} Drift', '{r} Cloudbank'] },
 ];
 const GENERIC: EraKit = { key: 'generic', match: /./, name: 'Age of Beginnings', startYear: 1, tone: 'young',
   places: ['Ardan', 'Belmar', 'Corvane', 'Dorrin', 'Elsmere', 'Fenwick', 'Galvan', 'Hollin'],
-  features: ['Marches', 'Reach', 'Downs', 'Fells', 'Vale', 'Heights', 'Moors', 'Shore'] };
+  features: ['Marches', 'Reach', 'Downs', 'Fells', 'Vale', 'Heights', 'Moors', 'Shore'],
+  local: ['{r} Reach', '{r} Marches', 'Old {r}', '{r} Vale', '{r} Heights', 'High {r}', '{r} Moors'] };
+
+// Durham colleges, the city and the North East: seasoning for template worlds (adapted per era kit).
+const DURHAM_ROOTS = ['Hatfield', 'Elvet', 'Framwellgate', 'Gilesgate', 'Claypath', 'Collingwood', 'Trevelyan', 'Ustinov', 'Stephenson',
+  'Cuthbert', 'Bede', 'Hild', 'Aidan', 'Chad', 'Van Mildert', 'Spennymoor', 'Brancepeth', 'Lanchester', 'Sedgefield', 'Coxhoe', 'Beamish',
+  'Penshaw', 'Seaham', 'Consett', 'Crook', 'Ferryhill', 'Houghall', 'Shincliffe', 'Belmont', 'Sherburn', 'Bowburn', 'Kingsgate', 'Pity Me',
+  'Palace Green', "Neville's Cross", 'Prebends', 'Bailey', 'Alnwick', 'Bamburgh', 'Hexham', 'Lindisfarne', 'Tynemouth', 'Stanley', 'Peterlee',
+  'Gateshead', 'Darlington', 'Hartlepool', 'Barnard', 'Auckland', 'Wear', 'Tyne', 'Tees', 'Josephine', 'Castle'];
+const DURHAM_SURNAMES = ['Cuthbert', 'Brancepeth', 'Hatfield', 'Elvet', 'Bede', 'Neville', 'Trevelyan', 'Stephenson', 'Collingwood', 'Lanchester', 'Sedgefield', 'Houghall', 'Aidan', 'Hild', 'Snow', 'Butler', 'Coxhoe', 'Shincliffe'];
 
 const PREFIX = ['Salt', 'Iron', 'Amber', 'Ember', 'Frost', 'Gale', 'Silent', 'Golden', 'Thorn', 'Crow', 'Misty', 'Red', 'Pale', 'Stone', 'Willow', 'Storm', 'Lantern', 'Wild', 'High', 'Bright'];
 
@@ -97,6 +114,14 @@ function shuffled<T>(rng: Rng, items: readonly T[]): T[] {
 
 function clamp01(x: number): number { return Math.max(0, Math.min(1, x)); }
 
+/** Half the time a leader "Title First Surname" takes a Durham surname (High Speaker Cuthbert Brancepeth style). */
+function localLeader(rng: Rng, leader: string): string {
+  const w = leader.split(' ');
+  const surname = pick(rng, DURHAM_SURNAMES);
+  if (rng() < 0.5 || w.length !== 3 || /^(the|The)$/.test(w[1]!) || w[2] === 'the') return leader;
+  return `${w[0]} ${w[1]} ${surname}`;
+}
+
 export function mockBible(opts: NewWorldOptions, seed: number): WorldBible {
   const rng = mulberry32(seed ^ 0xb1b1e);
   const n = Math.max(3, Math.min(10, Math.round(opts.nations ?? 6)));
@@ -117,13 +142,18 @@ export function mockBible(opts: NewWorldOptions, seed: number): WorldBible {
     const [agg, exp, trade, faith] = a.t;
     const jit = () => (rng() - 0.5) * 0.2;
     const aggr = clamp01(agg * 0.5 + aggression * 0.5 + jit());
-    const regionNames = shuffled(rng, PREFIX).slice(0, 4).map((p) => `${p} ${pick(rng, kit.features)}`);
-    regionNames.unshift(`${place} ${pick(rng, kit.features)}`, `Old ${place}`);
-    regionNames.push(`${pick(rng, PREFIX)} ${pick(rng, kit.features)}`);
+    // At least half the regions come from Durham and North East roots, the rest are invented.
+    const regionNames = [`${place} ${pick(rng, kit.features)}`, `Old ${place}`];
+    for (const r of shuffled(rng, DURHAM_ROOTS)) {
+      if (regionNames.length >= 6) break;
+      const nm = pick(rng, kit.local).replace('{r}', r);
+      if (!regionNames.includes(nm)) regionNames.push(nm);
+    }
+    regionNames.push(...shuffled(rng, PREFIX).slice(0, 2).map((p) => `${p} ${pick(rng, kit.features)}`));
     const flagColors = [color, pick(rng, FLAG_NEUTRALS), ...(rng() < 0.4 ? [pick(rng, COLORS)] : [])];
     nations.push({
       name: `The ${place} ${a.noun}`, adjective: place,
-      color, leader: pick(rng, a.leaders), government: a.government, ideology: a.ideology,
+      color, leader: localLeader(rng, pick(rng, a.leaders)), government: a.government, ideology: a.ideology,
       culture: a.culture.slice(0, 3 + Math.floor(rng() * 3)),
       foundingMyth: a.myth,
       temperament: { aggression: aggr, expansion: clamp01(exp + jit()), trade: clamp01(trade + jit()), faith: clamp01(faith + jit()) },
