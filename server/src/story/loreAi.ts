@@ -171,6 +171,11 @@ export function bindLore(r: WorldRunner): void {
   });
 }
 
+/** Row A31: true once Gemini's lore for this nation in this world is in the cache (not the template). */
+export function hasAiLore(countryId: number, worldId: string): boolean {
+  return countryCache.get(countryId)?.world === worldId;
+}
+
 async function cached<T extends { asOfTick?: number }>(
   key: string, store: Map<number, Entry<T>>, id: number, world: World,
   tickOf: (v: T) => number, make: () => Promise<T>, kind: 'country' | 'region',

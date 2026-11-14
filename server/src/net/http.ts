@@ -6,6 +6,7 @@ import type { LlmMode, WorldRunner } from '../runner';
 import { storyRoutes } from '../story/routes';
 import { tigerRoutes } from '../tiger/routes';
 import { chainRoutes } from '../chain/routes';
+import { prepareWorld } from '../prepare';
 
 export function createApp(runner: WorldRunner, mode: LlmMode) {
   const app = express();
@@ -22,11 +23,15 @@ export function createApp(runner: WorldRunner, mode: LlmMode) {
     if (body.imageBase64 != null && body.imageBase64 !== '' && !parseImage(body.imageBase64)) {
       return void res.status(400).json({ error: 'unsupported image' });
     }
+    const prepare = body.prepare === true;
     try {
       const world = await runner.newWorld({
         prompt: body.prompt, nations: body.nations, era: body.era, seaLevel: body.seaLevel,
         aggression: body.aggression, seed: typeof body.seed === 'number' ? body.seed : undefined, imageBase64: body.imageBase64 ?? null,
+        paused: prepare,
       });
+      // Row A31: the world waits paused while its lore, voices and first decisions are made.
+      if (prepare && runner.getWorld()?.id === world.id) void prepareWorld(runner, world);
       res.json({ worldId: world.id });
     } catch (e) {
       console.error('world creation failed:', e);

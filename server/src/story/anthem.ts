@@ -11,6 +11,7 @@ import { VoiceUnavailable } from './eleven';
 
 const API = 'https://api.elevenlabs.io/v1/music';
 const model = () => process.env.ELEVEN_MUSIC_MODEL || 'music_v1';
+export const anthemMaxPerRun = () => maxPerRun();
 const maxPerRun = () => {
   const n = Number(process.env.ANTHEM_MAX_PER_RUN);
   return Number.isFinite(n) && n >= 0 ? n : 8;

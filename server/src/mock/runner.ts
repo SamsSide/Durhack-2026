@@ -30,16 +30,16 @@ export class MockRunner implements WorldRunner {
   getWorld(): World | null { return this.world; }
   getLog() { return this.world && this.initial ? { initial: this.initial, events: this.log } : null; }
 
-  private load(w: World): World {
+  private load(w: World, paused = false): World {
     this.stop();
     this.world = w;
     this.initial = structuredClone(w);
     this.log = [];
     this.gen = mockEvents(w);
     this.pending = null;
-    this.clock.setPaused(false);
+    this.clock.setPaused(paused);                // row A31: prepare mode starts the world paused
     w.speed = this.clock.target;
-    w.paused = false;
+    w.paused = paused;
     this.lamport = 0;
     this.lastAgents = '';
     this.start();
@@ -51,7 +51,7 @@ export class MockRunner implements WorldRunner {
     const w = mockWorld(opts.seed ?? Math.floor(Math.random() * 1e6));
     w.prompt = opts.prompt;
     if (opts.era) w.era = opts.era;
-    return this.load(w);
+    return this.load(w, !!opts.paused);
   }
 
   listReplays() { return [{ id: 'demo-1', name: 'The Drowned Age', events: loadReplay('demo-1')?.events.length ?? 0 }]; }

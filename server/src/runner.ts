@@ -8,6 +8,8 @@ export type LlmMode = 'mock' | 'live';
 export interface NewWorldOptions {
   prompt: string; nations?: number; era?: string; seaLevel?: number; aggression?: number;
   seed?: number; imageBase64?: string | null;
+  /** Row A31: the world starts paused (the snapshot already says so), for prepare mode. */
+  paused?: boolean;
 }
 
 export type ControlMessage =
@@ -47,5 +49,8 @@ export interface WorldRunner {
   control(msg: ControlMessage): void;
   /** The tile ownership as that nation's own replica sees it. */
   belief(countryId: number): number[] | null;
+  /** Row A31: asks one ruler for its opening decision now and holds it for the nation's next turn.
+   *  Resolves true when a decision is waiting. Only the real engine has rulers. Optional. */
+  prepareRuler?(countryId: number): Promise<boolean>;
   subscribe(listener: RunnerListener): () => void;
 }

@@ -172,6 +172,14 @@ export class RulerScheduler {
     this.next.delete(countryId); this.last.delete(countryId); this.lastYear.delete(countryId); this.urgent.delete(countryId);
   }
 
+  /** A decision was made outside tick() (row A31, prepare mode): count it as this nation's turn. */
+  decided(countryId: number, now: number, year?: number): void {
+    this.last.set(countryId, now);
+    if (year !== undefined) this.lastYear.set(countryId, year);
+    this.next.set(countryId, now + this.jitter());
+    this.urgent.delete(countryId);
+  }
+
   /** Returns the ids that should be decided now (zero or one). They are marked as decided. */
   tick(now: number, nations: SchedNation[], year?: number): number[] {
     const spacing = (60_000 / this.o.maxCallsPerMin) * 1.1;

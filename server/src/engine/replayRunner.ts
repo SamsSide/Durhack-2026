@@ -189,6 +189,10 @@ export class RunnerHub implements WorldRunner {
   clockState() { return this.current.clockState?.(); }
   control(msg: ControlMessage) { this.current.control(msg); }
   belief(id: number) { return this.current.belief(id); }
+  /** Row A31: only the live engine has rulers; a replay never calls one. */
+  prepareRuler(id: number): Promise<boolean> {
+    return this.current === this.live && this.live.prepareRuler ? this.live.prepareRuler(id) : Promise.resolve(false);
+  }
 
   subscribe(listener: RunnerListener): () => void {
     this.listeners.add(listener);

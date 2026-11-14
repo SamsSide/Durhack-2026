@@ -164,3 +164,12 @@ export interface EconomyState {
   recent: LedgerEntry[];
 }
 
+// --- Row A31 (X2 Prepare): a world made ready for a demo while it waits paused, server to client ---
+export type PrepareItemKind = 'lore' | 'narration' | 'chant' | 'anthem' | 'ruler';
+export type PrepareItemStatus = 'pending' | 'working' | 'ready' | 'failed';
+export interface PrepareItem { kind: PrepareItemKind; countryId: number; status: PrepareItemStatus }
+/** At most twice a second while it runs, once more with `done: true`; a late connection gets the latest. */
+export interface PrepareMessage {
+  type: 'prepare'; worldId: string; done: boolean; ready: number; total: number; items: PrepareItem[];
+}
+

@@ -95,10 +95,10 @@ export class EngineRunner implements WorldRunner {
     this.lamport = 0;
     this.outgoing = [];
     this.scanned = 0;
-    this.clock.setPaused(false);
+    this.clock.setPaused(!!opts.paused);         // row A31: prepare mode starts the world paused
     this.clock.reset();
     w.speed = this.clock.target;
-    w.paused = false;
+    w.paused = !!opts.paused;
     this.lastAgents = '';
     this.bus = this.makeBus();
     this.bus.setObserver(this.observer);
@@ -448,6 +448,20 @@ export class EngineRunner implements WorldRunner {
     this.syncStatuses();
     this.flushOut();
     this.pushAgents(true);
+  }
+
+  /** Row A31 (prepare mode): one ruler's opening decision, asked now while the world waits paused. It
+   *  takes the normal path: the agent adopts it and publishes its events on its next turn, exactly as
+   *  if the scheduler had called. The scheduler counts it as that nation's decision, so the first
+   *  turn uses it instead of a fresh call. */
+  async prepareRuler(countryId: number): Promise<boolean> {
+    const a = this.agents.get(countryId);
+    if (!a || a.deleted || a.silenced || a.ruler !== 'llm') return false;
+    const before = a.decision;
+    await a.think();
+    if (a.retired || a.deleted || a.decision === before) return false;
+    this.scheduler.decided(countryId, Date.now(), this.world?.tick);
+    return true;
   }
 
   /** What one nation believes: its own replica's tile ownership. */
