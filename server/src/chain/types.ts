@@ -30,6 +30,8 @@ export interface MaintainInput {
   /** Per nation: sim treasury the chain should show once the queue has settled. */
   targets: Map<number, number>;
   busy: () => boolean;
+  /** The most transactions one true-up pass may send. */
+  maxTx: number;
 }
 
 /** What the mock and the devnet settlers both offer. All methods may throw; the caller catches. */

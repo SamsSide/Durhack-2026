@@ -53,6 +53,7 @@ class Chain {
   private lastEconAt = 0;
   private online = true;
   private failures = 0;
+  private maintFailures = 0;
   private breakerUntil = 0;
   private settling = false;
   private genesisRunning = false;
@@ -253,8 +254,16 @@ class Chain {
     if (!this.backend.maintain || this.playback || !this.backend.ready() || Date.now() < this.breakerUntil) return;
     const w = this.runner.getWorld();
     if (!w) return;
-    try { await this.backend.maintain({ world: w, targets: this.targets(w), busy: () => this.settling }); }
-    catch (e) { log(`maintenance failed: ${msg(e)}`); }
+    try {
+      await this.backend.maintain({ world: w, targets: this.targets(w), busy: () => this.settling, maxTx: this.maxTx });
+      this.maintFailures = 0;
+    } catch (e) {
+      log(`maintenance failed: ${msg(e)}`);
+      if (++this.maintFailures >= BREAKER_AFTER) {
+        this.maintFailures = 0; this.breakerUntil = Date.now() + BREAKER_MS; this.online = false;
+        log(`true-up offline, pausing ${BREAKER_MS / 1000} s`);
+      }
+    }
   }
 
   /** What each nation's on-chain balance should be once the queue settles: the sim's treasury, plus
@@ -323,7 +332,9 @@ class Chain {
       const onChain = round2(real ?? c.treasury + (pendingOut.get(c.id) ?? 0) - (pendingIn.get(c.id) ?? 0));
       sumNations += onChain;
       const sim = round2(c.treasury);
-      return [{ countryId: c.id, address: a, url: link(a), onChain, sim, inSync: Math.abs(onChain - sim - (pendingOut.get(c.id) ?? 0) + (pendingIn.get(c.id) ?? 0)) <= 1 }];
+      // On-chain plus payments still queued, against the sim treasury: the chain trails by whatever the sim earned since.
+      const drift = round2(onChain - sim - (pendingOut.get(c.id) ?? 0) + (pendingIn.get(c.id) ?? 0));
+      return [{ countryId: c.id, address: a, url: link(a), onChain, sim, drift, inSync: Math.abs(drift) <= Math.max(1, Math.abs(sim) * 0.02) }];
     });
     const realCommons = this.playback ? null : this.backend.commonsBalance();
     const t = this.totals();

@@ -158,7 +158,7 @@ export interface EconomyState {
   mode: EconomyMode; cluster: string;
   currency: { name: string; symbol: string; mint: string; url: string | null; supply: number; mintAuthority: string | null };
   commons: { address: string; url: string | null; balance: number };
-  nations: { countryId: number; address: string; url: string | null; onChain: number; sim: number; inSync: boolean }[];
+  nations: { countryId: number; address: string; url: string | null; onChain: number; sim: number; drift?: number; inSync: boolean }[];
   totals: { payments: number; volume: number; transactions: number; feesSol: number };
   recent: LedgerEntry[];
 }
