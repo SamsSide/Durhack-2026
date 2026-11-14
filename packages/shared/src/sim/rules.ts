@@ -15,6 +15,7 @@ import { ageStrength, ageTurn, satelliteTurn, type AgeMemory } from './ages';
 import { tradeTurn } from './trade';
 import { paymentTurn } from './payments';
 import { TERRAIN_EFFECTS } from './terrain';
+import { chokepoints } from './paths';
 import { WONDER_BUILD_TICKS, WONDER_COST, planWonder, wonderBonusOf } from './wonders';
 import {
   devastationOf, isShort, landDevastation, marketPlan, movementKey, outputMul, politicsOf, politicsStep, popCapMul, readinessOf,
@@ -358,6 +359,15 @@ export function nationTurn(
   };
   const tryFort = (): boolean => {
     if (treasury < COST.fort || countKind('fort') >= Math.max(1, Math.floor(ownedCount() / 5))) return false;
+    // Row A32: a ruler fortifying (or at war) builds first on the chokepoints of the cheapest enemy roads
+    // to its capital and its oldest cities, skipping any already covered by a fort next door.
+    if (policy.focus === 'fortify' || enemies.length) {
+      const free = new Set(empty());
+      const forts = myStructs.filter((x) => x.kind === 'fort').map((x) => x.tile);
+      const covered = (i: number): boolean => forts.some((f) => f === i || view.tiles[f]!.neighbors.includes(i));
+      const choke = chokepoints(view.tiles, own, countryId, fortHearts(), fortFoes()).filter((i) => free.has(i) && !covered(i));
+      if (choke.length) { spend(COST.fort); place(choke[0]!, 'fort'); return true; }
+    }
     const spots = borderTiles();
     if (!spots.length) return false;
     spend(COST.fort); place(pickRand(spots), 'fort'); return true;
@@ -376,6 +386,21 @@ export function nationTurn(
   };
   const enemies = enemiesOf(view, countryId);
   const foes = new Set([...enemies, ...(policy.focus === 'attack' ? policy.targets ?? [] : [])]);
+  // What a fort guards (row A32): the capital and up to three of the oldest cities; against whom: the
+  // nations at war with us, else the rivals the ruler names, else every neighbour that is not an ally.
+  const fortHearts = (): number[] => [capital, ...myStructs.filter((x) => x.kind === 'city' && own[x.tile] === countryId)
+    .sort((a, b) => (a.builtTick - b.builtTick) || (a.tile - b.tile)).slice(0, 3).map((x) => x.tile)];
+  const fortFoes = (): Set<number> => {
+    if (enemies.length) return new Set(enemies);
+    const near = new Set<number>();
+    for (let i = 0; i < own.length; i++) {
+      if (own[i] !== countryId) continue;
+      for (const j of view.tiles[i]!.neighbors) { const o = own[j]!; if (o >= 0 && o !== countryId && view.countries[o]?.alive) near.add(o); }
+    }
+    const named = (policy.targets ?? []).filter((o) => near.has(o));
+    if (named.length) return new Set(named);
+    return new Set([...near].filter((o) => relationOf(view, countryId, o).stance !== 'alliance'));
+  };
   const wantArmies = policy.focus === 'attack' ? Math.min(6, 2 + Math.floor(ownedCount() / 10))
     : policy.focus === 'fortify' ? Math.min(4, 1 + Math.floor(ownedCount() / 12))
       : t.aggression > 0.5 ? Math.min(3, 1 + Math.floor(ownedCount() / 15)) : 0;
@@ -393,7 +418,7 @@ export function nationTurn(
       if (at === undefined) return false;
       spend(cost);
       const u: Unit = { id: uid('u'), owner: countryId, kind: 'army', tile: at, strength };
-      emit({ type: 'unit_spawned', unit: u }); myUnits.push(u); return true;
+      emit({ type: 'unit_spawned', unit: { ...u } }); myUnits.push(u); return true;
     }
     const ports = myStructs.filter((s) => s.kind === 'port');
     if (!ports.length || treasury < COST.fleet || myUnits.filter((u) => u.kind === 'fleet').length >= Math.ceil(ports.length / 2)) return false;
@@ -403,7 +428,7 @@ export function nationTurn(
     spend(COST.fleet);
     const strength = ageScaled(me, Math.max(5, Math.round(armyStrengthFor({ ...me, treasury }, forts) * 0.6)));
     const u: Unit = { id: uid('u'), owner: countryId, kind: 'fleet', tile: sea, strength };
-    emit({ type: 'unit_spawned', unit: u }); myUnits.push(u); return true;
+    emit({ type: 'unit_spawned', unit: { ...u } }); myUnits.push(u); return true;
   };
 
   const dev = policy.focus === 'develop';
@@ -411,7 +436,7 @@ export function nationTurn(
     { w: dev ? 4 : 2.2, run: tryUpgrade },
     { w: dev ? 3.2 : 1.6, run: tryFarm },
     { w: 1 + t.trade * 2.5, run: tryPort },
-    { w: policy.focus === 'fortify' ? 4 : policy.focus === 'attack' ? 1.5 : 0.3 + t.aggression * 0.6, run: tryFort },
+    { w: policy.focus === 'fortify' ? 4 : policy.focus === 'attack' ? 1.5 : Math.max(enemies.length ? 1 : 0, 0.3 + t.aggression * 0.6), run: tryFort },
     { w: t.faith > 0.4 ? 0.6 + t.faith * 2.4 : 0.1, run: tryTemple },
     { w: dev ? 0.5 + t.trade * 2 : 0.3, run: tryFactory },
     { w: enemies.length ? 6 : policy.focus === 'attack' ? 4 : policy.focus === 'fortify' ? 2 : t.aggression > 0.5 ? 1 : 0, run: () => trySpawn('army') },
