@@ -1,6 +1,6 @@
-# Lane c — Story, sound and interface
+# Lane c — Interface
 
-**Owner:** @Justin-CODING-PY · **Focus:** the Create screen, nation panel, lore, narration, anthem, chronicle, network controls, submission · **Paths:** `web/src/ui/`, `server/src/story/`
+**Owner:** @Justin-CODING-PY · **Focus:** four screens built from the owner's Figma design against the mock, and the submission · **Paths:** `web/src/ui/`
 
 *Only this lane edits this file. Update a row's status in the same PR as the work.*
 *Status words: `todo` · `next` · `wip` · `done` (merged) · `testing` (waiting on a human test) · `blocked` (link the issue) · `cut`*
@@ -11,15 +11,11 @@ Read first: `docs/hackathon-plan.md` section 4 ("How the world works") and `docs
 
 | ID | Row | Needs (from other lanes) | Gives (to other lanes) | Checkpoint | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| C1 | Create screen: prompt, preset chips, number of nations, era, sea level, aggression; calls `POST /api/world` | A1; B1 (app shell) | | CP1 | next | Build as components in `web/src/ui/`; lane b places them |
-| C2 | Nation panel: name, leader, government, ideology, culture, history and a relations list with each neighbour's stance and story; opens on selection | B1 (X5) | | CP1 | todo | Lore from the mock first |
-| C3 | Lore route `GET /api/country/:id/lore`: Gemini writes culture, politics, history and relations from the nation's real chronicle; cached; template version for mock mode | A1 (`getWorld`) | X3 lore | CP1 | todo | |
-| C4 | Narration: ElevenLabs speaks the lore, cached on disk; a player in the panel; a voice chosen from `voiceStyle` | C3 | X3 narration | CP1.5 | todo | MLH ElevenLabs |
-| C5 | Anthem: ElevenLabs music from `anthemPrompt`, cached; plays from the panel | | X3 anthem | CP1.5 | todo | Check music access on our plan first |
-| C6 | Chronicle: a live ticker of the story, a scrollable timeline, click an entry to fly to it; a small web of who is allied and at war | B1 (X5) | | CP1.5 | todo | |
-| C7 | Network panel: per nation cut, restore, silence, wake, delete; blackout; speed and pause; the token meter; the decree box; a "what it believes" toggle | B1 (X5); A7, mock until then | | CP1.5 | todo | The demo's key moment |
-| C8 | Stretch: an image as input, read by Gemini for mood and palette | A5 | | CP2 | todo | Cut first if behind |
-| C9 | Submission: project text against the overall criteria and each sponsor's, the video, prize ticks, the README | all | | CP3 | todo | Platform and deadline not announced yet |
+| C1 | Create screen: prompt, preset chips, number of nations, era, sea level, aggression; calls `POST /api/world` | A1; B1 (app shell) | | CP1 | next | Use the X7 variables; restyle when A12 lands |
+| C2 | `NationCard`: name, leader, government, ideology, culture, politics, history, the relations list with each neighbour's stance and story, and the play buttons for narration and anthem (X6) | A1 (X3 lore mock, X6 stub); B1 (X5) | the card to b (shown in the hologram) | CP1 | todo | Plain component, 380 px wide, transparent background |
+| C3 | Chronicle: a live ticker of the story and a scrollable timeline; clicking an entry selects and flies to that nation | B1 (X5) | | CP1.5 | todo | |
+| C4 | Network panel: per nation cut, restore, silence, wake and delete; blackout; speed and pause; the token meter; the decree box; the "what it believes" toggle; the map mode buttons | B1 (X5) | | CP1.5 | todo | Sends X2 control messages; works fully against the mock |
+| C5 | Submission: the project text against the overall criteria and each sponsor's, the video, the prize ticks, the README | all | | CP3 | todo | Mostly writing; platform and deadline not announced yet |
 
 ## Waiting on
 
