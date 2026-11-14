@@ -115,11 +115,26 @@ export interface Country {
   alive: boolean;
   population: number;
   treasury: number;
+  council?: Council;                                     // row A29; missing on old replays
+}
+
+// Council (row A29, owner decision on #146: ruler and general only).
+export type CouncilRole = 'ruler' | 'general';
+export interface CouncilMember { name: string; portraitSeed: number; since: number; memory: string } // since = tick; memory = rolling 5-line summary handed to a successor
+export type CouncilState = 'active' | 'covering' | 'vacant' | 'cut';
+export interface Council {
+  ruler: CouncilMember | null; general: CouncilMember | null;
+  state: Record<CouncilRole, CouncilState>;
 }
 
 export type StructureKind = 'camp' | 'village' | 'town' | 'city' | 'capital'
-  | 'farm' | 'port' | 'fort' | 'temple' | 'factory' | 'ruin';
-export interface Structure { id: string; tile: number; owner: number; kind: StructureKind; builtTick: number }
+  | 'farm' | 'port' | 'fort' | 'temple' | 'factory' | 'ruin' | 'wonder';
+export interface Structure {
+  id: string; tile: number; owner: number; kind: StructureKind; builtTick: number;
+  wonder?: WonderKind; name?: string; complete?: boolean;   // only when kind is 'wonder' (row A30); complete false while it is being built
+}
+export type WonderKind = 'great_wall' | 'mausoleum' | 'pyramid' | 'colossus' | 'cathedral'
+  | 'palace_of_soviets' | 'skyscraper' | 'space_elevator';
 
 export type UnitKind = 'army' | 'fleet' | 'settler' | 'trader';   // trader: a merchant ship crossing the ocean between trading nations
 export type TechAge = 'ancient' | 'medieval' | 'gunpowder' | 'industrial' | 'modern' | 'future' | 'stellar';
@@ -129,7 +144,8 @@ export type Stance = 'war' | 'hostile' | 'neutral' | 'trade' | 'alliance';
 export interface Relation { a: number; b: number; stance: Stance; since: number; grievance: number } // a < b
 
 export type ChronicleKind = 'founding' | 'proclamation' | 'growth' | 'war' | 'battle' | 'peace'
-  | 'alliance' | 'betrayal' | 'fall' | 'silence' | 'return' | 'dispute' | 'decree' | 'secession';
+  | 'alliance' | 'betrayal' | 'fall' | 'silence' | 'return' | 'dispute' | 'decree' | 'secession'
+  | 'death' | 'succession' | 'wonder';
 export interface ChronicleEntry { id: string; tick: number; year: number; kind: ChronicleKind; countries: number[]; text: string }
 
 export interface AgentStatus {
@@ -167,6 +183,10 @@ export type WorldEvent = Base & (
   | { type: 'unit_removed'; unitId: string; reason: 'battle' | 'disband' | 'collapse' }
   | { type: 'unit_attrition'; unitId: string; loss: number; terrain: Terrain }   // strength lost to hunger, cold and thirst in hostile land; applyEvent subtracts loss
   | { type: 'payment'; from: number; to: number; amount: number; reason: PaymentReason; note: string }  // row A27; see below
+  | { type: 'council_changed'; countryId: number; role: CouncilRole; member: CouncilMember | null; cause: 'founded' | 'death' | 'assassination' | 'disconnect' | 'succession' | 'coup' | 'restored' }
+  | { type: 'council_status'; countryId: number; role: CouncilRole; state: CouncilState }
+  | { type: 'wonder_started'; countryId: number; structureId: string; tile: number; wonder: WonderKind; name: string }
+  | { type: 'wonder_built'; countryId: number; structureId: string }
   | { type: 'battle'; tile: number; attacker: number; defender: number; attackerUnit: string; winner: number; losses: { attacker: number; defender: number } }
   | { type: 'relation_changed'; a: number; b: number; stance: Stance; reason: string }
   | { type: 'country_updated'; countryId: number; patch: Partial<Country> }
@@ -209,6 +229,30 @@ export type PaymentReason = 'trade' | 'reparations' | 'plunder' | 'seizure' | 'w
   peace treaty; `plunder`: a sacked city; `seizure`: a captured capital's treasury; `war_chest`:
   an ally paying into a war; `subsidy`: a strong nation paying a weak friend; `pooled`: nations
   that join forces and move together pay into one leader's fund.
+
+- **Council (row A29):** every nation has a ruler and a general, each its own agent. The ruler
+  sets focus and stance (today's ruler, the only one calling Gemini every turn); the general picks
+  war targets and moves armies (rules, plus a Gemini call only for declaring or ending a war).
+  A general can fall when an army he leads loses a big battle, either member can be assassinated
+  (rare, more likely in war), a decree or the `kill` control can kill one, and `cut_member` cuts
+  one off. Then the other **covers** (`council_status` `covering`; armies fight at 0.85 while the
+  ruler covers the general; the general holds the course while covering the ruler). After 8 ticks
+  a **successor** is named (`council_changed` cause `succession`) and inherits the predecessor's
+  `memory`; a ruler's successor follows the government (heir, election or coup). `council_changed`
+  for the ruler also sets `Country.leader`. Chronicle kinds `death` and `succession` tell it
+  ("General Varo fell at Ashford; Captain Ilse takes command with his last orders.").
+  `mockEvents()` emits one death, one cover and one succession.
+- **Wonders (row A30, owner decision on #147):** a nation with a surplus treasury and no war
+  starts at most one wonder at a time, about 2 to 4 per world. `wonder_started` adds a `wonder`
+  structure with `complete: false`; `wonder_built` (about 40 ticks later) sets `complete: true`.
+  Kind by style: `great_wall` (east_asian, highland), `mausoleum` (south_asian, desert, sahel),
+  `pyramid` (egyptian, mesoamerican), `colossus` (classical; on a coast tile), `cathedral`
+  (medieval, norse), `palace_of_soviets` (soviet_bloc), `skyscraper` (western_modern, industrial,
+  scrap), `space_elevator` (arcology, or any nation in the future or stellar age). The name is
+  written in the nation's voice (Gemini in live mode, templates in mock). A finished wonder gives
+  a small bonus from `WONDER_BONUS: Record<WonderKind, { income: number; defence: number; unrest: number }>`
+  in `@terra/shared` (income share, defence share for the whole nation, unrest change per year);
+  lane b shows it in the tooltip. A captured wonder changes hands; a razed one is a `ruin`.
 
 | Terrain | defence | supply | attrition | move | yields |
 | --- | --- | --- | --- | --- | --- |
@@ -276,6 +320,9 @@ this table from `@terra/shared`.
 { "type": "control", "action": "pacing", "value": "auto" }
 { "type": "control", "action": "pause", "value": true }
 { "type": "control", "action": "decree", "text": "A plague sweeps the southern coast" }
+{ "type": "control", "action": "kill", "countryId": 2, "role": "general" }
+{ "type": "control", "action": "cut_member", "countryId": 2, "role": "general" }
+{ "type": "control", "action": "restore_member", "countryId": 2, "role": "general" }
 { "type": "belief", "countryId": 2 }
 ```
 
@@ -408,6 +455,11 @@ this table from `@terra/shared`.
   centre of its base, fits a 1 x 1 x 1 box, under 1,500 triangles, flat-shaded vertex colours or
   plain materials, no textures. One material named `team` is recoloured by lane b to the
   nation's colour. `footprint` is the share of a tile's width the model should fill.
+
+  **Wonders (row A30):** `"wonders": { "<WonderKind>": { "file": "wonders/<kind>.glb", "footprint": n } }`,
+  one model per `WonderKind`, built larger than a capital (lane b draws it at about 2 tiles wide),
+  under 3,000 triangles, with a `team` part. `great_wall` is one wall segment with a tower that
+  lane b repeats along the nation's border edges.
 
 - **Mock:** until the files exist lane b draws a coloured box (structures) or cone (units) for
   any key missing from the manifest. That fallback stays in for good.
