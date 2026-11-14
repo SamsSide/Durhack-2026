@@ -1,0 +1,85 @@
+.tn-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 260px;
+  pointer-events: none;   /* the column never blocks the globe; only the cards take clicks */
+}
+.tn-feed-card {
+  pointer-events: auto;
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  width: 260px;
+  height: 64px;
+  padding: 4px;
+  box-sizing: border-box;
+  text-align: left;
+  cursor: pointer;
+  color: var(--color-ink);
+  background: var(--parchment-fill);
+  border: 1px solid var(--color-ink);
+  box-shadow: var(--shadow-1);
+  font-family: var(--font-serif);
+  animation: tn-feed-in 200ms ease-out both;
+  transition: opacity 400ms ease, transform 400ms ease;
+}
+.tn-feed-card:hover { border-color: var(--color-rubric); }
+.tn-feed-card:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.tn-feed-out { opacity: 0; transform: translateX(12px); pointer-events: none; }
+
+.tn-feed-thumb {
+  position: relative;
+  flex: 0 0 72px;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-night-inset);
+  border: 1px solid var(--color-ink-faint);
+}
+.tn-feed-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tn-feed-icon {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  padding: 2px;
+  fill: var(--color-ink);
+  background: var(--color-parchment);
+  border: 1px solid var(--color-ink);
+}
+.tn-feed-war, .tn-feed-fall, .tn-feed-death { fill: var(--color-rubric); }
+.tn-feed-wonder, .tn-feed-succession { fill: var(--color-ink); }
+
+.tn-feed-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1px 2px 1px 0;
+}
+.tn-feed-flags { display: flex; align-items: center; gap: 4px; }
+.tn-feed-flag { display: inline-flex; line-height: 0; border: 1px solid var(--color-ink-faint); }
+.tn-feed-year {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-rubric);
+}
+.tn-feed-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes tn-feed-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tn-feed-card { animation: none; transition: opacity 150ms linear; }
+  .tn-feed-out { transform: none; }
+}
