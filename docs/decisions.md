@@ -25,3 +25,4 @@
 2026-11-14 14:52 · owner · Gemini models: lore and world bible gemini-3.5-flash, rulers gemini-3.5-flash-lite; never the 2.5 family (closed to new users) · tested live by A13, cheapest for many ruler calls
 2026-11-14 15:05 · owner · The world bible is written by gemini-3.5-flash-lite (GEMINI_MODEL_BIBLE), about 5 s instead of 28 s on flash · world creation must fit the 15 s demo step
 2026-11-14 15:04 · owner · ElevenLabs Starter plan bought (music API for anthems, about 40k characters a month); Gemini image billing not enabled, drawn flags only · anthems are a demo highlight, painted flags are not
+2026-11-14 15:50 · owner · X5 gains DecreeBox and TokenMeter (no props), placed in the top-bar area per the design (#61) · additive, matches the merged code
