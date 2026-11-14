@@ -573,12 +573,20 @@ export function marchTurn(p: MarchInput): void {
     break;
   }
   const terrain = (t: number): Terrain => view.tiles[t]!.terrain;
+  // Enemy armies and fleets anywhere; enemy merchant ships only at sea (fleets hunt them). One pass
+  // over the units, first match per tile kept (the order the old per-tile scan found), so the march
+  // below does not rescan every unit for every tile's neighbours.
+  const enemyAt = new Map<number, number>();
+  if (enemies.size) {
+    for (const v of view.units) {
+      if (v.tile < 0 || enemyAt.has(v.tile) || !enemies.has(v.owner)) continue;
+      if (isCombatant(v) || (v.kind === 'trader' && terrain(v.tile) === 'ocean')) enemyAt.set(v.tile, v.owner);
+    }
+  }
   const hostile = (t: number): number => {
     const o = own[t]!;
     if (enemies.has(o)) return o;
-    // Enemy armies and fleets anywhere; enemy merchant ships only at sea (fleets hunt them).
-    for (const v of view.units) if (v.tile === t && enemies.has(v.owner) && (isCombatant(v) || (v.kind === 'trader' && terrain(t) === 'ocean'))) return v.owner;
-    return -1;
+    return enemyAt.get(t) ?? -1;
   };
 
   // Armies standing in a neutral nation's land (a treaty moved the border) go home.

@@ -12,6 +12,10 @@ import { startPolitics } from './economy';
 
 export interface WorldGenOptions { seed: number; seaLevel?: number; provinces?: number }
 
+/** Provinces in a new world (#203 idea 1: was 500; 1,200 keeps the globe's frame time and the sim
+ *  under about 5 ms a tick; 1,500 went over). Old replays keep their own count. */
+export const DEFAULT_PROVINCES = 1200;
+
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const angle = (a: Vec3, b: Vec3): number => Math.acos(Math.max(-1, Math.min(1, dot(a, b))));
 
@@ -282,7 +286,7 @@ function placeCapitals(
 export function generateWorld(bible: WorldBible, opts: WorldGenOptions): World {
   const seed = opts.seed >>> 0;
   const seaLevel = Math.max(0.2, Math.min(0.85, opts.seaLevel ?? 0.55));
-  const count = opts.provinces ?? 500;
+  const count = opts.provinces ?? DEFAULT_PROVINCES;
   const rng = mulberry32(seed ^ 0x7e11a);
 
   const provs = generateProvinces(count, seed);
