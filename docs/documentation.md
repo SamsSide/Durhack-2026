@@ -655,6 +655,40 @@ payment: `docs/shots/solana-devnet-payment.jpg`.
     the rules scan provinces per nation, so much larger maps would need spatial indexes. We have not
     benchmarked beyond the demo size.
 
+### Added on 14 Nov (afternoon and evening)
+
+Short answers for the features that landed late.
+
+- **Time gears.** Speed runs from a week a second to ten years a second (new worlds start at a
+  month a second); the client shows month and day between yearly ticks and units glide, and the
+  pacing director still slows for big moments.
+- **Prepare mode.** `prepare: true` pauses a new world while lore, narration, chants, anthems and
+  each ruler's first decision are made in parallel within the budgets; a readiness panel shows
+  progress and a play button appears when done, so the demo never stutters.
+- **A living world.** Boats, caravans, birds and smoke, volumetric clouds with weather and storms
+  that answer storm decrees; units move at believable speeds.
+- **Strategic map.** Armies route by Dijkstra over terrain move cost (round mountains, through
+  passes), stop at enemy zone of control, and chokepoint forts hold lines; cities grow walls by
+  tier, drawn at close zoom from a derived city tier.
+- **Council ageing.** Each member has a birth year; natural death rises from 50 and nobody lives
+  past 100, so rulers do not reign for centuries; succession then follows the usual rules.
+- **News anchor.** Terra Nova News shows an animated, lip-synced anchor (our own original
+  characters and studio) in a broadcast window, with cutaways to the globe capture.
+- **Economy depth.** Each province makes a good; shortages, a goods market, devastation, war
+  readiness and a politics axis that drifts to extremes under war, shown as map modes and chips.
+- **Exact Solana ledger.** Every sim payment is recorded and netted per pair in 5-second windows,
+  with a token account opened for nations founded after genesis; balances match the sim (drift 0).
+- **Calm UI.** One left panel at a time (nation or province card), small war tabs top right, a
+  node-graph network panel and icon map modes by the minimap.
+- **Material system.** Shared CSS tokens give panels depth, bevels, engraved names and plated
+  badges across every screen (before and after shots in `docs/shots/`).
+- **Memory cap.** The chronicle is a recent window (about 500 lines, founding and secession kept)
+  trimmed by the shared `applyEvent`; the full log streams from `GET /api/world/log` on disk.
+- **Stability fixes.** The payment-arc label loop that froze the tab was removed and the server
+  now survives chain and socket errors.
+- **Timeline scrubber and Tiger Data chart.** The scrubber rebuilds the globe at any past year
+  from the log; the territory chart reads the continuous aggregate every 5 s.
+
 ### Per-person deep dive
 
 - **Lane a (SamsSide), world, story and sound:** event log and `applyTickBatch`; the battle function;
