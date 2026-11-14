@@ -214,12 +214,20 @@ export function flagSvg(spec: FlagSpec, width?: number, height?: number): string
 { "type": "control", "action": "delete", "countryId": 2 }
 { "type": "control", "action": "blackout", "value": true }
 { "type": "control", "action": "speed", "value": 4 }
+{ "type": "control", "action": "pacing", "value": "auto" }
 { "type": "control", "action": "pause", "value": true }
 { "type": "control", "action": "decree", "text": "A plague sweeps the southern coast" }
 { "type": "belief", "countryId": 2 }
 ```
 
-  `speed` is 1, 2, 4 or 8. `blackout` cuts or restores every link at once.
+  `speed` is any number from 0.1 to 64 (a multiplier on the base rate of two years a second): 0.1
+  is one year every five seconds, 1 is the old normal, 64 is a century in under a second. The
+  server clamps it. `pacing` is `"manual"` (the default: the chosen speed holds) or `"auto"` (the
+  director: the chosen speed is a ceiling; after a big moment, such as a war declared, a battle for
+  a capital, a secession, a fall, a decree, a cut or a restore, the world slows to at most 1 for
+  about eight seconds, then eases back up). The server reports the effective speed in a new
+  `{ "type": "clock", "speed": 4, "target": 8, "pacing": "auto", "paused": false }` message
+  whenever it changes. `blackout` cuts or restores every link at once.
 
 - **Errors:** an unknown message gets `{ "type": "error", "message": "..." }`; the socket stays open.
 - **Mock:** `npm run mock` starts the real server with `mockWorld()` and `mockEvents()` and
