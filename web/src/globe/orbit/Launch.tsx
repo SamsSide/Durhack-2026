@@ -17,6 +17,9 @@ import { C, Pool, pointScale } from './launchFx';
 import { buildVehicle, rocketKit } from './launchModels';
 import type { Vehicle } from './launchModels';
 
+const _up = new THREE.Vector3(0, 1, 0);
+const _right = new THREE.Vector3(1, 0, 0);
+
 const ROCKET_H = 0.075;      // world units, bold enough to read from the default view
 const HOLD = 0.8;            // s on the pad, engines lit
 const ASCENT = 5.6;          // s from lift-off to deployment
@@ -125,7 +128,7 @@ export function Launch() {
     };
     scan();
     const off = useWorld.subscribe(scan);
-    let w: { __launch?: (id?: number) => number | null } | null = null;
+    let w: { __launch?: (id?: number) => number | null; __launchDemo?: (id?: number) => number | null } | null = null;
     if (import.meta.env.DEV) {
       w = window as unknown as { __launch?: (id?: number) => number | null };
       // Dev: launch from this nation, or from the capital nearest the middle of the view.
@@ -147,8 +150,25 @@ export function Launch() {
         enqueue(pick);
         return pick;
       };
+      // Dev and demo: frame a side view of a capital (ground at the bottom, sky above), then launch from it.
+      w.__launchDemo = (id?: number) => {
+        const world = useWorld.getState().world;
+        const cc = (window as unknown as { __cam?: { setLookAt: (...a: (number | boolean)[]) => unknown } }).__cam;
+        if (!world || !cc) return null;
+        const pick = id ?? world.countries.findIndex((c) => c.alive && !!world.tiles[c.capitalTile]);
+        const t = pick >= 0 ? world.tiles[world.countries[pick]!.capitalTile] : undefined;
+        if (!t) return null;
+        // the globe group may be rotated: take the capital into world space, then look from the side so it sits on the limb
+        group.updateWorldMatrix(true, false);
+        const p = group.localToWorld(new THREE.Vector3(...t.center)).normalize();
+        const side = new THREE.Vector3().crossVectors(p, Math.abs(p.y) < 0.9 ? _up : _right).normalize();
+        const eye = p.clone().multiplyScalar(0.45).addScaledVector(side, 0.89).normalize().multiplyScalar(2.1);
+        cc.setLookAt(eye.x, eye.y, eye.z, 0, 0, 0, true);
+        window.setTimeout(() => enqueue(pick), 1600);
+        return pick;
+      };
     }
-    return () => { off(); if (w) delete w.__launch; };
+    return () => { off(); if (w) { delete w.__launch; delete w.__launchDemo; } };
   }, [camera, fx, group]);
 
   useEffect(() => () => {
