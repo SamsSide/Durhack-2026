@@ -1,6 +1,6 @@
 // Full-screen shell. Lane b owns this file after the seed.
 import type { CSSProperties } from 'react';
-import { Globe } from './globe/Globe';
+import { Globe } from './globe';
 import { Chronicle, CreateScreen, NationCard, NetworkPanel } from './ui';
 import { useWorld } from './state/world';
 import type { WorldStore } from './state/world';
@@ -54,7 +54,7 @@ export function App() {
       <Globe />
       <TopBar onCreate={() => setCreating(true)} />
       {world && <div style={{ ...overlay, top: 56, left: 'var(--space-3)', bottom: 170 }}><NetworkPanel /></div>}
-      {world && selected != null && <div style={{ ...overlay, top: 56, right: 'var(--space-3)' }}><NationCard countryId={selected} regionId={regionId} /></div>}
+      {world && selected != null && <div style={{ ...overlay, top: 56, right: 'var(--space-3)', background: 'rgba(18, 16, 13, 0.82)', borderRadius: 'var(--radius-2)', boxShadow: 'var(--shadow-1)' }}><NationCard countryId={selected} regionId={regionId} /></div>}
       {world && <div style={{ ...overlay, left: 'var(--space-3)', right: 'var(--space-3)', bottom: 'var(--space-3)' }}><Chronicle /></div>}
       {showCreate && (
         <div style={{ ...overlay, inset: 0, zIndex: 10, background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center' }} onClick={() => world && setCreating(false)}>
