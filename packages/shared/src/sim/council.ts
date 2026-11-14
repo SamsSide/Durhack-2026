@@ -191,7 +191,7 @@ function only(role: CouncilRole, state: CouncilState): Partial<Record<CouncilRol
 }
 
 const chronicle = (line: CouncilLine, kind: ChronicleKind, countries: number[], text: string): CouncilBody =>
-  ({ type: 'chronicle', entry: { id: line.entryId, tick: line.tick, year: line.year, kind, countries, text } });
+  ({ type: 'chronicle', entry: { id: line.entryId, tick: line.tick, year: line.year, kind, countries, text: text.charAt(0).toUpperCase() + text.slice(1) } });
 
 /** Who carries on after a seat empties, in words. */
 function coverText(council: Council, role: CouncilRole, countryName: string): string {
@@ -345,7 +345,7 @@ export function oldAgeEvents(world: World, countryId: number, roles: CouncilRole
   dying.forEach((r, i) => {
     const m = council[r]!;
     const age = memberAge(m, world.year);
-    const cover = i < dying.length - 1 ? '' : dying.length > 1 ? ` ${name} is left without a head.` : `; ${coverText(council, r, name)}`;
+    const cover = i < dying.length - 1 ? '' : dying.length > 1 ? ` ${c.name} is left without a head.` : `; ${coverText(council, r, name)}`;
     out.push(chronicle({ ...line, entryId: `${line.entryId}-${i}` }, 'death', [countryId],
       `${m.name} of ${name} ${deathPhrase(m, r)}${age !== undefined ? `, aged ${age}` : ''}${cover.startsWith(';') ? cover : cover ? `.${cover}` : '.'}`));
   });
