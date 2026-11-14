@@ -17,6 +17,7 @@ import { SelectionGlow } from './camera/SelectionGlow';
 import { Political } from './political/Political';
 import { Atmosphere } from './atmosphere/Atmosphere';
 import { Structures } from './structures/Structures';
+import { Units } from './units';
 import { registerCapture } from './capture';
 import { setStatuses } from './status/statusTint';
 
@@ -146,6 +147,7 @@ function Scene({ world }: { world: World }) {
       <SelectionGlow />
       <Political />
       <Structures />
+      <Units />
     </ProvinceMeshContext.Provider>
   );
 }

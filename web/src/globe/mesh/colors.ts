@@ -50,8 +50,42 @@ function colorBase(
   return out.lerp(tmp.set(country.color), pal.nationFill);
 }
 
-/** The base colour, then dimmed for a cut nation or greyed to ruin for a deleted one. */
+/** A stable -1..1 value per tile, so the relief noise never shimmers between repaints. */
+function tileNoise(id: number): number {
+  const s = Math.sin(id * 12.9898 + 78.233) * 43758.5453;
+  return (s - Math.floor(s)) * 2 - 1;
+}
+
+/**
+ * Terrain relief under the fill (Age of History style): high ground slightly lighter, low ground
+ * slightly darker, plus a small per-tile grain. The same factor in every map mode.
+ */
+export function reliefFactor(world: World, tileId: number): number {
+  const tile = world.tiles[tileId];
+  if (!tile) return 1;
+  if (tile.terrain === 'ocean') return 1 + 0.02 * tileNoise(tileId);
+  let f = 1 + (tile.elevation - 0.4) * 0.1 + 0.04 * tileNoise(tileId);
+  if (tile.terrain === 'mountain') f += 0.07;
+  else if (tile.terrain === 'hills') f += 0.035;
+  return f;
+}
+
+function applyRelief(world: World, tileId: number, out: THREE.Color): THREE.Color {
+  const f = reliefFactor(world, tileId);
+  out.r = Math.min(1, out.r * f); out.g = Math.min(1, out.g * f); out.b = Math.min(1, out.b * f);
+  return out;
+}
+
+/** The base colour, then dimmed for a cut nation or greyed to ruin for a deleted one, then relief. */
 function colorWith(
+  world: World, tileId: number, owner: number, mode: MapMode, sel: number | null,
+  out: THREE.Color, str: { value: Float64Array; max: number } | null,
+): THREE.Color {
+  colorStatus(world, tileId, owner, mode, sel, out, str);
+  return applyRelief(world, tileId, out);
+}
+
+function colorStatus(
   world: World, tileId: number, owner: number, mode: MapMode, sel: number | null,
   out: THREE.Color, str: { value: Float64Array; max: number } | null,
 ): THREE.Color {

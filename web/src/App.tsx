@@ -4,7 +4,8 @@ import { Globe } from './globe';
 import * as ui from './ui';
 import { Chronicle, CreateScreen, DecreeBox, NationCard, NetworkPanel } from './ui';
 import { useWorld } from './state/world';
-import { BeliefBanner, ClosingCard, DiplomacyLegend, MODES, TopBar, useTimelineOpen } from './hud';
+import { BeliefBanner, ClosingCard, DiplomacyLegend, Minimap, MODES, TopBar, useTimelineOpen } from './hud';
+import { HoverTooltip } from './globe/hover/HoverTooltip';
 import { useEffect, useState } from 'react';
 
 // Lane c's NewsBroadcast (X5); resolved at run time so the app builds before it lands.
@@ -47,6 +48,7 @@ export function App() {
       <TopBar onCreate={() => setCreating(true)} />
       <BeliefBanner />
       {world && <div style={{ ...overlay, top: 64, left: 'var(--space-4)', bottom: 'calc(var(--space-4) + var(--ticker-height) + var(--space-3))' }}><NetworkPanel /></div>}
+      {world && <Minimap hidden={timelineOpen} />}
       {world && dock && <div className={`hud card-dock${dockOut ? ' out' : ''}`}><NationCard countryId={dock.id} regionId={dock.regionId} /></div>}
       <DiplomacyLegend hidden={timelineOpen} />
       {world && !timelineOpen && <div className="hud decree-slot"><DecreeBox /></div>}
@@ -55,6 +57,7 @@ export function App() {
         <div className="news-slot"><NewsBroadcast /></div>
       )}
       <ClosingCard />
+      {world && <HoverTooltip />}
       {showCreate && (
         <div style={{ ...overlay, inset: 0, zIndex: 10, background: 'color-mix(in srgb, var(--color-bg) 38%, transparent)', display: 'grid', placeItems: 'center' }} onClick={() => world && setCreating(false)}>
           <div onClick={(e) => e.stopPropagation()}>

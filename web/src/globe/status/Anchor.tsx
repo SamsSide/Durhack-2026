@@ -13,10 +13,11 @@ export function Anchor({ pos, dx = 0, dy = 0, children }: { pos: P3; dx?: number
     const el = ref.current;
     if (!el) return;
     const facing = camera.position.dot(dir) / camera.position.length();
-    el.style.opacity = facing > 0.15 ? '1' : '0';
+    const covered = document.querySelector('.closing-veil') !== null;
+    el.style.opacity = facing > 0.15 && !covered ? '1' : '0';
   });
   return (
-    <Html position={pos} center zIndexRange={[30, 0]} style={{ pointerEvents: 'none' }}>
+    <Html position={pos} center zIndexRange={[4, 0]} style={{ pointerEvents: 'none' }}>
       <div ref={ref} className="gs-anchor" style={{ transform: `translate(${dx}px, ${dy}px)` }}>{children}</div>
     </Html>
   );

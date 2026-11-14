@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useWorld } from '../../state/world';
 import { useProvinceMesh } from '../mesh/context';
-import { loadModels } from './models';
+import { ensureStyles, loadModels, stylesInUse } from './models';
 import type { ModelSet } from './models';
 import { TileGeos } from './placement';
 import { StructureField } from './StructureField';
@@ -24,12 +24,20 @@ export function Structures() {
 
   useEffect(() => {
     if (!mesh || !world || !models) return;
-    const f = new StructureField(world, new TileGeos(world, mesh.heights), models);
-    field.current = f;
-    stale.current = true;
-    setGroup(f.group);
-    const unsub = useWorld.subscribe((s, prev) => { if (s.version !== prev.version) stale.current = true; });
-    return () => { unsub(); f.dispose(); field.current = null; setGroup(null); };
+    let live = true;
+    let f: StructureField | null = null;
+    let unsub: (() => void) | null = null;
+    // Fetch only the styles this world's living nations use (cached after the first time), then build.
+    const { styles, nomadic } = stylesInUse(world.countries);
+    void ensureStyles(models, styles, nomadic).then(() => {
+      if (!live) return;
+      f = new StructureField(world, new TileGeos(world, mesh.heights), models);
+      field.current = f;
+      stale.current = true;
+      setGroup(f.group);
+      unsub = useWorld.subscribe((s, prev) => { if (s.version !== prev.version) stale.current = true; });
+    });
+    return () => { live = false; unsub?.(); f?.dispose(); field.current = null; setGroup(null); };
   }, [mesh, world, models]);
 
   useFrame(({ camera, clock }, dt) => {

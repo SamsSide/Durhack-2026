@@ -4,6 +4,7 @@ import { BeliefBorders } from './BeliefBorders';
 import { Capitals } from './Capitals';
 import { NationLabels } from './NationLabels';
 import { Status } from '../status/Status';
+import { CameraBridge } from '../hover/cameraBridge';
 
 export function Political() {
   return (
@@ -13,6 +14,7 @@ export function Political() {
       <Capitals />
       <NationLabels />
       <Status />
+      <CameraBridge />
     </>
   );
 }

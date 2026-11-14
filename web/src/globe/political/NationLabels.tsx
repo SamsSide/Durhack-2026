@@ -1,44 +1,80 @@
-// Nation and region names with flags that always face the camera. Lane b.
-import { useEffect, useMemo, useRef, useState } from 'react';
+// Nation and region names, Age of History style: each name faces the camera, is turned in the
+// screen plane to its nation's long axis, spans about 70% of the land with widely spaced Cinzel
+// capitals, and bends around the globe so terrain never clips it (#106). Lane b.
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Billboard, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { flagSvg, regionOwner } from '@terra/shared';
 import type { FlagSpec } from '@terra/shared';
 import { useWorld } from '../../state/world';
-import { CLOSE } from '../constants';
+import { CLOSE, LAND_BASE, MOUNTAIN_BONUS, RELIEF } from '../constants';
 import { getPalette } from '../palette';
 import { useProvinceMesh } from '../mesh/context';
 import { statusOf } from '../status/statusTint';
+import { labelAxis, labelFont, mainBody, subscribeFont } from './labelLayout';
+import type { LabelAxis } from './labelLayout';
 
-const EXTRA_LIFT = 0.002;
-const RENDER_ORDER = 20;
+const RENDER_ORDER = 1000; // after the globe, borders and units: never hidden by terrain
+const TOP = LAND_BASE + RELIEF + MOUNTAIN_BONUS; // the highest terrain can reach
 const FADE_FAR = 1.5; // nation names fully visible above this camera distance
 const FADE_NEAR = 1.3; // and gone below this
+const FLAG_NEAR = 2.3; // flags beside names only when zoomed in closer than this
+const SPAN = 0.7; // the name spans this share of the nation's projected length
+const LS_BASE = 0.35; // letter spacing (em) when the size is free
+const LS_MIN = 0.08, LS_MAX = 1.4;
+const MAX_ANGLE = (60 * Math.PI) / 180;
+const SIZES = { nation: { min: 13, max: 56 }, region: { min: 11, max: 20 } }; // px, cap height-ish
+const LIMB = 0.9; // names stay inside this share of the visible disc
+const PANEL_GAP = 10; // px kept clear of the side panels
 
-interface LabelData {
+/** The free screen band between the network panel (left) and the nation card (right), in px. */
+const band = { left: 0, right: Infinity, t: 0 };
+function freeBand(width: number): { left: number; right: number } {
+  const now = performance.now();
+  if (now - band.t > 400 && typeof document !== 'undefined') {
+    band.t = now;
+    let left = 0, right = width;
+    const net = document.querySelector('.tn-net');
+    if (net) { const r = net.getBoundingClientRect(); if (r.width > 0 && r.left < width / 2) left = Math.max(left, r.right); }
+    const card = document.querySelector('.card-dock:not(.out)');
+    if (card) { const r = card.getBoundingClientRect(); if (r.width > 0) right = Math.min(right, r.left); }
+    band.left = left + PANEL_GAP; band.right = right - PANEL_GAP;
+  }
+  return { left: band.left, right: Math.min(band.right, width) };
+}
+
+interface LabelData extends LabelAxis {
   key: string;
   name: string;
   kind: 'nation' | 'region';
   owner: number;
-  pos: [number, number, number];
-  size: number;
+  dir: [number, number, number];
   flag: FlagSpec;
 }
 
-const clamp01 = (x: number): number => Math.min(1, Math.max(0, x));
+const clamp = (x: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, x));
+const clamp01 = (x: number): number => clamp(x, 0, 1);
 
-function FlagLabel({ data }: { data: LabelData }) {
+function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }) {
   const INK = getPalette().ink;
   const HALO = getPalette().parchment;
   const groupRef = useRef<THREE.Group>(null);
+  const innerRef = useRef<THREE.Group>(null);
   const textRef = useRef<any>(null); // troika Text instance
+  const flagRef = useRef<THREE.Mesh>(null);
   const flagMat = useRef<THREE.MeshBasicMaterial>(null);
   const strike = useRef<THREE.Mesh>(null);
-  const [textWidth, setTextWidth] = useState(data.name.length * data.size * 0.75);
+  const strikeMat = useRef<THREE.MeshBasicMaterial>(null);
+  const meas = useRef<{ w: number; ls: number } | null>(null);
+  const applied = useRef({ ls: -1, t: 0 });
+  const strikeKey = useRef('');
 
-  const posVec = useMemo(() => new THREE.Vector3(...data.pos), [data.pos]);
-  const dir = useMemo(() => posVec.clone().normalize(), [posVec]);
+  const n = Math.max(1, data.name.length);
+  const dir = useMemo(() => new THREE.Vector3(...data.dir), [data.dir]);
+  const axis = useMemo(() => new THREE.Vector3(...data.axis), [data.axis]);
+  const minor = useMemo(() => new THREE.Vector3(...data.minor), [data.minor]);
+  const tmp = useMemo(() => ({ right: new THREE.Vector3(), up: new THREE.Vector3(), pos: new THREE.Vector3(), ndc: new THREE.Vector3() }), []);
 
   const flagKey = data.key + JSON.stringify(data.flag);
   const texture = useMemo(() => {
@@ -48,84 +84,171 @@ function FlagLabel({ data }: { data: LabelData }) {
     return t;
   }, [flagKey]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => texture.dispose(), [texture]);
+  useEffect(() => () => strike.current?.geometry.dispose(), []);
 
-  const flagH = data.size * 0.75;
-  const flagW = flagH * 1.5;
-  const gap = data.size * 0.25;
-  const total = flagW + gap + textWidth;
-  const flagX = -total / 2 + flagW / 2;
-  const textX = -total / 2 + flagW + gap;
-
-  useFrame(({ camera }) => {
+  useFrame(({ camera, size }) => {
     const g = groupRef.current;
-    if (!g) return;
+    const inner = innerRef.current;
+    if (!g || !inner) return;
     const d = camera.position.length();
     let alpha = data.kind === 'nation'
       ? clamp01((d - FADE_NEAR) / (FADE_FAR - FADE_NEAR))
       : clamp01((CLOSE - d) / 0.2);
+    // Far-side hiding: fade out well before the limb so a name never shows through the planet.
     const facing = camera.position.dot(dir) / d;
-    if (facing < 0.1) alpha = 0;
+    alpha *= clamp01((facing - 0.25) / 0.15);
     const deleted = statusOf(data.owner) === 'deleted';
     if (deleted) alpha *= 0.5;
-    if (strike.current) strike.current.visible = deleted;
     g.visible = alpha > 0.01;
     if (!g.visible) return;
-    // Keep names legible at any zoom: scale with distance from the surface.
-    g.scale.setScalar(Math.min(1.6, Math.max(0.4, (d - 1) / 1.5)));
-    const t = textRef.current;
-    if (t) {
-      t.fillOpacity = alpha;
-      t.outlineOpacity = alpha;
+
+    // Lift above the tallest terrain plus a margin that grows as the camera pulls back.
+    const R = TOP + 0.004 + 0.008 * Math.max(0, d - 1);
+    tmp.pos.copy(dir).multiplyScalar(R);
+    g.position.copy(tmp.pos);
+
+    // The nation's axis in the screen plane.
+    const e = camera.matrixWorld.elements;
+    tmp.right.set(e[0]!, e[1]!, e[2]!);
+    tmp.up.set(e[4]!, e[5]!, e[6]!);
+    const dx = axis.dot(tmp.right) * data.major;
+    const dy = axis.dot(tmp.up) * data.major;
+    const L = Math.hypot(dx, dy);
+    const across = Math.hypot(minor.dot(tmp.right), minor.dot(tmp.up)) * data.across;
+    let angle = 0;
+    if (data.elongated) {
+      angle = Math.atan2(dy, dx);
+      if (angle > Math.PI / 2) angle -= Math.PI; // keep it upright
+      else if (angle < -Math.PI / 2) angle += Math.PI;
+      angle = clamp(angle, -MAX_ANGLE, MAX_ANGLE);
     }
-    if (flagMat.current) flagMat.current.opacity = alpha;
+
+    // Room: never past the limb of the visible disc, never under the side panels.
+    const dist = camera.position.distanceTo(tmp.pos);
+    const ux = Math.cos(angle), uy = Math.sin(angle);
+    const px = tmp.pos.dot(tmp.right), py = tmp.pos.dot(tmp.up);
+    const disc = (LIMB * (dist / d)) / Math.sqrt(Math.max(1e-3, 1 - 1 / (d * d))); // disc radius at the label's depth
+    const pu = px * ux + py * uy;
+    const limbHalf = Math.max(0, -Math.abs(pu) + Math.sqrt(Math.max(0, pu * pu + disc * disc - (px * px + py * py))));
+    const fov = ((camera as THREE.PerspectiveCamera).fov ?? 45) * (Math.PI / 180);
+    const wpp = (2 * dist * Math.tan(fov / 2)) / Math.max(1, size.height); // world units per pixel
+    tmp.ndc.copy(tmp.pos).project(camera);
+    const sx = ((tmp.ndc.x + 1) / 2) * size.width;
+    const fb = freeBand(size.width);
+    const roomPx = Math.min(sx - fb.left, fb.right - sx);
+    const panelHalf = Math.abs(ux) > 0.05 ? (Math.max(0, roomPx) * wpp) / Math.abs(ux) : Infinity;
+    const halfMax = Math.min(limbHalf, panelHalf);
+
+    // Size: span SPAN of the projected length, within the room, pixel limits and the nation's thickness.
+    const lim = SIZES[data.kind];
+    const m = meas.current;
+    const w0 = m ? Math.max(0.3 * n, m.w - m.ls * n) : 0.72 * n; // width in em with no spacing
+    const W = Math.min(SPAN * L, 2 * halfMax);
+    let f = W / (w0 + LS_BASE * n);
+    f = Math.min(f, Math.max(0.55 * across, lim.min * wpp), lim.max * wpp);
+    f = Math.max(f, lim.min * wpp);
+    const lsWanted = clamp((W / f - w0) / n, LS_MIN, LS_MAX);
+    const ls = Math.round(lsWanted / 0.05) * 0.05;
+    // Too little room even at the smallest size (at the limb, under a panel): fade the name out.
+    const showFlag = d < FLAG_NEAR;
+    const need = (f * (w0 + ls * n)) / 2 + (showFlag ? 1.6 * f : 0);
+    alpha *= clamp01((1.25 - need / Math.max(1e-6, halfMax)) / 0.25);
+    if (roomPx < 0) alpha = 0;
+    g.visible = alpha > 0.01;
+    if (!g.visible) return;
+
+    inner.rotation.z = angle;
+    inner.scale.setScalar(f);
+
+    const t = textRef.current;
+    const now = performance.now();
+    if (t && ls !== applied.current.ls && (applied.current.ls < 0 || now - applied.current.t > 300)) {
+      applied.current = { ls, t: now };
+      t.letterSpacing = ls;
+      t.sync();
+    }
+    // Bend the name around the globe: a convex cylinder of the label's radius (in text units).
+    const r = R / f;
+    if (t) {
+      t.curveRadius = -r;
+      t.fillOpacity = alpha * 0.8; // ink at 80%
+      t.outlineOpacity = alpha * 0.55;
+    }
+
+    const textW = m ? m.w + (applied.current.ls - m.ls) * n : w0 + ls * n;
+    const fl = flagRef.current;
+    if (fl) {
+      fl.visible = showFlag;
+      if (showFlag) {
+        const x = -textW / 2 - 0.35 - 0.6; // flag 1.2 x 0.8 em, a small gap before the name
+        const a = x / r;
+        fl.position.set(r * Math.sin(a), 0, -r * (1 - Math.cos(a)));
+        fl.rotation.set(0, a, 0);
+      }
+    }
+    if (flagMat.current) flagMat.current.opacity = alpha * clamp01((FLAG_NEAR - d) / 0.2);
+
+    const s = strike.current;
+    if (s) {
+      s.visible = deleted;
+      if (deleted) {
+        const half = Math.min(Math.PI * 0.9, (textW / 2 + 0.15) / r);
+        const key = `${r.toPrecision(2)}:${half.toPrecision(2)}`;
+        if (key !== strikeKey.current) {
+          strikeKey.current = key;
+          s.geometry.dispose();
+          s.geometry = new THREE.CylinderGeometry(r, r, 0.08, 24, 1, true, -half, 2 * half);
+        }
+        s.position.set(0, 0, -r);
+        if (strikeMat.current) strikeMat.current.opacity = 0.75 * alpha;
+      }
+    }
   });
 
   return (
-    <group ref={groupRef} position={data.pos} renderOrder={RENDER_ORDER}>
+    <group ref={groupRef} renderOrder={RENDER_ORDER}>
       <Billboard follow>
-      <mesh position={[flagX, 0, 0]} renderOrder={RENDER_ORDER}>
-        <planeGeometry args={[flagW, flagH]} />
-        <meshBasicMaterial ref={flagMat} map={texture} transparent depthWrite={false} toneMapped={false} />
-      </mesh>
-      <Text
-        ref={textRef}
-        position={[textX, 0, 0]}
-        anchorX="left"
-        anchorY="middle"
-        fontSize={data.size}
-        letterSpacing={0.15}
-        color={INK}
-        outlineWidth={0.002}
-        outlineColor={HALO}
-        renderOrder={RENDER_ORDER}
-        onSync={(t: any) => {
-          const b = t.textRenderInfo?.blockBounds;
-          if (b) {
-            const w = b[2] - b[0];
-            if (Math.abs(w - textWidth) > 1e-4) setTextWidth(w);
-          }
-        }}
-      >
-        {data.name}
-        <meshBasicMaterial transparent depthWrite={false} toneMapped={false} />
-      </Text>
-      <mesh ref={strike} position={[0, 0, 0.0005]} visible={false} renderOrder={RENDER_ORDER + 1}>
-        <planeGeometry args={[total, Math.max(0.0012, data.size * 0.07)]} />
-        <meshBasicMaterial color={INK} transparent opacity={0.75} depthWrite={false} toneMapped={false} />
-      </mesh>
+        <group ref={innerRef}>
+          <mesh ref={flagRef} renderOrder={RENDER_ORDER} visible={false}>
+            <planeGeometry args={[1.2, 0.8]} />
+            <meshBasicMaterial ref={flagMat} map={texture} transparent depthTest={false} depthWrite={false} toneMapped={false} side={THREE.DoubleSide} />
+          </mesh>
+          <Text
+            ref={textRef}
+            font={font}
+            anchorX="center"
+            anchorY="middle"
+            fontSize={1}
+            color={INK}
+            outlineWidth="7%"
+            outlineColor={HALO}
+            renderOrder={RENDER_ORDER}
+            onSync={(t: any) => {
+              const b = t.textRenderInfo?.blockBounds;
+              if (b) meas.current = { w: b[2] - b[0], ls: t.letterSpacing ?? 0 };
+            }}
+          >
+            {data.name.toUpperCase()}
+            <meshBasicMaterial transparent depthTest={false} depthWrite={false} toneMapped={false} />
+          </Text>
+          <mesh ref={strike} visible={false} renderOrder={RENDER_ORDER + 1}>
+            <planeGeometry args={[0.01, 0.01]} />
+            <meshBasicMaterial ref={strikeMat} color={INK} transparent opacity={0.75} depthTest={false} depthWrite={false} toneMapped={false} side={THREE.DoubleSide} />
+          </mesh>
+        </group>
       </Billboard>
     </group>
   );
 }
 
-function lift(c: [number, number, number]): [number, number, number] {
+function unit(c: [number, number, number]): [number, number, number] {
   const len = Math.hypot(c[0], c[1], c[2]) || 1;
-  const k = (len + EXTRA_LIFT) / len;
-  return [c[0] * k, c[1] * k, c[2] * k];
+  return [c[0] / len, c[1] / len, c[2] / len];
 }
 
 export function NationLabels() {
   const mesh = useProvinceMesh();
+  const font = useSyncExternalStore(subscribeFont, labelFont);
   const [labels, setLabels] = useState<LabelData[]>([]);
 
   useEffect(() => {
@@ -152,16 +275,17 @@ export function NationLabels() {
       for (const [id, tiles] of byOwner) {
         const c = world.countries[id];
         if (!c || c.alive === false || tiles.length === 0 || !c.name) continue;
-        const size = Math.min(0.12, Math.max(0.03, 0.018 * Math.sqrt(tiles.length)));
-        out.push({ key: `n${id}`, name: c.name, kind: 'nation', owner: id, pos: lift(mesh.centroidOf(tiles)), size, flag: c.flag });
+        const body = mainBody(world, tiles);
+        const centre = mesh.centroidOf(body);
+        out.push({ key: `n${id}`, name: c.name, kind: 'nation', owner: id, dir: unit(centre), flag: c.flag, ...labelAxis(world, body, centre) });
       }
       for (const r of world.regions) {
         if (!r.name || r.tiles.length === 0) continue;
         const owner = regionOwner(world, r.id);
         const oc = owner >= 0 ? world.countries[owner] : undefined;
         if (!oc || oc.alive === false) continue;
-        const size = 0.5 * Math.min(0.12, Math.max(0.03, 0.018 * Math.sqrt(byOwner.get(owner)?.length ?? 1)));
-        out.push({ key: `r${r.id}`, name: r.name, kind: 'region', owner, pos: lift(mesh.centroidOf(r.tiles)), size: Math.max(size, 0.02), flag: r.flag });
+        const centre = mesh.centroidOf(r.tiles);
+        out.push({ key: `r${r.id}`, name: r.name, kind: 'region', owner, dir: unit(centre), flag: r.flag, ...labelAxis(world, r.tiles, centre) });
       }
       setLabels(out);
     };
@@ -178,7 +302,7 @@ export function NationLabels() {
   return (
     <>
       {labels.map((l) => (
-        <FlagLabel key={l.key} data={l} />
+        <FlagLabel key={l.key} data={l} font={font} />
       ))}
     </>
   );

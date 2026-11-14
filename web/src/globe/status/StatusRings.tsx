@@ -46,7 +46,7 @@ function Inner({ mesh }: { mesh: ProvinceMesh }) {
   const group = useMemo(() => new THREE.Group(), []);
   const rings = useMemo(() => {
     const pal = getPalette();
-    return { cut: makeRing(group, pal.holo, 2.6, 6), deleted: makeRing(group, pal.ink, 2.2, 5) };
+    return { cut: makeRing(group, pal.holo, 4.2, 9), deleted: makeRing(group, pal.ink, 2.2, 5) };
   }, [group]);
 
   useEffect(() => {
@@ -92,7 +92,7 @@ function Inner({ mesh }: { mesh: ProvinceMesh }) {
     const t = clock.elapsedTime;
     for (const r of Object.values(rings)) r.mat.resolution.set(size.width, size.height);
     rings.cut.mat.dashOffset = -t * CRAWL;
-    rings.cut.mat.opacity = 0.78 + 0.22 * Math.sin(t * 2.2);
+    rings.cut.mat.opacity = 0.9 + 0.1 * Math.sin(t * 2.2);
     rings.deleted.mat.opacity = 0.85;
   });
 
