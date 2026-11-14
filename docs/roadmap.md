@@ -9,14 +9,16 @@
 
 ## Where we are
 
-**Not started.** Next: `durhack-init` (team and lanes), then `durhack-prizes` (research every
-prize), then `durhack-plan` kickoff (idea, plan, contracts, rows).
+**Team set up** (3 lanes, roles TBD). Next: `durhack-prizes` (research every prize announced at
+the opening ceremony), then `durhack-plan` kickoff (idea, roles, plan, contracts, rows).
 
 ## Up next, per lane
 
 | Lane | Person | Next row | Waiting on |
 | --- | --- | --- | --- |
-| _set by durhack-init_ | | | |
+| a | @SamsSide | set by `durhack-plan` | idea and plan |
+| b | @CutGrass88 | set by `durhack-plan` | idea and plan |
+| c | @Justin-CODING-PY | set by `durhack-plan` | idea and plan |
 
 ## Checkpoints
 
@@ -29,31 +31,36 @@ prize), then `durhack-plan` kickoff (idea, plan, contracts, rows).
 
 ## The lanes
 
-*Placeholder for 2 lanes; `durhack-init` redraws it with one column per person, and
-`durhack-plan` fills in the rows. Dotted arrows are cross-lane needs (contracts).*
+*One column per person; `durhack-plan` fills in the rows and roles. Dotted arrows are
+cross-lane needs (contracts).*
 
 ```mermaid
 flowchart LR
   CP0(["CP0 · Contracts agreed"]):::cp
-  subgraph A["Lane A · TBD"]
+  subgraph A["Lane A · TBD (@SamsSide)"]
     direction TB
     A1["A1 · Scaffold + mock"]:::todo --> A2["A2 · TBD"]:::todo --> A3["A3 · TBD"]:::todo
   end
-  subgraph B["Lane B · TBD"]
+  subgraph B["Lane B · TBD (@CutGrass88)"]
     direction TB
     B1["B1 · Scaffold + mock"]:::todo --> B2["B2 · TBD"]:::todo --> B3["B3 · TBD"]:::todo
+  end
+  subgraph C["Lane C · TBD (@Justin-CODING-PY)"]
+    direction TB
+    C1["C1 · Scaffold + mock"]:::todo --> C2["C2 · TBD"]:::todo --> C3["C3 · TBD"]:::todo
   end
   CP1(["CP1 · First end-to-end"]):::cp
   CP2(["CP2 · Feature freeze"]):::cp
   CP3(["CP3 · Demo + submission"]):::cp
-  CP0 --> A1 & B1
+  CP0 --> A1 & B1 & C1
   A2 --> CP1
   B2 --> CP1
-  CP1 --> A3 & B3
+  C2 --> CP1
+  CP1 --> A3 & B3 & C3
   A3 --> CP2
   B3 --> CP2
+  C3 --> CP2
   CP2 --> CP3
-  A1 -. "C1" .-> B2
   classDef done fill:#2da44e,color:#fff
   classDef wip fill:#d4a72c,color:#000
   classDef next fill:#0969da,color:#fff
