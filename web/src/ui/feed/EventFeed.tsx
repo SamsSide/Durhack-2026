@@ -1,10 +1,12 @@
 import { flagSvg } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import { useFeed } from './useFeed';
-import type { FeedCard, FeedKind } from './useFeed';
+import type { FeedCard, FeedTag } from './useFeed';
+
+type IconKind = 'city' | 'war' | 'treaty' | 'alliance' | 'fall' | 'born' | 'decree' | 'wonder' | 'death' | 'succession';
 import './feed.css';
 
-const ICONS: Record<FeedKind, JSX.Element> = {
+const ICONS: Record<IconKind, JSX.Element> = {
   // city tower
   city: <path d="M5 20V9l2-1V5h2v3l2 1v11zm9 0V12l3-1.5V8h2v2.5L21 12v8zM8 14h2v2H8zm9 2h2v2h-2z" />,
   // crossed swords
@@ -26,7 +28,12 @@ const ICONS: Record<FeedKind, JSX.Element> = {
   succession: <path d="M3 18l-1-11 5 4 5-7 5 7 5-4-1 11zm1 1.5h16V21H4z" />,
 };
 
-function Icon({ kind }: { kind: FeedKind }) {
+const ICON_OF: Record<FeedTag, IconKind> = {
+  WAR: 'war', PEACE: 'treaty', FALL: 'fall', SECESSION: 'born', CAPITAL: 'city', SILENCE: 'death', RETURN: 'born',
+  DECREE: 'decree', WONDER: 'wonder', COUP: 'succession', TRADE: 'alliance', DECADE: 'city',
+};
+
+function Icon({ kind }: { kind: IconKind }) {
   return (
     <svg className={`tn-feed-icon tn-feed-${kind}`} viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
       {ICONS[kind]}
@@ -37,7 +44,9 @@ function Icon({ kind }: { kind: FeedKind }) {
 function open(card: FeedCard) {
   const main = card.countries[0];
   if (!main) return;
-  useWorld.getState().flyTo(main.id);
+  const w = useWorld.getState();
+  w.select(main.id);
+  w.flyTo(main.id);
   if (card.tileId != null) {
     window.dispatchEvent(new CustomEvent('terra:focus-tile', { detail: { tileId: card.tileId } }));
   }
@@ -45,15 +54,16 @@ function open(card: FeedCard) {
 
 function Card({ card }: { card: FeedCard }) {
   return (
-    <button type="button" className={`tn-feed-card tn-lacquer tn-frame tn-frame--slim${card.gone ? ' tn-feed-out' : ''}`} onClick={() => open(card)} title={card.title}>
+    <button type="button" className={`tn-feed-card tn-lacquer tn-frame tn-frame--slim${card.gone ? ' tn-feed-out' : ''}`} onClick={() => open(card)} aria-label={`${card.tag}: ${card.title}`}>
       <span className="tn-feed-thumb">
         {card.thumb && <img src={card.thumb} alt="" width={144} height={81} />}
-        <Icon kind={card.kind} />
+        <Icon kind={ICON_OF[card.tag]} />
       </span>
       <span className="tn-feed-text">
         <span className="tn-feed-flags">
+          <span className={`tn-feed-tag tn-feed-tag-${card.tag.toLowerCase()}`}>{card.tag}</span>
           {card.countries.map((c) => (
-            <span key={c.id} className="tn-feed-flag tn-flag-plate" dangerouslySetInnerHTML={{ __html: flagSvg(c.flag, 30, 20) }} />
+            <span key={c.id} className="tn-feed-flag tn-flag-plate" dangerouslySetInnerHTML={{ __html: flagSvg(c.flag, 24, 16) }} />
           ))}
           <span className="tn-feed-year">Y{card.year}</span>
         </span>
