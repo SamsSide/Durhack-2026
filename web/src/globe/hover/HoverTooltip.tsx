@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { flagSvg } from '@terra/shared';
 import { useWorld } from '../../state/world';
+import { useSlowVersion } from '../../ui/useSlowVersion';
 import { effectsLine } from '../terrain/effects';
 import { useHover } from '../camera/usePicking';
 import { useWonders } from '../wonders/store';
@@ -20,7 +21,7 @@ const TERRAIN_NAMES: Record<string, string> = {
 export function HoverTooltip() {
   const hovered = useHover((s) => s.tile);
   const world = useWorld((s) => s.world);
-  const version = useWorld((s) => s.version);
+  const version = useSlowVersion();
   const [tile, setTile] = useState(-1);
   const box = useRef<HTMLDivElement>(null);
   const pointer = useRef({ x: 0, y: 0, down: false });

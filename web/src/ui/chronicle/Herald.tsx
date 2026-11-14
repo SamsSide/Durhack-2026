@@ -93,7 +93,6 @@ function Tab({ d, leaving }: { d: Dispatch; leaving: boolean }) {
  */
 export function Herald({ observed }: { observed: CutPeriod[] }) {
   const world = useWorld((s) => s.world);
-  const events = useWorld((s) => s.recentEvents);
   const [tabs, setTabs] = useState<{ d: Dispatch; id: number; leaving: boolean }[]>([]);
   const slotRef = useRef<HTMLDivElement | null>(null);
   const seen = useRef<Set<string>>(new Set());
@@ -119,8 +118,11 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
 
   useEffect(() => () => { timers.current.forEach((t) => window.clearTimeout(t)); }, []);
 
+  // B8: the events are read from a store subscription, not a selector, so the stack does not re-render on
+  // every batch of events (about 13 a second at the top gear), only when a dispatch is added or leaves.
   useEffect(() => {
     if (!world) return;
+    const take = (events: WorldEvent[]) => {
     if (worldId.current !== world.id) {
       worldId.current = world.id;
       seen.current = new Set();
@@ -218,7 +220,10 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
         });
       }
     }
-  }, [events, world]);
+    };
+    take(useWorld.getState().recentEvents);
+    return useWorld.subscribe((st, prev) => { if (st.recentEvents !== prev.recentEvents) take(st.recentEvents); });
+  }, [world]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Publish the stack's bottom edge so other overlays (the belief banner) can sit below it.
   const any = tabs.length > 0;

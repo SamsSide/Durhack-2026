@@ -224,12 +224,12 @@ export function Trade() {
     return () => { off(); offReset(); };
   }, [pool, world?.id]);
 
+  const canvasBox = useRef({ at: -1e9, left: 0, top: 0 });
   const tmp = useMemo(() => new THREE.Vector3(), []);
   const proj = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera, size }) => {
     const now = performance.now();
     const camDir = camera.position.clone().normalize();
-    const rect = dom.getBoundingClientRect();
     const toScreen = (v: THREE.Vector3): [number, number] => {
       proj.copy(v).project(camera);
       return [(proj.x * 0.5 + 0.5) * size.width, (-proj.y * 0.5 + 0.5) * size.height];
@@ -242,6 +242,10 @@ export function Trade() {
       let best: Slot | null = null, bestD = HIT_PX;
       const p = pointer.current;
       if (p && anyActive) {
+        // B8: the canvas box is read only while the pointer is tested against an arc, and at most four times
+        // a second (it used to be read every frame, which forced a layout every frame).
+        const rect = canvasBox.current;
+        if (now - rect.at > 250) { const r = dom.getBoundingClientRect(); rect.at = now; rect.left = r.left; rect.top = r.top; }
         const px = p.x - rect.left, py = p.y - rect.top;
         for (const s of pool.slots) {
           if (!s.active || now - s.start < TRAVEL_MS * 0.6) continue;

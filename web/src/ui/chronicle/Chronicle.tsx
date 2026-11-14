@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AgentStatus, World } from '@terra/shared';
 import { useWorld } from '../../state/world';
+import { useSlowVersion } from '../useSlowVersion';
 import { Herald } from './Herald';
 import { Ticker } from './Ticker';
 import { Timeline } from './Timeline';
@@ -53,7 +54,7 @@ function useObservedCuts(world: World | null, agents: AgentStatus[]): CutPeriod[
 
 export function Chronicle() {
   const world = useWorld((s) => s.world);
-  useWorld((s) => s.version);
+  useSlowVersion();
   const agents = useWorld((s) => s.agents);
   const selectedId = useWorld((s) => s.selectedCountryId);
   const select = useWorld((s) => s.select);
