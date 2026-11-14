@@ -22,7 +22,7 @@ export interface FeedCard {
 export const SHOW_MAX = 5;
 const KEEP_MAX = 20;
 const LIFE_MS = 40_000;
-export const FADE_MS = 400;
+export const FADE_MS = 200;   // --motion-exit, plus a frame
 const PACE_MS = 2000;          // at most one card every 2 s
 const STALE_MS = 20_000;       // a waiting candidate older than this is dropped (it stays in the chronicle)
 const QUIET_MS = 6000;         // low news is grouped into a decade card only after this much quiet

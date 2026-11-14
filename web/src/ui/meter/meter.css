@@ -8,7 +8,7 @@
   background: linear-gradient(180deg, var(--lacquer-hi), var(--lacquer));
   box-shadow: var(--bevel-dark), 0 0 0 1px rgba(201,162,75,.3), 0 2px 3px rgba(0,0,0,.5);
   text-shadow: var(--engrave-on-dark);
-  transition: color var(--dur-fast);
+  transition: color var(--motion-fast) var(--motion-ease-swap);
 }
 .tn-meter .num { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--gilt-hi); }
 .tn-meter .dot { color: var(--gilt-lo); margin: 0 2px; }

@@ -27,7 +27,7 @@
 .tn-net-tab {
   display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px 0 14px; cursor: pointer;
   font-family: var(--font-serif); color: var(--color-text);
-  transition: transform var(--dur-fast) var(--ease-out);
+  transition: transform var(--motion-fast) var(--motion-ease);
 }
 .tn-net-tab:hover .tn-nt-title, .tn-net-tab:hover > svg { color: #fff1c2; }
 .tn-net-tab:active { transform: translateY(1px); }
@@ -78,7 +78,7 @@
   border: 1px solid var(--color-ink-muted); border-radius: var(--radius-1);
   background: linear-gradient(180deg, #f8f0dc 0%, #e6d5ad 100%);
   box-shadow: var(--bevel-paper), 0 1px 2px rgba(42, 31, 20, 0.35);
-  transition: transform var(--dur-fast) var(--ease-out);
+  transition: transform var(--motion-fast) var(--motion-ease);
 }
 .tn-net-switch:hover:not(:disabled) { border-color: var(--gilt-lo); background: linear-gradient(180deg, #fbf5e6 0%, #ead9b2 100%); }
 .tn-net-switch:active:not(:disabled) { transform: translateY(1px); }
@@ -125,7 +125,7 @@
 .tn-node {
   position: absolute; cursor: pointer; border: 0;
   display: block; padding: 2px;   /* the gilt bezel (tn-roundel) */
-  transition: transform var(--dur-fast) var(--ease-out);
+  transition: transform var(--motion-fast) var(--motion-ease);
 }
 .tn-node:hover { transform: scale(1.08); }
 .tn-node:active { transform: scale(1.02) translateY(1px); }
@@ -229,7 +229,8 @@
 .tn-net-world .tn-switch { margin-top: 1px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .tn-node, .tn-node-count, .tn-net-tab, .tn-net-switch, .tn-switch > i, .tn-state i.tn-pulse { animation: none; transition: none; }
+  .tn-node, .tn-node-count, .tn-net-switch, .tn-switch > i, .tn-state i.tn-pulse { animation: none; transition: none; }
+  .tn-net-tab { transition: none; }
   .tn-node:hover, .tn-node:active, .tn-net-tab:active, .tn-net-switch:active:not(:disabled) { transform: none; }
 }
 
@@ -239,3 +240,8 @@
 .tn-net-short .tn-net-world .tn-net-switch { align-items: center; }
 .tn-net-short .tn-tray { padding: 6px 10px 7px 12px; }
 .tn-net-short .tn-tray-council { margin-top: 6px; padding-top: 4px; gap: 3px; }
+
+/* Motion: the open panel slides in from its edge and leaves the same way; the folded strip fades back in. */
+.tn-net { --m-x: calc(-1 * var(--motion-slide)); animation: tn-m-in var(--motion-panel) var(--motion-ease) backwards; }
+.tn-net.tn-m-out { animation: tn-m-out var(--motion-exit) var(--motion-ease-exit) forwards; }
+.tn-net-tab { --m-x: calc(-1 * var(--motion-slide-sm)); animation: tn-m-in var(--motion-base) var(--motion-ease) backwards; }

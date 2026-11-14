@@ -184,7 +184,8 @@ export function Minimap({ hidden = false }: { hidden?: boolean }) {
     return () => cancelAnimationFrame(raf);
   }, [world, hidden]);
 
-  if (!world || hidden) return null;
+  // Hidden (the Chronicle sheet is open): it stays mounted and fades, so it never pops out or back in.
+  if (!world) return null;
 
   const turnTo = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -194,8 +195,8 @@ export function Minimap({ hidden = false }: { hidden?: boolean }) {
 
   return (
     <>
-    <MapModeStrip />
-    <div className="hud minimap tn-lacquer tn-frame tn-frame--slim" title="Click or drag to turn the globe">
+    <MapModeStrip hidden={hidden} />
+    <div className={`hud minimap tn-lacquer tn-frame tn-frame--slim${hidden ? ' mm-hidden' : ''}`} aria-hidden={hidden || undefined} title="Click or drag to turn the globe">
       <canvas ref={mapRef} width={W} height={H} />
       <canvas
         ref={viewRef}
@@ -211,11 +212,11 @@ export function Minimap({ hidden = false }: { hidden?: boolean }) {
 }
 
 /** Icon-only map-mode buttons on the top edge of the minimap (#245). Keys 1 to 6 still switch. */
-function MapModeStrip() {
+function MapModeStrip({ hidden = false }: { hidden?: boolean }) {
   const mapMode = useWorld((s) => s.mapMode);
   const setMapMode = useWorld((s) => s.setMapMode);
   return (
-    <div className="hud mm-modes tn-lacquer tn-frame tn-frame--slim" role="toolbar" aria-label="Map mode">
+    <div className={`hud mm-modes tn-lacquer tn-frame tn-frame--slim${hidden ? ' mm-hidden' : ''}`} aria-hidden={hidden || undefined} role="toolbar" aria-label="Map mode">
       {MODES.map((m, i) => {
         const tip = `Map mode: ${MAP_MODE_LABELS[m]}`;
         return (

@@ -18,8 +18,9 @@
   cursor: pointer;
   color: var(--color-text);
   font-family: var(--font-serif);
-  animation: tn-feed-in 200ms ease-out both;
-  transition: opacity 400ms ease, transform 400ms ease;
+  --m-x: calc(-1 * var(--motion-slide));   /* the feed lives on the left edge: cards arrive from it and leave to it */
+  animation: tn-m-in var(--motion-panel) var(--motion-ease) backwards;
+  transition: opacity var(--motion-exit) var(--motion-ease-exit), translate var(--motion-exit) var(--motion-ease-exit), transform var(--motion-instant) var(--motion-ease-swap);
 }
 .tn-feed-card:hover .tn-feed-title, .tn-feed-card:focus-visible .tn-feed-title { color: var(--gilt-hi); }
 /* hover or focus: the card grows to show the whole sentence */
@@ -28,7 +29,7 @@
 .tn-feed-card:hover .tn-feed-text, .tn-feed-card:focus-visible .tn-feed-text { gap: 4px; }
 .tn-feed-card:active { transform: translateY(1px); }
 .tn-feed-card:focus-visible { outline: 2px solid var(--gilt-hi); outline-offset: 2px; }
-.tn-feed-out { opacity: 0; transform: translateX(12px); pointer-events: none; }
+.tn-feed-out { opacity: 0; translate: calc(-1 * var(--motion-slide)) 0; pointer-events: none; }
 
 .tn-feed-thumb {
   position: relative;
@@ -112,19 +113,13 @@
   letter-spacing: normal;
   color: var(--color-text);
   text-shadow: var(--engrave-on-dark);
-  transition: color var(--dur-fast);
+  transition: color var(--motion-fast) var(--motion-ease-swap);
   /* two lines, no ellipsis (a full sentence); hover or focus lifts the clamp */
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3;
   overflow: hidden;
   overflow-wrap: anywhere;
 }
 
-@keyframes tn-feed-in {
-  from { opacity: 0; transform: translateX(24px); }
-  to { opacity: 1; transform: translateX(0); }
-}
 @media (prefers-reduced-motion: reduce) {
-  .tn-feed-card { animation: none; transition: opacity 150ms linear; }
   .tn-feed-card:active { transform: none; }
-  .tn-feed-out { transform: none; }
 }

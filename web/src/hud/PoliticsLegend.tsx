@@ -4,14 +4,16 @@ import { movementOf } from '@terra/shared';
 import { useWorld } from '../state/world';
 import { POLITICS_LEFT, POLITICS_MID, POLITICS_RIGHT } from '../globe/mesh/colors';
 import { getPalette } from '../globe/palette';
+import { usePresence } from '../ui/motion/usePresence';
 import './hud.css';
 
 export function PoliticsLegend({ hidden = false }: { hidden?: boolean }) {
   const world = useWorld((s) => s.world);
   const mapMode = useWorld((s) => s.mapMode);
-  if (hidden || !world || mapMode !== 'politics') return null;
+  const { mounted, leaving } = usePresence(!hidden && !!world && mapMode === 'politics');
+  if (!mounted || !world) return null;
   return (
-    <div className="hud legend-box legend-politics tn-lacquer tn-frame">
+    <div className={`hud legend-box legend-politics tn-lacquer tn-frame${leaving ? ' tn-m-out' : ''}`}>
       <div className="cap tn-cartouche">Politics</div>
       <div className="muted">Where each nation stands; strong colour means radical</div>
       <div className="lg-ramp" style={{ background: `linear-gradient(90deg, ${POLITICS_LEFT}, ${POLITICS_MID} 50%, ${POLITICS_RIGHT})` }} />

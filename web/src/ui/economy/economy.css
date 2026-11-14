@@ -22,7 +22,8 @@ a.tn-led-cur:hover { color: var(--gilt-hi); }
 .tn-led-row {
   min-width: 0; padding: 6px 8px 7px; border-radius: 2px;
   background: rgba(42,31,20,.05); box-shadow: var(--well-paper), inset 0 0 0 1px rgba(42,31,20,.12);
-  animation: tn-led-in 320ms var(--ease-out);
+  --m-x: calc(-1 * var(--motion-slide-sm));
+  animation: tn-m-in var(--motion-panel) var(--motion-ease) backwards;
 }
 .tn-led-top, .tn-led-mid, .tn-led-bot { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-width: 0; }
 .tn-led-mid, .tn-led-bot { margin-top: 4px; }
@@ -44,8 +45,7 @@ a.tn-led-sig:hover { color: var(--color-rubric); }
 .tn-led-chip.failed { --chip-fill: var(--color-danger); }
 .tn-led-chip.simulated { color: var(--color-ink-muted); }
 .tn-led-empty { margin: 4px 0 8px; padding: 10px 12px; border-radius: 2px; font-style: italic; color: var(--color-ink-muted); font-size: var(--text-sm); text-shadow: var(--engrave-on-paper); }
-@keyframes tn-led-in { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .tn-led-row { animation: none; } }
+
 
 /* Nation card: the treasury link */
 .tn-treasury { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; padding: 6px 0 0; font-size: var(--text-sm); }

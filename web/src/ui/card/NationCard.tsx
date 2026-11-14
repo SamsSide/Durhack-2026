@@ -14,6 +14,7 @@ import { useLore } from './useLore';
 import { EconomyTab, PoliticsBlock, StatusChips, useMarketPlan } from './Economy';
 import { CloseIcon, Lines, Meter, nameClass, useCardClass, useShort } from './shared';
 import './card.css';
+import { Roll } from '../motion/Roll';
 
 const STANCE_ORDER: Stance[] = ['war', 'hostile', 'alliance', 'trade', 'neutral'];
 
@@ -124,7 +125,14 @@ function Nation({ countryId }: { countryId: number }) {
   const flyTo = useWorld((s) => s.flyTo);
   const { lore, loading, error, retry } = useLore(countryId);
   const { state, countryId: playing } = useAudio();
-  const [tab, setTab] = useState<Tab>('culture');
+  const [tab, setTabState] = useState<Tab>('culture');
+  // Motion: the body fades up only when another nation replaces this one (never with the dock's own slide),
+  // and a tab's page only after a tab was pressed.
+  const firstId = useRef(countryId);
+  const swapped = useRef(false);
+  if (firstId.current !== countryId) swapped.current = true;
+  const tabTouched = useRef(false);
+  const setTab = (t: Tab) => { tabTouched.current = true; setTabState(t); };
   const [pressed, setPressed] = useState<'narration' | 'anthem' | null>(null);
   const [failed, setFailed] = useState<'narration' | 'anthem' | null>(null);
   const failTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -197,8 +205,8 @@ function Nation({ countryId }: { countryId: number }) {
 
   return (
     <div className={cls} ref={ref}>
-      <span className="tn-cartouche tn-gov">{country.government}</span>
-      <div className="tn-card-body">
+      <span key={`gov-${countryId}`} className={`tn-cartouche tn-gov${swapped.current ? ' tn-m-swap-fade' : ''}`}>{country.government}</span>
+      <div key={countryId} className={`tn-card-body${swapped.current ? ' tn-m-swap' : ''}`}>
         <header className="tn-head">
           <Flag countryId={countryId} spec={country.flag} />
           <div className="tn-head-text">
@@ -226,10 +234,10 @@ function Nation({ countryId }: { countryId: number }) {
           <div><span className="tn-cap">Main good</span><span className="tn-pair-v">{stats?.mainGood ? cap(stats.mainGood) : 'None'}</span></div>
         </div>
         <div className="tn-grid">
-          <div className="tn-stat"><span className="tn-stat__label">Provinces</span><span className="tn-stat__value">{fmt(stats?.provinces ?? 0)}</span></div>
-          <div className="tn-stat"><span className="tn-stat__label">Population</span><span className="tn-stat__value">{short(country.population)}</span></div>
-          <div className="tn-stat"><span className="tn-stat__label">Treasury</span><span className="tn-stat__value">{fmt(country.treasury)}<small>{coin}</small></span></div>
-          <div className="tn-stat" title="The summed strength of its armies and fleets"><span className="tn-stat__label">Army</span><span className="tn-stat__value">{fmt(stats?.army ?? 0)}</span></div>
+          <div className="tn-stat"><span className="tn-stat__label">Provinces</span><span className="tn-stat__value"><Roll value={stats?.provinces ?? 0} format={fmt} /></span></div>
+          <div className="tn-stat"><span className="tn-stat__label">Population</span><span className="tn-stat__value"><Roll value={country.population} format={short} fractional /></span></div>
+          <div className="tn-stat"><span className="tn-stat__label">Treasury</span><span className="tn-stat__value"><Roll value={country.treasury} format={fmt} /><small>{coin}</small></span></div>
+          <div className="tn-stat" title="The summed strength of its armies and fleets"><span className="tn-stat__label">Army</span><span className="tn-stat__value"><Roll value={stats?.army ?? 0} format={fmt} /></span></div>
         </div>
         <div className="tn-meters">
           <Meter label="Readiness" value={String(Math.round(readiness))} pct={readiness} fill={readinessFill(readiness)} seg
@@ -296,7 +304,7 @@ function Nation({ countryId }: { countryId: number }) {
             <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={`tn-booktab${tab === t.id ? ' tn-booktab--active' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
           ))}
         </div>
-        <div className="tn-tab-body" role="tabpanel">
+        <div key={tab} className={`tn-tab-body${tabTouched.current ? ' tn-m-swap' : ''}`} role="tabpanel">
           {tab === 'culture' && (
             <>
               <div className="tn-chips">{country.culture.map((c) => <span key={c} className="tn-chip">{c}</span>)}</div>

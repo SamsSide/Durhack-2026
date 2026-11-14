@@ -7,6 +7,7 @@ import { Ticker } from './Ticker';
 import { Timeline } from './Timeline';
 import type { CutPeriod } from './Timeline';
 import './chronicle.css';
+import { usePresence } from '../motion/usePresence';
 
 function isTyping(t: EventTarget | null): boolean {
   const el = t as HTMLElement | null;
@@ -62,6 +63,7 @@ export function Chronicle() {
 
   const [open, setOpen] = useState(false);
   const observed = useObservedCuts(world, agents);
+  const sheet = usePresence(open);   // the sheet stays up while it sinks away
 
   // h toggles the timeline (not while typing), Escape closes it.
   useEffect(() => {
@@ -87,8 +89,9 @@ export function Chronicle() {
   return (
     <div className="tn-chronicle">
       <Herald observed={observed} />
-      {open && (
+      {sheet.mounted && (
         <Timeline
+          leaving={sheet.leaving}
           world={world}
           agents={agents}
           observed={observed}

@@ -1,5 +1,6 @@
 // Lane c owns this directory after the seed. Names and props are fixed by X5.
 import './calm.css';
+import './motion.css';   // shared enter, exit, swap and press motion (tokens: --motion-*)
 export { useLeftPanel, useLeftPanelKind } from './leftPanel';
 export { CreateScreen } from './create/CreateScreen';
 export { NationCard } from './card/NationCard';
@@ -23,3 +24,5 @@ export { ArmyCard } from './army/ArmyCard';
 export { BattleCard } from './army/BattleCard';
 export { HelpScreen, HelpButton } from './help/HelpScreen';
 export { useHelp, useHelpKeys } from './help/useHelp';
+export { Roll } from './motion/Roll';
+export { usePresence, reducedMotion } from './motion/usePresence';

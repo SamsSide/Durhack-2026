@@ -89,9 +89,9 @@
   display: flex; flex-direction: column;
   padding: 24px 24px 14px;
   margin-bottom: 4px;              /* clear of the chronicle bar's moulding */
-  animation: tn-tl-rise 200ms ease-out both;
+  --m-y: var(--motion-slide);
+  animation: tn-m-in var(--motion-panel) var(--motion-ease) backwards;
 }
-@keyframes tn-tl-rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 .tn-tl-head { display: flex; align-items: center; gap: 24px; flex: none; }
 .tn-tl-title { flex: none; }
 .tn-tl-plate { margin: 0; font-size: var(--text-sm); padding: 5px 26px 4px; }
@@ -197,7 +197,7 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
   pointer-events: none;
 }
 /* the nation card now docks on the left (#245), so the stack keeps the far right corner */
-.tn-herald-slot { transition: right var(--dur-fast) var(--ease-out); }
+.tn-herald-slot { transition: right var(--motion-base) var(--motion-ease); }
 /* A small framed lacquer plate (tn-lacquer tn-frame tn-frame--slim); the kind is a lit stripe on the
    left of the row, the flags sit in gilt flag plates. */
 .tn-herald {
@@ -206,8 +206,9 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
   display: block; width: 344px; min-height: 40px; padding: 0;
   overflow: hidden;
   font-family: var(--font-serif); font-size: 15px;
-  animation: tab-in 200ms var(--ease-out) both;
-  transition: opacity 400ms ease-in, transform var(--dur-fast);
+  --m-x: var(--motion-slide);
+  animation: tn-m-in var(--motion-panel) var(--motion-ease) backwards;
+  transition: opacity var(--motion-exit) var(--motion-ease-exit), translate var(--motion-exit) var(--motion-ease-exit), transform var(--motion-instant) var(--motion-ease-swap);
 }
 /* on the 1920 px projector two ordinary nation names fit without the ellipsis; narrower screens keep 344 px clear of the belief banner */
 @media (min-width: 1800px) { .tn-herald { width: 400px; } }
@@ -218,7 +219,7 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
 .tn-h-seal { flex: none; color: var(--gilt-hi); }
 .tn-herald:hover .tn-h-text { color: var(--gilt-hi); }
 .tn-herald:active { transform: translateY(1px); }
-.tn-herald.tn-leaving { opacity: 0; }
+.tn-herald.tn-leaving { opacity: 0; translate: var(--motion-slide) 0; pointer-events: none; }
 .tn-herald:focus-visible { outline: 2px solid var(--gilt-hi); outline-offset: 2px; }
 .tn-h-row {
   display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px 0 12px;
@@ -235,7 +236,7 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
 @media (max-height: 820px) { .tn-herald:nth-child(3) { display: none; } }
 .tn-h-flags { display: flex; gap: 4px; flex: none; }
 .tn-h-flag.tn-flag-plate { width: 28px; height: 20px; line-height: 0; }
-.tn-h-text { flex: 1 1 0; min-width: 0; font-size: 15px; color: var(--color-text); text-shadow: var(--engrave-on-dark); transition: color var(--dur-fast); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tn-h-text { flex: 1 1 0; min-width: 0; font-size: 15px; color: var(--color-text); text-shadow: var(--engrave-on-dark); transition: color var(--motion-fast) var(--motion-ease-swap); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tn-h-year { flex: none; font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--gilt-hi); text-shadow: var(--engrave-on-dark); }
 .tn-h-more { display: none; padding: 0 12px 10px; border-top: 1px solid rgba(201,162,75,.3); }
 .tn-herald:hover .tn-h-more, .tn-herald:focus-visible .tn-h-more { display: block; }
@@ -247,13 +248,11 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
 }
 .tn-h-stats { display: flex; justify-content: space-between; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--color-text-muted); }
 .tn-h-stats b { font-family: var(--font-mono); font-size: 14px; color: var(--gilt-hi); }
-/* no end opacity: the tab settles on its own (an older tab is dimmer, a leaving one fades) */
-@keyframes tab-in { from { opacity: 0; transform: translateX(24px); } to { transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .tn-tl, .tn-t-new::after, .tn-herald { animation: none; }
+  .tn-t-new::after { animation: none; }
   .tn-herald:active { transform: none; }
-  .tn-herald, .tn-herald-slot { transition: none; }
+  .tn-herald-slot { transition: none; }
 }
 
 /* 720 px projector: the lanes get the room, so six nations fit without scrolling. */
@@ -261,3 +260,6 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
   .tn-tl-list { display: none; }
   .tn-tl-lane { height: 28px; }
 }
+
+/* The sheet sinks back the way it rose. */
+.tn-tl.tn-m-out { animation: tn-m-out var(--motion-exit) var(--motion-ease-exit) forwards; pointer-events: none; }

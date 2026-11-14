@@ -88,7 +88,8 @@ function buildLayout(world: World): Layout {
   return { marks, hasWorld, wars, silences, kinds };
 }
 
-export function Timeline({ world, agents, observed, selectedId, onPick, onClose }: {
+export function Timeline({ world, agents, observed, selectedId, onPick, onClose, leaving = false }: {
+  leaving?: boolean;
   world: World;
   agents: AgentStatus[];
   observed: CutPeriod[];
@@ -208,7 +209,7 @@ export function Timeline({ world, agents, observed, selectedId, onPick, onClose 
   for (let y = Math.ceil(start / 10) * 10; y <= end; y += 10) ticks.push(y);
 
   return (
-    <div className="tn-sheet tn-frame tn-frame--corners tn-tl tn-chron-timeline" role="dialog" aria-label="The Chronicle">
+    <div className={`tn-sheet tn-frame tn-frame--corners tn-tl tn-chron-timeline${leaving ? ' tn-m-out' : ''}`} role="dialog" aria-label="The Chronicle">
       <h2 className="tn-cartouche tn-tl-plate">The Chronicle</h2>
       <div className="tn-tl-head">
         <div className="tn-tl-title">

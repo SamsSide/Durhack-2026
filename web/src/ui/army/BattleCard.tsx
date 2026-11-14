@@ -13,6 +13,7 @@ import { BattleGrid } from './BattleGrid';
 import { TroopTile } from './TroopTile';
 import { MOCK_BATTLE_TILE, useMockBattle } from './mock';
 import './army.css';
+import { Roll } from '../motion/Roll';
 
 function Side({ side, label, leading }: { side: BattleSide; label: 'Attackers' | 'Defenders'; leading: boolean }) {
   const kept = side.startSoldiers > 0 ? side.soldiers / side.startSoldiers : 0;
@@ -32,10 +33,10 @@ function Side({ side, label, leading }: { side: BattleSide; label: 'Attackers' |
           <span className="tn-stat__label">At start</span><span className="tn-stat__value">{formatSoldiers(side.startSoldiers)}</span>
         </div>
         <div className="tn-stat" title={`${side.soldiers.toLocaleString('en-GB')} still fighting`}>
-          <span className="tn-stat__label">Now</span><span className="tn-stat__value">{formatSoldiers(side.soldiers)}</span>
+          <span className="tn-stat__label">Now</span><span className="tn-stat__value"><Roll value={side.soldiers} format={formatSoldiers} fractional /></span>
         </div>
         <div className="tn-stat tn-bside-lost" title={`${side.lostSoldiers.toLocaleString('en-GB')} fallen`}>
-          <span className="tn-stat__label">Lost</span><span className="tn-stat__value">{formatSoldiers(side.lostSoldiers)}</span>
+          <span className="tn-stat__label">Lost</span><span className="tn-stat__value"><Roll value={side.lostSoldiers} format={formatSoldiers} fractional /></span>
         </div>
       </div>
       <span className="tn-trough tn-bside-trough" role="img" aria-label={`${Math.round(kept * 100)}% still standing`}>

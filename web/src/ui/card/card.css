@@ -50,7 +50,7 @@
 .tn-flag { width: 64px; height: 44px; line-height: 0; }
 .tn-flag-drawn, .tn-flag-painted { position: absolute; inset: 0; }
 .tn-flag-drawn svg { width: 100%; height: 100%; display: block; }
-.tn-flag-painted { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 250ms ease; }
+.tn-flag-painted { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity var(--motion-base) var(--motion-ease-swap); }
 .tn-flag-painted.tn-on { opacity: 1; }
 .tn-name { margin: 0; font-family: var(--font-display); font-size: 21px; font-weight: 700; line-height: 24px; letter-spacing: 0.03em; color: var(--color-ink); }
 /* a 12-letter word (COMMONWEALTH) is wider than the 162px title column at 21px; see nameClass in shared.tsx */
@@ -132,14 +132,13 @@
 }
 .tn-shimmer.tn-short { width: 60%; }
 @keyframes tn-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-.tn-fade { animation: tn-fade 250ms ease both; }
-@keyframes tn-fade { from { opacity: 0; } to { opacity: 1; } }
+.tn-fade { animation: tn-m-fade-in var(--motion-base) var(--motion-ease-swap) backwards; }
 
 /* Short viewport (under 800 px tall): the summary and the strip's second sentence are dropped in the markup */
 .tn-short .tn-tab-body { min-height: 0; }
 
 @media (prefers-reduced-motion: reduce) {
-  .tn-shimmer, .tn-fade, .tn-progress div, .tn-eq i { animation: none; }
+  .tn-shimmer, .tn-progress div, .tn-eq i { animation: none; }
   .tn-flag-painted, .tn-dip-flag { transition: none; }
 }
 
@@ -244,7 +243,7 @@
 .tn-dip-trade { border-left-color: var(--stance-trade); }
 .tn-dip-label { flex: none; width: 88px; font-family: var(--font-display); font-size: var(--text-cap); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .tn-dip-flags { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
-.tn-dip-flag { width: 34px; height: 24px; padding: 0; line-height: 0; cursor: pointer; transition: transform var(--dur-fast) var(--ease-out); }
+.tn-dip-flag { width: 34px; height: 24px; padding: 0; line-height: 0; cursor: pointer; transition: transform var(--motion-fast) var(--motion-ease); }
 .tn-dip-flag svg { display: block; width: 100%; height: 100%; }
 .tn-dip-flag:hover { transform: translateY(-1px); }
 .tn-dip-flag:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }

@@ -1,5 +1,6 @@
 import { useWorld } from '../../state/world';
 import './meter.css';
+import { Roll } from '../motion/Roll';
 
 const calls = (n: number) => Math.round(n).toLocaleString('en-GB');
 function short(n: number): string {
@@ -15,8 +16,8 @@ export function TokenMeter() {
   const label = state === 'capped' ? 'Capped' : state === 'live' ? 'Live' : 'Mock';
   return (
     <div className={`tn-meter tn-meter-${state}`}>
-      <span className="calls"><span className="num">{calls(budget.calls)}</span> calls<span className="dot">·</span></span>
-      <span className="num">{short(budget.tokensIn + budget.tokensOut)}</span> tokens<span className="dot">·</span>
+      <span className="calls"><Roll className="num" value={budget.calls} format={calls} /> calls<span className="dot">·</span></span>
+      <Roll className="num" value={budget.tokensIn + budget.tokensOut} format={short} fractional /> tokens<span className="dot">·</span>
       <span className="mode">{label}</span>
     </div>
   );

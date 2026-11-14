@@ -190,6 +190,34 @@
   --diamond-gilt: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path d='M6 .8L11.2 6L6 11.2L.8 6Z' fill='%23c9a24b' stroke='%23140e08' stroke-width='.8'/><path d='M6 3.6L8.4 6L6 8.4L3.6 6Z' fill='%23f4e2a6'/></svg>");
 }
 
+/* ---- Motion (the motion polish pass, 14 Nov). ONE set of curves, times and distances for every panel,
+   control and number; ui/motion.css holds the shared keyframes and classes that use them, and
+   globe/camera/motion.ts mirrors the feel for the camera. Use these, not literal milliseconds.
+   Only opacity, transform, translate and scale are ever animated (never box-shadow, filter or a gradient). */
+:root {
+  --motion-ease: cubic-bezier(0.25, 0.8, 0.25, 1);        /* arrive and move: quick off the mark, a long soft landing, no overshoot */
+  --motion-ease-exit: cubic-bezier(0.5, 0, 0.9, 0.5);     /* leave: gathers speed and goes */
+  --motion-ease-swap: cubic-bezier(0.4, 0, 0.2, 1);       /* in place: knobs, cross-fades, things that stay on screen */
+  --motion-instant: 90ms;      /* a press */
+  --motion-fast: 140ms;        /* hover, tooltips, colour */
+  --motion-base: 200ms;        /* content swaps, knobs, small plates (legends, tabs, cards in a list) */
+  --motion-panel: 240ms;       /* a panel arriving */
+  --motion-exit: 180ms;        /* a panel leaving (always shorter than its arrival) */
+  --motion-veil: 260ms;        /* a full-screen veil and the sheet on it */
+  --motion-slide: 14px;        /* how far a panel travels while it fades */
+  --motion-slide-sm: 6px;      /* how far swapped content and list items travel */
+  --motion-stagger: 24ms;      /* the step between list items */
+  --motion-press: 0.96;        /* scale of a round or icon control while pressed */
+  --motion-number: 320ms;      /* a readout rolling to its new value (ui/motion/Roll.tsx reads this) */
+}
+/* Reduced motion: nothing travels and nothing staggers; panels and swaps become a short fade. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-instant: 1ms; --motion-fast: 1ms; --motion-base: 100ms; --motion-panel: 100ms; --motion-exit: 80ms; --motion-veil: 100ms;
+    --motion-slide: 0px; --motion-slide-sm: 0px; --motion-stagger: 0ms; --motion-press: 1; --motion-number: 0ms;
+  }
+}
+
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; height: 100%; }
 body {

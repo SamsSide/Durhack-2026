@@ -2,6 +2,7 @@ import { useWorld } from '../state/world';
 import { BIOME_COLORS } from '../globe/palette';
 import { TERRAIN_LABELS, effectsLine } from '../globe/terrain/effects';
 import type { Terrain } from '@terra/shared';
+import { usePresence } from '../ui/motion/usePresence';
 import './hud.css';
 
 const ROWS: [Terrain, string][] = [
@@ -16,9 +17,10 @@ const ROWS: [Terrain, string][] = [
 export function TerrainLegend({ hidden = false }: { hidden?: boolean }) {
   const world = useWorld((s) => s.world);
   const mapMode = useWorld((s) => s.mapMode);
-  if (hidden || !world || mapMode !== 'terrain') return null;
+  const { mounted, leaving } = usePresence(!hidden && !!world && mapMode === 'terrain');
+  if (!mounted || !world) return null;
   return (
-    <div className="hud legend-box legend-terrain tn-lacquer tn-frame">
+    <div className={`hud legend-box legend-terrain tn-lacquer tn-frame${leaving ? ' tn-m-out' : ''}`}>
       <div className="cap tn-cartouche">Terrain</div>
       <div className="muted">Defence, army supply and yearly attrition</div>
       {ROWS.map(([t, colour]) => (
