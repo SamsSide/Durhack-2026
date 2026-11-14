@@ -17,7 +17,8 @@ import { currentMode, llmJson, rulerModel, type Schema } from '../llm';
 
 export type { DecreeEffect, DecreeOutcome };
 export const EFFECTS = ['plague', 'famine', 'storm', 'meteor', 'prophet', 'goldrush', 'rebellion', 'flood', 'none'] as const satisfies readonly DecreeEffect[];
-export interface DecreeTarget { countryId?: number; regionId?: number; tile?: number }
+/** `world`: the words say the whole world, so a population effect strikes every living nation. */
+export interface DecreeTarget { countryId?: number; regionId?: number; tile?: number; world?: boolean }
 export interface Decree { text: string; effect: DecreeEffect; severity: number; target: DecreeTarget }
 
 /** What the runner offers the voice route: apply an already interpreted decree, get back what it did. */
@@ -121,6 +122,14 @@ const KEYWORDS: [DecreeEffect, RegExp][] = [
   ['plague', /\b(die|dies|dying|dead|death|deaths|perish\w*|kill\w*|slaughter\w*|sick|ill|wither\w*)\b/i],
 ];
 
+// Scope (owner #288): a decree that names no place strikes its whole nation, and one that says the whole
+// world strikes every nation. Only a named place (a compass word, the coast, the capital, mountains, a
+// province or region, a region's own name) keeps the regional footprint.
+const PLACE_RE = /\b(north|south|east|west)\w*|\bcoast\w*|\bcapital\b|\bmountain\w*|\bprovince\b|\bregion\b/i;
+const WORLD_RE = /\b(the (whole |entire )?(world|earth|planet)|everyone on (the )?(earth|planet)|every ?(one|body) (on|in) (the )?(earth|world|planet)|all (the )?(nations|countries|kingdoms|peoples)|every (nation|country|kingdom)|mankind|humankind|humanity)\b/i;
+const namesPlace = (w: World, text: string): boolean =>
+  PLACE_RE.test(text) || w.regions.some((r) => r.name && text.toLowerCase().includes(r.name.toLowerCase().replace(/^the /, '')));
+
 const clean = (s: string): string => {
   const t = s.replace(/\s+/g, ' ').trim().slice(0, 160);
   return t ? t[0]!.toUpperCase() + t.slice(1) : t;
@@ -129,14 +138,16 @@ const clean = (s: string): string => {
 /** Finish a half-known target: validate ids against the world, fill the region from a direction, and
  *  fall back to the most fitting nation. */
 function finishTarget(w: World, effect: DecreeEffect, text: string, tick: number, raw: DecreeTarget & { direction?: string }): DecreeTarget {
+  const placed = namesPlace(w, text);
   let countryId = alive(w, raw.countryId) ? raw.countryId : undefined;
-  let regionId = raw.regionId !== undefined && w.regions[raw.regionId] ? raw.regionId : undefined;
+  // Gemini likes to pick a region anyway; without a place in the words it is dropped.
+  let regionId = placed && raw.regionId !== undefined && w.regions[raw.regionId] ? raw.regionId : undefined;
   if (regionId !== undefined && countryId === undefined) {
     const o = regionOwner(w, regionId);
     if (alive(w, o)) countryId = o;
   }
   if (regionId !== undefined && countryId !== undefined && regionOwner(w, regionId) !== countryId) regionId = undefined;
-  const dir = raw.direction && DIRECTIONS[raw.direction] ? raw.direction : undefined;
+  const dir = placed && raw.direction && DIRECTIONS[raw.direction] ? raw.direction : undefined;
   if (regionId === undefined && dir) {
     regionId = regionInDirection(w, dir, countryId);
     if (regionId !== undefined && countryId === undefined) countryId = regionOwner(w, regionId);
@@ -150,6 +161,7 @@ function finishTarget(w: World, effect: DecreeEffect, text: string, tick: number
     if (w.tiles[cap]) { t.tile = cap; const r = w.tiles[cap]!.region; regionId = r >= 0 && regionOwner(w, r) === countryId ? r : undefined; }
   }
   if (regionId !== undefined) t.regionId = regionId;
+  if (WORLD_RE.test(text) && !placed) t.world = true;
   return t;
 }
 
@@ -278,6 +290,19 @@ function shuffled<T>(items: T[], rng: Rng): T[] {
 
 /** 41000 as "41,000" (no locale, so every machine writes the same line). */
 export const fmtNum = (n: number): string => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+/** What fraction of a people died, in words: "half its people", "a third of its people", "40% of its people". */
+function sharePhrase(f: number, of: string): string {
+  const near = (x: number): boolean => Math.abs(f - x) < 0.03;
+  if (f >= 0.97) return `all but a few of ${of}`;
+  if (near(0.5)) return `half ${of}`;
+  if (near(0.25)) return `a quarter of ${of}`;
+  if (near(1 / 3)) return `a third of ${of}`;
+  if (near(2 / 3)) return `two thirds of ${of}`;
+  if (near(0.75)) return `three quarters of ${of}`;
+  return `${Math.max(1, Math.round(f * 100))}% of ${of}`;
+}
+/** Most provinces a decree's recorded target lists (the client draws each one). */
+const MAX_TARGET_TILES = 200;
 const count = (n: number, one: string, many = `${one}s`): string => `${fmtNum(n)} ${n === 1 ? one : many}`;
 
 export interface DecreeEventOptions { n?: number; lamport?: () => number }
@@ -319,8 +344,10 @@ export function decreeEvents(world: World, decree: Decree, tick: number, opts: D
   const place = inRegion.length && regionLabel ? regionLabel : nationName;
   const where = inRegion.length && region?.name ? `the ${region.name.replace(/^the /i, '')} region of ${nationName}` : nationName;
 
+  // The whole world: plague and famine strike every living nation (physical effects stay with one nation).
+  const worldwide = !!t.world && (decree.effect === 'plague' || decree.effect === 'famine');
   const out: WorldEvent[] = [];
-  const countries = country ? [country.id] : [];
+  const countries = worldwide ? aliveIds(world) : country ? [country.id] : [];
   const entry: Extract<WorldEvent, { type: 'chronicle' }>['entry'] = { id: `c-decree-${n}`, tick, year: world.year, kind: 'decree', countries, text: decree.text };
   out.push(ev({ type: 'chronicle', entry }));
 
@@ -346,13 +373,38 @@ export function decreeEvents(world: World, decree: Decree, tick: number, opts: D
   let result = 'The world shrugs.';
   let consequence = `Nothing in ${where} answers the decree; the chroniclers note it and move on.`;
 
-  if (country) {
+  if (worldwide) {
+    let dead = 0; let people = 0; let lost = 0;
+    const all: number[] = []; const caps: number[] = [];
+    for (const c of world.countries.filter((q) => q.alive)) {
+      const d = Math.max(0, Math.min(c.population - 1, Math.round(c.population * sev)));
+      const l = decree.effect === 'famine' ? Math.round(c.treasury * Math.min(0.8, sev * 1.2)) : 0;
+      out.push(ev({ type: 'country_updated', countryId: c.id, patch: decree.effect === 'famine' ? { population: c.population - d, treasury: c.treasury - l } : { population: c.population - d } }));
+      dead += d; people += c.population; lost += l;
+      all.push(...countryTiles(world, c.id)); caps.push(c.capitalTile);
+    }
+    // The client draws every province in `tiles`: past about 200 send the capitals plus an even sample.
+    if (all.length > MAX_TARGET_TILES) {
+      const rest = all.filter((x) => !caps.includes(x));
+      const room = Math.max(0, MAX_TARGET_TILES - caps.length);
+      const step = rest.length / Math.max(1, room);
+      hitTiles = uniq([...caps, ...Array.from({ length: room }, (_, i) => rest[Math.floor(i * step)]!)]);
+    } else hitTiles = all;
+    const of = ` (${sharePhrase(dead / Math.max(1, people), 'the world\'s people')})`;
+    if (decree.effect === 'plague') {
+      result = `A plague sweeps the world: ${fmtNum(dead)} dead${of}`;
+      consequence = `A plague sweeps the world: ${fmtNum(dead)} souls are lost across ${count(countries.length, 'nation')}.`;
+    } else {
+      result = `Famine grips the world: ${fmtNum(dead)} starve, the treasuries lose ${fmtNum(lost)}${of}`;
+      consequence = `Famine grips every nation: ${fmtNum(dead)} starve and the treasuries fall by ${fmtNum(lost)}.`;
+    }
+  } else if (country) {
     switch (decree.effect) {
       case 'plague': {
         const dead = kill(pop * sev * share);
         out.push(ev({ type: 'country_updated', countryId: country.id, patch: { population: pop - dead } }));
         hitTiles = tiles;
-        result = `Plague in ${place}: ${fmtNum(dead)} dead`;
+        result = `Plague ${inRegion.length ? 'in' : 'across'} ${place}: ${fmtNum(dead)} dead${inRegion.length ? '' : ` (${sharePhrase(dead / Math.max(1, pop), 'its people')})`}`;
         consequence = `Plague sweeps ${where}: ${fmtNum(dead)} souls are lost, ${Math.round(sev * 100)} in every hundred of those it touches.`;
         break;
       }
@@ -361,7 +413,7 @@ export function decreeEvents(world: World, decree: Decree, tick: number, opts: D
         const lost = Math.round(country.treasury * Math.min(0.8, sev * 1.2));
         out.push(ev({ type: 'country_updated', countryId: country.id, patch: { population: pop - dead, treasury: country.treasury - lost } }));
         hitTiles = tiles;
-        result = `Famine in ${place}: ${fmtNum(dead)} starve, the treasury loses ${fmtNum(lost)}`;
+        result = `Famine ${inRegion.length ? 'in' : 'across'} ${place}: ${fmtNum(dead)} starve${inRegion.length ? '' : ` (${sharePhrase(dead / Math.max(1, pop), 'its people')})`}, the treasury loses ${fmtNum(lost)}`;
         consequence = `Famine empties the granaries of ${where}: ${fmtNum(dead)} starve and the treasury falls by ${fmtNum(lost)}.`;
         break;
       }
@@ -469,7 +521,7 @@ export function decreeEvents(world: World, decree: Decree, tick: number, opts: D
   }
   entry.decree = {
     effect: decree.effect, severity: sev,
-    target: { countryId: country && decree.effect !== 'none' ? country.id : t.countryId ?? null, tiles: hitTiles },
+    target: { countryId: worldwide ? null : country && decree.effect !== 'none' ? country.id : t.countryId ?? null, tiles: hitTiles },
     result,
   };
   out.push(ev({ type: 'chronicle', entry: { id: `c-decree-${n}-b`, tick, year: world.year, kind: 'decree', countries, text: consequence } }));
