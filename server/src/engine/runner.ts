@@ -5,12 +5,15 @@
 // decides anything for a nation. Rulers (row A5) are called from here, fire and forget.
 import {
   applyEvent, applyTickBatch, generateWorld, hashString, mulberry32,
-  type AgentStatus, type World, type WorldEvent,
+  type AgentStatus, type ChronicleKind, type World, type WorldEvent,
 } from '@terra/shared';
 import type { ControlMessage, NewWorldOptions, RunnerListener, WorldRunner } from '../runner';
 import { MessageBus, type BusEndpoint } from './bus';
 import { prepareWorld } from './bibleAi';
 import { NationAgent } from '../agents/nation';
+import {
+  FALL_AFTER_TICKS, disputeText, fallText, findDisputes, returnText, silenceText,
+} from './resilience';
 import { RulerScheduler } from '../agents/ruler';
 import { currentMode, getBudget, resetRun } from '../llm';
 
@@ -35,6 +38,11 @@ export class EngineRunner implements WorldRunner {
   private bus: MessageBus = this.makeBus();
   private scheduler = new RulerScheduler();
   private outgoing: WorldEvent[] = [];         // applied to the truth, waiting to be broadcast
+  // Row A7: when each link was cut and each agent deleted, and which deleted nations have fallen.
+  private cutAt = new Map<number, number>();
+  private deletedAt = new Map<number, number>();
+  private fallen = new Set<number>();
+  private worldSeq = 0;
 
   getWorld(): World | null { return this.world; }
   getLog() { return this.world && this.initial ? { initial: this.initial, events: this.log } : null; }
@@ -81,6 +89,10 @@ export class EngineRunner implements WorldRunner {
     this.bus.setObserver(this.observer);
     this.scheduler = new RulerScheduler();
     this.agents.clear();
+    this.cutAt.clear();
+    this.deletedAt.clear();
+    this.fallen.clear();
+    this.worldSeq = 0;
     const rulerOn = currentMode() === 'live' && !!process.env.GEMINI_API_KEY;
     for (const c of w.countries) this.addAgent(c.id, bible.nations[c.id]?.regionNames, rulerOn);
     this.syncStatuses();
@@ -162,6 +174,7 @@ export class EngineRunner implements WorldRunner {
     }
     for (const id of order) this.agents.get(id)!.turn(tick, w.year);
     this.bus.flush();
+    this.collapseDeleted(tick);
   }
 
   /** The ruler loop (row A5): at most one call per step, chosen by the scheduler; never awaited. */
@@ -212,20 +225,78 @@ export class EngineRunner implements WorldRunner {
     for (const l of this.listeners) l.agents?.(ag);
   }
 
-  // --- resilience hooks (row A7 grows these) ---------------------------------------------------
+  // --- resilience (row A7) ----------------------------------------------------------------------
 
-  /** A link came back. Default before row A7: the agent rebuilds its beliefs from the moment it was
-   *  cut (NationAgent.rejoin), then its queued events go to everyone else and the true world, applied
-   *  on top in lamport order; any that are no longer legal are dropped. Row A7 adds the disputes. */
-  onRestore(countryId: number, missedByIt: WorldEvent[][], missedByOthers: WorldEvent[]): void {
-    const agent = this.agents.get(countryId);
-    if (!agent) return;
-    agent.rejoin(missedByIt, missedByOthers);
-    this.bus.deliver(missedByOthers, countryId);
+  /** One event from the world itself (not a nation): silences, returns, disputes, falls. */
+  private worldEvent(body: Record<string, unknown> & { type: WorldEvent['type'] }): WorldEvent {
+    const n = ++this.worldSeq;
+    return { id: `e-w-r${n}`, tick: this.world!.tick, actor: 'world', lamport: ++this.lamport, ...body } as WorldEvent;
   }
 
-  /** A nation's agent is removed: no more turns, heartbeats or ruler calls. Row A7: its neighbours
-   *  notice the silence (NationAgent.silentPeers) and carve up its ruins. */
+  private chronicleEvent(kind: ChronicleKind, countries: number[], text: string): WorldEvent {
+    const w = this.world!;
+    return this.worldEvent({ type: 'chronicle', entry: { id: `c-w-r${this.worldSeq + 1}`, tick: w.tick, year: w.year, kind, countries, text } });
+  }
+
+  /** Links just cut: one `silence` line per nation, heard at once by the world and every up agent
+   *  (the cut ones get it queued and read it when they come back). */
+  private announceSilence(ids: number[]): void {
+    const w = this.world!;
+    const batch: WorldEvent[] = [];
+    for (const id of ids) {
+      const c = w.countries[id];
+      this.cutAt.set(id, w.tick);
+      if (c) batch.push(this.chronicleEvent('silence', [id], silenceText(w, c)));
+    }
+    this.bus.deliver(batch);
+  }
+
+  /**
+   * A link came back. The agent rebuilds its beliefs from the moment it was cut and, on that merged
+   * view, the border disputes are settled (resilience.ts: the earlier claim wins). The settlement is
+   * one batch: the `return` line, a `tile_claimed` cause 'dispute' for every tile the returning
+   * nation wins back, one `dispute` line per pair of nations. Every replica applies that batch, then
+   * the nation's queued events (its claims that lost are no longer legal and are dropped), in the same
+   * order, so they all converge.
+   */
+  onRestore(countryId: number, missedByIt: WorldEvent[][], missedByOthers: WorldEvent[]): void {
+    const agent = this.agents.get(countryId);
+    const w = this.world;
+    if (!agent || !w) return;
+    const since = this.cutAt.get(countryId) ?? w.tick;
+    this.cutAt.delete(countryId);
+    const settle = (merged: World): WorldEvent[] => {
+      const out: WorldEvent[] = [];
+      const me = merged.countries[countryId];
+      if (me) out.push(this.chronicleEvent('return', [countryId], returnText(merged, me, w.tick - since)));
+      const disputes = me?.alive ? findDisputes(merged, countryId, missedByIt, missedByOthers) : [];
+      const pairs = new Map<number, { won: number; lost: number }>();
+      for (const d of disputes) {
+        const p = pairs.get(d.holder) ?? { won: 0, lost: 0 };
+        if (d.winner === countryId) {
+          p.won++;
+          out.push(this.worldEvent({ type: 'tile_claimed', tile: d.tile, owner: countryId, from: d.holder, cause: 'dispute' }));
+        } else p.lost++;
+        pairs.set(d.holder, p);
+      }
+      for (const [holder, p] of [...pairs].sort((a, b) => a[0] - b[0])) {
+        const other = merged.countries[holder];
+        if (me && other) out.push(this.chronicleEvent('dispute', [countryId, holder], disputeText(me, other, p.won, p.lost)));
+      }
+      this.lastDisputes = disputes;
+      return out;
+    };
+    const { settled } = agent.rejoin(missedByIt, missedByOthers, settle);
+    this.bus.deliver(settled, countryId);
+    this.bus.deliver(missedByOthers, countryId);
+    this.bus.heartbeat(countryId, w.tick);
+  }
+
+  /** The disputes settled by the last restore (for headless checks and logs). */
+  lastDisputes: ReturnType<typeof findDisputes> = [];
+
+  /** A nation's agent is removed: no more turns, heartbeats or ruler calls. Its neighbours notice the
+   *  silence (NationAgent.noticeSilence) and FALL_AFTER_TICKS later it falls (collapseDeleted). */
   onDelete(countryId: number): void {
     const agent = this.agents.get(countryId);
     if (!agent || agent.deleted) return;
@@ -233,26 +304,52 @@ export class EngineRunner implements WorldRunner {
     agent.retired = true;
     this.bus.leave(countryId);
     this.scheduler.forget(countryId);
+    this.deletedAt.set(countryId, this.world?.tick ?? 0);
+  }
+
+  /** A deleted nation that has been silent long enough falls with no conqueror: every structure
+   *  becomes a ruin, its units disband, its land is released (cause 'collapse') and its neighbours
+   *  carve the ruins up by their ordinary expansion over the next years. */
+  private collapseDeleted(tick: number): void {
+    const w = this.world!;
+    for (const [id, at] of [...this.deletedAt].sort((a, b) => a[0] - b[0])) {
+      if (this.fallen.has(id) || tick < at + FALL_AFTER_TICKS) continue;
+      this.fallen.add(id);
+      const c = w.countries[id];
+      if (!c?.alive) continue;
+      const batch: WorldEvent[] = [];
+      for (const s of w.structures) if (s.owner === id && s.kind !== 'ruin') batch.push(this.worldEvent({ type: 'structure_upgraded', structureId: s.id, kind: 'ruin' }));
+      for (const u of w.units) if (u.owner === id) batch.push(this.worldEvent({ type: 'unit_removed', unitId: u.id, reason: 'collapse' }));
+      for (let t = 0; t < w.owner.length; t++) if (w.owner[t] === id) batch.push(this.worldEvent({ type: 'tile_claimed', tile: t, owner: -1, from: id, cause: 'collapse' }));
+      batch.push(this.worldEvent({ type: 'country_fell', countryId: id }));
+      batch.push(this.chronicleEvent('fall', [id], fallText(c)));
+      this.bus.deliver(batch);
+    }
   }
 
   control(msg: ControlMessage): void {
     const w = this.world;
     if (!w) return;
     const live = (id: number): NationAgent | undefined => { const a = this.agents.get(id); return a && !a.deleted ? a : undefined; };
-    const cut = (a: NationAgent): void => { if (this.bus.cut(a.id)) a.onCut(); };
+    const cut = (a: NationAgent): boolean => { if (!this.bus.cut(a.id)) return false; a.onCut(); return true; };
     switch (msg.action) {
-      case 'cut': { const a = live(msg.countryId); if (a) cut(a); break; }
+      case 'cut': { const a = live(msg.countryId); if (a && cut(a)) this.announceSilence([a.id]); break; }
       case 'restore': { if (live(msg.countryId)) this.bus.restore(msg.countryId); break; }
       case 'silence': live(msg.countryId)?.silence(); break;
       case 'wake': { const a = live(msg.countryId); if (a) { a.wake(); this.scheduler.notify(a.id); } break; }
       case 'delete': this.onDelete(msg.countryId); break;
-      case 'blackout':
+      case 'blackout': {
+        // Every link at once; restore-all goes in ascending id order (the outcome of the disputes
+        // does not depend on the order: the earlier claim wins).
+        const cutNow: number[] = [];
         for (const id of this.bus.ids()) {
           const a = live(id);
           if (!a) continue;
-          if (msg.value) cut(a); else this.bus.restore(id);
+          if (msg.value) { if (cut(a)) cutNow.push(id); } else this.bus.restore(id);
         }
+        if (cutNow.length) this.announceSilence(cutNow);
         break;
+      }
       case 'speed': this.setSpeed(msg.value); break;
       case 'pause': this.setPaused(msg.value); break;
       case 'decree': {
