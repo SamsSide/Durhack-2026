@@ -32,6 +32,8 @@ Real values go in `.env` at the repo root (git-ignored). The owner's keys file i
 | `ELEVEN_MODEL` | lane a | ElevenLabs text-to-speech model, default `eleven_multilingual_v2` |
 | `ELEVEN_MAX_CHARS_PER_RUN` | lane a | Default 20000; 30000 on the Starter plan (about 40k characters a month). Above it, narration and chants return 503 |
 | `ELEVEN_CHANT_MODEL` | lane a | War chant voice model, default `eleven_v3` (uses the `[shouting]` audio tag) |
+| `ELEVEN_MUSIC_MODEL` | lane a | Anthem music model, default `music_v1` (composition plan with sung lyrics) |
+| `ANTHEM_MAX_PER_RUN` | lane a | Default 8. Anthems generated per world; above it the anthem route returns 503 |
 | `LLM_MODE` | lane a | `mock` (default: canned answers, no API calls) or `live` |
 | `GEMINI_MODEL_RULER` | lane a | Model id for ruler decisions: `gemini-3.5-flash-lite` |
 | `GEMINI_MODEL_LORE` | lane a | Model id for lore: `gemini-3.5-flash` |

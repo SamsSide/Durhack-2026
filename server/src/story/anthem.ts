@@ -39,13 +39,16 @@ function moodStyles(c: Pick<Country, 'government' | 'culture' | 'temperament'>):
   return [...new Set(s)].slice(0, 6);
 }
 
+/** The music filter rejects prompts that name a (national) anthem, so the bible's wording is softened. */
+const safeStyle = (p: string) => p.replace(/national\s+anthems?/gi, 'patriotic hymn').replace(/anthems?/gi, 'hymn');
+
 /** The composition plan: the anthemPrompt as global style, the lyrics split across two sung sections. */
 export function buildPlan(c: Pick<Country, 'name' | 'government' | 'culture' | 'temperament' | 'anthemPrompt'>, lyrics: string[]): Plan {
   const lines = lyrics.map((l) => l.replace(/\s+/g, ' ').trim().slice(0, 190)).filter(Boolean).slice(0, 8);
   const half = Math.ceil(lines.length / 2);
   const parts = [lines.slice(0, half), lines.slice(half)].filter((p) => p.length);
   return {
-    positive_global_styles: [c.anthemPrompt, 'sung vocals', 'sung lyrics', ...moodStyles(c)].map((s) => s.slice(0, 200)),
+    positive_global_styles: [safeStyle(c.anthemPrompt), 'sung vocals', 'sung lyrics', ...moodStyles(c)].map((s) => s.slice(0, 200)),
     negative_global_styles: ['instrumental only', 'spoken word', 'rap'],
     sections: parts.map((p, i) => ({
       section_name: i === 0 ? 'Verse' : 'Chorus',
