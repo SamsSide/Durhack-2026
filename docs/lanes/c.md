@@ -71,3 +71,4 @@ budget, run them one at a time in the order below, on Sonnet.
 - 14 Nov · #293 · C18 event feed by priority, full sentences, decade grouping (#279)
 - 14 Nov · C17 checked on the real A20 decree (#301, #303): effect word and fly-to work; result line moved beside the box, off the minimap
 - 14 Nov · C19 help screen: round "?" button (third in the bottom-left row) and `?` / `F1` keys open one overlay labelling the top bar, feed tags, map modes, panels and keys; closed on every reload
+- 14 Nov · Create screen and decree box exits with usePresence and the motion tokens (#355)

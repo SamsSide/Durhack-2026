@@ -2,7 +2,7 @@
 import type { ComponentType, CSSProperties } from 'react';
 import { Globe } from './globe';
 import * as ui from './ui';
-import { Chronicle, Collapsible, CreateScreen, DecreeBox, HourglassIcon, NationCard, NetworkPanel, PreparePanel, PresentationYear, QuillIcon, ScrollIcon, usePresentationKeys, HelpButton, HelpScreen, useHelpKeys } from './ui';
+import { Chronicle, Collapsible, CreateScreen, DecreeBox, HourglassIcon, NationCard, NetworkPanel, PreparePanel, PresentationYear, QuillIcon, ScrollIcon, usePresentationKeys, HelpButton, HelpScreen, useHelpKeys, usePresence } from './ui';
 import { useWorld } from './state/world';
 import { EventFeed } from './hud/lookup';
 import { BeliefBanner, ClosingCard, DiplomacyLegend, Minimap, MODES, TerrainLegend, TopBar, useTimelineOpen, WealthLegend, PoliticsLegend } from './hud';
@@ -50,6 +50,9 @@ export function App() {
   useEffect(() => setCreating(false), [world?.id]);
   useEffect(() => { setDock(null); setDockOut(false); }, [epoch]);
   const showCreate = !world || creating;
+  // #355: the create screen and the decree box stay mounted for their exit (lane a's motion tokens).
+  const createP = usePresence(showCreate);
+  const decreeP = usePresence(!!world && !timelineOpen);
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
       <Globe />
@@ -66,8 +69,8 @@ export function App() {
       <WealthLegend hidden={timelineOpen} />
       <PoliticsLegend hidden={timelineOpen} />
       {/* Start collapsed (C16, #276): the decree box is one quill icon until opened. */}
-      {world && !timelineOpen && (
-        <Collapsible id="decree" label="the decree box" icon={<QuillIcon />} wrapClass="hud decree-slot"><DecreeBox key={epoch} /></Collapsible>
+      {world && decreeP.mounted && (
+        <Collapsible id="decree" label="the decree box" icon={<QuillIcon />} wrapClass={`hud decree-slot tn-m-from-below ${decreeP.leaving ? 'tn-m-out' : 'tn-m-in'}`}><DecreeBox key={epoch} /></Collapsible>
       )}
       {/* B9 timeline (lane a): the history scrubber, in the band above the chronicle ticker */}
       {world && !showCreate && (
@@ -88,9 +91,9 @@ export function App() {
       <HelpButton /><HelpScreen />
       <ClosingCard />
       {world && <HoverTooltip />}
-      {showCreate && (
-        <div style={{ ...overlay, inset: 0, zIndex: 10, background: 'radial-gradient(ellipse at center, rgba(5,6,10,.35), rgba(5,6,10,.7))', display: 'grid', placeItems: 'center' }} onClick={() => world && setCreating(false)}>
-          <div onClick={(e) => e.stopPropagation()}>
+      {createP.mounted && (
+        <div className={createP.leaving ? 'tn-m-veil-out' : undefined} style={{ ...overlay, inset: 0, zIndex: 10, background: 'radial-gradient(ellipse at center, rgba(5,6,10,.35), rgba(5,6,10,.7))', display: 'grid', placeItems: 'center' }} onClick={() => world && setCreating(false)}>
+          <div className={createP.leaving ? 'tn-m-out tn-m-from-below' : undefined} onClick={(e) => e.stopPropagation()}>
             <CreateScreen />
           </div>
         </div>

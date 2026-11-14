@@ -130,7 +130,14 @@ export function applyEvent(world: World, event: WorldEvent): void {
       if (c) {
         Object.assign(c, event.patch);
         if (event.patch.politics) c.politics = { ...event.patch.politics };   // a copy: replicas never share objects
+        if (event.patch.temperament) c.temperament = { ...event.patch.temperament };   // #317 item 13: the mood drifts; same rule
       }
+      break;
+    }
+    case 'satellite_lost': {
+      // #317 item 15: a rival knocked one of its satellites out of orbit
+      const c = world.countries[event.victim];
+      if (c) c.satellites = Math.max(0, (c.satellites ?? 0) - 1);
       break;
     }
     case 'country_fell': {

@@ -1,7 +1,8 @@
-// A26: one satellite per stellar-age nation, on a tilted circular orbit above the clouds, with a faint
+// A26: each nation's satellites (from the modern age, #317) on a tilted circular orbit above the clouds, with a faint
 // orbit line. The modelled satellite (manifest models.satellite, team material tinted per nation), else a code-built one. Mount once inside <Canvas>. Lane b.
 // #291: a satellite launched during the run appears only when its rocket (Launch.tsx) delivers it;
-// the rings, phases and counts live in launchState.ts.
+// the rings, phases and counts live in launchState.ts. #317 item 15: a satellite shot down in a war
+// streaks, flashes and leaves its ring (Strike.tsx, mounted here).
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -10,6 +11,7 @@ import { useSlowVersion } from '../../ui/useSlowVersion';
 import { omega, ringFor, ringPos, revision, satNations, satPhases, subscribe, syncWorld } from './launchState';
 import type { Ring } from './launchState';
 import { loadGlb } from './launchModels';
+import { Strike } from './Strike';
 import type { ModelPart } from '../structures/models';
 
 const SAT_SCALE = 0.7; // #317 item 11: satellites at 70 percent of their first size
@@ -123,9 +125,9 @@ export function Orbit() {
 
   useEffect(() => () => { geo.body.dispose(); geo.panel.dispose(); geo.ring.dispose(); mats.hull.dispose(); mats.solar.dispose(); }, [geo, mats]);
 
-  if (!sats.length) return null;
   return (
     <group>
+      <Strike />
       {sats.map((s, i) => (
         <group key={`${s.id}:${i}`}>
           {s.first && (

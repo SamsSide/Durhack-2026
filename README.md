@@ -75,6 +75,13 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   tag "SIGNAL LOST · silent N yrs · M queued". On restore the letters fly to the other capitals.
 - **Ruler proclamation scrolls** are each tagged AI or AUTOPILOT.
 - **Secession:** restless regions break away as new nations with their own agents and rulers.
+- **A national mood that shifts:** each nation's temperament (aggression, expansion, trade, faith)
+  drifts a little every year with what happens to it. A long war or bitter losses harden it,
+  defeat and exhaustion take the fight out of it, victories make it hungry for land, long peace and
+  trade pacts make merchants of it, and unrest, plague and prophets turn it to its temples; with
+  nothing pushing, it slowly returns to its founding character. The chronicle says when a mood
+  turns ("Years of war have hardened the Dorrin Horde."), the nation card shows its current mood,
+  and its ruler decides with it.
 
 ### The council
 
@@ -144,6 +151,14 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   catapults to tanks and beyond; armies fire at each other by era: arrows, crossbows and
   trebuchets, cannon, artillery, tank tracers, drones and orbital strike.
   Troops move like troops: foot soldiers step and sway, horses canter, guns recoil, mechs stomp, ships roll on the swell, and the fallen drop one by one.
+- **Battles read at a glance:** every army at war carries a short status line above its counter
+  ("Advancing on", "Assaulting", "Besieging", "Holding the line", "Retreating", "Routed"), fading
+  out as the camera pulls back. Volleys flash and smoke along the line, with the odd shell
+  exploding among the enemy from the industrial age, and a bold red attack arrow runs from
+  attacker to defender for as long as the battle rages.
+
+![A battle on the globe: status line over the army counter, tracers on the line and the red attack arrow](docs/shots/battle-readability.png)
+
 - **Select an army or a battle:** click an army chip or its figures for its troops, general and
   status; click a battle badge for both sides, losses and the battle-line grid.
 - **War effects:** explosions by era, smoke over the front, and cities turning to ruins and rebuilding; devastation, war
@@ -154,6 +169,14 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   sides' generals, strength at the start and now, losses, and a battle grid whose front line
   thins and flanks fold in as the losses mount. To preview them without a war, add `?mockArmy=1`
   or `?mockBattle=1` to the URL.
+- **Satellites shot down:** in an all-out war between two nations of the modern age or later, now
+  and then one side knocks out a rival's satellite. A strike streaks up from its capital, a flash
+  and a burst of debris mark the hit, and the wreck tumbles off its ring; the chronicle tells it
+  ("A missile from the Tidemark Kingdom knocks a satellite of the Framwell Court out of the sky").
+  Rare: under one chance in a hundred a year, at most once in 80 years per nation. The nation
+  launches a replacement on its usual rhythm.
+
+![A strike from the ground knocks a satellite out of orbit in a burst of debris](docs/shots/satellite-strike.jpg)
 
 | | |
 | --- | --- |
@@ -162,9 +185,10 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 
 ### The rocket launch
 
-- When a nation reaches the stellar age it launches satellites: each goes up on a **rocket with
-  stage separation, a satellite release and a booster burning up** on re-entry, then the
-  satellite circles the globe.
+- Satellites come with the modern age, from 1957 on: a modern nation launches one, a future-age
+  nation keeps two up and a stellar nation four. Each goes up on a **rocket with stage
+  separation, a satellite release and a booster burning up** on re-entry, then the satellite
+  circles the globe.
 
 | | |
 | --- | --- |
@@ -256,6 +280,7 @@ star; speed presets; Hide HUD and Show HUD for clean screenshots.
 Dev helpers, run in the browser console:
 
 - `__launchDemo()`: launch a satellite rocket
+- `__shootDown(victim?, attacker?, slow?)`: shoot down a satellite (one is put up first if needed; `slow` 0..1 for slow motion)
 - `__warDemo()`: a scripted battle
 - `__firingDemo(age)`: armies firing the weapons of one age
 - `__decreeDemo(effect)`: play one decree effect

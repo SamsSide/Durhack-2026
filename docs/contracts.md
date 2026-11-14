@@ -107,11 +107,12 @@ export interface Country {
   ideology: string;                                      // one sentence
   culture: string[];                                     // 3 to 5 short traits
   foundingMyth: string;                                  // one or two sentences
-  temperament: { aggression: number; expansion: number; trade: number; faith: number }; // each 0 to 1
+  temperament: { aggression: number; expansion: number; trade: number; faith: number }; // each 0 to 1; drifts every year (#317, "National mood" below)
   anthemPrompt: string;                                  // for the music model
   buildingStyle?: BuildingStyle;                         // its architecture (X4 styles); missing means 'medieval'
   nomadic?: boolean;                                     // herders and horse lords: camps as yurts
   techAge?: TechAge;                                     // its weapons and ships; advances over time (missing means 'ancient')
+  satellites?: number;                                   // #317 (owner, 14 Nov): satellites it has up, missing means 0; see "Satellites" below
   voiceStyle: string;                                    // for narration voice choice
   alive: boolean;
   population: number;
@@ -238,6 +239,7 @@ export type WorldEvent = Base & (
   | { type: 'country_founded'; country: Country; regionId?: number }    // a secession, or a nation created later; its tiles follow as tile_claimed
   | { type: 'region_updated'; regionId: number; patch: Partial<Pick<Region, 'name' | 'flag' | 'unrest'>> }
   | { type: 'chronicle'; entry: ChronicleEntry }
+  | { type: 'satellite_lost'; attacker: number; victim: number; index: number }   // #317: see "Satellites" below
 );
 
 export function applyEvent(world: World, event: WorldEvent): void;   // mutates; the only way a World changes
@@ -324,6 +326,35 @@ export type PaymentReason = 'trade' | 'reparations' | 'plunder' | 'seizure' | 'w
   a small bonus from `WONDER_BONUS: Record<WonderKind, { income: number; defence: number; unrest: number }>`
   in `@terra/shared` (income share, defence share for the whole nation, unrest change per year);
   lane b shows it in the tooltip. A captured wonder changes hands; a razed one is a `ruin`.
+
+- **National mood (owner, #317 item 13, 14 Nov):** `Country.temperament` is no longer fixed at
+  founding. Each year `moodStep` (`sim/mood.ts`, exported from `@terra/shared`) moves every trait by a
+  small step from the year's facts (a war of 6 years or more and lost provinces raise `aggression`;
+  exhaustion and paid reparations lower it; provinces won and reparations received raise
+  `expansion`; trade pacts in a long peace raise `trade`, war lowers it; unrest, plague, famine and a
+  prophet raise `faith`), plus a slow return to its founding values, within founding +-0.3 and
+  0.05..0.95, three decimals. The new values ride in the nation's own yearly `country_updated` patch
+  (`temperament`), so replays are exact; `applyEvent` copies the object. When a trait crosses 0.7
+  upwards or 0.35 downwards the chronicle gets one line (kind `growth`, id ending
+  `-mood-<trait>-<up|down>`, not repeated within 40 years). `moodWords(temperament)` gives the
+  card's words ("Warlike, devout", "Even-tempered").
+
+- **Satellites (owner, #317 item 14, 14 Nov; replaces the #313 stellar-only rule):** a nation in
+  the `modern` age or later launches satellites from year 1957 on, up to a cap by age
+  (`SATELLITE_CAP`: modern 1, future 2, stellar 4; `MAX_SATELLITES` 4). The first comes a few years
+  after it may, then one every 60 years while below its cap. Each launch is the nation's own
+  `country_updated { satellites }` plus a chronicle line whose id ends in `-sat` (lane b's rocket
+  starts on that line).
+- **Satellites shot down (owner, #317 item 15, 14 Nov):** a nation in the `modern` age or later at
+  all-out war (war readiness 80 or more) with a modern-or-later enemy that has satellites up may
+  shoot one down: `satellite_lost { attacker, victim, index }` (actor the attacker, `index`
+  0..satellites-1), valid only while the two are at war and the victim still has that satellite.
+  `applyEvent` takes one off `countries[victim].satellites`. Rare and bounded (`satelliteStrike` in
+  `sim/ages.ts`: 5 in 1000 a year in the modern age, 8 later, from a hash of the tick; at most once
+  every 80 years per attacker). It comes with a chronicle line (kind `battle`, countries
+  `[attacker, victim]`, id ending `-satlost-<victim>`). The victim launches a replacement on its
+  usual rhythm. The browser (`web/src/globe/orbit/Strike.tsx`, lane a) draws a strike from the
+  attacker's capital, a flash and debris at the satellite, and the wreck falling off its ring.
 
 | Terrain | defence | supply | attrition | move | yields |
 | --- | --- | --- | --- | --- | --- |
@@ -536,8 +567,9 @@ this table from `@terra/shared`.
   Buildings: a nation in the future or stellar age builds in the `arcology` style (domes,
   arcology towers, spires, a space elevator for the stellar capital) whatever its culture style:
   lane b picks `styles.arcology[kind]` when `techAge` is `future` or `stellar`, else the culture
-  style. A stellar nation also gets satellites circling the globe above its capital (lane b; no
-  model needed beyond a small `satellite` key in `models`). Lane b draws `ages[countries[unit.owner].techAge][unit.kind]`, then
+  style. A nation with satellites up (`Country.satellites`, from the modern age; X1) gets them
+  circling the globe above its capital (lane b; no model needed beyond a small `satellite` key in
+  `models`). Lane b draws `ages[countries[unit.owner].techAge][unit.kind]`, then
   `models[kind]`, then the cone. A nation's age advances during the run (a `country_updated` with
   `techAge` and a chronicle line), so every unit it owns changes look at once.
 
