@@ -30,7 +30,7 @@ in `assets/` and `web/public/models/`) and *design* (A12, in Figma, `web/src/the
 | A10 | Nation agents on other laptops over the socket | | | | cut | Owner, 14 Nov: it runs and demos on one device |
 | A11 | Stretch, prize: write events to a Tiger Data hypertable and serve one territory-over-time series | | | CP2 | todo | MLH Tiger Data |
 | A12 | Design the interface in Figma: the style, the Create screen, the hologram nation card, the chronicle, the network panel, the top bar; export the variables to `web/src/theme/tokens.css` and a screenshot of each screen to `docs/design/` | | X7 to b and c | Sat 18:00 | next | Owner's laptop has the Figma tools; lane c builds from this |
-| A13 | Lore route: Gemini writes culture, politics, history, relations and anthem lyrics from the nation's real chronicle; cached; a template version for mock mode | | X3 lore | CP1 | todo | |
+| A13 | Lore route: Gemini writes culture, politics, history, relations and anthem lyrics from the nation's real chronicle; cached; a template version for mock mode | | X3 lore | CP1 | done | |
 | A14 | Narration: ElevenLabs speaks the lore in a voice chosen from `voiceStyle`, cached on disk; the real `web/src/audio/` module (X6) | A13 | X3 narration, X6 | CP1.5 | todo | MLH ElevenLabs |
 | A15 | Anthem: the music model sings the lyrics from A13 in the nation's style, cached; regenerated only when the lyrics change | A13 | X3 anthem | CP1.5 | todo | Check music access on our plan first |
 | A16 | War chants: one short chant per nation, cached; played automatically by the audio module when war is declared or a battle is fought | A6, A14 | X3 chant | CP1.5 | todo | |
@@ -47,5 +47,6 @@ in `assets/` and `web/public/models/`) and *design* (A12, in Figma, `web/src/the
 <!-- One line per merged PR: time · PR # · what. Newest last. -->
 - 14:35 · #19 · A1: shared types and mock world, mock server for X2 and every X3 route, store, app shell, placeholders, audio, tokens
 - 14:47 · A2: about 500 provinces, terrain, regions, spread capitals from a seed; POST /api/world builds a world from a template bible
+- 14:48 · A13: Gemini lore and anthem lyrics from the real chronicle, cached, template in mock mode; shared Gemini client with meter and caps in server/src/llm
 
 Mocks: `npm run mock` (MockRunner behind the `WorldRunner` interface in `server/src/runner.ts`) stands in for the engine until A3; lore, audio and replays are mocked until A13 to A16 and A9.
