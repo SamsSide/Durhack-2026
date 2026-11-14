@@ -8,6 +8,7 @@ import { facing } from './effects';
 import { standMatrix } from './ModelField';
 import type { ModelField } from './ModelField';
 import type { UnitModel } from './unitModels';
+import type { VehicleFx } from './vehicleFx';
 
 interface Seg { to: number; ms: number }
 interface TState {
@@ -23,6 +24,7 @@ const WAKE = 640;
 const WAKE_LIFE = 1800;
 const WAKE_EVERY = 110;
 const FADE_MS = 700;
+const FX_RANGE = 2.4; // vehicle effects only when the camera is this close
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _t = new THREE.Vector3(), _m = new THREE.Matrix4(), _c = new THREE.Color();
 
@@ -33,6 +35,7 @@ function hash(id: string): number {
 }
 
 export interface TraderHost {
+  fx?: VehicleFx;
   dirs: THREE.Vector3[];
   heights: Float32Array;
   msPerTick(): number;
@@ -155,6 +158,7 @@ export class Traders {
       const model = h.model(st.owner);
       const size = this.size * (model.footprint / 0.4) * orbit * Math.min(1, fade) * h.pop(st.owner, now);
       field.push(model, standMatrix(_m, _b, st.head, size, roll), h.team(st.owner));
+      if (h.fx && camDist < FX_RANGE) h.fx.emit({ anchors: model.anchors, stand: _m, size, moving, facing: f }, now, dt);
 
       if (moving && now >= st.nextWake && f > 0.3) {
         st.nextWake = now + WAKE_EVERY;

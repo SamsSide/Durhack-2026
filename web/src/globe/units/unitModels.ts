@@ -11,8 +11,16 @@ export const MODEL_KINDS: readonly ModelKind[] = ['army', 'fleet', 'trader'];
 interface Entry { file: string; footprint: number }
 type Manifest = { models?: Record<string, Entry>; ages?: Record<string, Record<string, Entry>> };
 
-/** One drawable model. `norm` maps it to a unit box: 1 across (x/z), base at y = 0. */
-export interface UnitModel { key: string; parts: ModelPart[]; norm: THREE.Matrix4; footprint: number; real: boolean }
+export type AnchorKind = 'thruster' | 'wake' | 'exhaust' | 'contrail' | 'dust';
+/** An X4 effect anchor: where an effect starts and the way it streams out (local -Z of the node). */
+export interface ModelAnchor { kind: AnchorKind; pos: THREE.Vector3; dir: THREE.Vector3 }
+
+/** One drawable model. `norm` maps it to a unit box: 1 across (x/z), base at y = 0. `anchors` are in that box. */
+export interface UnitModel { key: string; parts: ModelPart[]; norm: THREE.Matrix4; footprint: number; real: boolean; anchors: ModelAnchor[] }
+
+const ANCHOR_RE = /^fx_(thruster|wake|exhaust|contrail|dust)/;
+/** Anchors read from each GLB at load, in the file's own space (the same space as its parts). */
+const rawAnchors = new Map<string, ModelAnchor[]>();
 
 const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 const DEFAULT_FOOTPRINT = 0.5;
@@ -76,7 +84,14 @@ async function loadParts(set: ModelSet, file: string): Promise<void> {
     const gltf = await set.loader.loadAsync(`${BASE}models/${file}`);
     gltf.scene.updateMatrixWorld(true);
     const parts: ModelPart[] = [];
+    const anchors: ModelAnchor[] = [];
     gltf.scene.traverse((o) => {
+      const hit = ANCHOR_RE.exec(o.name);
+      if (hit && !(o as THREE.Mesh).isMesh) {
+        const pos = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
+        const dir = new THREE.Vector3(0, 0, -1).transformDirection(o.matrixWorld);
+        anchors.push({ kind: hit[1] as AnchorKind, pos, dir });
+      }
       const m = o as THREE.Mesh;
       if (!m.isMesh) return;
       const geometry = m.geometry.clone().applyMatrix4(m.matrixWorld);
@@ -90,6 +105,7 @@ async function loadParts(set: ModelSet, file: string): Promise<void> {
     });
     if (!parts.length) throw new Error(`no meshes in ${file}`);
     if (!set.files.has(file)) set.files.set(file, parts);
+    rawAnchors.set(file, anchors);
   } catch (err) {
     set.failed.add(file);
     console.warn(`units: ${file} failed, using the next fallback`, err);
@@ -105,7 +121,7 @@ export class UnitModels {
   private disposed = false;
 
   constructor() {
-    const mk = (key: string, parts: ModelPart[]): UnitModel => ({ key, parts, norm: normFor(parts), footprint: DEFAULT_FOOTPRINT, real: false });
+    const mk = (key: string, parts: ModelPart[]): UnitModel => ({ key, parts, norm: normFor(parts), footprint: DEFAULT_FOOTPRINT, real: false, anchors: [] });
     this.fallbacks = { army: mk('fb:army', cone()), fleet: mk('fb:fleet', boat(false)), trader: mk('fb:trader', boat(true)) };
     this.fallbacks.trader.footprint = 0.4;
     void this.init();
@@ -143,7 +159,7 @@ export class UnitModels {
     await Promise.all([...files].map((f) => loadParts(set, f)));
   }
 
-  private fromFile(e: Entry | undefined): UnitModel | null {
+  private fromFile(e: Entry | undefined, kind: ModelKind): UnitModel | null {
     if (!e || !this.set) return null;
     const have = this.made.get(e.file);
     if (have) return have;
@@ -151,14 +167,23 @@ export class UnitModels {
     if (!parts) return null;
     // Lane a's unit GLBs face +x (#131); the stand matrix expects +z forward, so turn them a quarter.
     const norm = new THREE.Matrix4().makeRotationY(-Math.PI / 2).multiply(normFor(parts));
-    const m: UnitModel = { key: e.file, parts, norm, footprint: e.footprint, real: true };
+    const anchors: ModelAnchor[] = (rawAnchors.get(e.file) ?? []).map((a) => ({
+      kind: a.kind, pos: a.pos.clone().applyMatrix4(norm), dir: a.dir.clone().transformDirection(norm),
+    }));
+    // until a model carries its own anchors (X4), ships get a wake and armies dust at the stern
+    if (!anchors.length) {
+      const back = new THREE.Vector3(0, 0, -1);
+      if (kind === 'fleet' || kind === 'trader') anchors.push({ kind: 'wake', pos: new THREE.Vector3(0, 0.03, -0.45), dir: back });
+      else anchors.push({ kind: 'dust', pos: new THREE.Vector3(0, 0.05, -0.4), dir: back });
+    }
+    const m: UnitModel = { key: e.file, parts, norm, footprint: e.footprint, real: true, anchors };
     this.made.set(e.file, m);
     return m;
   }
 
   /** ages[age][kind], then models[kind], then the code-built one. */
   resolve(age: TechAge, kind: ModelKind): UnitModel {
-    return this.fromFile(this.ages.get(age)?.get(kind)) ?? this.fromFile(this.shared.get(kind)) ?? this.fallbacks[kind];
+    return this.fromFile(this.ages.get(age)?.get(kind), kind) ?? this.fromFile(this.shared.get(kind), kind) ?? this.fallbacks[kind];
   }
 
   dispose(): void {

@@ -11,6 +11,7 @@ import { COUNTER_H, COUNTER_W, drawAttrition, drawClash, drawCounter, drawLoss, 
 import { terrainEffects } from '../terrain/effects';
 import { unitIcon } from './era';
 import { ModelField, standMatrix } from './ModelField';
+import { VehicleFx } from './vehicleFx';
 import { Traders } from './traders';
 import { UnitModels } from './unitModels';
 import { Pops, Smoke, Sparks, facing, tangentJitter } from './effects';
@@ -117,6 +118,7 @@ export class UnitLayer {
 
   private readonly models = new UnitModels();
   private readonly field = new ModelField();
+  private readonly fx = new VehicleFx();
   private readonly traders: Traders;
   private readonly unitSize: number;
   private readonly ageSeen = new Map<number, TechAge>(); // from country_updated, until world.countries catches up
@@ -128,6 +130,7 @@ export class UnitLayer {
   private dirty = true;
   private lastFront = -1e9;
   private lastNow = 0;
+  private lastDt = 16;
   private disposed = false;
 
   constructor(mesh: ProvinceMesh, world: World) {
@@ -167,13 +170,14 @@ export class UnitLayer {
     world.countries.forEach((c, i) => this.knownAge.set(i, c.techAge ?? 'ancient'));
     this.traders = new Traders({
       dirs: this.dirs,
+      fx: this.fx,
       heights: mesh.heights,
       msPerTick: () => this.msPerTick(),
       model: (owner) => this.models.resolve(this.ageFor(owner), 'trader'),
       team: (owner) => this.team(owner),
       pop: (owner, now) => this.popScale(owner, now),
     }, p.parchment, this.unitSize * 0.8);
-    this.group.add(this.frontGroup, this.arrowGroup, this.field.group, this.traders.group, this.smoke.group, this.sparks.points, this.chipGroup, this.pops.group);
+    this.group.add(this.frontGroup, this.arrowGroup, this.field.group, this.fx.group, this.traders.group, this.smoke.group, this.sparks.points, this.chipGroup, this.pops.group);
     this.group.name = 'units';
   }
 
@@ -693,6 +697,7 @@ export class UnitLayer {
     if (this.disposed) return;
     const dt = this.lastNow ? Math.min(100, now - this.lastNow) : 16;
     this.lastNow = now;
+    this.lastDt = dt;
     const dist = camera.position.length();
     _camDir.copy(camera.position).normalize();
     const zoom = Math.min(1.25, Math.max(0.68, 1.25 - ((dist - 1.3) / 2.2) * 0.6)); // compact from orbit
@@ -799,6 +804,7 @@ export class UnitLayer {
       }
     }
 
+    this.fx.update(camera, now, dt);
     this.sparks.update(now, dt);
     this.smoke.update(now, dt);
     this.pops.update(now, _camDir, zoom);
@@ -860,11 +866,13 @@ export class UnitLayer {
     }
     const bob = chip.kind === 'fleet' ? Math.sin(now * 0.002 + chip.tile) * 0.07 : 0;
     this.field.push(model, standMatrix(_mm, _v, lead.head, size, bob), this.team(chip.owner));
+    if (this.near > 0.5 && k >= 1) this.fx.emit({ anchors: model.anchors, stand: _mm, size, moving: !!chip.moving, facing: f }, now, this.lastDt);
   }
 
   dispose(): void {
     this.disposed = true;
     this.field.dispose();
+    this.fx.dispose();
     this.traders.dispose();
     this.models.dispose();
     for (const chip of this.chips.values()) this.dropChip(chip);
