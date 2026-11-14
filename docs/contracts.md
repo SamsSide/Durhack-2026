@@ -30,8 +30,9 @@ Real values go in `.env` at the repo root (git-ignored). The owner's keys file i
 | `GEMINI_API_KEY` | lane a | Gemini API key |
 | `ELEVENLABS_API_KEY` | lane a | ElevenLabs key |
 | `LLM_MODE` | lane a | `mock` (default: canned answers, no API calls) or `live` |
-| `GEMINI_MODEL_RULER` | lane a | Model id for ruler decisions (a flash-lite model) |
-| `GEMINI_MODEL_LORE` | lane a | Model id for the world bible and lore (a flash model) |
+| `GEMINI_MODEL_RULER` | lane a | Model id for ruler decisions: `gemini-3.5-flash-lite` |
+| `GEMINI_MODEL_LORE` | lane a | Model id for lore: `gemini-3.5-flash` |
+| `GEMINI_MODEL_BIBLE` | lane a | Model id for the world bible at creation: `gemini-3.5-flash-lite` (about 5 s; flash takes about 28 s) |
 | `LLM_MAX_CALLS_PER_MIN` | lane a | Default 20. Above it, nations fall to autopilot |
 | `LLM_MAX_TOKENS_PER_RUN` | lane a | Default 400000. Above it, every nation is on autopilot |
 | `GEMINI_MODEL_IMAGE` | lane a | Image model id for painted flags; empty turns painted flags off |

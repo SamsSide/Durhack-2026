@@ -1,7 +1,7 @@
 // The world bible written by Gemini (row A5): one call to the lore model at world creation, strictly
 // validated and repaired, with the template bible (mockBible) as the fallback on any failure.
 import type { BibleNation, FlagEmblem, FlagLayout, FlagSpec, WorldBible } from '@terra/shared';
-import { llmJson, loreModel, type Schema } from '../llm';
+import { llmJson, bibleModel, type Schema } from '../llm';
 import type { NewWorldOptions } from '../runner';
 import { mockBible } from './bible';
 
@@ -133,7 +133,7 @@ export async function makeBible(opts: NewWorldOptions, seed: number): Promise<Wo
   try {
     const aggr = opts.aggression ?? 0.5;
     const raw = await llmJson<RawBible>({
-      model: loreModel(), system: SYSTEM, purpose: 'bible', schema: bibleSchema,
+      model: bibleModel(), system: SYSTEM, purpose: 'bible', schema: bibleSchema,
       maxOutputTokens: Math.min(5000, 700 + 380 * n),
       prompt: [
         `World prompt from the user: "${opts.prompt.trim().slice(0, 500)}"`,
@@ -145,7 +145,7 @@ export async function makeBible(opts: NewWorldOptions, seed: number): Promise<Wo
       ].join('\n'),
     });
     const bible = repairBible(raw, fallback, n);
-    console.log(`bible written by ${loreModel()} in ${Date.now() - t0} ms (${n} nations)`);
+    console.log(`bible written by ${bibleModel()} in ${Date.now() - t0} ms (${n} nations)`);
     return bible;
   } catch (e) {
     console.warn(`bible: using the template (${e instanceof Error ? e.message : String(e)})`);
