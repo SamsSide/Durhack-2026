@@ -34,3 +34,7 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Terra Nova
+server/.cache/
+server/replays/
