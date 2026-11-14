@@ -38,3 +38,4 @@
 2026-11-14 18:25 · owner · Time control: speed is continuous from 0.1x to 64x, plus an auto pacing director that slows the world for big moments and speeds through quiet years; the server reports the clock · the fixed 1/2/4/8 steps were too fast at times and too slow at others
 2026-11-14 18:40 · owner · Ruined, drowned and post-apocalyptic worlds start in the ancient age (survivors rebuild from salvage), so every world type shows the climb from spears to tanks · the demo must show the march of history
 2026-11-14 18:40 · owner · Lane a's laptop may run up to 7 agents at once; other lanes keep 4 · the owner's laptop has the headroom
+2026-11-14 19:00 · owner · History keeps going past the present: two more ages, future (drones, hover tanks, railgun cruisers, maglev freighters, arcology cities) and stellar (mechs, starships, orbital freighters, space elevators, satellites over the globe) · the world should not stop at 2050

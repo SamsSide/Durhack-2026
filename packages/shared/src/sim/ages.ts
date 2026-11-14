@@ -6,13 +6,13 @@
 // more advanced side a modest edge (sim/war.ts).
 import type { ChronicleKind, Country, Structure, TechAge, World } from '../types';
 
-export const AGES: readonly TechAge[] = ['ancient', 'medieval', 'gunpowder', 'industrial', 'modern'];
+export const AGES: readonly TechAge[] = ['ancient', 'medieval', 'gunpowder', 'industrial', 'modern', 'future', 'stellar'];
 
 /** A nation's age as a number, 0 (ancient) to 4 (modern). A missing age means ancient. */
 export const ageIndex = (age: TechAge | undefined): number => Math.max(0, AGES.indexOf(age ?? 'ancient'));
 
 /** How much stronger a unit is when raised in each age. */
-const AGE_STRENGTH = [1, 1.3, 1.8, 2.6, 3.8] as const;
+const AGE_STRENGTH = [1, 1.3, 1.8, 2.6, 3.8, 5.2, 7] as const;
 export const ageStrength = (c: Pick<Country, 'techAge'> | undefined): number => AGE_STRENGTH[ageIndex(c?.techAge)]!;
 
 /** The most strength one unit can hold, whatever its age (keeps the numbers readable). */
@@ -35,7 +35,7 @@ export function startAge(eraText: string | undefined): TechAge {
 }
 
 /** Progress needed to reach each age (cumulative; ancient is the start). */
-export const AGE_AT = [0, 260, 1150, 2900, 4800] as const;
+export const AGE_AT = [0, 260, 1150, 2900, 4800, 7400, 10500] as const;
 
 /** What a nation's agent remembers between turns for its age and its trade (kept outside the World). */
 export interface AgeMemory {
@@ -74,6 +74,8 @@ const AGE_LINES: Record<TechAge, string> = {
   gunpowder: '{n} forges its first iron cannon: the age of gunpowder begins.',
   industrial: '{n} lays down its first ironclads and lays its first railway: the industrial age begins.',
   modern: '{n} rolls out its first tanks: the modern age begins.',
+  future: '{n} sends its first drone swarms aloft and raises its first arcology: the future age begins.',
+  stellar: '{n} launches its first starship from the top of its space elevator: the stellar age begins.',
 };
 
 /**

@@ -54,6 +54,7 @@ default of 4 still applies to the other lanes).
 | A22 | Building styles: `Country.buildingStyle` picked in the world bible (rules fallback, at most two per style), and 30 Blender models (6 styles x capital, city, town, temple, fort) in the X4 manifest's `styles` | | X1 `buildingStyle`, X4 `styles` to b | CP2 | done | Preview: assets/preview-styles.png |
 | A23 | Technology ages and sea trade: each nation advances ancient, medieval, gunpowder, industrial, modern (start from the era; armies stronger with age), trader ships crossing the oceans between trading nations, and 15 unit models (army, fleet, trader x 5 ages) in the manifest's `ages` | | X1 `techAge`, `trader`; X4 `ages` to b | CP2 | done | Preview: assets/preview-ages.png |
 | A24 | Nation identity (#118): four more building styles (soviet_bloc, western_modern, egyptian, highland; 20 models), anthem, chant and narration prompts shaped by era and government, flag emblems by ideology, a chronicle tone per government | | X1 `BuildingStyle` +4, X4 `styles` | CP2 | done | Preview: assets/preview-identity.png |
+| A26 | Beyond the present: the future age (drones, hover tanks, railgun cruisers, maglev freighters) and the stellar age (mechs, starships, orbital freighters), the `arcology` building style for both, satellites over stellar nations; sim thresholds, chronicle, sound and 11 models | | X1 `TechAge` +2, `BuildingStyle` `arcology`; X4 | CP2 | wip | Owner decision 14 Nov |
 
 ## Waiting on
 

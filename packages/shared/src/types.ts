@@ -30,7 +30,7 @@ export interface Region {                                // a fixed group of nei
 
 export type BuildingStyle = 'medieval' | 'classical' | 'desert' | 'east_asian' | 'mesoamerican' | 'scrap'
   | 'norse' | 'south_asian' | 'sahel' | 'industrial'
-  | 'soviet_bloc' | 'western_modern' | 'egyptian' | 'highland';
+  | 'soviet_bloc' | 'western_modern' | 'egyptian' | 'highland' | 'arcology';
 
 export interface Country {
   id: number;                                            // index into World.countries; new nations are appended
@@ -61,7 +61,7 @@ export type StructureKind = 'camp' | 'village' | 'town' | 'city' | 'capital'
 export interface Structure { id: string; tile: number; owner: number; kind: StructureKind; builtTick: number }
 
 export type UnitKind = 'army' | 'fleet' | 'settler' | 'trader';   // trader: a merchant ship crossing the ocean between trading nations
-export type TechAge = 'ancient' | 'medieval' | 'gunpowder' | 'industrial' | 'modern';
+export type TechAge = 'ancient' | 'medieval' | 'gunpowder' | 'industrial' | 'modern' | 'future' | 'stellar';
 export interface Unit { id: string; owner: number; kind: UnitKind; tile: number; strength: number; target?: number }
 
 export type Stance = 'war' | 'hostile' | 'neutral' | 'trade' | 'alliance';
