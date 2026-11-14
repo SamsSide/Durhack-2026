@@ -50,3 +50,26 @@ renders `assets/preview-styles.png` (all ten styles) and `assets/preview-identit
   overrides the kind layout but keeps the footprint.
 - A quick look at some styles: `PREVIEW_STYLES=egyptian,highland PREVIEW_KINDS=capital,temple
   PREVIEW_MARGIN=0.4 PREVIEW_OUT=/tmp/look.png` before the blender command (the GLBs are still all rebuilt).
+
+- Preview a subset: `PREVIEW_STYLES=scrap,desert PREVIEW_KINDS=capital,temple` before the blender command.
+
+## Technology ages (row A23, contract X4 `ages`)
+
+15 unit models: 5 ages (`ancient`, `medieval`, `gunpowder`, `industrial`, `modern`) x 3 kinds (`army`,
+`fleet`, `trader`) in `web/public/models/ages/<age>/<kind>.glb`. Rebuild (also adds the `ages` section
+and the shared `trader` fallback to `manifest.json`, keeping everything else, and renders
+`assets/preview-ages.png`):
+
+    blender --background --factory-startup --python assets/blender/build_ages.py
+    python3 assets/blender/verify_ages.py       # triangles, bounds, one `team` material, size
+
+- `ages_kit.py`: `AgeBuilder` (the styles Builder plus rod, path, prism, loft, ball, disc), the one
+  `ages` palette, and the shared pieces: `Hull` (a lofted hull with stripes), mast, sail, lateen, flag,
+  funnel, smoke, man, horse. `build()` scales every model so its longest side is 1.
+- `ages_defs.py`: one function per model. Everything faces +x (bows and soldiers); ships are drawn
+  from the waterline up, so y = 0 in the GLB is the waterline.
+- Reading rules: war ships carry `team` sails or a `team` hull stripe; merchants carry plain canvas
+  with one `team` stripe and cargo on deck. Every model also has a flat `team` patch on top (awning,
+  deck cloth, turret roof, helipad, containers) so its owner shows from straight above.
+- Preview a subset, with nothing exported: `PREVIEW_ONLY=1 PREVIEW_AGES=modern PREVIEW_OUT=/tmp/p.png`
+  before the blender command (more knobs in the docstring of `build_ages.py`).

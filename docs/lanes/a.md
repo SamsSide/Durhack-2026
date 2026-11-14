@@ -52,7 +52,7 @@ default of 4 still applies to the other lanes).
 | A20 | Multimodal, audio in: spoken decrees. Gemini hears the recording directly and turns it into a decree with an effect (plague, famine, storm, meteor, prophet, gold rush, rebellion) that the engine applies to a nation or region | A6, A7 | X3 `POST /api/decree/voice` | CP2 | done | Browser webm/opus not yet tested with a real mic |
 | A21 | Multimodal, image in and voice out: "Terra Nova News". Gemini watches a capture of the globe plus the recent chronicle and writes a 20 to 30 s news bulletin; ElevenLabs reads it in a newsreader voice | A14 | X3 `POST /api/broadcast`, X6 `playBroadcast` | CP1.5 | done | Gemini with the image takes about 19 s |
 | A22 | Building styles: `Country.buildingStyle` picked in the world bible (rules fallback, at most two per style), and 30 Blender models (6 styles x capital, city, town, temple, fort) in the X4 manifest's `styles` | | X1 `buildingStyle`, X4 `styles` to b | CP2 | done | Preview: assets/preview-styles.png |
-| A23 | Technology ages and sea trade: each nation advances ancient, medieval, gunpowder, industrial, modern (start from the era; armies stronger with age), trader ships crossing the oceans between trading nations, and 15 unit models (army, fleet, trader x 5 ages) in the manifest's `ages` | | X1 `techAge`, `trader`; X4 `ages` to b | CP2 | wip | Owner decision 14 Nov |
+| A23 | Technology ages and sea trade: each nation advances ancient, medieval, gunpowder, industrial, modern (start from the era; armies stronger with age), trader ships crossing the oceans between trading nations, and 15 unit models (army, fleet, trader x 5 ages) in the manifest's `ages` | | X1 `techAge`, `trader`; X4 `ages` to b | CP2 | done | Preview: assets/preview-ages.png |
 | A24 | Nation identity (#118): four more building styles (soviet_bloc, western_modern, egyptian, highland; 20 models), anthem, chant and narration prompts shaped by era and government, flag emblems by ideology, a chronicle tone per government | | X1 `BuildingStyle` +4, X4 `styles` | CP2 | done | Preview: assets/preview-identity.png |
 
 ## Waiting on
@@ -88,5 +88,6 @@ default of 4 still applies to the other lanes).
 - 15:50 · A18: unrest per region published by its holder, restless regions break away as new nations with their own agent and ruler (one at a time, cooldown, once per region), the secession chronicle kind
 - 15:53 · A22: 30 style models (medieval, classical, desert, east_asian, mesoamerican, scrap x capital, city, town, temple, fort) from a shared Blender kit, in the manifest's styles
 - 16:13 · A24: four identity styles (20 models) and sound, flags and chronicle voice by era and government
+- 16:15 · A23 models (Fable): army, war fleet and merchant ship for each of five ages, from spearmen and galleys to tanks, destroyers and container ships
 
 Mocks: `npm run mock` (MockRunner behind the `WorldRunner` interface in `server/src/runner.ts`) stands in for the engine until A3; lore, audio and replays are mocked until A13 to A16 and A9.
