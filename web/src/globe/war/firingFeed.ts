@@ -21,7 +21,28 @@ class FiringFeed {
   readonly pos = new Float32Array(MAX_FIGS * 3);
   readonly size = new Float32Array(MAX_FIGS);
 
+  /** When each army (by key) was last engaged and last fired: UnitLayer reads these to brace, lunge and recoil. */
+  private readonly foughtAt = new Map<string, number>();
+  private readonly shotAt = new Map<string, number>();
+
   begin(): void { this.armies = 0; this.figs = 0; }
+
+  /** Firing: this army has an enemy in reach right now. */
+  markFight(key: string, now: number): void {
+    if (this.foughtAt.size > 256) this.foughtAt.clear();
+    this.foughtAt.set(key, now);
+  }
+
+  /** Firing: this army just loosed a volley. */
+  markShot(key: string, now: number): void {
+    if (this.shotAt.size > 256) this.shotAt.clear();
+    this.shotAt.set(key, now);
+  }
+
+  fighting(key: string, now: number): boolean { return now - (this.foughtAt.get(key) ?? -1e9) < 700; }
+
+  /** Ms since the army's last volley (a large number when it never fired). */
+  sinceShot(key: string, now: number): number { return now - (this.shotAt.get(key) ?? -1e9); }
 
   /** One formation; returns its index, or -1 when the feed is full. */
   army(key: string, owner: number, age: number, tile: number, c: THREE.Vector3): number {

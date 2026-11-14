@@ -5,7 +5,8 @@ import type { Unit } from '@terra/shared';
 import { arcPoint } from './ribbons';
 import { drawDot, toTexture } from './draw';
 import { facing } from './effects';
-import { standMatrix } from './ModelField';
+import { poseMatrix } from './ModelField';
+import { hullPose } from './motion';
 import type { ModelField } from './ModelField';
 import type { UnitModel } from './unitModels';
 import type { VehicleFx } from './vehicleFx';
@@ -23,6 +24,7 @@ interface TState {
   dissolve: boolean;
   ghost: THREE.Vector3 | null; // a glide cut short by a speed change fades out from here
   landAt: number; inAt: number;
+  way: number; // 0 at rest, 1 under way: eases, so the bow lifts and settles
 }
 
 const WAKE = 640;
@@ -49,6 +51,8 @@ export interface TraderHost {
   model(owner: number): UnitModel;
   team(owner: number): THREE.Color;
   pop(owner: number, now: number): number; // age-change bounce, 1 when none
+  /** The nation's freighters fly (the stellar age's orbital freighter): they float and bank instead of riding the swell. */
+  sky?(owner: number): boolean;
 }
 
 export class Traders {
@@ -108,7 +112,7 @@ export class Traders {
           id: u.id, owner: u.owner, seed: hash(u.id) * Math.PI * 2,
           from: start, to: start, t0: 0, t1: 0, queue: [],
           head: new THREE.Vector3(), pos: new THREE.Vector3(), born: now, gone: -1, nextWake: now,
-          dissolve: false, ghost: null, landAt: -1e9, inAt: -1e9,
+          dissolve: false, ghost: null, landAt: -1e9, inAt: -1e9, way: 0,
         };
         if (start !== u.tile) st.queue.push({ to: u.tile, ms: pm!.ms });
         this.states.set(u.id, st);
@@ -205,13 +209,14 @@ export class Traders {
       }
       const f = facing(st.pos, camDir);
       if (f <= 0) continue;
-      const bob = Math.sin(now * 0.0021 + st.seed) * this.size * 0.05;
-      const roll = Math.sin(now * 0.0017 + st.seed * 1.7) * 0.09;
+      st.way += ((moving ? 1 : 0) - st.way) * Math.min(1, dt * 0.004);
+      const P = hullPose(st.way, st.seed, now, h.sky?.(st.owner) ?? false);
+      const bob = P.lift * this.size;
       _a.copy(st.pos).normalize();
       _b.copy(st.pos).addScaledVector(_a, 0.0004 + bob);
       const model = h.model(st.owner);
       const size = this.size * (model.footprint / 0.4) * orbit * Math.max(0, Math.min(1, fade)) * h.pop(st.owner, now);
-      field.push(model, standMatrix(_m, _b, st.head, size, roll), h.team(st.owner));
+      field.push(model, poseMatrix(_m, _b, st.head, size, P.pitch, P.roll), h.team(st.owner));
       if (h.fx && camDist < FX_RANGE) h.fx.emit({ anchors: model.anchors, stand: _m, size, moving, facing: f }, now, dt);
 
       if (moving && now >= st.nextWake && f > 0.3) {

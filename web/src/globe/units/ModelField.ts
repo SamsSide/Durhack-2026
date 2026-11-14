@@ -108,3 +108,21 @@ export function standMatrix(out: THREE.Matrix4, pos: THREE.Vector3, head: THREE.
   out.setPosition(pos);
   return out;
 }
+
+/**
+ * `standMatrix` with a pose laid over it: `pitch` leans the model forward (nose down), `roll` tips it
+ * about its front axis, `sy` stretches it upward (a breath). Both turn about the model's base.
+ */
+export function poseMatrix(out: THREE.Matrix4, pos: THREE.Vector3, head: THREE.Vector3, size: number, pitch: number, roll: number, sy = 1): THREE.Matrix4 {
+  const up = _up.copy(pos).normalize();
+  _z.copy(head).addScaledVector(up, -head.dot(up));
+  if (_z.lengthSq() < 1e-10) { _z.set(0, 1, 0).addScaledVector(up, -up.y); if (_z.lengthSq() < 1e-10) _z.set(1, 0, 0); }
+  _z.normalize();
+  _x.crossVectors(up, _z);
+  out.makeBasis(_x, up, _z);
+  if (roll) out.multiply(_r.makeRotationZ(roll));
+  if (pitch) out.multiply(_r.makeRotationX(pitch));
+  out.scale(_s.set(size, size * sy, size));
+  out.setPosition(pos);
+  return out;
+}
