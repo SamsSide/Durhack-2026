@@ -234,6 +234,8 @@ export function flagSvg(spec: FlagSpec, width?: number, height?: number): string
 | `GET /api/country/:id/chant` | a | none | `audio/mpeg`, 5 to 10 seconds: that nation's war chant |
 | `GET /api/country/:id/flag` | a | none | `image/png`: an AI-painted version of the nation's flag, made on first request and cached. `503` when image generation is off or capped; the interface then keeps the drawn flag |
 | `GET /api/region/:id/lore` | a | none | `{ "regionId": 4, "name": "The Salt Marches", "owner": 2, "summary": "...", "history": "..." }` |
+| `GET /api/stats/territory?worldId=` | a | none (`worldId` optional, default current world) | `{ "worldId": "w-3f9a", "series": [ { "countryId": 0, "name": "...", "color": "#c8553d", "points": [ { "tick": 10, "year": 1010, "tiles": 12 } ] } ] }` from Tiger Data (row A11); `503 { "error": "stats unavailable" }` without a database |
+| `GET /api/stats/summary` | a | none | `{ "events": 5210, "worlds": 3, "eventsPerType": { "tile_claimed": 900 } }`; `503` without a database |
 
   Lore response:
 
