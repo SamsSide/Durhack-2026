@@ -413,5 +413,39 @@
         "footprint": 0.45
       }
     }
+  },
+  "wonders": {
+    "great_wall": {
+      "file": "wonders/great_wall.glb",
+      "footprint": 1.0
+    },
+    "mausoleum": {
+      "file": "wonders/mausoleum.glb",
+      "footprint": 2.0
+    },
+    "pyramid": {
+      "file": "wonders/pyramid.glb",
+      "footprint": 2.0
+    },
+    "colossus": {
+      "file": "wonders/colossus.glb",
+      "footprint": 2.0
+    },
+    "cathedral": {
+      "file": "wonders/cathedral.glb",
+      "footprint": 2.0
+    },
+    "palace_of_soviets": {
+      "file": "wonders/palace_of_soviets.glb",
+      "footprint": 2.0
+    },
+    "skyscraper": {
+      "file": "wonders/skyscraper.glb",
+      "footprint": 1.6
+    },
+    "space_elevator": {
+      "file": "wonders/space_elevator.glb",
+      "footprint": 1.6
+    }
   }
 }
