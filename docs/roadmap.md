@@ -16,7 +16,7 @@ Today's big pieces: calm UI with one left panel (#254), a material-system UI dep
 chose to keep (#258 to #268), living world (#252), 1,200 provinces (#240), time gears from
 1 week to 10 years a second (#267), the freeze fix and server guards (#255), the memory cap
 (#259), a full demo dry run (#274), a UI bug test (#277), devnet payments verified (#270), and
-the submission text, video plan and README (#269).
+the submission text, 2-minute table demo script and README (#269).
 
 **Open, for people:** the hand tests (#222 lane b CP2 suite; #23, #24, #39, #40, #82 lane c;
 #53 war chants), one live rehearsal with Gemini, ElevenLabs and devnet, the `[check]` items in

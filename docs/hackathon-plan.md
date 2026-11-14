@@ -16,23 +16,28 @@ altogether and the world keeps building; bring it back and its history merges in
 One sentence for judges: **a new world, composed live by AIs that keep working together when
 they cannot talk to each other.**
 
-## 2. The demo (2 minutes)
+## 2. The demo (2 minutes, live at the table)
 
-1. A judge gives a prompt. We pick six nations and press Create. A planet forms; six nations are
-   named and placed, each with a leader, an ideology and a founding myth. (15 seconds)
-2. Time runs at speed. Borders spread province by province, camps become villages become
-   cities, low-poly buildings pop up, every nation flies its own flag. A chronicle ticker tells the story as it happens.
-3. Zoom into a nation and click it. Its border lights up and its card slides in at the side,
-   showing its culture, politics and its history with its neighbours. A voice narrates it; its
-   anthem plays, with words written from what has actually happened to it.
-4. A war breaks out. Armies march, volleys fly, tiles change colour, and each side's war chant
-   is heard. Switch the map to diplomacy mode to see who stands with whom.
-5. **The moment:** open the network panel and cut the link to one nation in the middle of the
-   war. It carries on building from what it last knew; a "what it believes" view shows its map
-   drifting from the truth; its neighbours notice the silence. Delete a second nation outright:
-   its neighbours carve it up. Restore the link: the missing years merge in, the border disputes
-   are settled on screen, and the chronicle records "the Silence".
-6. Close on the token meter ("this whole world cost N tokens") and the build history in Entire.
+There is no video. Judging is a **2-minute live demo on the owner's laptop (1920x1080), running
+the real app, given again for every judge who comes to the table.** Two minutes is the hard
+maximum. The full script, the 20-second version and the reset routine are in
+`docs/submission.md` section 3. The shape:
+
+1. **Before the judge arrives:** a prepared world already running (cities, a war, payments in the
+   ledger), presentation mode on (key P), panels collapsed.
+2. **0:00 to 0:10:** orbit, six named nations, gears up. "Every nation has its own AI ruler."
+3. **0:10 to 0:25:** a gold payment arc, click it, land on the Solana Explorer memo.
+4. **0:25 to 0:50, the moment:** open the network panel and cut a nation. Show beliefs: its map
+   drifts from the truth while it keeps building on what it last knew.
+5. **0:50 to 1:05:** kill its ruler; the council recovers and the successor keeps the memory.
+6. **1:05 to 1:25:** restore the link (the missing years merge, "the Silence" is recorded), then
+   speak a decree ("a plague in the north").
+7. **1:25 to 1:45:** Terra Nova News, with the animated anchor's voice, reports it.
+8. **1:45 to 2:00:** the time gears at 10 years a second, the token meter (key End), and one line
+   for the prize that judge is here for.
+
+Between judges: Escape, P, restore the link, reset the gears; or replay the saved `demo-1` world
+from the Create screen (no API calls) for a known strong start.
 
 Backup plan if live fails: every run is an event log, so a saved run replays exactly, offline,
 with no API calls (`row A9`). Narration and anthems for the saved world are cached on disk.
