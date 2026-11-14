@@ -35,11 +35,11 @@ case "$KIND" in
     [ -n "$TO" ] || die "request needs --to <lane|login>"
     ASSIGNEE="$(login_of "$TO")"; TOLANE="$(lane_of "$ASSIGNEE")"; TOLANE="${TOLANE:-?}"
     LABELS+=(agent-request); [ "$TOLANE" != "?" ] && LABELS+=("to:$TOLANE")
-    TITLE="[$MYLANE→$TOLANE] $TITLE" ;;
+    TITLE="[${MYLANE}→${TOLANE}] $TITLE" ;;
   owner)
     ASSIGNEE="$(owner)"
     LABELS+=(needs-owner)
-    TITLE="[$MYLANE→owner] $TITLE" ;;
+    TITLE="[${MYLANE}→owner] $TITLE" ;;
   test)
     ASSIGNEE="$(login_of "${TO:-$ME}")"
     LABELS+=(human-test)
@@ -48,7 +48,7 @@ case "$KIND" in
     [ -n "$TO" ] || die "ready needs --to <lane|login>"
     ASSIGNEE="$(login_of "$TO")"; TOLANE="$(lane_of "$ASSIGNEE")"; TOLANE="${TOLANE:-?}"
     LABELS+=(ready); [ "$TOLANE" != "?" ] && LABELS+=("to:$TOLANE")
-    TITLE="[$MYLANE→$TOLANE] Ready: $TITLE" ;;
+    TITLE="[${MYLANE}→${TOLANE}] Ready: $TITLE" ;;
   *) die "usage: ask.sh request|owner|test|ready ..." ;;
 esac
 [ "$MYLANE" != "?" ] && LABELS+=("from:$MYLANE")
@@ -65,7 +65,7 @@ cat "$BODY" > "$TMP"
 } >> "$TMP"
 
 ARGS=(-R "$R" --title "$TITLE" --body-file "$TMP" --assignee "$ASSIGNEE")
-for l in "${LABELS[@]}"; do ARGS+=(--label "$l"); done
+for l in ${LABELS[@]+"${LABELS[@]}"}; do ARGS+=(--label "$l"); done
 URL="$(gh issue create "${ARGS[@]}")"
 echo "$URL"
 
