@@ -3,9 +3,31 @@
   "repo": "SamsSide/Durhack-2026",
   "people": 3,
   "lanes": [
-    { "id": "a", "name": "Lane A (role TBD)", "github": "SamsSide", "focus": "TBD: set by durhack-plan once the idea is chosen", "paths": [] },
-    { "id": "b", "name": "Lane B (role TBD)", "github": "CutGrass88", "focus": "TBD: set by durhack-plan once the idea is chosen", "paths": [] },
-    { "id": "c", "name": "Lane C (role TBD)", "github": "Justin-CODING-PY", "focus": "TBD: set by durhack-plan once the idea is chosen", "paths": [] }
+    {
+      "id": "a",
+      "name": "Lane A (role TBD)",
+      "github": "SamsSide",
+      "focus": "TBD: set by durhack-plan once the idea is chosen",
+      "paths": []
+    },
+    {
+      "id": "b",
+      "name": "Lane B (role TBD)",
+      "github": "CutGrass88",
+      "focus": "TBD: set by durhack-plan once the idea is chosen",
+      "paths": []
+    },
+    {
+      "id": "c",
+      "name": "Lane C (role TBD)",
+      "github": "Justin-CODING-PY",
+      "focus": "TBD: set by durhack-plan once the idea is chosen",
+      "paths": []
+    }
   ],
-  "board": {}
+  "board": {
+    "number": 1,
+    "owner": "SamsSide",
+    "url": "https://github.com/users/SamsSide/projects/1"
+  }
 }
