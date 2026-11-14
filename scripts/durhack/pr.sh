@@ -77,7 +77,7 @@ case "$CMD" in
     ME="$(me)"; LANE="$(lane_of "$ME")"
     [ -n "$LANE" ] && LABELS+=(--label "lane:$LANE")
     if [ -n "$OF" ] && ! is_owner; then LABELS+=(--label needs-owner --reviewer "$(owner)"); fi
-    URL="$(gh pr create -R "$R" --base main --head "$B" --title "$TITLE" --body-file "$BODY" "${DRAFT[@]}" "${LABELS[@]}")"
+    URL="$(gh pr create -R "$R" --base main --head "$B" --title "$TITLE" --body-file "$BODY" ${DRAFT[@]+"${DRAFT[@]}"} ${LABELS[@]+"${LABELS[@]}"})"
     echo "$URL"
     if [ -n "$OF" ] && ! is_owner; then
       echo "needs-owner: this PR changes owner paths, only $(owner) can merge it:"
