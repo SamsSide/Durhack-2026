@@ -17,6 +17,11 @@ import { bindChain } from './chain';
 // .env lives at the repo root (may be missing).
 dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.env') });
 
+// The world lives in this process: one stray rejection or throw (a failed chain, Gemini or
+// ElevenLabs call, a bad control) must not end it mid-demo. Log it and carry on.
+process.on('unhandledRejection', (reason) => { console.error('unhandled rejection (server kept running):', reason); });
+process.on('uncaughtException', (err) => { console.error('uncaught exception (server kept running):', err); });
+
 const mockFlag = process.argv.includes('--mock') || process.env.MOCK_WORLD === '1';
 const mode: LlmMode = mockFlag ? 'mock' : process.env.LLM_MODE === 'live' ? 'live' : 'mock';
 const port = Number(process.env.PORT ?? 8787);

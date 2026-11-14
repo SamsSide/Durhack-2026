@@ -426,7 +426,7 @@ export class EngineRunner implements WorldRunner {
       case 'pause': this.setPaused(msg.value); break;
       case 'decree': {
         // Typed decrees take the same path as spoken ones (row A20): interpret, then applyDecree.
-        if (currentMode() === 'live') void interpretDecree(msg.text, w).then((d) => { if (this.world === w) this.applyDecree(d); });
+        if (currentMode() === 'live') interpretDecree(msg.text, w).then((d) => { if (this.world === w) this.applyDecree(d); }).catch((e) => console.warn('decree failed:', e instanceof Error ? e.message : e));
         else this.applyDecree(interpretDecreeMock(msg.text, w));
         return;
       }

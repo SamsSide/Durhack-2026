@@ -296,11 +296,15 @@ export function Trade() {
         // a long arc can top out off screen: keep its label below the top bar and inside the view
         const [mx, my] = toScreen(s.mid);
         const x = Math.min(size.width - 150, Math.max(150, mx));
-        let y = Math.min(size.height - 20, Math.max(LABEL_MIN_Y, my));
-        // two arcs between the same capitals would share a spot: stack them downwards
-        for (let k = 0; k < placed.length; k++) {
+        // Whole pixels: with a fractional y, (o + LABEL_STEP) - o can round to just under LABEL_STEP,
+        // so a stacked label still "overlapped" the one it was moved below and the loop never ended
+        // (the whole tab froze, issue #249).
+        let y = Math.round(Math.min(size.height - 20, Math.max(LABEL_MIN_Y, my)));
+        // two arcs between the same capitals would share a spot: stack them downwards. Each placed
+        // label can push this one down at most once, so the passes are bounded as well.
+        for (let k = 0, passes = 0; k < placed.length && passes <= placed.length; k++) {
           const o = placed[k]!;
-          if (Math.abs(o[0] - x) < 220 && Math.abs(o[1] - y) < LABEL_STEP) { y = o[1] + LABEL_STEP; k = -1; }
+          if (Math.abs(o[0] - x) < 220 && Math.abs(o[1] - y) < LABEL_STEP) { y = o[1] + LABEL_STEP; k = -1; passes++; }
         }
         placed.push([x, y]);
         s.label.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, calc(-100% - 6px))`;

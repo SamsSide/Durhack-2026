@@ -135,10 +135,16 @@ class Chain {
       snapshot: (w) => { try { this.onSnapshot(w); } catch (e) { log(`snapshot failed: ${msg(e)}`); } },
       events: (events) => { try { this.onEvents(events); } catch (e) { log(`events failed: ${msg(e)}`); } },
     });
-    setInterval(() => { void this.tickSettle(); }, this.settleMs).unref();
-    setInterval(() => { void this.tickPoll(); }, POLL_MS).unref();
-    setInterval(() => { void this.tickOpen(); }, 2000).unref();
-    setInterval(() => { try { this.flushEconomy(); void this.tickMaintain(); this.maybeSave(); } catch { /* never */ } }, 1000).unref();
+    // Each timer catches everything, including a throw before the task's own try block (a backend
+    // that throws from ready() or balanceOf(), say): a chain fault is a log line, never a rejection.
+    const guard = (what: string, task: () => Promise<void>) => () => {
+      try { task().catch((e) => log(`${what} failed: ${msg(e)}`)); } catch (e) { log(`${what} failed: ${msg(e)}`); }
+    };
+    setInterval(guard('settle window', () => this.tickSettle()), this.settleMs).unref();
+    setInterval(guard('status poll', () => this.tickPoll()), POLL_MS).unref();
+    setInterval(guard('account opening', () => this.tickOpen()), 2000).unref();
+    setInterval(() => { try { this.flushEconomy(); this.maybeSave(); } catch (e) { log(`housekeeping failed: ${msg(e)}`); } }, 1000).unref();
+    setInterval(guard('balance read', () => this.tickMaintain()), 1000).unref();
   }
 
   /** A world that already exists when the module starts (devnet loads its libraries lazily). */
@@ -158,7 +164,7 @@ class Chain {
     if (this.playback) this.seedPlaybackLedger(w);
     if (this.genesisTimer) { clearTimeout(this.genesisTimer); this.genesisTimer = null; }
     this.lastEcon = '';
-    if (!this.playback) void this.runGenesis(w);
+    if (!this.playback) this.runGenesis(w).catch((e) => log(`genesis failed: ${msg(e)}`));
   }
 
   private loadSidecar(id: string): Sidecar | null {

@@ -51,9 +51,11 @@ export function storyRoutes(runner: WorldRunner): Router {
     const id = countryId(req.params.id);
     const w = runner.getWorld();
     if (id === null || !w) return void res.status(404).json({ error: 'no such country' });
-    const lore = await getLore(id, w);
-    if (!lore) return void res.status(404).json({ error: 'no such country' });
-    res.json(lore);
+    try {
+      const lore = await getLore(id, w);
+      if (!lore) return void res.status(404).json({ error: 'no such country' });
+      res.json(lore);
+    } catch { res.status(503).json({ error: 'lore unavailable' }); }
   });
 
   r.get('/country/:id/narration', async (req, res) => {
@@ -172,9 +174,11 @@ export function storyRoutes(runner: WorldRunner): Router {
 
   r.get('/region/:id/lore', async (req, res) => {
     const w = runner.getWorld();
-    const lore = w ? await getRegionLore(Number(req.params.id), w) : null;
-    if (!lore) return void res.status(404).json({ error: 'no such region' });
-    res.json(lore);
+    try {
+      const lore = w ? await getRegionLore(Number(req.params.id), w) : null;
+      if (!lore) return void res.status(404).json({ error: 'no such region' });
+      res.json(lore);
+    } catch { res.status(503).json({ error: 'lore unavailable' }); }
   });
   return r;
 }
