@@ -111,6 +111,7 @@ export function NetworkPanel() {
             country={c}
             agent={agents.find((a) => a.countryId === c.id)}
             tick={world.tick}
+            year={world.year}
             selected={c.id === selected}
             onSelect={(id) => { select(id); flyTo(id); }}
             onControl={control}

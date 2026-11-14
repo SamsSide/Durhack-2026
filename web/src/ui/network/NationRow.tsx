@@ -5,12 +5,13 @@ interface Props {
   country: Country;
   agent: AgentStatus | undefined;
   tick: number;
+  year: number;
   selected: boolean;
   onSelect(id: number): void;
   onControl(action: string, id: number): void;
 }
 
-export function NationRow({ country, agent, tick, selected, onSelect, onControl }: Props) {
+export function NationRow({ country, agent, tick, year, selected, onSelect, onControl }: Props) {
   const [confirming, setConfirming] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
@@ -33,6 +34,8 @@ export function NationRow({ country, agent, tick, selected, onSelect, onControl 
   };
 
   const years = agent ? Math.max(0, tick - agent.lastHeardTick) : 0;
+  // #108: a deleted agent stops its heartbeat, so its last-heard tick is when it was deleted (one tick is one year).
+  const deletedYear = year - years;
   const cls = ['tn-nrow', selected ? 'tn-sel' : '', cut ? 'tn-is-cut' : '', gone ? 'tn-gone' : ''].filter(Boolean).join(' ');
   return (
     <li className={cls} style={{ ['--tn-nation' as string]: country.color }}>
@@ -42,7 +45,7 @@ export function NationRow({ country, agent, tick, selected, onSelect, onControl 
         {agent && !gone && (cut
           ? <span className="tn-state cut"><i className="tn-pulse" />Cut</span>
           : <span className="tn-state up"><i />Link up</span>)}
-        {gone && <span className="tn-state del">{deleted ? `Deleted Y${tick}` : 'Fallen'}</span>}
+        {gone && <span className="tn-state del">{deleted ? `Deleted Y${deletedYear}` : 'Fallen'}</span>}
       </div>
       {gone && (
         <div className="tn-nr-sub ruin">
