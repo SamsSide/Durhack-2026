@@ -23,11 +23,11 @@ function halt(): void {
 }
 
 const DUCK = 0.15;
-let chantBase = 0.9;
 let warned = false;
 /** Duck the chant while narration speaks, restore it afterwards. */
 function applyDuck(): void {
-  if (chant) chant.volume = state === 'narration' || (state === 'loading' && kindNow === 'narration') ? chantBase * DUCK : chantBase;
+  const ducked = state === 'narration' || (state === 'loading' && kindNow === 'narration');
+  for (const c of chants) c.el.volume = ducked ? c.base * DUCK : c.base;
 }
 let kindNow = null as 'narration' | 'anthem' | null;
 
@@ -58,7 +58,11 @@ export const audio = {
   playNarration: (id: number) => play('narration', id),
   playAnthem: (id: number) => play('anthem', id),
   stop(): void { halt(); state = 'idle'; countryId = null; kindNow = null; applyDuck(); emit(); },
-  setMuted(m: boolean): void { muted = m; if (el) el.muted = m; emit(); },
+  setMuted(m: boolean): void {
+    muted = m; if (el) el.muted = m;
+    if (m) { for (const c of chants) c.el.pause(); chants.clear(); }
+    emit();
+  },
   getState: () => snapshot,
   subscribe(listener: () => void): () => void {
     listeners.add(listener);
@@ -68,8 +72,10 @@ export const audio = {
 
 // War chants: a short, rate-limited reaction to war declarations and battles.
 let lastChant = 0;
-let chant: HTMLAudioElement | null = null;
+const chants = new Set<{ el: HTMLAudioElement; base: number }>();
 const CHANT_GAP_MS = 6000;
+/** The second side's chant starts this long after the first begins (so they overlap slightly), or when it ends. */
+const OVERLAP_S = 0.6;
 
 function chantFor(event: WorldEvent): number[] {
   if (event.type === 'relation_changed' && event.stance === 'war') return [event.a, event.b];
@@ -77,18 +83,37 @@ function chantFor(event: WorldEvent): number[] {
   return [];
 }
 
+function startChant(id: number, base: number, onNearEnd?: () => void): void {
+  const a = new Audio(`/api/country/${id}/chant`);
+  const entry = { el: a, base };
+  chants.add(entry);
+  a.volume = base;
+  const drop = () => { chants.delete(entry); };
+  let fired = false;
+  const next = () => { if (!fired) { fired = true; onNearEnd?.(); } };
+  a.ontimeupdate = () => { if (a.duration && a.currentTime >= a.duration - OVERLAP_S) next(); };
+  a.onended = () => { drop(); next(); };
+  a.onerror = () => { drop(); next(); };
+  applyDuck();
+  a.play().catch(() => { drop(); next(); /* autoplay blocked or route unavailable: silent */ });
+}
+
 function playChants(ids: number[]): void {
   const now = Date.now();
   if (muted || now - lastChant < CHANT_GAP_MS || ids.length === 0) return;
   lastChant = now;
   const selected = useWorld.getState().selectedCountryId;
-  const id = selected != null && ids.includes(selected) ? selected : ids[Math.floor(Math.random() * ids.length)]!;
-  chant?.pause();
-  const a = new Audio(`/api/country/${id}/chant`);
-  chantBase = id === selected ? 0.9 : 0.4;
-  chant = a;
-  applyDuck();
-  a.play().catch(() => { /* autoplay blocked or route unavailable: silent */ });
+  for (const c of chants) { c.el.pause(); }
+  chants.clear();
+  // Both sides, one after the other; the selected nation's chant comes first and louder.
+  const order = [...new Set(ids)].sort((x, y) => Number(y === selected) - Number(x === selected));
+  const volume = (id: number) => (selected != null && id === selected ? 0.9 : selected != null ? 0.4 : 0.6);
+  const run = (i: number): void => {
+    const id = order[i];
+    if (id === undefined || muted) return;
+    startChant(id, volume(id), () => run(i + 1));
+  };
+  run(0);
 }
 
 let seen: WorldEvent | undefined;
