@@ -397,3 +397,33 @@ export function drawDot(): HTMLCanvasElement {
   circle(ctx, 32, 32, 32);
   return c;
 }
+
+/** The war status line over a counter: a small dark pill, an accent bar on the left, parchment text. */
+export function drawStatus(text: string, accent: string, night: string, parchment: string): HTMLCanvasElement {
+  const font = 'bold 24px "IBM Plex Mono", ui-monospace, Menlo, monospace';
+  const probe = canvas2d(8, 8)[1];
+  probe.font = font;
+  const w = Math.ceil(probe.measureText(text).width) + 40, h = 40;
+  const [c, ctx] = canvas2d(w, h);
+  ctx.fillStyle = night;
+  ctx.globalAlpha = 0.88;
+  ctx.beginPath();
+  ctx.roundRect(2, 2, w - 4, h - 4, 8);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = accent;
+  ctx.beginPath();
+  ctx.roundRect(2, 2, 9, h - 4, [8, 0, 0, 8]);
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.beginPath();
+  ctx.roundRect(2, 2, w - 4, h - 4, 8);
+  ctx.stroke();
+  ctx.font = font;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = parchment;
+  ctx.fillText(text, w / 2 + 5, h / 2 + 1);
+  return c;
+}

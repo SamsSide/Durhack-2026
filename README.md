@@ -144,6 +144,14 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   catapults to tanks and beyond; armies fire at each other by era: arrows, crossbows and
   trebuchets, cannon, artillery, tank tracers, drones and orbital strike.
   Troops move like troops: foot soldiers step and sway, horses canter, guns recoil, mechs stomp, ships roll on the swell, and the fallen drop one by one.
+- **Battles read at a glance:** every army at war carries a short status line above its counter
+  ("Advancing on", "Assaulting", "Besieging", "Holding the line", "Retreating", "Routed"), fading
+  out as the camera pulls back. Volleys flash and smoke along the line, with the odd shell
+  exploding among the enemy from the industrial age, and a bold red attack arrow runs from
+  attacker to defender for as long as the battle rages.
+
+![A battle on the globe: status line over the army counter, tracers on the line and the red attack arrow](docs/shots/battle-readability.png)
+
 - **Select an army or a battle:** click an army chip or its figures for its troops, general and
   status; click a battle badge for both sides, losses and the battle-line grid.
 - **War effects:** explosions by era, smoke over the front, and cities turning to ruins and rebuilding; devastation, war

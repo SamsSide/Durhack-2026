@@ -71,3 +71,4 @@ pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
 - 14 Nov · dev demo panel (backquote or Shift+D, ?demo): __launchDemo flies a scripted camera beside the rocket, __warDemo stages battles, smoke and a city falling on a real front, __demoMode hides the HUD for recordings
 - 14 Nov · #311 · select armies (counter or formation) and battles (new AoH3 battle badge) on the globe; useArmyInfo and useBattleInfo (troops by age, generals, losses, battle line); dev debug card until lane a's cards land
 - 14 Nov · #332 #317 · city markers stack per capital (status/cityStack.ts; one transient council badge, the newest), lens flare clamped to the limb and gone when the sun is hidden, three faint warm lens ghosts only, satellites at 70 percent
+- 14 Nov · #354 · battles read at a glance: war status line over each army counter (armyInfo warLineOf), a bolder attack arrow that lasts while the battle runs, the odd explosion on the enemy line from the industrial age

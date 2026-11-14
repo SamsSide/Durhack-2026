@@ -161,6 +161,14 @@ export function Firing() {
       }
     }
 
+    // the odd explosion on the enemy line: a shell lands among the figures (industrial on), bigger when modern
+    if (age >= 3 && Math.random() < (age >= 4 ? 0.22 : 0.12)) {
+      const k = j0 + Math.floor(Math.random() * (j1 - j0));
+      posOf(k, _p0);
+      _up.copy(_p0).normalize();
+      impact(age >= 5 ? Shot.Beam : Shot.Shell, _p0, _up, F.size[k]! * 1.2, now);
+    }
+
     function backLine(age: number, fs: number, aim: number, now: number): void {
       const tf = F.size[aim]!;
       posOf(aim, _c);
