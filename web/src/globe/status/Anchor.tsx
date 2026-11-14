@@ -7,15 +7,19 @@ import * as THREE from 'three';
 import type { P3 } from './geo';
 import { underHud } from './hudCover';
 
-export function Anchor({ pos, dx = 0, dy = 0, children }: { pos: P3; dx?: number; dy?: number; children: ReactNode }) {
+export function Anchor({ pos, dx = 0, dy = 0, limb, children }: { pos: P3; dx?: number; dy?: number; limb?: number; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const dir = useMemo(() => new THREE.Vector3(...pos).normalize(), [pos]);
   useFrame(({ camera }) => {
     const el = ref.current;
     if (!el) return;
-    const facing = camera.position.dot(dir) / camera.position.length();
+    const dist = camera.position.length();
+    const facing = camera.position.dot(dir) / dist;
+    // limb (0..1): hide this share of the way from the horizon (cos = 1 / dist) to straight below
+    const h = Math.min(1, 1 / dist);
+    const minFacing = limb == null ? 0.15 : h + (1 - h) * limb;
     const covered = document.querySelector('.closing-veil') !== null;
-    const shown = facing > 0.15 && !covered && !underHud(el);
+    const shown = facing > minFacing && !covered && !underHud(el);
     el.style.opacity = shown ? '1' : '0'; // never over a HUD panel (#175)
     el.classList.toggle('gs-hidden', !shown); // and never clickable while hidden
   });

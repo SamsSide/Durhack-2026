@@ -1,20 +1,31 @@
 // "Signal lost" tags at cut capitals and a small A at autopilot ones. Lane b (B7).
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { useWorld } from '../../state/world';
+import { LetterPile } from '../show/LetterPile';
 import { useProvinceMesh } from '../mesh/context';
 import { Anchor } from './Anchor';
 import { capitalPoint } from './geo';
 
+const FAR = 2.5;       // camera distance past which a cut tag shrinks to its letter pile
+const LIMB = 0.3;      // cut tags hide well before the horizon (a blackout cuts every nation)
+
+// One marker per cut nation (B14): the sealed-letter pile and "SIGNAL LOST / silent 42 yrs · 49 queued".
 function SignalLost({ countryId, pos }: { countryId: number; pos: [number, number, number] }) {
-  const years = useWorld((s) => {
+  const [years, queued] = useWorld((s) => {
     const a = s.agents.find((x) => x.countryId === countryId);
-    return s.world && a ? Math.max(0, s.world.tick - a.lastHeardTick) : 0;
-  });
+    return `${s.world && a ? Math.max(0, s.world.tick - a.lastHeardTick) : 0}:${a?.pendingEvents ?? 0}`;
+  }).split(':').map(Number) as [number, number];
+  const ref = useRef<HTMLDivElement>(null);
+  useFrame(({ camera }) => { ref.current?.classList.toggle('far', camera.position.length() > FAR); });
   return (
-    <Anchor pos={pos} dy={34}>
-      <div className="tn-plate gs-tag cut">
-        <span className="cap">Signal lost</span>
-        <span className="yrs">silent {years} {years === 1 ? 'yr' : 'yrs'}</span>
+    <Anchor pos={pos} dy={34} limb={LIMB}>
+      <div ref={ref} className="gs-cut">
+        <LetterPile count={queued} />
+        <div className="tn-plate gs-tag cut">
+          <span className="cap">Signal lost</span>
+          <span className="yrs">silent {years} {years === 1 ? 'yr' : 'yrs'}{queued > 0 ? ` · ${queued} queued` : ''}</span>
+        </div>
       </div>
     </Anchor>
   );
