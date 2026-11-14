@@ -68,8 +68,8 @@
 .belief-banner .btn { background: transparent; color: var(--holo-tint); border-color: var(--holo-tint); }
 .belief-banner .btn:hover { background: var(--holo-scanline); color: var(--holo-tint); }
 
-/* Nation card dock, top right. */
-.card-dock { top: calc(var(--topbar-height) + var(--space-3)); right: var(--space-3); background: color-mix(in srgb, var(--color-bg) 82%, transparent); border-radius: var(--radius-2); box-shadow: var(--shadow-1); }
+/* Nation card dock: right side, below the top bar, above the ticker; slides in on selection. */
+.card-dock { bottom: calc(var(--ticker-height) + var(--space-4)); overflow-y: auto; animation: card-slide-in 220ms ease-out; top: calc(var(--topbar-height) + var(--space-3)); right: var(--space-3); background: color-mix(in srgb, var(--color-bg) 82%, transparent); border-radius: var(--radius-2); box-shadow: var(--shadow-1); }
 @media (max-width: 1099px) {
   .card-dock { right: 0; top: var(--topbar-height); background: transparent; box-shadow: none; }
   .decree-slot, .legend-box { right: var(--space-2); }
@@ -90,3 +90,6 @@
 .news-slot > * { pointer-events: auto; }
 .onair { display: inline-flex; align-items: center; gap: 6px; }
 .onair-dot { width: 7px; height: 7px; border-radius: 50%; background: #e5484d; }
+
+@keyframes card-slide-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .card-dock { animation: none; } }

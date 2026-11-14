@@ -1,7 +1,7 @@
-// Nation and region names with flags painted flat on the planet, Age of History style. Lane b.
+// Nation and region names with flags that always face the camera. Lane b.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Text } from '@react-three/drei';
+import { Billboard, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { flagSvg, regionOwner } from '@terra/shared';
 import type { FlagSpec } from '@terra/shared';
@@ -14,7 +14,6 @@ const EXTRA_LIFT = 0.002;
 const RENDER_ORDER = 20;
 const FADE_FAR = 1.5; // nation names fully visible above this camera distance
 const FADE_NEAR = 1.3; // and gone below this
-const NORTH = new THREE.Vector3(0, 1, 0);
 
 interface LabelData {
   key: string;
@@ -27,17 +26,6 @@ interface LabelData {
 
 const clamp01 = (x: number): number => Math.min(1, Math.max(0, x));
 
-/** Quaternion with +Z along the surface normal and +Y towards north on the tangent plane. */
-function surfaceQuat(pos: THREE.Vector3): THREE.Quaternion {
-  const n = pos.clone().normalize();
-  let up = NORTH.clone().addScaledVector(n, -NORTH.dot(n));
-  if (up.lengthSq() < 1e-4) up = new THREE.Vector3(1, 0, 0).addScaledVector(n, -n.x);
-  up.normalize();
-  const right = new THREE.Vector3().crossVectors(up, n).normalize();
-  const m = new THREE.Matrix4().makeBasis(right, up, n);
-  return new THREE.Quaternion().setFromRotationMatrix(m);
-}
-
 function FlagLabel({ data }: { data: LabelData }) {
   const INK = getPalette().ink;
   const HALO = getPalette().parchment;
@@ -48,7 +36,6 @@ function FlagLabel({ data }: { data: LabelData }) {
 
   const posVec = useMemo(() => new THREE.Vector3(...data.pos), [data.pos]);
   const dir = useMemo(() => posVec.clone().normalize(), [posVec]);
-  const quat = useMemo(() => surfaceQuat(posVec), [posVec]);
 
   const flagKey = data.key + JSON.stringify(data.flag);
   const texture = useMemo(() => {
@@ -77,6 +64,8 @@ function FlagLabel({ data }: { data: LabelData }) {
     if (facing < 0.1) alpha = 0;
     g.visible = alpha > 0.01;
     if (!g.visible) return;
+    // Keep names legible at any zoom: scale with distance from the surface.
+    g.scale.setScalar(Math.min(1.6, Math.max(0.4, (d - 1) / 1.5)));
     const t = textRef.current;
     if (t) {
       t.fillOpacity = alpha;
@@ -86,7 +75,8 @@ function FlagLabel({ data }: { data: LabelData }) {
   });
 
   return (
-    <group ref={groupRef} position={data.pos} quaternion={quat} renderOrder={RENDER_ORDER}>
+    <group ref={groupRef} position={data.pos} renderOrder={RENDER_ORDER}>
+      <Billboard follow>
       <mesh position={[flagX, 0, 0]} renderOrder={RENDER_ORDER}>
         <planeGeometry args={[flagW, flagH]} />
         <meshBasicMaterial ref={flagMat} map={texture} transparent depthWrite={false} toneMapped={false} />
@@ -113,6 +103,7 @@ function FlagLabel({ data }: { data: LabelData }) {
         {data.name}
         <meshBasicMaterial transparent depthWrite={false} toneMapped={false} />
       </Text>
+      </Billboard>
     </group>
   );
 }

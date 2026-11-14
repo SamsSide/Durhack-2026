@@ -38,7 +38,7 @@ export function App() {
       <TopBar onCreate={() => setCreating(true)} />
       <BeliefBanner />
       {world && <div style={{ ...overlay, top: 'calc(var(--topbar-height) + var(--space-3))', left: 'var(--space-3)', bottom: 170 }}><NetworkPanel /></div>}
-      {world && selected != null && <div className="hud card-dock" data-hologram><NationCard countryId={selected} regionId={regionId} /></div>}
+      {world && selected != null && <div className="hud card-dock"><NationCard countryId={selected} regionId={regionId} /></div>}
       <DiplomacyLegend hidden={timelineOpen} />
       {world && !timelineOpen && <div className="hud decree-slot"><DecreeBox /></div>}
       {world && <div style={{ ...overlay, left: 'var(--space-3)', right: 'var(--space-3)', bottom: 'var(--space-3)' }}><Chronicle /></div>}
