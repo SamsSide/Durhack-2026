@@ -52,6 +52,11 @@ export function TopBar({ onCreate }: { onCreate: () => void }) {
             ))}
           </div>
         )}
+        {world && (
+          <button className="btn onair" title="Terra Nova News" onClick={() => window.dispatchEvent(new CustomEvent('terra:news-broadcast'))}>
+            <i className="onair-dot" />On air
+          </button>
+        )}
         <TokenMeter />
         <button className="btn primary-dark" onClick={onCreate}>New world</button>
       </div>

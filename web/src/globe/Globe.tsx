@@ -17,6 +17,7 @@ import { SelectionGlow } from './camera/SelectionGlow';
 import { Political } from './political/Political';
 import { Atmosphere } from './atmosphere/Atmosphere';
 import { Structures } from './structures/Structures';
+import { registerCapture } from './capture';
 
 const SPACE = '#0b0f14';
 
@@ -31,6 +32,18 @@ function CameraLight() {
     l.position.copy(camera.position).add(offset);
   });
   return <directionalLight ref={ref} intensity={1.1} />;
+}
+
+/** Hands the renderer, scene and camera to captureGlobe(). */
+function CaptureBridge() {
+  const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
+  const camera = useThree((s) => s.camera);
+  useEffect(() => {
+    registerCapture({ gl, scene, camera });
+    return () => registerCapture(null);
+  }, [gl, scene, camera]);
+  return null;
 }
 
 function Planet({ world, mesh }: { world: World; mesh: ProvinceMesh }) {
@@ -144,6 +157,7 @@ export function Globe() {
       <Atmosphere />
       {world && <Scene world={world} />}
       <CameraRig />
+      <CaptureBridge />
     </Canvas>
   );
 }

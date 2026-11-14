@@ -1,10 +1,14 @@
 // Full-screen shell. Lane b owns this file after the seed.
-import type { CSSProperties } from 'react';
+import type { ComponentType, CSSProperties } from 'react';
 import { Globe } from './globe';
+import * as ui from './ui';
 import { Chronicle, CreateScreen, DecreeBox, NationCard, NetworkPanel } from './ui';
 import { useWorld } from './state/world';
 import { BeliefBanner, DiplomacyLegend, MODES, TopBar, useTimelineOpen } from './hud';
 import { useEffect, useState } from 'react';
+
+// Lane c's NewsBroadcast (X5); resolved at run time so the app builds before it lands.
+const NewsBroadcast = (ui as unknown as Record<string, ComponentType | undefined>).NewsBroadcast;
 
 const overlay: CSSProperties = { position: 'absolute', zIndex: 5 };
 
@@ -38,6 +42,9 @@ export function App() {
       <DiplomacyLegend hidden={timelineOpen} />
       {world && !timelineOpen && <div className="hud decree-slot"><DecreeBox /></div>}
       {world && <div style={{ ...overlay, left: 'var(--space-3)', right: 'var(--space-3)', bottom: 'var(--space-3)' }}><Chronicle /></div>}
+      {world && NewsBroadcast && (
+        <div className="news-slot"><NewsBroadcast /></div>
+      )}
       {showCreate && (
         <div style={{ ...overlay, inset: 0, zIndex: 10, background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center' }} onClick={() => world && setCreating(false)}>
           <div onClick={(e) => e.stopPropagation()}>

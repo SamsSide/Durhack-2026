@@ -46,3 +46,4 @@ pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
 - 14 Nov · B4 + design · buildings from the real models, the designed top bar, decree box, legend, beliefs banner, capitals, atmosphere
 - 14 Nov · #59 · placed lane c's DecreeBox and TokenMeter, data-hologram on the card mount
 - 14 Nov · #59 · diplomacy legend hides under the open timeline
+- 14 Nov · #72 · captureGlobe and the NewsBroadcast slot
