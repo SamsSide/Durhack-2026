@@ -183,3 +183,11 @@ body:has(.tn-news) .minimap { opacity: 0; pointer-events: none; }
   z-index: 4;
   pointer-events: none;
 }
+
+/* Wealth legend (B12): a gold ramp with the poorest and richest treasuries at its ends */
+.legend-wealth .lg-ramp { height: 10px; border-radius: 2px; border: 1px solid var(--color-accent); margin: 4px 0 4px; }
+.legend-wealth .lg-ends { display: flex; justify-content: space-between; gap: 8px; font-family: var(--font-mono); font-size: 12px; }
+.legend-wealth .lg-ends b { font-weight: 600; }
+.legend-wealth .lg-names { font-family: inherit; font-size: 11px; color: var(--color-text-muted); margin-bottom: 6px; }
+.legend-wealth .lg-names span { max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legend-wealth .lg-names span:last-child { text-align: right; }

@@ -35,8 +35,8 @@ pairs: B2 with B3, then B4 with B5, then B6 with B7, then B8.
 | B9 | Stretch: a timeline scrubber that rebuilds the globe at any past year from `GET /api/world/log` | nothing (the mock serves the log) | | CP2 | testing | built by lane a (owner decision 14 Nov) |
 | B10 | Devnet hardening: a token account for every nation founded after genesis (`country_founded`), readable memos naming payer and payee, our laptop's own devnet run | a human funds the Commons at the faucet | | CP2 | built, devnet hand test pending | Owner's devnet run of #180 was clean (#183). Plan `docs/plans/b-economy.md` tasks 0, 1 |
 | B11 | Economy depth in the sim (the core five): a main good per province, devastation, civilian fear from war readiness, an ideology axis that drifts to the extremes under war | owner decision on the design and its contract changes | | CP2 | planned | Designed (`docs/research/economy-games.md`); tasks B11-1 to B11-7 in `docs/plans/b-economy.md`; contract changes wait on #204. `check-money` and `check-replay` must pass after every sim change |
-| B12 | Economy on the globe: trade-route lines between pact partners, coin bursts on plunder and seizure, a wealth map mode | #187 for the wealth mode (X5) | | CP2 | planned | Tasks 5, 6 |
-| B13 | The 15-second Solana beat: click a gold arc, land on Solana Explorer with the memo visible | B10 memo | | CP2 | planned | Task 7; human test on devnet |
+| B12 | Economy on the globe: trade-route lines between pact partners, coin bursts on plunder and seizure, a wealth map mode | #187 for the wealth mode (X5) | | CP2 | done | Tasks 5, 6 on `b/economy-globe`: `trade/Routes.tsx` (ribbons, dashed for trade, solid for alliance), `trade/CoinBurst.tsx`, wealth mode on key 5 with `hud/WealthLegend.tsx` |
+| B13 | The 15-second Solana beat: click a gold arc, land on Solana Explorer with the memo visible | B10 memo | | CP2 | done | Task 7 on `b/economy-globe`: arcs stay 6 s with a `<amount> TNC · <note>` label; arc or label click opens `row.url`. Human test on devnet still owed |
 
 ## Waiting on
 

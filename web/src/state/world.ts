@@ -26,7 +26,7 @@ export interface WorldStore {
   selectedTileId: number | null;
   selectedRegionId: number | null;
   beliefOf: number | null;
-  mapMode: 'political' | 'terrain' | 'diplomacy' | 'strength';
+  mapMode: 'political' | 'terrain' | 'diplomacy' | 'strength' | 'wealth';
   setMapMode(mode: WorldStore['mapMode']): void;
   select(countryId: number | null, tileId?: number | null): void;
   showBelief(countryId: number | null): void;
