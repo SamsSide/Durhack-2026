@@ -79,7 +79,14 @@ else ok(false, 'real engine 0.1x: could not see two ticks in 12 s');
 // 4. The real engine director: a war in auto pacing at target 8.
 runner.setSpeed(8);
 runner.control({ action: 'pacing', value: 'auto' });
-await wait(500);
+// The sim can have its own big moment just before ours (it does for seed 77), which would leave the
+// director already at 1x. Wait out any such hold until the clock is really back at 8x, then settle.
+{
+  const settle = Date.now() + HOLD_MS + EASE_MS + 4000;
+  while (Date.now() < settle && runner.clockState().speed !== 8) await wait(100);
+  ok(runner.clockState().speed === 8, `clock settled at 8x before the war (${runner.clockState().speed})`);
+  await wait(500);
+}
 clocks.length = 0;
 const tw = Date.now();
 const w = runner.getWorld()!;
