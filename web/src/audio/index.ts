@@ -34,6 +34,8 @@ let kindNow = null as 'narration' | 'anthem' | null;
 async function play(kind: 'narration' | 'anthem', id: number): Promise<void> {
   // The same narration already loading or playing: nothing to do.
   if (kind === 'narration' && kindNow === 'narration' && countryId === id && (state === 'loading' || state === 'narration')) return;
+  // An anthem is slow to generate the first time: a second press while it loads is a no-op.
+  if (kind === 'anthem' && kindNow === 'anthem' && countryId === id && state === 'loading') return;
   halt();
   kindNow = kind;
   const mine = token;
