@@ -12,7 +12,7 @@ import { DEMO_PROMPT } from './record-demo';
 forceMockMode(true);
 const ticks = Number(process.argv[2] ?? 600);
 const seed = Number(process.argv[3] ?? 1337);
-const runner = new EngineRunner();
+const runner = new EngineRunner({ keepLog: true });   // the log is replayed below
 const batches: WorldEvent[][] = [];
 runner.subscribe({ events: (e) => batches.push(e) });
 await runner.newWorld({ prompt: DEMO_PROMPT, seed });

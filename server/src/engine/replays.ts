@@ -6,6 +6,7 @@
 // The recorder is only a listener: it never touches the tick loop and never throws.
 import fs from 'node:fs';
 import path from 'node:path';
+import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import type { AgentStatus, World, WorldEvent } from '@terra/shared';
 import type { RunnerListener, WorldRunner } from '../runner';
@@ -103,6 +104,70 @@ export class Recorder implements RunnerListener {
 
   /** The id of the run being recorded. */
   get currentId(): string { return this.id; }
+
+  /** The files of run `id` once every event heard so far is on disk (GET /api/world/log reads them).
+   *  `size` is where the event file ended at that moment: read no further (it keeps growing). */
+  async settled(id: string): Promise<RecordingFiles | null> {
+    if (!id || id !== this.id) return null;
+    this.flush();
+    let p: Promise<void>;
+    do { p = this.writing; await p; } while (p !== this.writing);
+    if (id !== this.id) return null;
+    try {
+      return { head: path.join(this.dir, `${id}.head.json`), ndjson: this.ndjson, size: fs.statSync(this.ndjson).size };
+    } catch { return null; }
+  }
+}
+
+/** A recording on disk, as far as it was complete when asked (Recorder.settled). */
+export interface RecordingFiles { head: string; ndjson: string; size: number }
+
+// --- the log for the timeline scrubber (X3 GET /api/world/log) ----------------------------------
+
+const CHUNK = 256 * 1024;
+
+/** Where the log is written: an HTTP response, in practice. */
+export interface LogSink {
+  write(chunk: string): boolean;
+  once(ev: 'drain' | 'close', fn: () => void): unknown;
+  off(ev: 'drain' | 'close', fn: () => void): unknown;
+  readonly destroyed: boolean;
+}
+
+/** Writes `{"initial":...,"events":[...]}` a chunk at a time, waiting when the client is slow, so a
+ *  long run is never built as one string in memory. Stops early if the client goes away. */
+export async function writeLog(out: LogSink, initialJson: string, events: Iterable<string> | AsyncIterable<string>): Promise<void> {
+  const send = (s: string): Promise<void> | null => {
+    if (out.destroyed) return null;
+    if (out.write(s)) return null;
+    return new Promise((ok) => {
+      const done = () => { out.off('drain', done); out.off('close', done); ok(); };
+      out.once('drain', done); out.once('close', done);
+    });
+  };
+  await send(`{"initial":${initialJson},"events":[`);
+  let buf = '';
+  let first = true;
+  for await (const e of events) {
+    if (out.destroyed) return;
+    buf += first ? e : `,${e}`;
+    first = false;
+    if (buf.length >= CHUNK) { const s = buf; buf = ''; await send(s); }
+  }
+  await send(`${buf}]}`);
+}
+
+/** The recorded events of a run (the `e` lines), as JSON strings, up to `files.size` bytes. */
+async function* recordedEvents(files: RecordingFiles): AsyncGenerator<string> {
+  if (files.size <= 0) return;
+  const lines = readline.createInterface({ input: fs.createReadStream(files.ndjson, { start: 0, end: files.size - 1 }), crlfDelay: Infinity });
+  for await (const line of lines) if (line.startsWith('{"e":') && line.endsWith('}')) yield line.slice(5, -1);
+}
+
+/** GET /api/world/log for the run being recorded, straight from its files. */
+export async function writeRecordedLog(out: LogSink, files: RecordingFiles): Promise<void> {
+  const head = JSON.parse(await fs.promises.readFile(files.head, 'utf8')) as { initial: World };
+  await writeLog(out, JSON.stringify(head.initial), recordedEvents(files));
 }
 
 /** Records every world the runner makes. Returns the recorder (scripts flush it by hand). */

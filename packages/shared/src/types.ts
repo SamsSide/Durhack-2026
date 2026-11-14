@@ -112,7 +112,7 @@ export interface World {
   structures: Structure[];
   units: Unit[];
   relations: Relation[];
-  chronicle: ChronicleEntry[];                           // oldest first
+  chronicle: ChronicleEntry[];                           // oldest first; a recent window (world.ts CHRONICLE_KEEP)
   agents: AgentStatus[];
 }
 

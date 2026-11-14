@@ -1,6 +1,37 @@
 // applyEvent is the only code that changes a World (server and browser both use it).
-import type { CouncilMember, CouncilRole, Relation, Vec3, World, WorldEvent } from './types';
+import type { ChronicleEntry, CouncilMember, CouncilRole, Relation, Vec3, World, WorldEvent } from './types';
 import { DEVASTATION, addDevastation, devastationTick } from './sim/economy';
+
+// The chronicle a World holds is a recent window, not the whole history (owner, 14 Nov): at the top
+// gear a run writes tens of thousands of lines, and every replica, snapshot and browser held them all.
+// The full history lives in the event log (GET /api/world/log), which the timeline scrubber replays.
+/** How many lines the chronicle keeps (plus the pinned ones below). */
+export const CHRONICLE_KEEP = 500;
+/** Trimming waits for this many extra lines, so it runs once per CHRONICLE_SLACK lines, not per line. */
+export const CHRONICLE_SLACK = 100;
+/** Lines this many years old or newer are never trimmed: the rules read offers, treaties and war
+ *  declarations back from the chronicle (sim/war.ts OFFER_TTL is 30 years, the rest less). */
+export const CHRONICLE_MIN_YEARS = 40;
+// Secession lines (SECESSION_MARK in sim/regions.ts, not imported because regions imports this file)
+// are how the rules know which regions already broke away, so they are kept for the whole run, as are
+// the founding lines. Both are bounded by the nation cap.
+const PINNED_PREFIX = 'c-secession-';
+const pinned = (e: ChronicleEntry): boolean => e.kind === 'founding' || e.id.startsWith(PINNED_PREFIX);
+
+/** Drops the oldest unpinned lines down to CHRONICLE_KEEP, in place and in order. A pure function of
+ *  the chronicle and the tick, so every replica that applied the same events trims the same way. */
+export function trimChronicle(world: World): void {
+  const c = world.chronicle;
+  let drop = c.length - CHRONICLE_KEEP;
+  const minTick = world.tick - CHRONICLE_MIN_YEARS;
+  let w = 0;
+  for (let i = 0; i < c.length; i++) {
+    const e = c[i]!;
+    if (drop > 0 && !pinned(e) && e.tick < minTick) { drop--; continue; }
+    c[w++] = e;
+  }
+  c.length = w;
+}
 
 export function applyEvent(world: World, event: WorldEvent): void {
   const memo = councilMemo(world, event);
@@ -121,6 +152,7 @@ export function applyEvent(world: World, event: WorldEvent): void {
     }
     case 'chronicle':
       world.chronicle.push(event.entry);
+      if (world.chronicle.length > CHRONICLE_KEEP + CHRONICLE_SLACK) trimChronicle(world);
       break;
     case 'payment': {
       // Row A27: money moves from the payer's treasury to the payee's, never more than the payer has.
