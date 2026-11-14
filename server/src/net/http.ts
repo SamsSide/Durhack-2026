@@ -1,5 +1,6 @@
 // X3 HTTP routes.
 import { parseImage } from '../engine/bibleAi';
+import { checkAudio, hearDecree, NoSpeechError, type DecreeRunner } from '../engine/decrees';
 import express from 'express';
 import type { LlmMode, WorldRunner } from '../runner';
 import { storyRoutes } from '../story/routes';
@@ -44,6 +45,27 @@ export function createApp(runner: WorldRunner, mode: LlmMode) {
     const log = runner.getLog();
     if (!log) return void res.status(404).json({ error: 'no world' });
     res.json(log);
+  });
+
+  // Row A20: a spoken decree. Gemini hears the audio and interprets it in one call; the decree is
+  // applied at once (the real engine applies its effect; the mock runner only chronicles it).
+  app.post('/api/decree/voice', async (req, res) => {
+    const world = runner.getWorld();
+    if (!world) return void res.status(404).json({ error: 'no world' });
+    const body = req.body ?? {};
+    const mime = checkAudio(body.audioBase64, body.mimeType);
+    if (!mime) return void res.status(400).json({ error: 'unsupported audio' });
+    try {
+      const { transcript, decree } = await hearDecree(world, body.audioBase64, mime);
+      const engine = runner as WorldRunner & Partial<DecreeRunner>;
+      if (engine.applyDecree) engine.applyDecree(decree);
+      else runner.control({ action: 'decree', text: decree.text });
+      res.json({ transcript, decree });
+    } catch (e) {
+      if (e instanceof NoSpeechError) return void res.status(400).json({ error: 'no speech heard' });
+      console.warn('voice decree failed:', e instanceof Error ? e.message : e);
+      res.status(503).json({ error: 'voice unavailable' });
+    }
   });
 
   app.use('/api', storyRoutes(runner));
