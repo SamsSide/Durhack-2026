@@ -7,6 +7,7 @@ import { captureGlobe } from '../../globe/capture';
 export interface Bulletin {
   id: string;
   headline: string;
+  anchor?: string;          // "Sam", "Justin" or "Denis" (#111); older servers send none
   script: string;
   year: number;
   audio: string;

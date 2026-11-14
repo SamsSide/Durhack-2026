@@ -47,4 +47,5 @@ budget, run them one at a time in the order below, on Sonnet.
 - 14 Nov · #95 · C1 to C4 to the polished design (#88): founding scroll, card states, herald dispatches, folded network tab
 - 14 Nov · #100 · TokenMeter call count in a .calls span for the compact top bar (#98)
 - 14 Nov · #105 · C7 on the real A20: the voice route's own error lines, mimeType sent with codecs
-- 14 Nov · this PR · Network rows never overflow; the deleted stamp freezes at the year of deletion (#108)
+- 14 Nov · #110 · Network rows never overflow; the deleted stamp freezes at the year of deletion (#108)
+- 14 Nov · this PR · News lower-third names its anchor (#111); secession is a real kind (A18)
