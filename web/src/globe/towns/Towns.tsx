@@ -7,6 +7,7 @@ import { TileGeos } from '../structures/placement';
 import { TownLayer } from './TownLayer';
 import { lodCamera, pipDetail } from '../pip/pipLod';
 import { WORLD_SYNC_S } from '../constants';
+import { Ports } from '../structures/ports/Ports';
 import { onOccupancy } from '../structures/occupancy';
 import type { TechAge } from '@terra/shared';
 
@@ -64,5 +65,5 @@ export function Towns() {
     l.update(now, Math.min(dt, 0.1), lodCamera(camera).position.length());
   });
 
-  return group ? <primitive object={group} /> : null;
+  return <>{group ? <primitive object={group} /> : null}<Ports /></>;
 }
