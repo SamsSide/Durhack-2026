@@ -48,7 +48,7 @@ const C = {
   foam0: new THREE.Color('#eef7fa'), foam1: new THREE.Color('#9cc3d6'), spray: new THREE.Color('#bfe3f2'),
   ring: new THREE.Color('#dff3f8'),
 };
-const ringGeo = new THREE.RingGeometry(0.82, 1, 48);
+const ringGeo = new THREE.RingGeometry(0.9, 1, 48);
 const Z = new THREE.Vector3(0, 0, 1);
 const _t = new THREE.Vector3(), _sp = new THREE.Vector3();
 
@@ -191,7 +191,7 @@ export function Firing() {
     _p0.setLength(_p0.length() - 0.0032);
     _up.copy(_p0).normalize();
     const r = rings[s0.ringAt++ % SINKS]!;
-    r.born = now; r.size = size * 1.9;
+    r.born = now; r.size = size * 0.55;   // about one and a half hull lengths across at its widest
     r.mesh.position.copy(_p0);
     r.mesh.quaternion.setFromUnitVectors(Z, _up);
     r.mesh.visible = true;
@@ -604,7 +604,7 @@ export function Firing() {
       const t = (now - r.born) / RING_MS;
       if (t >= 1) { r.born = -1; r.mesh.visible = false; continue; }
       r.mesh.scale.setScalar(r.size * 0.25 + r.size * (1 - (1 - t) * (1 - t)));
-      r.mat.opacity = 0.4 * (1 - t) * Math.min(1, t * 8);
+      r.mat.opacity = 0.3 * (1 - t) * Math.min(1, t * 8);
     }
     gl.getDrawingBufferSize(_size);
     sys.update(now, _size.y * 0.5 * camera.projectionMatrix.elements[5]!, impact);
