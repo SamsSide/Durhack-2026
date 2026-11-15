@@ -13,6 +13,12 @@ anthems and voices (ElevenLabs).
 
 ## Part 1. Your stage time, click by click
 
+**Mock mode has no links.** In **mock** mode (`npm run demo:mock`, or Solana set to mock in setup)
+every chain link is plain text: the gold arcs, the ledger signatures, the currency name and the
+nation card's "Treasury on Solana" do not open anything, and rows say **simulated**. Everything in
+Parts 1 and 2 that opens the Explorer needs **devnet**. To rehearse the clicks, run devnet; in mock,
+practise the words only.
+
 ### Before judging (check once)
 - In the setup window: **Solana on (devnet)**, LLM **Both**. Run checks; all green.
 - In the game, open the **Network panel** (top left) and check that the **Treasury** tab exists. It
