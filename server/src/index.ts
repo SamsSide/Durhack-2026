@@ -16,6 +16,9 @@ import { bindChain } from './chain';
 
 // .env lives at the repo root (may be missing).
 dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.env') });
+// Voice off (the desktop app's switch, demo.sh --no-voice): dotenv has just put the key back from
+// .env, so drop it again or every voice line still calls ElevenLabs and spends credit.
+if (process.env.DEMO_VOICE === '0') delete process.env.ELEVENLABS_API_KEY;
 
 // The world lives in this process: one stray rejection or throw (a failed chain, Gemini or
 // ElevenLabs call, a bad control) must not end it mid-demo. Log it and carry on.

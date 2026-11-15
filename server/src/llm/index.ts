@@ -169,6 +169,8 @@ function toGemini(s: Schema): Record<string, unknown> {
 // --- the call ----------------------------------------------------------------
 let client: GoogleGenAI | null = null;
 const OLLAMA_TIMEOUT_MS = () => envNum('OLLAMA_TIMEOUT_MS', 20_000);
+// The world bible is one long answer (every nation, ruler and myth): a laptop model needs longer.
+const OLLAMA_BIBLE_TIMEOUT_MS = () => envNum('OLLAMA_BIBLE_TIMEOUT_MS', 75_000);
 
 /** Gemma may wrap JSON in code fences or chatter: take the outermost object. */
 function parseLooseJson(text: string): unknown {
@@ -217,7 +219,7 @@ async function viaOllama(opts: LlmJsonOptions, model: string): Promise<Raw> {
   const res = await fetch(`${ollamaHost()}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    signal: AbortSignal.timeout(OLLAMA_TIMEOUT_MS()),
+    signal: AbortSignal.timeout(opts.purpose === 'bible' ? OLLAMA_BIBLE_TIMEOUT_MS() : OLLAMA_TIMEOUT_MS()),
     body: JSON.stringify({
       model,
       stream: false,
