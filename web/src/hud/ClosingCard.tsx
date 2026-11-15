@@ -72,7 +72,7 @@ export function ClosingCard() {
     [world.countries.length, 'nations, each ruled by its own AI'],
     [b - a, 'years of history'],
     [(budget?.calls ?? 0) + local, 'decisions made by the rulers'],
-    [wars, 'wars and silences'],
+    [wars, wars === 1 ? 'war or silence' : 'wars and silences'],
   ];
   return (
     <div className={`closing-veil ${leaving ? 'tn-m-veil-out' : 'tn-m-veil-in'}`} onClick={close}>
