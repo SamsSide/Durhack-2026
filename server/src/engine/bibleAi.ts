@@ -1,5 +1,6 @@
 // The world bible written by Gemini (row A5): one call to the lore model at world creation, strictly
 // validated and repaired, with the template bible (mockBible) as the fallback on any failure.
+import { makeNationColorsDistinct } from './nationColors';
 import { BUILDING_STYLES, clampStartYear, diversifyStyles, isBuildingStyle, isNomadic, pickBuildingStyle } from '@terra/shared';
 import { fitStyles, mergeShape, settingOf, shapeFromText, type Setting } from './promptShape';
 import type { BibleNation, FlagEmblem, FlagLayout, FlagSpec, WorldBible } from '@terra/shared';
@@ -201,6 +202,7 @@ export function repairBible(raw: RawBible, fallback: WorldBible, n: number, extr
       nomadic: typeof r.nomadic === 'boolean' ? r.nomadic : undefined,
     });
   }
+  makeNationColorsDistinct(nations); // two near-identical colours (two greens) are told apart before the world is built
   // Flags (A24): steer layout and emblem to each nation's government and the era, at most two alike.
   const eraKey = worldEraKey({ era: `${raw.era ?? ''} ${fallback.era}`, prompt: raw.name ?? '', name: '' });
   const used = new Map<string, number>();
@@ -260,6 +262,7 @@ export async function makeBible(opts: NewWorldOptions, seed: number): Promise<Wo
   if (image && !live) { // mock: ignore the picture but let its bytes pick the colours
     const pal = hashPalette(image.data, n);
     fallback.nations.forEach((nat, i) => { nat.color = pal[i]!; nat.flag.colors[0] = pal[i]!; });
+    makeNationColorsDistinct(fallback.nations);
     return fallback;
   }
 
