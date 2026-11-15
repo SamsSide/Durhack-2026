@@ -80,7 +80,13 @@ export interface PropSpec {
   smoke?: Smoke;
 }
 
-export interface PropCtx { kind: string; id: Identity; border: boolean; coastal: boolean }
+export interface PropCtx {
+  kind: string; id: Identity; border: boolean; coastal: boolean;
+  /** A tribe of a very early world (towns/ageStyle): standing stones only, nothing carved, forged or built of dressed stone. */
+  primitive?: boolean;
+  /** The nation's tech age as a number (ageIndex in @terra/shared); props follow it the way towns do. */
+  age?: number;
+}
 
 const BANNER_GOVS = new Set<Gov>(['communist', 'junta']);
 
@@ -89,24 +95,30 @@ export function propsFor(ctx: PropCtx): PropSpec[] {
   const { kind, id } = ctx;
   const out: PropSpec[] = [];
   const era = id.eraIndex;
+  const age = ctx.age ?? -1;
+  if (ctx.primitive) {
+    if (kind === 'village' || kind === 'camp' || kind === 'town') out.push({ kind: 'stones', ang: 0.4, rad: 0.5, scale: 0.8 });
+    return out;
+  }
   if (kind === 'capital') {
     if (BANNER_GOVS.has(id.gov)) out.push({ kind: 'banner', ang: -0.5, rad: 0.5, scale: 1.0 }, { kind: 'banner', ang: 0.5, rad: 0.5, scale: 1.0 });
     if (id.gov === 'monarchy' || id.gov === 'democracy' || id.era === 'classical') out.push({ kind: 'statue', ang: 0, rad: 0.42, scale: 0.55 });
     if (BANNER_GOVS.has(id.gov) || (id.gov === 'monarchy' && id.era === 'bronze')) out.push({ kind: 'obelisk', ang: 0.95, rad: 0.5, scale: 0.9 });
-    if (id.era === 'modern') out.push({ kind: 'mast', ang: -0.95, rad: 0.5, scale: 1.0 });
-    if (id.era === 'future') out.push({ kind: 'ring', ang: 0, rad: 0, scale: 1.1, lift: 1.1 });
-    if (id.era === 'post_apoc') out.push({ kind: 'barrel', ang: 0.6, rad: 0.45, scale: 0.55, smoke: { color: '#4a4541', puffs: 3 } });
+    if (id.era === 'modern' || age === 4) out.push({ kind: 'mast', ang: -0.95, rad: 0.5, scale: 1.0 });
+    if (id.era === 'future' || age >= 5) out.push({ kind: 'ring', ang: 0, rad: 0, scale: 1.1, lift: 1.1 });
+    if (id.era === 'post_apoc' && age < 4) out.push({ kind: 'barrel', ang: 0.6, rad: 0.45, scale: 0.55, smoke: { color: '#4a4541', puffs: 3 } });
   }
   if (kind === 'city') {
-    if (id.era === 'industrial') out.push({ kind: 'smokestack', ang: 0.2, rad: 0.5, scale: 0.8, smoke: { color: '#4d4d4d', puffs: 2 } });
+    if (age >= 5) { /* a future city has no chimneys */ }
+    else if (id.era === 'industrial') out.push({ kind: 'smokestack', ang: 0.2, rad: 0.5, scale: 0.8, smoke: { color: '#4d4d4d', puffs: 2 } });
     else if (id.era === 'modern') out.push({ kind: 'smokestack', ang: 0.2, rad: 0.5, scale: 0.8, smoke: { color: '#c4c4c4', puffs: 1 } });
     if (id.gov === 'merchant' && ctx.coastal) out.push({ kind: 'crane', ang: -0.3, rad: 0.5, scale: 0.8 });
   }
   if (kind === 'fort' && BANNER_GOVS.has(id.gov)) out.push({ kind: 'banner', ang: -0.5, rad: 0.5, scale: 0.9 }, { kind: 'banner', ang: 0.5, rad: 0.5, scale: 0.9 });
   if (kind === 'temple' && id.gov === 'theocracy') out.push({ kind: 'spire', ang: 0.3, rad: 0.5, scale: 0.9 });
-  if ((kind === 'village' || kind === 'camp') && (id.gov === 'tribal' || era <= 0)) out.push({ kind: 'stones', ang: 0.4, rad: 0.5, scale: 0.8 });
+  if ((kind === 'village' || kind === 'camp') && (id.gov === 'tribal' || era <= 0) && age < 4) out.push({ kind: 'stones', ang: 0.4, rad: 0.5, scale: 0.8 });
   if (kind === 'port' && id.gov === 'merchant') out.push({ kind: 'crane', ang: 0.3, rad: 0.45, scale: 0.8 });
-  if (id.mood === 'martial' && ctx.border && (kind === 'town' || kind === 'city' || kind === 'capital' || kind === 'fort')) {
+  if (id.mood === 'martial' && ctx.border && age < 4 && (kind === 'town' || kind === 'city' || kind === 'capital' || kind === 'fort')) {
     out.push({ kind: 'watchtower', ang: -1.3, rad: 0.55, scale: 0.75 });
   }
   return out;

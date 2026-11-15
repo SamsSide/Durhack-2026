@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useWorld } from '../state/world';
 import { usePresence } from '../ui/motion/usePresence';
 import './hud.css';
@@ -79,7 +79,10 @@ export function ClosingCard() {
       <div className={`closing tn-lacquer tn-frame tn-frame--corners tn-m-from-below ${leaving ? 'tn-m-out' : 'tn-m-in'}`} role="dialog" aria-label="What this world cost" onClick={(e) => e.stopPropagation()}>
         <div className="cap tn-cartouche">{world.name} · years {yearRange(a, b)}</div>
         <h1 className="tn-gilt-text">This whole world cost</h1>
-        <div className="cl-hero"><span className="cl-num tn-gilt-text">{fmt(count)}</span><span className="cl-unit">tokens</span></div>
+        <div className="cl-hero"><span className="cl-num tn-gilt-text">{fmt(count).split(',').map((g, i) => (
+          // the comma of a monospace face fills a whole cell: its own span closes the gap (.cl-sep)
+          <Fragment key={i}>{i > 0 && <span className="cl-sep">,</span>}{g}</Fragment>
+        ))}</span><span className="cl-unit">tokens</span></div>
         <div className="cl-stats tn-m-stagger">
           {facts.map(([n, label]) => <div key={label}><b>{fmt(n)}</b><span>{label}</span></div>)}
         </div>

@@ -14,13 +14,14 @@ import { hash01, smoothstep } from '../structures/placement';
 import { standMatrix } from '../units/ModelField';
 import { sunDir } from '../celestial/sun';
 import { LIVING as L } from './tokens';
+import { isPrimitive } from '../towns/ageStyle';
 
 type V3 = THREE.Vector3;
 
 /** A spot on the globe with its own tangent frame; offsets are in radians along t1 and t2. */
 interface Frame { n: V3; t1: V3; t2: V3; r: number }
-interface Boat extends Frame { ax: number; ay: number; ph: number; sp: number; size: number; col: THREE.Color; lod: number }
-interface Cart { dirs: V3[]; rad: number[]; off: number; sp: number; size: number; col: THREE.Color; lod: number; side: number }
+interface Boat extends Frame { ax: number; ay: number; ph: number; sp: number; size: number; col: THREE.Color; lod: number; late: boolean }
+interface Cart { dirs: V3[]; rad: number[]; off: number; sp: number; size: number; col: THREE.Color; lod: number; side: number; late: boolean }
 interface Walker extends Frame { cx: number; cy: number; rad: number; ph: number; sp: number; sx: number; sy: number; sz: number; col: THREE.Color; lod: number }
 interface Mill extends Frame { cx: number; cy: number; turn: number; size: number; ph: number; lod: number }
 interface Chimney extends Frame { cx: number; cy: number; up: number; size: number; puffs: number; ph: number; col: THREE.Color; lod: number }
@@ -38,6 +39,8 @@ const AGE_RANK: Record<TechAge, number> = { ancient: 0, medieval: 1, gunpowder: 
 
 const _p = new THREE.Vector3(), _h = new THREE.Vector3(), _q = new THREE.Vector3(), _s = new THREE.Vector3();
 const _m = new THREE.Matrix4(), _r = new THREE.Matrix4(), _c = new THREE.Color();
+/** The paint of a late boat or van: steel greys in the modern age, near white from the future age on. */
+const lateCol = (age: number, h: number): THREE.Color => age >= 5 ? new THREE.Color().setHSL(0.52, 0.12, 0.9 + 0.1 * h) : new THREE.Color().setHSL(0.58, 0.1 + 0.15 * h, 0.55 + 0.25 * h);
 
 /** One instanced mesh refilled every frame with whatever is in view. */
 class Pool {
@@ -105,6 +108,25 @@ function cartGeo(): THREE.BufferGeometry {
     box(0.2, 0.26, 0.38, 0, 0.2, 0.36, L.color.ox),
   ]);
 }
+/** The boat of a modern or future nation: a pale hull with a band and a cabin, no mast (the port layer's future hull). */
+function launchGeo(): THREE.BufferGeometry {
+  return merged([
+    box(0.3, 0.14, 0.86, 0, 0.06, 0, L.color.lateHull),
+    box(0.2, 0.12, 0.22, 0, 0.07, 0.5, L.color.lateHull),
+    box(0.32, 0.035, 0.88, 0, 0.09, 0, L.color.lateBand),
+    box(0.2, 0.13, 0.3, 0, 0.19, -0.12, L.color.lateCabin),
+    box(0.21, 0.05, 0.31, 0, 0.26, -0.12, L.color.lateGlass),
+  ]);
+}
+/** The cart of a modern or future nation: a closed van with a dark windscreen, no ox. */
+function vanGeo(): THREE.BufferGeometry {
+  return merged([
+    box(0.4, 0.26, 0.74, 0, 0.21, -0.04, L.color.lateHull),
+    box(0.36, 0.12, 0.2, 0, 0.27, 0.3, L.color.lateGlass),
+    box(0.42, 0.04, 0.76, 0, 0.12, -0.04, L.color.lateBand),
+    box(0.34, 0.08, 0.6, 0, 0.04, -0.04, L.color.lateGlass),
+  ]);
+}
 function millGeo(): THREE.BufferGeometry {
   return merged([
     paint(new THREE.CylinderGeometry(0.15, 0.26, 0.9, 6).translate(0, 0.45, 0), L.color.millWall),
@@ -147,7 +169,7 @@ export class LivingLayer {
   private flocks: Flock[] = [];
   private readonly surf: Surf[] = [];
 
-  private readonly pBoat: Pool; private readonly pCart: Pool; private readonly pDot: Pool; private readonly pMill: Pool;
+  private readonly pBoat: Pool; private readonly pCart: Pool; private readonly pBoatL: Pool; private readonly pCartL: Pool; private readonly pDot: Pool; private readonly pMill: Pool;
   private readonly pBlade: Pool; private readonly pSmoke: Pool; private readonly pBird: Pool; private readonly pSurf: Pool;
   private readonly pools: Pool[];
   private windows: THREE.Points | null = null;
@@ -176,6 +198,8 @@ export class LivingLayer {
     const lit = (): THREE.Material => new THREE.MeshLambertMaterial({ vertexColors: true });
     this.pBoat = new Pool(boatGeo(), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), L.cap.boats);
     this.pCart = new Pool(cartGeo(), lit(), L.cap.carts);
+    this.pBoatL = new Pool(launchGeo(), lit(), L.cap.boats);
+    this.pCartL = new Pool(vanGeo(), lit(), L.cap.carts);
     this.pDot = new Pool(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), new THREE.MeshLambertMaterial(), L.cap.dots);
     this.pMill = new Pool(millGeo(), lit(), L.cap.mills);
     this.pBlade = new Pool(bladeGeo(), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), L.cap.mills);
@@ -184,7 +208,7 @@ export class LivingLayer {
     this.pSurf = new Pool(new THREE.PlaneGeometry(1, 0.2).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide,
     }), L.cap.surf, 5);
-    this.pools = [this.pBoat, this.pCart, this.pDot, this.pMill, this.pBlade, this.pSmoke, this.pBird, this.pSurf];
+    this.pools = [this.pBoat, this.pCart, this.pBoatL, this.pCartL, this.pDot, this.pMill, this.pBlade, this.pSmoke, this.pBird, this.pSurf];
     for (const p of this.pools) this.group.add(p.mesh);
 
     this.winMat = new THREE.ShaderMaterial({
@@ -316,6 +340,8 @@ export class LivingLayer {
       const f = this.frame(s.tile);
       const wd = this.width[s.tile]!;
       const age = AGE_RANK[w.countries[s.owner]?.techAge ?? 'ancient'] ?? 0;
+      const late = age >= 4;                                   // modern and later: launches and vans, not sails and ox carts
+      const tribe = isPrimitive(w, w.countries[s.owner]);      // a stone age tribe has no wheel yet
       const set = SETTLEMENT[s.kind];
 
       // fishing boats off ports and coastal settlements
@@ -338,7 +364,7 @@ export class LivingLayer {
               ax: ws * (0.12 + 0.2 * H(s.id, 110 + k)), ay: ws * (0.1 + 0.18 * H(s.id, 120 + k)),
               ph: H(s.id, 130 + k) * 6.28, sp: 0.05 + 0.05 * H(s.id, 140 + k),
               size: wd * L.size.boat * (0.8 + 0.4 * H(s.id, 150 + k)),
-              col: new THREE.Color().setHSL(0.08, 0.1, 0.8 + 0.2 * H(s.id, 160 + k)), lod: H(s.id, 170 + k),
+              col: late ? lateCol(age, H(s.id, 160 + k)) : new THREE.Color().setHSL(0.08, 0.1, 0.8 + 0.2 * H(s.id, 160 + k)), lod: H(s.id, 170 + k), late,
             });
           }
         }
@@ -376,7 +402,7 @@ export class LivingLayer {
         }
         // carts between this place and the capital, along the nation's own land
         const cap = w.countries[s.owner]?.capitalTile;
-        if (s.kind !== 'camp' && s.kind !== 'capital' && cap != null && cap !== s.tile && routes < L.cap.routes) {
+        if (!tribe && s.kind !== 'camp' && s.kind !== 'capital' && cap != null && cap !== s.tile && routes < L.cap.routes) {
           const path = this.pathTo(s.tile, cap, s.owner);
           if (path) {
             routes++;
@@ -386,8 +412,8 @@ export class LivingLayer {
               this.carts.push({
                 dirs: path.map((t) => this.dirs[t]!), rad: path.map((t) => this.mesh.heights[t] ?? 1),
                 off: H(s.id, 500 + k) * 2 * (path.length - 1), sp: 0.085 + 0.04 * H(s.id, 510 + k),
-                size: wd * L.size.cart, col: new THREE.Color().setHSL(0.09, 0.15, 0.75 + 0.25 * H(s.id, 520 + k)),
-                lod: k === 0 ? H(s.id, 530) * 0.5 : H(s.id, 530 + k), side: wd * 0.035,
+                size: wd * L.size.cart, col: late ? lateCol(age, H(s.id, 520 + k)) : new THREE.Color().setHSL(0.09, 0.15, 0.75 + 0.25 * H(s.id, 520 + k)),
+                lod: k === 0 ? H(s.id, 530) * 0.5 : H(s.id, 530 + k), side: wd * 0.035, late,
               });
             }
           }
@@ -455,12 +481,14 @@ export class LivingLayer {
           });
         }
       }
-      if (t.terrain === 'ocean' && !boatSites.has(i) && H(i, 970) < 0.3 && t.neighbors.some((nb) => !this.isSea(nb) && w.owner[nb]! >= 0)) {
+      const shore = t.terrain === 'ocean' && !boatSites.has(i) && H(i, 970) < 0.3 ? t.neighbors.find((nb) => !this.isSea(nb) && w.owner[nb]! >= 0) : undefined;
+      if (shore !== undefined) {
         const f = this.frame(i);
+        const age = AGE_RANK[w.countries[w.owner[shore]!]?.techAge ?? 'ancient'] ?? 0; // the boat of whoever holds the shore
         this.boats.push({
           n: f.n, t1: f.t1, t2: f.t2, r: SEA_LEVEL, ax: wd * (0.15 + 0.2 * H(i, 971)), ay: wd * (0.12 + 0.2 * H(i, 972)),
           ph: H(i, 973) * 6.28, sp: 0.04 + 0.04 * H(i, 974), size: wd * L.size.boat * (0.7 + 0.3 * H(i, 975)),
-          col: new THREE.Color().setHSL(0.08, 0.1, 0.8 + 0.2 * H(i, 976)), lod: 0.3 + 0.7 * H(i, 977),
+          col: age >= 4 ? lateCol(age, H(i, 976)) : new THREE.Color().setHSL(0.08, 0.1, 0.8 + 0.2 * H(i, 976)), lod: 0.3 + 0.7 * H(i, 977), late: age >= 4,
         });
       }
     });
@@ -537,19 +565,21 @@ export class LivingLayer {
 
     // fishing boats: a slow figure over the water, bow to the heading, bobbing and rolling
     for (const b of this.boats) {
-      if (b.lod > q || b.n.dot(cam) < cosT || this.pBoat.full) continue;
+      const pool = b.late ? this.pBoatL : this.pBoat;
+      if (b.lod > q || b.n.dot(cam) < cosT || pool.full) continue;
       const u = b.sp * life + b.ph, v = b.sp * 0.63 * life + b.ph * 2.3;
       const bob = Math.sin(drift * 1.9 + b.ph * 5) * b.size * 0.035;
       this.at(b, b.ax * Math.sin(u), b.ay * Math.sin(v), 0.0004 + bob, _p);
       _h.copy(b.t1).multiplyScalar(b.ax * Math.cos(u)).addScaledVector(b.t2, b.ay * 0.63 * Math.cos(v));
-      this.pBoat.push(standMatrix(_m, _p, _h, b.size * vis, Math.sin(drift * 1.5 + b.ph * 3) * 0.1), b.col);
+      pool.push(standMatrix(_m, _p, _h, b.size * vis, Math.sin(drift * 1.5 + b.ph * 3) * (b.late ? 0.04 : 0.1)), b.col);
       seen++;
     }
 
     // carts: out to the capital and back, keeping to one side of the way
     for (const c of this.carts) {
       const last = c.dirs.length - 1;
-      if (c.lod > q || this.pCart.full) continue;
+      const pool = c.late ? this.pCartL : this.pCart;
+      if (c.lod > q || pool.full) continue;
       const span = 2 * last;
       let u = (c.off + c.sp * life) % span;
       const back = u > last;
@@ -563,7 +593,7 @@ export class LivingLayer {
       _s.crossVectors(_h, _p).normalize();
       const r = c.rad[i]! + (c.rad[i + 1]! - c.rad[i]!) * smoothstep(0.36, 0.64, f);
       _p.addScaledVector(_s, c.side).normalize().multiplyScalar(r + 0.0007);
-      this.pCart.push(standMatrix(_m, _p, _h, c.size * vis), c.col);
+      pool.push(standMatrix(_m, _p, _h, c.size * vis), c.col);
       seen++;
     }
 

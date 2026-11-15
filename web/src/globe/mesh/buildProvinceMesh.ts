@@ -143,7 +143,10 @@ export function buildProvinceMesh(world: World): ProvinceMesh {
         const d: Vec3 = [bn[0] - an[0], bn[1] - an[1], bn[2] - an[2]];
         const m = norm([an[0] + bn[0], an[1] + bn[1], an[2] + bn[2]]);
         const out = norm([d[1] * m[2] - d[2] * m[1], d[2] * m[0] - d[0] * m[2], d[0] * m[1] - d[1] * m[0]]);
-        const top = otherSea ? VK_COAST_TOP : VK_WALL_TOP, bot = otherSea ? VK_COAST_BOT : VK_WALL_TOP;
+        // A gentle step's wall only shows as a sliver at a corner where a third tile sits lower; it takes the
+        // land colour (as the slope above it), so flat owned land has no dark rock shards at tile corners.
+        const land = hr !== h ? VK_SLOPE : VK_WALL_TOP;
+        const top = otherSea ? VK_COAST_TOP : land, bot = otherSea ? VK_COAST_BOT : land;
         const hb = otherSea ? SEA_LEVEL : Math.min(hr, ho);
         // The higher side of a step carries the wall down to the lowest ground at each corner.
         const stepDown = !otherSea && ho < h - 1e-6;

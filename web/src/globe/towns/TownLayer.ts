@@ -45,6 +45,19 @@ function houseGeometry(): THREE.BufferGeometry {
   return merged;
 }
 
+/** A round hut: a low wall under a tall cone of thatch (the `roof` attribute as on the house), total height about 1. */
+function hutGeometry(): THREE.BufferGeometry {
+  const body = new THREE.CylinderGeometry(0.46, 0.5, 0.36, 8).translate(0, 0.18, 0);
+  const roof = new THREE.CylinderGeometry(0.02, 0.66, 0.72, 8).translate(0, 0.28 + 0.36, 0);
+  const mark = (g: THREE.BufferGeometry, isRoof: number): THREE.BufferGeometry => {
+    g.setAttribute('roof', new THREE.BufferAttribute(new Float32Array(g.getAttribute('position').count).fill(isRoof), 1));
+    return g;
+  };
+  const merged = mergeGeometries([mark(body, 0), mark(roof, 1)], false)!;
+  body.dispose(); roof.dispose();
+  return merged;
+}
+
 /** A stone wall segment with battlements: unit length along x, thickness along z, total height 1. */
 function crenGeometry(): THREE.BufferGeometry {
   const parts = [new THREE.BoxGeometry(1, 0.8, 1).translate(0, 0.4, 0)];
@@ -132,13 +145,14 @@ export class TownLayer {
     };
     glow.customProgramCacheKey = () => 'towns-glow';
     this.mats = {
-      grounds: ground, flats: flat, houses: house, walls: solid, towers: solid,
+      grounds: ground, flats: flat, houses: house, huts: house, walls: solid, towers: solid,
       crens: solid, stakes: solid, caps: solid, roofs4: solid, roofsC: solid, shields: glow,
     };
     this.geos = {
       grounds: groundGeometry(),
       flats: new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
       houses: houseGeometry(),
+      huts: hutGeometry(),
       walls: new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
       towers: new THREE.CylinderGeometry(0.5, 0.5, 1, 10).translate(0, 0.5, 0),
       crens: crenGeometry(),

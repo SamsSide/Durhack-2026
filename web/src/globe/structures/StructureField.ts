@@ -16,7 +16,8 @@ import type { EraLook } from '../identity/look';
 import { disposePropSet, makePropSet, propsFor } from '../identity/props';
 import type { PropKind, PropSet, Smoke } from '../identity/props';
 import { shownKind, updateRuins } from '../war/ruins';
-import { ageStyle, ageSwapDelay } from '../towns/ageStyle';
+import { ageSwapDelay, isPrimitive, settingStyle } from '../towns/ageStyle';
+import { ageIndex } from '@terra/shared';
 import { clearOccupancy, setFeet } from './occupancy';
 import type { Foot } from './occupancy';
 
@@ -118,7 +119,7 @@ export class StructureField {
   }
 
   /** The style a nation builds in now, by its tech age. */
-  private styleOf(owner: number): string { return ageStyle(this.world.countries[owner]); }
+  private styleOf(owner: number): string { return settingStyle(this.world, this.world.countries[owner]); }
 
   /** The instanced group for (model file, kind): one per distinct model, made on first use. */
   private poolFor(kind: string, owner: number, style: string): Pool {
@@ -165,7 +166,7 @@ export class StructureField {
       const c = this.world.countries[owner];
       const id = nationIdentity(this.world, owner);
       const css = c?.color ?? '#b8b0a0';
-      l = { id, css, style: ageStyle(c), nomadic: !!c?.nomadic, tint: wallTint(id, owner), team: bannerColor(css, id), era: eraLook(id.era) };
+      l = { id, css, style: settingStyle(this.world, c), nomadic: !!c?.nomadic, tint: wallTint(id, owner), team: bannerColor(css, id), era: eraLook(id.era) };
       this.looks.set(owner, l);
     }
     return l;
@@ -181,7 +182,7 @@ export class StructureField {
       const c = this.world.countries[owner];
       if (!c) continue;
       const same = nationIdentity(this.world, owner) === l.id && c.color === l.css && !!c.nomadic === l.nomadic;
-      const style = ageStyle(c);
+      const style = settingStyle(this.world, c);
       if (same && style === l.style) continue;
       if (same) { l.style = style; this.queueAgeStep(owner, now); continue; }
       this.looks.delete(owner);
@@ -356,7 +357,8 @@ export class StructureField {
     const id = this.lookOf(r.owner).id;
     const base = r.slot === 0 ? hash01(r.tile, 5) * Math.PI * 2 + 2.4 : hash01(r.id, 5) * Math.PI * 2;
     const out = new THREE.Vector3();
-    for (const sp of propsFor({ kind: r.kind, id, border, coastal })) {
+    const c = this.world.countries[r.owner];
+    for (const sp of propsFor({ kind: r.kind, id, border, coastal, primitive: isPrimitive(this.world, c), age: ageIndex(c?.techAge) })) {
       const rad = sp.rad * (TIGHT[r.terr] ?? 1);
       const ra = Math.cos(base + sp.ang) * rad * r.g.width, rb = Math.sin(base + sp.ang) * rad * r.g.width;
       this.geos.point(r.g, r.off[0] + ra, r.off[1] + rb, 0.0004 + r.lift + (sp.lift ?? 0) * r.size, out);

@@ -16,6 +16,7 @@ export const LIVING = {
     hull: '#7a5636', hullDark: '#4a3524', sail: '#f1e8d2', wood: '#a07a4c', canvas: '#e6dcc2', ox: '#6b5340',
     millWall: '#e0d4bc', millRoof: '#8a4b34', smoke: '#cfcabf', smokeDark: '#6f6a66',
     farmerA: '#b8894e', farmerB: '#7c8f9c', sheep: '#ece6d6', cattle: '#7a5234', deer: '#8f6a45',
+    lateHull: '#f0f4f6', lateBand: '#59dcff', lateCabin: '#dbe6ec', lateGlass: '#39454f',
     gull: '#f4f1e8', bird: '#2b2a28', foam: '#dff0f2', window: '#ffc56e',
   },
 } as const;

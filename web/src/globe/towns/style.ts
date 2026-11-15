@@ -20,6 +20,11 @@ export const ROOFS: Record<BuildingStyle, string[]> = {
   arcology: ['#e8eef0', '#9fd8d0', '#c4cfd6'],
 };
 
+/** Thatch and hide for the round huts of a stone age tribe (buildTown's primitive branch). */
+export const THATCH = ['#cdb06a', '#b89a55', '#d6bc7c', '#c4ac8c'];
+/** How many huts a tribe's town has, as a share of the houses of a later town: fewer and bigger, with open ground between. */
+export const HUT_SHARE = 0.5;
+
 /** House walls: the roof colour washed toward this plaster, so pale styles get pale walls. */
 export const PLASTER = '#e0d4bc';
 
