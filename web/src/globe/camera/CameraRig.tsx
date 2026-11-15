@@ -310,7 +310,7 @@ export function CameraRig() {
       let score = 0;
       for (const p of caps) {
         const d = (p[0] * cand[0] + p[1] * cand[1] + p[2] * cand[2]) / (len * (Math.hypot(p[0], p[1], p[2]) || 1));
-        if (d > 0.3) score += 1 + d * 0.5;   // a capital on the facing side, better near the middle
+        if (d > 0.55) score += d * d;   // only capitals well inside the view count, most near the middle: never the empty sea between two continents
       }
       if (score > bestScore) { bestScore = score; best = cand; }
     }
