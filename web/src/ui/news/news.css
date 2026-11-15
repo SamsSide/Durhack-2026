@@ -68,7 +68,12 @@
 }
 .tn-news-year { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--gilt-hi); flex: none; }
 
-.tn-news-script { flex: 1; min-height: 0; overflow: hidden; }
+.tn-news-script {
+  flex: 1; min-height: 0; overflow: hidden;
+  /* the script crawls upward: lines fade at the edges instead of being cut in half */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 4px, #000 calc(100% - 5px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 4px, #000 calc(100% - 5px), transparent 100%);
+}
 .tn-news-text {
   font-size: var(--text-sm); line-height: 1.35; color: var(--color-text); font-style: italic; text-shadow: var(--engrave-on-dark);
   animation-duration: var(--tn-news-dur, 25s);
