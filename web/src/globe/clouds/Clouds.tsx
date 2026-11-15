@@ -31,8 +31,8 @@ const WINDOW_S = 2.5;   // how long it must stay slow before stepping down
 
 // The parting: zoomed in close, the clouds clear from a zone round the camera and along its line of
 // sight to the ground, so they never block the view (numbers in world units, planet radius 1).
-const PART_START = 0.55;  // camera height above the ground where the parting starts to open
-const PART_FULL = 0.32;   // and where it is fully open
+const PART_START = 0.8;   // camera height above the ground where the parting starts to open (a fly-to stops at 0.6)
+const PART_FULL = 0.55;   // and where it is fully open
 const PART_R_HIGH = 0.02; // clear radius at the camera as the parting starts
 const PART_R_LOW = 0.06;  // and at the lowest zoom: wider when lower
 const PART_SLOPE = 0.16;  // the cone: clear radius gained per unit of distance toward the look target
