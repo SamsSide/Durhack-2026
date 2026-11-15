@@ -159,6 +159,13 @@ export function applyEvent(world: World, event: WorldEvent): void {
     }
     case 'chronicle':
       world.chronicle.push(event.entry);
+      // A meteor decree scorches its crater: the provinces it hit carry the scar (less income, fewer
+      // people, ash on the map) until the years heal it. Folded here from the decree's own chronicle
+      // line, so every replica and every replay gets the same scar from the same event.
+      if (event.entry.decree?.effect === 'meteor') {
+        const by = Math.round(DEVASTATION.meteor + (DEVASTATION.max - DEVASTATION.meteor) * Math.min(1, Math.max(0, event.entry.decree.severity)));
+        for (const t of event.entry.decree.target.tiles) addDevastation(world, t, by);
+      }
       if (world.chronicle.length > CHRONICLE_KEEP + CHRONICLE_SLACK) trimChronicle(world);
       break;
     case 'payment': {

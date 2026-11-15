@@ -48,7 +48,7 @@ export const MARKUP = { centre: 1.1, farRight: 1.2 } as const;
 export const FAR_LEFT_VOLUME = 0.5;
 
 /** Devastation, 0 to 100 per province (folded in applyEvent). */
-export const DEVASTATION = { battle: 20, conquest: 10, occupied: 5, recovery: 3, max: 100 } as const;
+export const DEVASTATION = { battle: 20, conquest: 10, occupied: 5, recovery: 3, max: 100, meteor: 45 } as const;
 
 // ---- goods per province ---------------------------------------------------------------------
 
