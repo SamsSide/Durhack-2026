@@ -107,7 +107,7 @@ export class StructureField {
     this.group.add(this.puffMesh);
     this.smokeMesh = new THREE.InstancedMesh(
       new THREE.IcosahedronGeometry(1, 0),
-      new THREE.MeshStandardMaterial({ color: '#ffffff', flatShading: true, roughness: 1, transparent: true, opacity: 0.78, depthWrite: false }),
+      new THREE.MeshStandardMaterial({ color: '#ffffff', flatShading: true, roughness: 1, transparent: true, opacity: 0.42, depthWrite: false }),
       MAX_SMOKE,
     );
     this.smokeMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_SMOKE * 3), 3);

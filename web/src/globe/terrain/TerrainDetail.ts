@@ -211,6 +211,7 @@ export class TerrainDetail {
       if (k === 'ice') icy = true; else if (k === 'desert') dry = true;
     }
     const frost = icy || lat > 0.8 ? 0.55 : NO_SNOW;   // a dusting on knolls and rocks in the far north and south
+    const knollFrost = frost === NO_SNOW ? NO_SNOW : 0.8;   // knolls are wide and low: only the crown, or the whole knoll reads as a white disc
     const taken: [number, number, number][] = [];
     const seaGap = S * 0.07;
     const rocks = (count: number, salt: number, lo = 0.03, hi = 0.065): void => {
@@ -246,14 +247,14 @@ export class TerrainDetail {
         (a, b, rad, i, u) => peak(a, b, rad, i, u, false), 0.86);
       // Foothills toward the lowlands, in the province's own colour.
       this.scatter(t, poly, taken, 3, 2, (i) => W * (0.15 + 0.08 * h(i, 66)), (rad) => rad + W * 0.04, 0.7, false, seaGap, (a, b, rad, i, u) => {
-        this.add(t, g, KIND.knoll, a, b, rad * 1.15, rad * (0.4 + 0.25 * u), rad, null, { snow: frost, mix: 0.55 });
+        this.add(t, g, KIND.knoll, a, b, rad * 1.15, rad * (0.4 + 0.25 * u), rad, null, { snow: knollFrost, mix: 0.55 });
       });
       rocks(4, 3, 0.035, 0.075);
       return;
     }
     if (t.terrain === 'hills') {
       this.scatter(t, poly, taken, 4 + Math.floor(h(0, 67) * 2), 1, (i) => W * (i === 0 ? 0.34 : 0.19 + 0.13 * h(i, 68)), (rad) => rad * 0.92 + W * 0.02, 0.66, false, seaGap, (a, b, rad, i, u) => {
-        this.add(t, g, KIND.knoll, a, b, rad * (1.05 + 0.3 * h(i, 69)), rad * (0.34 + 0.2 * u), rad, null, { snow: frost, mix: 0.38 });
+        this.add(t, g, KIND.knoll, a, b, rad * (1.05 + 0.3 * h(i, 69)), rad * (0.34 + 0.2 * u), rad, null, { snow: knollFrost, mix: 0.38 });
       });
       rocks(3, 2);
       return;
