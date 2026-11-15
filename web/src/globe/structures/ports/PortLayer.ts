@@ -11,6 +11,7 @@ import { isRuinedTile } from '../../war/ruins';
 import { buildPort, oceanNeighbour, spaceSig } from './buildPort';
 import type { PortParts } from './buildPort';
 import { PORT_FADE_FAR, portEra } from './portStyle';
+import { isPrimitive } from '../../towns/ageStyle';
 import type { PartBuf } from '../../towns/buildTown';
 import { nationIdentity } from '../../identity/identity';
 import { bannerColor } from '../../identity/look';
@@ -98,12 +99,13 @@ export class PortLayer {
       const country = world.countries[s.owner];
       // The nation's banner colour, as on its other buildings; only a port shows it.
       const team = small || !country ? '' : `#${bannerColor(country.color, nationIdentity(world, s.owner)).getHexString()}`;
-      const key = `${s.kind}|${era}|${ocean}|${team}|${spaceSig(tile, fid)}`;
+      const tribe = isPrimitive(world, country); // a stone age tribe: a landing place, no lighthouse
+      const key = `${s.kind}|${era}${tribe ? 't' : ''}|${ocean}|${team}|${spaceSig(tile, fid)}`;
       seen.add(s.id);
       const had = this.harbours.get(s.id);
       if (had?.key === key) { setFeet(tile, fid, had.parts.feet); setFeet(ocean, `${fid}:sea`, had.sea); continue; } // re-assert after a world clear
       const st = world.structures.find((x) => x.id === s.id)!;
-      const parts = buildPort(world, st, this.tileGeos.get(tile), ocean, era, small, fid, team || '#b8b0a0');
+      const parts = buildPort(world, st, this.tileGeos.get(tile), ocean, era, small, fid, team || '#b8b0a0', tribe);
       // every part of the harbour, as squares on the sea tile it faces: fleets anchor clear of piers and the lighthouse
       const sea = seaFeet(parts, this.tileGeos.get(ocean));
       if (had && had.ocean !== ocean) setFeet(had.ocean, `${fid}:sea`, null);

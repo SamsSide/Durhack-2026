@@ -93,7 +93,7 @@ export function spaceSig(tile: number, id: string): string {
   return s;
 }
 
-export function buildPort(world: World, s: Structure, g: TileGeo, ocean: number, era: PortEra, small: boolean, footId: string, team: string): PortParts {
+export function buildPort(world: World, s: Structure, g: TileGeo, ocean: number, era: PortEra, small: boolean, footId: string, team: string, tribe = false): PortParts {
   const out: PortParts = { boxes: new PartBuf(), cyls: new PartBuf(), cones: new PartBuf(), roofs: new PartBuf(), feet: [] };
   const dir = new THREE.Vector3();
   const shore = pierAxis(world, g, s.tile, ocean, dir);
@@ -255,20 +255,33 @@ export function buildPort(world: World, s: Structure, g: TileGeo, ocean: number,
     if (era === 'early') {
       // A timber waterfront: a boardwalk on piles, two jetties, a hall under the nation's colour and a lighthouse.
       slab(back, e - 0.02 * U, 0, 2 * QH, C.yardEarth, dk - 0.0004);
-      slab(e - 0.03 * U, face, 0, 2 * QH, C.pile, dk - 0.0006);
+      // On a high shore the boardwalk sits down at the water (pier height) under a stone retaining wall, with a
+      // ledge half way and stairs between the jetties, so the place reads as a cliff-side harbour and not as one
+      // tall dark plank wall. On a low shore the boardwalk is level with the yard, as before.
+      const high = dk - pk > 0.0015;
+      const walk = high ? pk : dk, w0 = high ? e : e - 0.03 * U;
+      if (high) {
+        slab(e - 0.045 * U, e - 0.014 * U, 0, 2 * QH + 0.01 * U, C.stone);
+        box(e - 0.0295 * U, 0, dk, 0.035 * U, 0.0008, 2 * QH + 0.014 * U, C.coping);
+        slab(e - 0.014 * U, e, 0, 2 * QH, C.stoneDark, (dk + pk) / 2);
+        const steps = 6, s0 = e - 0.014 * U, sl = (face - 0.006 * U - s0) / steps;
+        for (let i = 0; i < steps; i++) slab(s0 + i * sl, s0 + (i + 1) * sl, 0.025 * U, 0.05 * U, C.coping, dk - ((dk - pk) * (i + 1)) / (steps + 1));
+      }
+      slab(w0, face, 0, 2 * QH, C.pile, walk - 0.0006);
       const n = 8, pl = (2 * QH) / n;
-      for (let i = 0; i < n; i++) box((e - 0.03 * U + face) / 2, -QH + (i + 0.5) * pl, dk - 0.0006, face - e + 0.03 * U, 0.0008, pl * 0.96, pick(C.plank, i * 3 + 2));
-      for (let i = 0; i <= n; i += 2) cyl(face, -QH + i * pl, base, 0.012 * U, dk - base + 0.006 * U, C.pile);
+      for (let i = 0; i < n; i++) box((w0 + face) / 2, -QH + (i + 0.5) * pl, walk - 0.0006, face - w0, 0.0008, pl * 0.96, pick(C.plank, i * 3 + 2));
+      for (let i = 0; i <= n; i += 2) cyl(face, -QH + i * pl, base, 0.012 * U, walk - base + 0.006 * U, C.pile);
       const jetty = (oc: number, s1: number, pw: number, k: number): void => {
         const seg = 0.08 * U;
         for (let a = face, i = 0; a < s1; a += seg, i++) box(a + Math.min(seg, s1 - a) / 2, oc, pk - 0.0012, Math.min(seg, s1 - a) * 0.96, 0.0012, pw, pick(C.plank, k + i * 3));
         for (let a = face + 0.06 * U; a < s1 + 0.01 * U; a += 0.1 * U) for (const sd of [-1, 1]) cyl(a, oc + sd * pw * 0.5, base, 0.012 * U, pk - base + 0.008 * U, C.pile);
       };
       const m1 = -0.07 * U, e1 = e + 0.42 * U, m2 = 0.12 * U, e2 = e + 0.24 * U;
-      for (const oc of [m1, m2]) box(face + 0.012 * U, oc, pk - 0.0012, 0.03 * U, (dk - pk) * 0.55, 0.04 * U, C.plank[1]); // a step down
+      if (!high) for (const oc of [m1, m2]) box(face + 0.012 * U, oc, pk - 0.0012, 0.03 * U, (dk - pk) * 0.55, 0.04 * U, C.plank[1]); // a step down
       jetty(m1, e1, 0.06 * U, 1);
       jetty(m2, e2, 0.045 * U, 5);
-      // the lighthouse stands on a stone mole at the end of the long jetty
+      // the lighthouse stands on a stone mole at the end of the long jetty (a stone age tribe has neither)
+      if (!tribe) {
       cyl(e1 + 0.02 * U, m1, base, 0.13 * U, pk - base, C.stone);
       cyl(e1 + 0.02 * U, m1, pk, 0.075 * U, 0.07 * U, C.lightWhite);
       cyl(e1 + 0.02 * U, m1, pk + 0.07 * U, 0.064 * U, 0.05 * U, C.lightRed);
@@ -276,6 +289,7 @@ export function buildPort(world: World, s: Structure, g: TileGeo, ocean: number,
       cyl(e1 + 0.02 * U, m1, pk + 0.17 * U, 0.07 * U, 0.006 * U, C.iron);
       cyl(e1 + 0.02 * U, m1, pk + 0.176 * U, 0.04 * U, 0.024 * U, C.lamp);
       cone(e1 + 0.02 * U, m1, pk + 0.2 * U, 0.066 * U, 0.04 * U, C.lightRed);
+      }
       shed(yard, 0.09 * U, 0.17 * U, 0.085 * U, 0.042 * U, C.timberWall, team, 0.04 * U);
       shed(yard - 0.005 * U, -0.12 * U, 0.09 * U, 0.065 * U, 0.032 * U, C.timberWall, C.thatch, 0.032 * U);
       crates(e - 0.035 * U, 0.02 * U, 5, 20);
