@@ -1,5 +1,5 @@
-// Lane b: every harbour on the globe in three draw calls (boxes, cylinders, cones). A harbour is built once per
-// structure and rebuilt only when what it looks like changes: its nation's era, the ocean side it faces, or the
+// Lane b: every harbour on the globe in four draw calls (boxes, cylinders, cones, gable roofs). A harbour is built once per
+// structure and rebuilt only when what it looks like changes: its nation's era or colour, the ocean side it faces, or the
 // space other structures leave on its tile. Packed into the instance buffers only when a harbour changed.
 import * as THREE from 'three';
 import type { World } from '@terra/shared';
@@ -10,9 +10,21 @@ import { buildPort, oceanNeighbour, spaceSig } from './buildPort';
 import type { PortParts } from './buildPort';
 import { PORT_FADE_FAR, portEra } from './portStyle';
 import type { PartBuf } from '../../towns/buildTown';
+import { nationIdentity } from '../../identity/identity';
+import { bannerColor } from '../../identity/look';
+
+/** A gable roof: 1 x 1 footprint, height 1, the ridge along x, base at y = 0. */
+function gableGeometry(): THREE.BufferGeometry {
+  const A = [-0.5, 0, -0.5], B = [0.5, 0, -0.5], C = [0.5, 0, 0.5], D = [-0.5, 0, 0.5], R0 = [-0.5, 1, 0], R1 = [0.5, 1, 0];
+  const tris = [D, C, R1, D, R1, R0, B, A, R0, B, R0, R1, B, R1, C, A, D, R0];
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(tris.flat(), 3));
+  g.computeVertexNormals();
+  return g;
+}
 
 const SETTLEMENTS = new Set<string>(['village', 'town', 'city', 'capital']);
-const KINDS = ['boxes', 'cyls', 'cones'] as const;
+const KINDS = ['boxes', 'cyls', 'cones', 'roofs'] as const;
 type Kind = typeof KINDS[number];
 
 interface Harbour { key: string; tile: number; parts: PortParts }
@@ -21,6 +33,7 @@ export class PortLayer {
   readonly group = new THREE.Group();
   private harbours = new Map<string, Harbour>();
   private meshes = {} as Record<Kind, THREE.InstancedMesh>;
+  private sea = new Map<number, number>(); // tile -> the ocean neighbour its harbour faces (-1 inland)
   private dirty = true;
   private m = new THREE.Matrix4();
   private p = new THREE.Vector3();
@@ -35,6 +48,7 @@ export class PortLayer {
       boxes: new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
       cyls: new THREE.CylinderGeometry(0.5, 0.5, 1, 8).translate(0, 0.5, 0),
       cones: new THREE.ConeGeometry(0.5, 1, 8).translate(0, 0.5, 0),
+      roofs: gableGeometry(),
     };
     for (const k of KINDS) {
       const mesh = new THREE.InstancedMesh(geos[k], mat, 64);
@@ -59,19 +73,24 @@ export class PortLayer {
       if (!have || (s.kind === 'port' && have.kind !== 'port')) byTile.set(s.tile, { id: s.id, kind: s.kind, owner: s.owner });
     }
     for (const [tile, s] of byTile) {
-      const ocean = oceanNeighbour(world, tile, s.id);
+      let ocean = this.sea.get(tile);
+      if (ocean === undefined) { ocean = oceanNeighbour(world, tile); this.sea.set(tile, ocean); } // tiles never change
+
       if (ocean < 0) continue;
       const fid = `harbour:${s.id}`;
       const era = portEra(world.countries[s.owner]?.techAge);
       const small = s.kind !== 'port';
-      const key = `${s.kind}|${era}|${ocean}|${spaceSig(tile, fid)}`;
+      const country = world.countries[s.owner];
+      // The nation's banner colour, as on its other buildings; only a port shows it.
+      const team = small || !country ? '' : `#${bannerColor(country.color, nationIdentity(world, s.owner)).getHexString()}`;
+      const key = `${s.kind}|${era}|${ocean}|${team}|${spaceSig(tile, fid)}`;
       seen.add(s.id);
       const had = this.harbours.get(s.id);
-      if (had?.key === key) { if (had.parts.foot) setFeet(tile, fid, [had.parts.foot]); continue; } // re-assert after a world clear
+      if (had?.key === key) { setFeet(tile, fid, had.parts.feet); continue; } // re-assert after a world clear
       const st = world.structures.find((x) => x.id === s.id)!;
-      const parts = buildPort(world, st, this.tileGeos.get(tile), ocean, era, small, fid);
+      const parts = buildPort(world, st, this.tileGeos.get(tile), ocean, era, small, fid, team || '#b8b0a0');
       this.harbours.set(s.id, { key, tile, parts });
-      setFeet(tile, fid, parts.foot ? [parts.foot] : null);
+      setFeet(tile, fid, parts.feet);
       this.dirty = true;
     }
     for (const [id, h] of this.harbours) {

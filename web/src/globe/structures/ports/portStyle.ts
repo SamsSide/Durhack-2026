@@ -44,9 +44,22 @@ export const PORT_COLORS = {
   floatWalk: '#c4d2da',
   floatHull: '#f0f4f6',
   floatDark: '#39454f',
+  yardEarth: '#b39a72',
+  cobble: '#8f8a80',
+  timberWall: '#9c7a52',
+  thatch: '#c2a460',
+  brick: '#9a5a44',
+  door: '#3a2c22',
+  barrel: '#6e4f33',
+  crate: ['#b08a58', '#9a7446', '#c49c68'],
 } as const;
 
 /** Distance (camera radius) inside which harbours are drawn; matches the close-up towns. */
 export const PORT_FADE_FAR = 1.85;
 /** Boats moored at a port by era (a coastal town's pier holds one). */
-export const PORT_BOATS: Record<PortEra, number> = { early: 2, middle: 3, modern: 2, future: 3 };
+export const PORT_BOATS: Record<PortEra, number> = { early: 4, middle: 3, modern: 2, future: 3 };
+/** A port's footprint in tile widths: half the quay's length along the shore, and how far the yard runs inland. */
+export const PORT_SIZE: Record<'quayHalf' | 'yardDepth', Record<PortEra, number>> = {
+  quayHalf: { early: 0.2, middle: 0.21, modern: 0.23, future: 0.2 },
+  yardDepth: { early: 0.17, middle: 0.18, modern: 0.2, future: 0.17 },
+};
