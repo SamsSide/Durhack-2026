@@ -1,13 +1,12 @@
 // A21: Terra Nova News. Gemini looks at a picture of the globe plus the recent chronicle and writes a
 // short news bulletin; ElevenLabs reads it in a newsreader voice. Template bulletin and bundled sample in mock.
-import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { militaryStrength } from '@terra/shared';
 import type { ChronicleEntry, ChronicleKind, NewsBattle, NewsFocus, StructureKind, World, WorldEvent } from '@terra/shared';
-import { currentMode, getBudget, loreModel, validate, type Schema } from '../llm';
+import { currentMode, getBudget, llmJson, loreModel, routeFor, type Schema } from '../llm';
 import { speak, VoiceUnavailable } from './eleven';
 import { anchorFor } from './teamVoices';
 
@@ -41,24 +40,12 @@ export const getBulletin = (id: string): Stored | undefined => store.get(id);
 
 const FOCUS_DESC = 'The 1 to 3 places the bulletin talks about, in the order it speaks of them: place is an id from the Places list, caption at most 6 words.';
 const schema: Schema = {
-  type: 'object', required: ['headline', 'script', 'mood'],
+  type: 'object', required: ['headline', 'script', 'mood', 'focus'],
   properties: {
     headline: { type: 'string', description: 'At most 8 words.' },
     script: { type: 'string', description: 'A newsreader bulletin of 45 to 65 words, plain text.' },
     mood: { type: 'string', enum: ['grave', 'triumphant', 'neutral'] },
     focus: { type: 'array', description: FOCUS_DESC, maxItems: 3, items: { type: 'object', required: ['place', 'caption'], properties: { place: { type: 'integer' }, caption: { type: 'string' } } } },
-  },
-};
-const geminiSchema = {
-  type: 'OBJECT', required: ['headline', 'script', 'mood', 'focus'],
-  properties: {
-    headline: { type: 'STRING', description: 'At most 8 words.' },
-    script: { type: 'STRING', description: 'A newsreader bulletin of 45 to 65 words, plain text.' },
-    mood: { type: 'STRING', enum: ['grave', 'triumphant', 'neutral'] },
-    focus: {
-      type: 'ARRAY', description: FOCUS_DESC, maxItems: 3,
-      items: { type: 'OBJECT', required: ['place', 'caption'], properties: { place: { type: 'INTEGER' }, caption: { type: 'STRING' } } },
-    },
   },
 };
 
@@ -126,33 +113,22 @@ function template(w: World, f: ReturnType<typeof facts>): { headline: string; sc
 }
 
 async function ask(w: World, f: ReturnType<typeof facts>, ps: Place[], imageBase64: string, mimeType: string) {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error('GEMINI_API_KEY is not set');
-  const ai = new GoogleGenAI({ apiKey: key });
-  const model = loreModel();
-  const res = await ai.models.generateContent({
-    model,
-    contents: [{ role: 'user', parts: [
-      { inlineData: { mimeType, data: imageBase64 } },
-      { text: `${f.text}\n${placesText(ps)}\n\nWrite the bulletin as JSON: headline (max 8 words), script (45 to 65 words), mood, and focus: the 1 to 3 places from the list the script speaks of, in the order it speaks of them, each with a caption of at most 6 words ("Steel works rise in Hatfield").` },
-    ] }],
-    config: {
-      systemInstruction: SYSTEM,
-      responseMimeType: 'application/json',
-      responseSchema: geminiSchema as never,
-      maxOutputTokens: 600,
-      temperature: 0.9,
-      thinkingConfig: /gemini-2\.5/.test(model) ? { thinkingBudget: 0 } : { thinkingLevel: ThinkingLevel.MINIMAL },
-      abortSignal: AbortSignal.timeout(30_000),
-    } as never,
+  // Same routing as every other call (LLM_PROVIDER); the globe picture goes along as an image.
+  const before = getBudget();
+  const out = await llmJson<{ headline: string; script: string; mood: string; focus?: { place: number; caption: string }[] }>({
+    model: loreModel(),
+    purpose: 'broadcast',
+    system: SYSTEM,
+    prompt: `${f.text}\n${placesText(ps)}\n\nWrite the bulletin as JSON: headline (max 8 words), script (45 to 65 words), mood, and focus: the 1 to 3 places from the list the script speaks of, in the order it speaks of them, each with a caption of at most 6 words ("Steel works rise in Hatfield").`,
+    schema,
+    maxOutputTokens: 600,
+    images: [{ data: imageBase64, mimeType }],
   });
-  if (!res.text) throw new Error('empty response');
-  const out = validate<{ headline: string; script: string; mood: string; focus?: { place: number; caption: string }[] }>(JSON.parse(res.text), schema);
   out.script = out.script.replace(/[*_#`]/g, '').replace(/\s+/g, ' ').trim();
   out.headline = words(out.headline.replace(/[*_#`]/g, ''), 8);
   if (out.script.split(' ').length < 20) throw new Error('script too short');
-  return { out, tokensIn: res.usageMetadata?.promptTokenCount ?? 0,
-    tokensOut: (res.usageMetadata?.candidatesTokenCount ?? 0) + (res.usageMetadata?.thoughtsTokenCount ?? 0) };
+  const after = getBudget();
+  return { out, tokensIn: Math.max(0, after.tokensIn - before.tokensIn), tokensOut: Math.max(0, after.tokensOut - before.tokensOut) };
 }
 
 // --- focus beats (owner #288) ----------------------------------------------------------------
@@ -381,7 +357,7 @@ export async function makeBroadcast(w: World, imageBase64: string, mimeType: str
   const started = Date.now();
   if (w.id !== worldId) { worldId = w.id; made = 0; lastHeadline = ''; lastCounts = null; store.clear(); }
   const f = facts(w);
-  const live = !offline && currentMode() === 'live' && !!process.env.GEMINI_API_KEY;
+  const live = !offline && currentMode() === 'live' && (!!process.env.GEMINI_API_KEY || routeFor('broadcast') === 'ollama');
   const underCap = made < maxBroadcasts();
   const ps = places(w);
   let body: { headline: string; script: string; mood: string; focus?: { place: number; caption: string }[] } | null = null;

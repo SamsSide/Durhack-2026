@@ -315,6 +315,19 @@ with none set the app runs fully in mock mode.
 | `SOLANA_RPC_URL`, `SOLANA_WS_URL`, `SOLANA_KEYS_DIR`, `SOLANA_SETTLE_MS`, `SOLANA_MAX_TX_PER_WINDOW`, `SOLANA_FLOAT` | Solana settings |
 | `PORT` | The server port (default 8787) |
 
+Which model answers is a switch (`LLM_MODE=live` only; mock never calls anything). Voice decrees
+(audio in) and painted flags always stay on Gemini.
+
+| Variable | What |
+| --- | --- |
+| `LLM_PROVIDER` | `gemini` (default), `gemma-api` (Gemma through the Gemini API), `ollama` (local Gemma) or `hybrid` |
+| `GEMMA_API_MODEL` | The Gemma id for `gemma-api` (default `gemma-4-26b-a4b-it`) |
+| `OLLAMA_HOST`, `OLLAMA_MODEL` | Where Ollama listens (default `http://localhost:11434`) and its model (default `gemma4:e4b-it-qat`; run `ollama pull gemma4:e4b-it-qat` once) |
+| `LLM_LOCAL_PURPOSES` | In `hybrid`, the purposes sent to Ollama (default `ruler`); the rest stay on Gemini |
+
+Check a setup with `LLM_PROVIDER=hybrid npx tsx server/scripts/check-llm.ts` (one tiny call per route,
+prints `PASS` or `FAIL`).
+
 For `SOLANA_MODE=devnet`, make the keypairs first with `npx tsx scripts/solana-keys.ts` (they
 are written outside the repo, or to `SOLANA_KEYS_DIR`; it never overwrites and prints only the
 Commons address), then fund that address from the devnet faucet.
