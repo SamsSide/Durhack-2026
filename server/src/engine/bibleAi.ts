@@ -1,6 +1,7 @@
 // The world bible written by Gemini (row A5): one call to the lore model at world creation, strictly
 // validated and repaired, with the template bible (mockBible) as the fallback on any failure.
-import { BUILDING_STYLES, diversifyStyles, isBuildingStyle, isNomadic, pickBuildingStyle } from '@terra/shared';
+import { BUILDING_STYLES, clampStartYear, diversifyStyles, isBuildingStyle, isNomadic, pickBuildingStyle } from '@terra/shared';
+import { fitStyles, mergeShape, settingOf, shapeFromText, type Setting } from './promptShape';
 import type { BibleNation, FlagEmblem, FlagLayout, FlagSpec, WorldBible } from '@terra/shared';
 import { llmJson, bibleModel, currentMode, type Schema } from '../llm';
 import { createHash } from 'node:crypto';
@@ -39,24 +40,39 @@ const nationSchema: Schema = {
     flagColors: { type: 'array', items: str('hex colour'), description: '2 to 4 hex colours' },
     flagEmblem: { type: 'string', enum: EMBLEMS },
     regionNames: { type: 'array', items: str('place name'), description: '6 to 8 region names in this culture\'s style' },
-    buildingStyle: { type: 'string', enum: [...BUILDING_STYLES], description: 'Architecture: scrap for post-apocalyptic, industrial for modern; else from the culture (samurai east_asian, pharaoh desert, Inca mesoamerican, senate classical, feudal medieval, jarl norse, raja south_asian, griot sahel). At most 2 nations per style.' },
+    buildingStyle: { type: 'string', enum: [...BUILDING_STYLES], description: 'Architecture that fits the era and climate: scrap after an apocalypse; industrial, western_modern or soviet_bloc for steam, clockwork and modern worlds; arcology for the far future; else from the culture and land (samurai east_asian, pharaoh egyptian, caravan desert, Inca or jungle mesoamerican, senate classical, feudal medieval, jarl or ice norse, mountain highland, raja south_asian, griot sahel). At most 2 nations per style.' },
     nomadic: { type: 'boolean', description: 'Herders, horse lords, steppe or caravan people' },
+  },
+};
+const shapeSchema: Schema = {
+  type: 'object',
+  required: ['seaLevel', 'landmasses', 'climate', 'dryness', 'forest', 'mountains'],
+  description: 'The planet itself, as the prompt (or the picture) describes it',
+  properties: {
+    seaLevel: { type: 'number', description: 'Share of the surface that is ocean: 0.35 a dry or land-heavy world, 0.55 Earth-like, 0.75 drowned or all islands' },
+    landmasses: { type: 'string', enum: ['one', 'few', 'many'], description: 'one supercontinent, a few continents, or many islands (an archipelago)' },
+    climate: { type: 'string', enum: ['cold', 'temperate', 'hot'], description: 'cold for frozen, arctic or ice worlds; hot for desert, jungle or scorched worlds' },
+    dryness: { type: 'number', description: '0 (rainforest, swamp) to 1 (desert); 0.5 is Earth-like' },
+    forest: { type: 'number', description: '0 (bare) to 1 (jungle or deep woods); 0.5 is Earth-like' },
+    mountains: { type: 'number', description: '0 (flat) to 1 (very rugged); 0.5 is Earth-like' },
   },
 };
 const bibleSchema: Schema = {
   type: 'object',
-  required: ['name', 'era', 'startYear', 'nations'],
+  required: ['name', 'era', 'startYear', 'shape', 'nations'],
   properties: {
     name: str('The world name'), era: str('The era, 2 to 4 words'),
     startYear: { type: 'integer', description: 'Calendar year the world starts at (negative for BCE)' },
+    shape: shapeSchema,
     nations: { type: 'array', items: nationSchema },
   },
 };
 const imageReadingSchema: Schema = {
   type: 'object',
-  required: ['mood', 'palette', 'setting'],
+  required: ['subject', 'mood', 'palette', 'setting'],
   description: 'What the picture shows',
   properties: {
+    subject: str('What is in the picture, one plain sentence naming the main things you can see'),
     mood: str('The mood of the picture, 2 to 6 words'),
     palette: { type: 'array', items: str('hex colour'), description: '3 to 6 dominant hex colours of the picture' },
     setting: str('The setting and era the picture suggests, under 12 words'),
@@ -65,11 +81,11 @@ const imageReadingSchema: Schema = {
 };
 const imageBibleSchema: Schema = {
   ...(bibleSchema as Extract<Schema, { type: 'object' }>),
-  required: ['name', 'era', 'startYear', 'nations', 'imageReading'],
+  required: ['name', 'era', 'startYear', 'shape', 'nations', 'imageReading'],
   properties: { ...(bibleSchema as Extract<Schema, { type: 'object' }>).properties, imageReading: imageReadingSchema },
 };
 
-export interface ImageReading { mood: string; palette: string[]; setting: string; seaLevelHint?: number }
+export interface ImageReading { mood: string; palette: string[]; setting: string; seaLevelHint?: number; subject?: string }
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
 /** Validates an uploaded picture (JPEG, PNG or WebP, under about 4 MB decoded); null if unsupported. */
@@ -106,7 +122,9 @@ interface RawNation {
   culture: string[]; foundingMyth: string; aggression: number; expansion: number; trade: number; faith: number;
   anthemPrompt: string; voiceStyle: string; flagLayout: FlagLayout; flagColors: string[]; flagEmblem: FlagEmblem; regionNames: string[]; buildingStyle?: string; nomadic?: boolean;
 }
-interface RawBible { name: string; era: string; startYear: number; nations: RawNation[]; imageReading?: ImageReading }
+interface RawBible { name: string; era: string; startYear: number; shape?: unknown; nations: RawNation[]; imageReading?: ImageReading }
+/** What the words of the prompt say on their own (promptShape.ts), used to check the model's bible. */
+export interface PromptFacts { opts: { prompt: string; era?: string }; seed: number; seaHint?: number }
 
 const SYSTEM = [
   'You design the nations of a fictional world for a strategy simulation. Be vivid and specific, but compact:',
@@ -140,7 +158,7 @@ const dist = (a: string, b: string): number => {
 const readable = (hex: string): boolean => HEX.test(hex) && luma(hex) >= 70 && luma(hex) <= 235;
 
 /** Turns what Gemini wrote into a WorldBible that is safe to build a world from. Throws if unusable. */
-export function repairBible(raw: RawBible, fallback: WorldBible, n: number, extraPalette: string[] = []): WorldBible {
+export function repairBible(raw: RawBible, fallback: WorldBible, n: number, extraPalette: string[] = [], facts?: PromptFacts): WorldBible {
   const usedNames = new Set<string>();
   const usedColors: string[] = [];
   const nations: BibleNation[] = [];
@@ -189,31 +207,44 @@ export function repairBible(raw: RawBible, fallback: WorldBible, n: number, extr
   nations.forEach((nat, i) => { nat.flag = steerFlag(nat.flag, governmentKeyOf({ ...nat, nomadic: nat.nomadic }), eraKey, used, i); });
   // Building styles (#91): Gemini's pick, else the rules; then at most two nations per style.
   const worldText = `${raw.era ?? ''} ${raw.name ?? ''} ${fallback.era}`;
-  const styles = diversifyStyles(nations.map((n) => n.buildingStyle ?? pickBuildingStyle(worldText, n)));
+  // The year, the age and the planet: the model's answer, checked against the words of the prompt (a
+  // year the prompt names wins, a year outside the setting's span is pulled into it; the prompt's own
+  // words win a shape field). Without the prompt (older callers) the model's year is only clamped.
+  const promptText = facts ? `${facts.opts.era ?? ''} ${facts.opts.prompt}` : '';
+  const setting: Setting | undefined = facts ? settingOf(facts.opts, facts.seed, { era: clean(raw.era ?? '', 40), startYear: raw.startYear }, fallback.startYear) : undefined;
+  const picked = nations.map((n) => n.buildingStyle ?? pickBuildingStyle(worldText, n));
+  const styles = setting?.kind ? fitStyles(picked, setting.kind, `${promptText} ${raw.era ?? ''}`) : diversifyStyles(picked);
   nations.forEach((n, i) => { n.buildingStyle = styles[i]; if (n.nomadic === undefined) n.nomadic = isNomadic(n); });
   if (!raw.name.trim()) throw new Error('bible has no name');
+  const shape = facts ? mergeShape(shapeFromText(promptText), raw.shape, facts.seaHint) : undefined;
   return {
     name: clean(raw.name, 60), era: clean(raw.era, 40) || fallback.era,
-    startYear: Number.isFinite(raw.startYear) ? Math.round(Math.max(-10000, Math.min(5000, raw.startYear))) : fallback.startYear,
+    startYear: setting?.startYear ?? (Number.isFinite(raw.startYear) ? clampStartYear(raw.startYear) : fallback.startYear),
     nations,
+    ...(setting ? { startAge: setting.startAge } : {}), ...(shape ? { shape } : {}),
   };
 }
 
-const IMAGE_INSTRUCTION = 'A picture is attached. Read the picture for mood, palette, setting and era; let it shape the world\'s name, the nations\' cultures, colours (draw nation colours from the picture\'s palette, still distinct and readable on a dark globe), flags and region names. Also fill imageReading: mood, palette (3 to 6 hex colours from the picture), setting, and seaLevelHint (0.3 to 0.75, how watery the scene feels).';
+const IMAGE_INSTRUCTION = 'A picture is attached. First look at it and say what it shows (imageReading.subject: one plain sentence naming the main things you can see). Then let the picture drive the world: its name, the era and the start year its buildings, clothes or machines suggest, the planet (shape: snow means cold, sand means hot and dry, water means a high sea level and many islands, trees mean forest, peaks mean mountains), each nation\'s building style, the nations\' cultures and moods, colours (draw nation colours from the picture\'s palette, still distinct and readable on a dark globe), flags and region names. Where the words of the prompt and the picture disagree, the words win. Also fill imageReading: mood, palette (3 to 6 hex colours from the picture), setting, and seaLevelHint (0.3 to 0.75, how watery the scene feels).';
+
+const WORLD_INSTRUCTION = 'The prompt must visibly shape the whole world, not only its names. '
+  + 'startYear: if the prompt names a year or a century, use it; otherwise pick a year that fits the era: stone age 10000 to 4000 BC (negative numbers), bronze age 3000 to 1200 BC, classical 500 BC to 400, medieval 800 to 1400, age of sail 1500 to 1750, industrial, steam or clockwork 1800 to 1900, modern or cold war in the 1900s, near future 2040 to 2099, far future after 2150, post-apocalyptic a century or more after its fall (2150 to 2500). '
+  + 'shape: the planet the prompt describes. A frozen world is cold; desert empires are hot, dry (dryness near 0.9), bare of forest and low in sea; a drowned world or an archipelago has a high sea level (0.7 or more) and many landmasses; jungle is hot, wet and forested (forest near 0.9); one great continent is landmasses "one" with a low sea level. Use 0.5 and "few" and "temperate" only where the prompt says nothing. '
+  + 'Nations: governments, temperaments, cultures and building styles must fit the era and the land (no mud-brick towns in a clockwork age, no factories in a stone age); if the prompt names a kind of state (republics, tribes, city-states), most nations are that kind, each in its own way.';
 
 function cleanReading(r: ImageReading | undefined): ImageReading | undefined {
   if (!r) return undefined;
   const palette = (r.palette ?? []).map((c) => c.trim().toLowerCase()).filter((c) => HEX.test(c)).slice(0, 6);
   const hint = typeof r.seaLevelHint === 'number' && Number.isFinite(r.seaLevelHint) ? Math.max(0.3, Math.min(0.75, r.seaLevelHint)) : undefined;
-  return { mood: clean(r.mood ?? '', 60), palette, setting: clean(r.setting ?? '', 100), seaLevelHint: hint };
+  return { mood: clean(r.mood ?? '', 60), palette, setting: clean(r.setting ?? '', 100), seaLevelHint: hint, subject: clean(r.subject ?? '', 200) || undefined };
 }
 
 /** One line in the first founding myth so the chronicle shows the picture shaped the world. */
 function stampVision(bible: WorldBible, reading: ImageReading | undefined): void {
   const first = bible.nations[0];
-  if (!first || !reading || !(reading.mood || reading.setting)) return;
-  const vision = [reading.mood, reading.setting].filter(Boolean).join(', ');
-  first.foundingMyth = `The world was shaped from a vision of ${vision}. ${first.foundingMyth}`.slice(0, 400);
+  if (!first || !reading || !(reading.mood || reading.setting || reading.subject)) return;
+  const vision = [reading.mood, reading.subject || reading.setting].filter(Boolean).map((x) => x!.replace(/[.\s]+$/, '')).join(': ');
+  first.foundingMyth = `The world was shaped from a vision, ${vision}. ${first.foundingMyth}`.slice(0, 460);
 }
 
 /** Gemini writes the bible; on mock mode or any failure the template bible is returned instead.
@@ -225,6 +256,7 @@ export async function makeBible(opts: NewWorldOptions, seed: number): Promise<Wo
   const live = currentMode() === 'live';
   const aggr = opts.aggression ?? 0.5;
 
+  lastBibleSource = 'template';
   if (image && !live) { // mock: ignore the picture but let its bytes pick the colours
     const pal = hashPalette(image.data, n);
     fallback.nations.forEach((nat, i) => { nat.color = pal[i]!; nat.flag.colors[0] = pal[i]!; });
@@ -237,12 +269,13 @@ export async function makeBible(opts: NewWorldOptions, seed: number): Promise<Wo
     const raw = await llmJson<RawBible>({
       model, system: SYSTEM, purpose: withImage ? 'bible-image' : 'bible',
       schema: withImage ? imageBibleSchema : bibleSchema,
-      maxOutputTokens: Math.min(5000, 700 + 380 * n + (withImage ? 300 : 0)),
+      maxOutputTokens: Math.min(5200, 800 + 380 * n + (withImage ? 400 : 0)),
       images: withImage ? [image!] : undefined,
       prompt: [
         `World prompt from the user: "${opts.prompt.trim().slice(0, 500)}"`,
         withImage ? IMAGE_INSTRUCTION : '',
         opts.era ? `Era: ${opts.era}.` : 'Choose a fitting era.',
+        WORLD_INSTRUCTION,
         `Write exactly ${n} nations. World aggression level ${aggr.toFixed(2)} of 1: higher means more warlike temperaments overall.`,
         'Give each nation a distinct hex colour (far apart in hue, bright enough to read on a dark globe),',
         'a different flag layout and emblem, 3 to 5 culture traits, temperaments 0 to 1, and 6 to 8 region names in its own culture\'s naming style.',
@@ -253,10 +286,11 @@ export async function makeBible(opts: NewWorldOptions, seed: number): Promise<Wo
       ].filter(Boolean).join('\n'),
     });
     const reading = withImage ? cleanReading(raw.imageReading) : undefined;
-    const bible = repairBible(raw, fallback, n, reading?.palette.filter(readable));
+    // The picture's sea level is the weakest voice: the prompt's words and the model's shape come first,
+    // and the Create screen's slider, when moved, beats them all (chosenSeaLevel in worldgen).
+    const bible = repairBible(raw, fallback, n, reading?.palette.filter(readable), { opts, seed, seaHint: reading?.seaLevelHint });
     if (withImage) {
       stampVision(bible, reading);
-      if (opts.seaLevel === undefined && reading?.seaLevelHint !== undefined) opts.seaLevel = reading.seaLevelHint; // runner reads opts.seaLevel after prepareWorld
       console.log(`bible written by ${model} from a picture in ${Date.now() - t0} ms (${n} nations); reading: ${JSON.stringify(reading)}`);
       lastImageReading = reading;
     } else {
@@ -266,12 +300,15 @@ export async function makeBible(opts: NewWorldOptions, seed: number): Promise<Wo
   };
 
   for (const withImage of image ? [true, false] : [false]) {
-    try { return await ask(withImage); } catch (e) {
+    try { const bible = await ask(withImage); lastBibleSource = withImage ? 'model-picture' : 'model'; return bible; } catch (e) {
       console.warn(`bible${withImage ? ' (with picture)' : ''}: ${withImage ? 'trying text only' : 'using the template'} (${e instanceof Error ? e.message : String(e)})`);
     }
   }
   return fallback;
 }
+
+/** Who wrote the last bible, for the check scripts: the model, the model with the picture, or the template. */
+export let lastBibleSource: 'model' | 'model-picture' | 'template' = 'template';
 
 /** The last picture reading, for the live check script and logs. */
 export let lastImageReading: ImageReading | undefined;

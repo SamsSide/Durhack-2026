@@ -5,14 +5,26 @@ import type {
 } from '../types';
 import { generateProvinces, normalize } from '../sphere';
 import { hashString, mulberry32, pick, type Rng } from '../rng';
-import type { WorldBible } from './bible';
-import { startAge } from './ages';
+import { cleanShape, type WorldBible, type WorldShape } from './bible';
+import { AGES, startAge } from './ages';
 import { foundingCouncil } from './council';
 import { startPolitics } from './economy';
 import { WARMONGER_AGGRESSION } from './war';
 
 /** `aggression` is the Create screen's slider (0 to 1); it is the floor for the world's warmonger. */
 export interface WorldGenOptions { seed: number; seaLevel?: number; provinces?: number; aggression?: number }
+
+/** The Create screen's sea level when its slider was not touched: then the bible's shape may choose. */
+export const DEFAULT_SEA_LEVEL = 0.55;
+
+/** The sea level a new world gets: the slider when it was moved off its default, else the prompt's, else the default. */
+export function chosenSeaLevel(slider: number | undefined, shape: WorldShape | undefined): number {
+  const moved = typeof slider === 'number' && Number.isFinite(slider) && Math.abs(slider - DEFAULT_SEA_LEVEL) > 0.001;
+  // A cold planet loses much of its land to ice, so the prompt's own sea level stops at 0.7 there.
+  const asked = shape?.seaLevel !== undefined && shape.climate === 'cold' ? Math.min(0.7, shape.seaLevel) : shape?.seaLevel;
+  const v = moved ? slider! : asked ?? slider ?? DEFAULT_SEA_LEVEL;
+  return Math.max(0.2, Math.min(0.85, Number.isFinite(v) ? v : DEFAULT_SEA_LEVEL));
+}
 
 /** Provinces in a new world (#203 idea 1: was 500; 1,200 keeps the globe's frame time and the sim
  *  under about 5 ms a tick; 1,500 went over). Old replays keep their own count. */
@@ -74,13 +86,22 @@ function randomFlag(rng: Rng): FlagSpec {
 // ---- terrain --------------------------------------------------------------------------------
 
 function buildTerrain(
-  centers: Vec3[], neighbors: number[][], seed: number, seaLevel: number,
+  centers: Vec3[], neighbors: number[][], seed: number, seaLevel: number, shape: WorldShape = {},
 ): { terrain: Terrain[]; elevation: number[]; land: boolean[] } {
   const n = centers.length;
   const rng = mulberry32(seed ^ 0xa11ce);
+  // The prompt's shape (bible.shape). With no shape every number below is the one worlds always had,
+  // and the random stream is drawn in the same order, so an old seed still gives its old planet.
+  const masses = shape.landmasses ?? 'few';
+  const dry = shape.dryness ?? 0.5, wood = shape.forest ?? 0.5, rugged = shape.mountains ?? 0.5;
+  const cold = shape.climate === 'cold', hot = shape.climate === 'hot';
 
-  // Continent-scale blobs, spread apart, so land forms a few masses rather than noise.
-  const blobCount = 3 + Math.floor(rng() * 3);
+  // Continent-scale blobs, spread apart, so land forms a few masses rather than noise. One
+  // supercontinent is a single wide blob; an archipelago is many small ones.
+  const roll = rng();
+  const blobCount = masses === 'one' ? 1 : masses === 'many' ? 11 + Math.floor(roll * 6) : 3 + Math.floor(roll * 3);
+  const blobR = masses === 'one' ? [1.25, 0.3] : masses === 'many' ? [0.2, 0.14] : [0.55, 0.3];
+  const blobShare = masses === 'one' ? 0.88 : masses === 'many' ? 0.6 : 0.7;   // the rest is fine noise
   const blobs: { c: Vec3; r: number; w: number }[] = [];
   for (let i = 0; i < blobCount; i++) {
     let best: Vec3 = normalize([rng() - 0.5, rng() - 0.5, rng() - 0.5]);
@@ -90,7 +111,7 @@ function buildTerrain(
       const d = blobs.length ? Math.min(...blobs.map((b) => angle(b.c, c))) : 9;
       if (d > bestD) { bestD = d; best = c; }
     }
-    blobs.push({ c: best, r: 0.55 + rng() * 0.3, w: 0.85 + rng() * 0.3 });
+    blobs.push({ c: best, r: blobR[0]! + rng() * blobR[1]!, w: 0.85 + rng() * 0.3 });
   }
   const warpSeed = seed ^ 0x51ed;
   const raw: number[] = new Array(n);
@@ -104,7 +125,7 @@ function buildTerrain(
     ]);
     let b = 0;
     for (const bl of blobs) b = Math.max(b, bl.w * Math.max(0, 1 - angle(q, bl.c) / bl.r));
-    raw[i] = 0.7 * b + 0.3 * fbm(seed, p, 2.2, 4);
+    raw[i] = blobShare * b + (1 - blobShare) * fbm(seed, p, 2.2, 4);
   }
 
   const sorted = [...raw].sort((a, b) => a - b);
@@ -116,6 +137,16 @@ function buildTerrain(
   const h = (i: number) => (elevation[i]! - 0.3) / 0.7; // land height 0..1
 
   const moistSeed = seed ^ 0xd00d;
+  // Climate: the ice line (and the lower line for high ground), how far from the equator desert
+  // reaches, and the moisture cuts for desert and forest. The middle values are the old constants.
+  const iceLat = cold ? 0.7 : hot ? 0.97 : 0.9;
+  const iceHighLat = cold ? 0.45 : hot ? 0.9 : 0.78;
+  const iceHigh = cold ? 0.35 : 0.45;
+  const desertLat = hot || dry > 0.7 ? 0.85 : cold ? 0.4 : 0.6;
+  const desertCut = 0.42 + (dry - 0.5) * 0.4 + (hot ? 0.03 : cold ? -0.04 : 0);
+  const forestCut = 0.52 - (wood - 0.5) * 0.4;
+  const mountainCut = 0.62 - (rugged - 0.5) * 0.4;
+  const hillCut = 0.4 - (rugged - 0.5) * 0.3;
   const terrain: Terrain[] = new Array(n);
   for (let i = 0; i < n; i++) {
     if (!land[i]) { terrain[i] = 'ocean'; continue; }
@@ -123,12 +154,12 @@ function buildTerrain(
     const lat = Math.abs(p[1]);
     const touchesSea = neighbors[i]!.some((j) => !land[j]);
     const moist = fbm(moistSeed, p, 2.8, 3) - lat * 0.08;
-    if (lat > 0.9 || (lat > 0.78 && h(i) > 0.45)) terrain[i] = 'ice';
+    if (lat > iceLat || (lat > iceHighLat && h(i) > iceHigh)) terrain[i] = 'ice';
     else if (touchesSea) terrain[i] = 'coast';
-    else if (h(i) > 0.62) terrain[i] = 'mountain';
-    else if (h(i) > 0.4) terrain[i] = 'hills';
-    else if (moist < 0.42 && lat < 0.6) terrain[i] = 'desert';
-    else if (moist > 0.52) terrain[i] = 'forest';
+    else if (h(i) > mountainCut) terrain[i] = 'mountain';
+    else if (h(i) > hillCut) terrain[i] = 'hills';
+    else if (moist < desertCut && lat < desertLat) terrain[i] = 'desert';
+    else if (moist > forestCut) terrain[i] = 'forest';
     else terrain[i] = 'plains';
   }
   return { terrain, elevation, land };
@@ -244,13 +275,36 @@ function allocate(n: number, sizes: number[]): number[] {
  *  spread by farthest-point sampling over the regions' central tiles. Deterministic from the rng. */
 function placeCapitals(
   n: number, regions: Region[], land: boolean[], neighbors: number[][], centers: Vec3[], terrain: Terrain[], rng: Rng,
+  shaped = false,
 ): Region[] {
   const comps = components(land, neighbors);
   const compOf = new Array<number>(land.length).fill(-1);
   comps.forEach((c, ci) => { for (const t of c) compOf[t] = ci; });
   const regionsIn = comps.map(() => [] as Region[]);
-  for (const r of regions) if (compOf[r.capitalTile]! >= 0) regionsIn[compOf[r.capitalTile]!]!.push(r);
-  const alloc = allocate(n, comps.map((c) => c.length));
+  // A shaped planet (a frozen world, an archipelago) can be mostly ice or crumbs, where a nation could
+  // not grow: there a capital sits on open ground with at least four ice-free provinces joined to it, and
+  // landmasses are sized by their ice-free land. Unshaped worlds place capitals exactly as before.
+  const open = (t: number) => terrain[t] !== 'ice';
+  const home = new Set<Region>();
+  if (shaped) {
+    // Room to start: at least four ice-free provinces joined to the capital by land.
+    const roomy = (t: number): boolean => {
+      const q = [t];
+      for (let k = 0; k < q.length && q.length < 4; k++) for (const j of neighbors[q[k]!]!) if (land[j] && open(j) && !q.includes(j)) q.push(j);
+      return q.length >= 4;
+    };
+    for (const r of regions) {
+      const free = r.tiles.filter(open);
+      if (!free.length) continue;
+      const cap = open(r.capitalTile) && roomy(r.capitalTile) ? r.capitalTile : [centralTile(free, centers), ...free].find(roomy);
+      if (cap === undefined) continue;
+      r.capitalTile = cap;
+      home.add(r);
+    }
+  }
+  const usable = shaped && home.size >= n;
+  for (const r of regions) if (compOf[r.capitalTile]! >= 0 && (!usable || home.has(r))) regionsIn[compOf[r.capitalTile]!]!.push(r);
+  const alloc = allocate(n, comps.map((c) => (usable ? c.filter(open).length : c.length)));
   // A landmass cannot hold more capitals than it has regions; the overflow goes to the largest with room.
   let spill = 0;
   alloc.forEach((a, ci) => { const room = regionsIn[ci]!.length; if (a > room) { spill += a - room; alloc[ci] = room; } });
@@ -325,14 +379,16 @@ function crownWarmonger(countries: Country[], tiles: Tile[], slider: number | un
 
 export function generateWorld(bible: WorldBible, opts: WorldGenOptions): World {
   const seed = opts.seed >>> 0;
-  const seaLevel = Math.max(0.2, Math.min(0.85, opts.seaLevel ?? 0.55));
+  const shape = bible.shape ? cleanShape(bible.shape) : undefined;
+  const seaLevel = chosenSeaLevel(opts.seaLevel, shape);
+  const firstAge = bible.startAge && AGES.includes(bible.startAge) ? bible.startAge : startAge(bible.era);
   const count = opts.provinces ?? DEFAULT_PROVINCES;
   const rng = mulberry32(seed ^ 0x7e11a);
 
   const provs = generateProvinces(count, seed);
   const centers = provs.map((p) => p.center);
   const neighbors = provs.map((p) => p.neighbors);
-  const { terrain, elevation, land } = buildTerrain(centers, neighbors, seed, seaLevel);
+  const { terrain, elevation, land } = buildTerrain(centers, neighbors, seed, seaLevel, shape);
 
   const regionTiles = buildRegions(land, neighbors, centers, rng);
   const tileRegion: number[] = new Array(count).fill(-1);
@@ -347,7 +403,7 @@ export function generateWorld(bible: WorldBible, opts: WorldGenOptions): World {
   }));
 
   const nNations = bible.nations.length;
-  const chosen = placeCapitals(nNations, regions, land, neighbors, centers, terrain, rng);
+  const chosen = placeCapitals(nNations, regions, land, neighbors, centers, terrain, rng, !!shape && Object.keys(shape).length > 0);
 
   const owner: number[] = new Array(count).fill(-1);
   const countries: Country[] = [];
@@ -372,7 +428,7 @@ export function generateWorld(bible: WorldBible, opts: WorldGenOptions): World {
     countries.push({
       ...cultureFields, id, capitalTile: cap, alive: true, parent: null,
       population: 2000 * take.length + Math.floor(rng() * 4000), treasury: 100 + Math.floor(rng() * 60),
-      techAge: startAge(bible.era),
+      techAge: firstAge,
       council: foundingCouncil({ ...cultureFields, id }, seed, 0, bible.startYear),     // row A29: its leader and a general
       warReadiness: 0, politics: startPolitics(cultureFields.temperament),   // B11 (#204): at peace, its politics from its temperament
     });

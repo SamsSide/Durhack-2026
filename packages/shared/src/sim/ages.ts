@@ -22,18 +22,56 @@ export const STRENGTH_CAP = 150;
 /** The extra edge in battle for each age one side is ahead of the other. */
 export const AGE_EDGE = 1.15;
 
-/** The age a world's era starts its nations in. Unknown, generic and ancient eras start at the beginning. */
-export function startAge(eraText: string | undefined): TechAge {
-  const t = (eraText ?? '').toLowerCase();
+/**
+ * The settings a prompt or an era can name, most telling first (first match wins). Each has the tech age
+ * its nations start in and the span of calendar years it may start at (negative years are BC). The start
+ * age stays at or after its `AGE_EARLIEST_YEAR`, except after a fall, where survivors start again.
+ */
+export type EraKind = 'post' | 'far_future' | 'near_future' | 'modern' | 'industrial' | 'sail' | 'medieval' | 'classical' | 'bronze' | 'stone';
+export const ERA_KINDS: readonly { kind: EraKind; match: RegExp; age: TechAge; years: readonly [number, number] }[] = [
   // Owner ruling: after the fall, survivors rebuild from salvage with spears and rafts, so ruined,
   // drowned and post-apocalyptic worlds start at the beginning and climb the whole arc again.
-  if (/post-?apoc|apocalyp|ruin|drown|wasteland|fallout|aftermath|collapse/.test(t)) return 'ancient';
-  if (/modern|cold war|cyber|sci-?fi|science fiction|space|atomic|nuclear|future/.test(t)) return 'modern';
-  if (/industrial|steam|victorian|wild west/.test(t)) return 'industrial';
-  if (/renaissance|age of sail|pirate|colonial|gunpowder/.test(t)) return 'gunpowder';
-  if (/medieval|feudal|dark age|viking/.test(t)) return 'medieval';
-  return 'ancient';
+  { kind: 'post', match: /post-?apoc|apocalyp|\bruin\b|ruined|in ruins|ruins of|drown|wasteland|fallout|aftermath|after the (fall|bombs|flood|end|collapse)|collapsed (world|earth|civili[sz]ation)|\bage of collapse/, age: 'ancient', years: [2150, 2500] },
+  { kind: 'far_future', match: /far.?future|distant future|arcolog|interstellar|starship|galactic|space age|post-?human|terraform/, age: 'future', years: [2150, 2600] },
+  { kind: 'near_future', match: /cyber|sci-?fi|science fiction|\bspace\b|future|android|neon/, age: 'modern', years: [2040, 2099] },
+  { kind: 'modern', match: /modern|cold war|atomic|nuclear|world war|20th century|21st century|contemporary|superpower|jet age|dieselpunk/, age: 'modern', years: [1900, 1999] },
+  { kind: 'industrial', match: /industrial|steam|victorian|wild west|clockwork|brass|railway|factory|coal|19th century|gilded age/, age: 'industrial', years: [1800, 1900] },
+  { kind: 'sail', match: /renaissance|age of sail|pirate|colonial|gunpowder|galleon|musket|privateer|whal|conquistador|early modern|age of discovery/, age: 'gunpowder', years: [1500, 1750] },
+  { kind: 'medieval', match: /medieval|feudal|dark age|viking|knight|crusade|castle|middle ages/, age: 'medieval', years: [800, 1400] },
+  { kind: 'classical', match: /classical|antiquity|iron age|roman|hellen|legion|senate|philosopher/, age: 'ancient', years: [-500, 400] },
+  { kind: 'bronze', match: /bronze|pharaoh|chariot|ziggurat|\bancient\b/, age: 'ancient', years: [-3000, -1200] },
+  { kind: 'stone', match: /stone age|neolithic|paleolithic|(last|end of the) ice age|mammoth|hunter-gatherer|prehistor|cave (people|painters|dwellers)|dawn of (man|time)/, age: 'ancient', years: [-10000, -4000] },
+];
+
+/** The setting a text names, or undefined for a text with no era in it. */
+export function eraKind(text: string | undefined): EraKind | undefined {
+  const t = (text ?? '').toLowerCase();
+  return ERA_KINDS.find((k) => k.match.test(t))?.kind;
 }
+export const eraKindInfo = (kind: EraKind) => ERA_KINDS.find((k) => k.kind === kind)!;
+
+/** The latest age a world may simply start in at a calendar year (at most `future`: the stellar age is earned). */
+export function ageForYear(year: number): TechAge {
+  let i = 0;
+  while (i < 5 && year >= AGE_EARLIEST_YEAR[i + 1]!) i++;
+  return AGES[i]!;
+}
+
+/**
+ * The age a world's era starts its nations in. Unknown, generic and ancient eras start at the beginning.
+ * With a `year` (a prompt that names one, such as "in 1349"), an era text that names no setting starts
+ * in the age that year allows.
+ */
+export function startAge(eraText: string | undefined, year?: number): TechAge {
+  const kind = eraKind(eraText);
+  if (kind) return eraKindInfo(kind).age;
+  return year !== undefined && Number.isFinite(year) ? ageForYear(year) : 'ancient';
+}
+
+/** The earliest and latest year a new world may start at. */
+export const START_YEAR_MIN = -10000;
+export const START_YEAR_MAX = 5000;
+export const clampStartYear = (y: number): number => Math.round(Math.max(START_YEAR_MIN, Math.min(START_YEAR_MAX, y)));
 
 /** Progress needed to reach each age (cumulative; ancient is the start). */
 export const AGE_AT = [0, 260, 1150, 2900, 4800, 8600, 13000] as const;

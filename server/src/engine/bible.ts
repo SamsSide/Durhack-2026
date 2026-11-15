@@ -1,9 +1,10 @@
 // Mock world bible (row A2): template nations and region names, no API calls. Seeded, so the same
 // (options, seed) gives the same bible. Row A5 replaces this with a Gemini-written bible.
 import { diversifyStyles, isNomadic, pickBuildingStyle } from '@terra/shared';
-import { mulberry32, pick, type BibleNation, type FlagSpec, type Rng, type WorldBible } from '@terra/shared';
+import { hashString, mulberry32, pick, type BibleNation, type FlagSpec, type Rng, type WorldBible } from '@terra/shared';
 import type { NewWorldOptions } from '../runner';
 import { governmentKeyOf, steerFlag, worldEraKey } from '../story/identity';
+import { fitStyles, KIND_MODS, KIND_NAME, moodFromText, nationsFromPrompt, polityFor, settingOf, shapeFromText, worldNoun } from './promptShape';
 
 interface EraKit {
   key: string; match: RegExp; name: string; startYear: number; tone: string;
@@ -105,6 +106,11 @@ const ARCHETYPES: Archetype[] = [
     leaders: ['Eldest Gorm Halvar', 'Speaker Brenna Holt', 'Warden Ivo Stane'], layouts: ['plain', 'diagonal', 'vertical2'], emblems: ['mountain', 'moon', 'tree'] },
 ];
 
+/** The word each archetype puts before the kind of state the prompt or the setting asks for ("naval republic"). */
+const MODS: Record<string, string> = { Concord: 'merchant', Kingdom: 'elective', League: 'naval', Dominion: 'holy', Court: 'shadow', Horde: 'warrior', Union: 'technocratic', Pact: 'elder' };
+/** The Create screen's nation count when its stepper was not touched: then a count in the prompt may choose. */
+const DEFAULT_NATIONS = 6;
+
 const FLAG_NEUTRALS = ['#f1ead2', '#1d1d24', '#16324f'];
 
 function shuffled<T>(rng: Rng, items: readonly T[]): T[] {
@@ -125,12 +131,22 @@ function localLeader(rng: Rng, leader: string): string {
 
 export function mockBible(opts: NewWorldOptions, seed: number): WorldBible {
   const rng = mulberry32(seed ^ 0xb1b1e);
-  const n = Math.max(3, Math.min(10, Math.round(opts.nations ?? 6)));
+  // "seven warring kingdoms" sets the count unless the Create screen's stepper was moved off its default.
+  const asked = opts.nations === undefined || Math.round(opts.nations) === DEFAULT_NATIONS ? nationsFromPrompt(opts.prompt) : undefined;
+  const n = Math.max(3, Math.min(10, Math.round(asked ?? opts.nations ?? DEFAULT_NATIONS)));
   const text = `${opts.era ?? ''} ${opts.prompt}`;
   const kit = ERAS.find((e) => e.match.test(text)) ?? GENERIC;
   const aggression = clamp01(opts.aggression ?? 0.5);
+  // What the prompt itself says (promptShape.ts): the setting, its year and age, the planet, the mood.
+  const setting = settingOf(opts, seed, {}, kit.startYear + Math.floor(mulberry32(seed ^ 0x9ea4)() * 40));
+  const shape = shapeFromText(text);
+  const mood = moodFromText(text);
+  const eraName = setting.kind ? KIND_NAME[setting.kind] : kit.name;
 
-  const worldName = `The ${pick(rng, PREFIX)} ${kit.name === 'Age of Beginnings' ? 'Age' : kit.name.replace(/^Age of /, '')}`;
+  const noun = worldNoun(text, mulberry32(seed ^ 0x40a7)());
+  const seeded = pick(rng, PREFIX);   // always drawn, so the rest of the bible keeps its random stream
+  const prefix = noun || setting.kind ? PREFIX[(hashString(opts.prompt.trim().toLowerCase()) + seed) % PREFIX.length]! : seeded;
+  const worldName = `The ${prefix} ${noun ?? (eraName === 'Age of Beginnings' ? 'Age' : eraName.replace(/^Age of /, ''))}`;
   const colors = shuffled(rng, COLORS);
   const archs = shuffled(rng, ARCHETYPES);
   const places = shuffled(rng, kit.places);
@@ -142,7 +158,11 @@ export function mockBible(opts: NewWorldOptions, seed: number): WorldBible {
     const color = colors[i % colors.length]!;
     const [agg, exp, trade, faith] = a.t;
     const jit = () => (rng() - 0.5) * 0.2;
-    const aggr = clamp01(agg * 0.5 + aggression * 0.5 + jit());
+    const aggr = clamp01(agg * 0.5 + aggression * 0.5 + jit() + mood.aggression);
+    const polity = polityFor(opts.prompt, setting.kind, i);
+    const stateNoun = polity?.[0] ?? a.noun;
+    const mod = MODS[a.noun] ?? '';
+    const government = polity ? `${(setting.kind && KIND_MODS[setting.kind]?.[mod]) || mod} ${polity[1]}`.trim() : a.government;
     // At least half the regions come from Durham and North East roots, the rest are invented.
     const regionNames = [`${place} ${pick(rng, kit.features)}`, `Old ${place}`];
     for (const r of shuffled(rng, DURHAM_ROOTS)) {
@@ -153,11 +173,11 @@ export function mockBible(opts: NewWorldOptions, seed: number): WorldBible {
     regionNames.push(...shuffled(rng, PREFIX).slice(0, 2).map((p) => `${p} ${pick(rng, kit.features)}`));
     const flagColors = [color, pick(rng, FLAG_NEUTRALS), ...(rng() < 0.4 ? [pick(rng, COLORS)] : [])];
     nations.push({
-      name: `The ${place} ${a.noun}`, adjective: place,
-      color, leader: localLeader(rng, pick(rng, a.leaders)), government: a.government, ideology: a.ideology,
+      name: `The ${place} ${stateNoun}`, adjective: place,
+      color, leader: localLeader(rng, pick(rng, a.leaders)), government, ideology: a.ideology,
       culture: a.culture.slice(0, 3 + Math.floor(rng() * 3)),
       foundingMyth: a.myth,
-      temperament: { aggression: aggr, expansion: clamp01(exp + jit()), trade: clamp01(trade + jit()), faith: clamp01(faith + jit()) },
+      temperament: { aggression: aggr, expansion: clamp01(exp + jit() + mood.expansion), trade: clamp01(trade + jit() + mood.trade), faith: clamp01(faith + jit() + mood.faith) },
       anthemPrompt: `${a.anthem}, ${kit.tone} ${kit.key === 'generic' ? '' : 'flavour'}`.trim(),
       voiceStyle: a.voice,
       flag: {
@@ -168,11 +188,16 @@ export function mockBible(opts: NewWorldOptions, seed: number): WorldBible {
     });
   }
   // Flags (A24): layout and emblem follow the government (a ruined era leans on skulls and flames), at most two alike.
-  const eraKey = worldEraKey({ era: opts.era ?? kit.name, prompt: opts.prompt, name: worldName });
+  const eraKey = worldEraKey({ era: opts.era ?? eraName, prompt: opts.prompt, name: worldName });
   const used = new Map<string, number>();
   nations.forEach((nat, i) => { nat.flag = steerFlag(nat.flag, governmentKeyOf({ ...nat, nomadic: undefined }), eraKey, used, seed + i); });
   // Building styles (#91): rules from the prompt and each nation, then at most two per style.
-  const styles = diversifyStyles(nations.map((n) => pickBuildingStyle(text, n)));
+  // With a setting, only styles that fit it (a clockwork age gets no mud-brick towns), the climate's first.
+  const picked = nations.map((n) => pickBuildingStyle(text, n));
+  const styles = setting.kind ? fitStyles(picked, setting.kind, text) : diversifyStyles(picked);
   nations.forEach((n, i) => { n.buildingStyle = styles[i]; n.nomadic = isNomadic(n); });
-  return { name: worldName, era: opts.era?.trim() || kit.name, startYear: kit.startYear + Math.floor(rng() * 40), nations };
+  return {
+    name: worldName, era: opts.era?.trim() || eraName, startYear: setting.startYear, nations,
+    startAge: setting.startAge, ...(Object.keys(shape).length ? { shape } : {}),
+  };
 }
