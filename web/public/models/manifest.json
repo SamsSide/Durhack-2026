@@ -557,5 +557,39 @@
       "file": "wonders/space_elevator.glb",
       "footprint": 1.6
     }
+  },
+  "trees": {
+    "oak": {
+      "file": "trees/oak.glb",
+      "footprint": 0.22
+    },
+    "pine": {
+      "file": "trees/pine.glb",
+      "footprint": 0.22
+    },
+    "snowpine": {
+      "file": "trees/snowpine.glb",
+      "footprint": 0.22
+    },
+    "poplar": {
+      "file": "trees/poplar.glb",
+      "footprint": 0.22
+    },
+    "palm": {
+      "file": "trees/palm.glb",
+      "footprint": 0.22
+    },
+    "acacia": {
+      "file": "trees/acacia.glb",
+      "footprint": 0.22
+    },
+    "birch": {
+      "file": "trees/birch.glb",
+      "footprint": 0.22
+    },
+    "bush": {
+      "file": "trees/bush.glb",
+      "footprint": 0.22
+    }
   }
 }

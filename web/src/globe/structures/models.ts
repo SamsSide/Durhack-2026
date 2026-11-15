@@ -52,7 +52,7 @@ async function loadOne(loader: GLTFLoader, file: string): Promise<ModelPart[]> {
 
 let cache: Promise<ModelSet> | null = null;
 
-type Manifest = { models?: Record<string, Entry>; styles?: Record<string, Record<string, Entry>> };
+type Manifest = { models?: Record<string, Entry>; styles?: Record<string, Record<string, Entry>>; trees?: Record<string, Entry> };
 
 export function loadModels(): Promise<ModelSet> {
   if (cache) return cache;
@@ -75,8 +75,9 @@ export function loadModels(): Promise<ModelSet> {
       for (const [kind, e] of Object.entries(kinds ?? {})) if (e?.file) m.set(kind, { file: e.file, footprint: e.footprint || DEFAULT_FOOTPRINT });
       if (m.size) set.styles.set(style, m);
     }
-    await Promise.all([...STRUCTURE_KINDS, 'tree'].map(async (key) => {
-      const entry = models[key];
+    const trees = manifest.trees ?? {}; // tree variants, kept as 'tree:<name>'
+    await Promise.all([...STRUCTURE_KINDS, 'tree', ...Object.keys(trees).map((k) => `tree:${k}`)].map(async (key) => {
+      const entry = key.startsWith('tree:') ? trees[key.slice(5)] : models[key];
       if (entry?.footprint) set.footprint.set(key, entry.footprint);
       if (!entry?.file) return;
       const parts = await loadFile(set, entry.file);

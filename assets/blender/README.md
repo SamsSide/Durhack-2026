@@ -160,6 +160,37 @@ adds `ages.<age>.formation` to `manifest.json`, keeping everything else, and ren
 - A quick look, nothing exported: `PREVIEW_ONLY=1 PREVIEW_AGES=modern,future PREVIEW_OUT=/tmp/p.png` before
   the blender command (`PREVIEW_PX=40` for globe scale, `PREVIEW_ROLES=back` a subset).
 
+## Trees (manifest `trees`, `models.tree`)
+
+8 tree variants in `web/public/models/trees/<name>.glb`, built on their own so no other GLB is touched
+(also rewrites `tree.glb` as the oak, adds the `trees` section to `manifest.json`, keeping everything
+else, and renders `assets/preview-trees.png` and `assets/preview-trees-40px.png`):
+
+    blender --background --factory-startup --python assets/blender/build_trees.py
+    python3 assets/blender/verify_trees.py      # under 600 triangles, bounds, at most one `team` material, under 30 KB
+
+- No Linux Blender on a laptop: run the Windows one from WSL, giving it the script's Windows path
+  (the script finds the repo from its own location, so the working folder does not matter):
+  `"/mnt/c/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup --python "$(wslpath -w assets/blender/build_trees.py)"`.
+  Environment knobs need `WSLENV` to cross over (`WSLENV=PREVIEW_ONLY:PREVIEW_OUT`).
+- `trees_defs.py`: its own small `Kit` (`blob` leaf clumps, `tube` trunks and boughs, `tier` conifer
+  skirts, `frond` palm leaves, `gem` fruit, `box`) and one function per variant: `oak` (forked trunk,
+  layered crown, fruit), `pine` (four tiers), `snowpine` (three tiers with snow), `poplar` (a tall
+  spindle, also the cypress), `palm` (bent trunk, eight fronds, coconuts), `acacia` (flat umbrella
+  crowns), `birch` (white trunk with dark marks), `bush`.
+- Every face gets its material when it is made. The old `m_tree()` in `build_models.py` set materials
+  by face index after `create_icosphere`, which reuses freed face slots, so a few canopy triangles
+  came out `timber`: the red-brown triangles seen close up. `Builder.sphere(sub=2)` in
+  `build_models.py` still has that fault (the `temple` dome uses it); `tree.glb` no longer comes from it,
+  but a full `build_models.py` run would write the old tree back, so run `build_trees.py` after it.
+- A tree stands on z = 0 with its trunk at the origin, inside x, y in -0.5..0.5 and z in 0..1. One unit
+  is the tallest tree, so variants keep their relative heights; `footprint` (0.22) is the share of a
+  tile's width that one unit takes. `team` is only used where it reads as fruit (oak), coconuts (palm)
+  or berries (bush); lane b tints it per variant (`ACCENT` in `web/src/globe/structures/Trees.ts`).
+- Which variant grows where is in `Trees.ts` (`mixFor`): latitude, height and the neighbours' terrain.
+- A quick look, nothing exported: `PREVIEW_ONLY=1 PREVIEW_OUT=<png>` before the command
+  (`PREVIEW_NAMES=oak,palm` a subset, `PREVIEW_PX`, `PREVIEW_TILT`).
+
 ## Launch sequence (issue #291, contract X4 `models.rocket`, `models.booster`, `models.satellite`)
 
 4 models, built on their own so no other GLB is touched (also adds their manifest entries, keeping

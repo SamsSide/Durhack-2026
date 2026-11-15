@@ -53,6 +53,10 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   look that follows its nation's age: wooden jetties and a lighthouse, stone quays and cranes, container wharves
   with gantry cranes and stacked containers, then floating docks. Coastal towns get a smaller pier of the same age.
 - **Wonders** from the Great Wall to a space elevator.
+- **Trees by climate:** oak, birch and poplar woods in temperate land, pine and snowy pine towards the
+  poles and the mountains, palms on hot coasts, acacia and scrub by the deserts.
+
+![Oaks, palms and a birch round a village, seen from the ground view](docs/shots/trees.jpg)
 
 | | | |
 | --- | --- | --- |
