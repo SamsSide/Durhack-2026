@@ -147,4 +147,9 @@
   .tn-create-error, .tn-create-quiet { margin-top: 8px; }
   .tn-create-rule { margin-top: 8px; }
   .tn-create-foot { margin-top: 6px; }
+  /* the era row and the prepare switch came later: these keep the Create button on screen at 720 px */
+  .tn-create-body { padding-top: 16px; }
+  .tn-create .tn-create-prompt { height: 58px; min-height: 58px; }
+  .tn-create-prep-sub { display: none; }
+  .tn-create .tn-create-prep { padding-top: 6px; padding-bottom: 6px; min-height: 0; }
 }
