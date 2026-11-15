@@ -9,6 +9,8 @@ import { statusOf } from '../status/statusTint';
 export type MapMode = 'political' | 'terrain' | 'diplomacy' | 'strength' | 'wealth' | 'politics';
 
 const tmp = new THREE.Color();
+/** What mountain ground is pulled half way toward in terrain mode: a warm stone grey. */
+const MOUNTAIN_LIFT = '#8d8478';
 const WHITE = new THREE.Color('#ffffff');
 
 function strengthByCountry(world: World): { value: Float64Array; max: number } {
@@ -144,7 +146,13 @@ function colorBase(
   if (tile.terrain === 'ocean') return out.set(mode === 'terrain' ? BIOME_COLORS.ocean : pal.ocean);
   const terrain = pal.terrain[tile.terrain];
   const country = owner >= 0 ? world.countries[owner] : undefined;
-  if (mode === 'terrain') return biomeColor(world, tileId, out);
+  if (mode === 'terrain') {
+    biomeColor(world, tileId, out);
+    // Mountain ground is a dark blue-grey that the night side turns to near-black navy, like the sea. In this
+    // mode it is a little lighter and warmer, so land still reads as land in the dark.
+    if (tile.terrain === 'mountain') out.lerp(tmp.set(MOUNTAIN_LIFT), 0.5);
+    return out;
+  }
   if (mode === 'diplomacy' && sel != null) {
     if (!country) return out.set(terrain).lerp(WHITE, 0.2);
     if (owner === sel) return out.set(pal.selectedSelf);
