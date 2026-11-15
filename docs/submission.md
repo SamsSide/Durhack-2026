@@ -1,6 +1,6 @@
 # Terra Nova: submission text
 
-*Ready to paste, 14 Nov 2026, updated by lane a for row C5. Lane c keeps the final edit and
+*Ready to paste, 14 Nov 2026, sections 1 and 2 rewritten 15 Nov 2026 in the final prize review. Lane c keeps the final edit and
 submits. Checked against the lane files (`docs/lanes/`), `docs/decisions.md` and the code on
 `main`. Anything still needing a human look is marked `[check]`. British English, no emojis.*
 
@@ -21,7 +21,8 @@ A new world composed live by AIs that keep working together when they cannot tal
 Type one line, or drop in a picture, and a living 3D planet builds itself. Every nation is ruled
 by its own independent Gemini agent with its own wallet on Solana: it settles, trades, pays and
 fights from bows to starships, with narrated histories, anthems sung from what really happened
-and a news broadcast in our own voices. Cut a nation off, silence its ruler, delete it or kill its
+and a news broadcast in our own voices. Rulers run on Gemini, Gemma through the Gemini API or
+local Gemma, and nations have moods that shift with their history. Cut a nation off, silence its ruler, delete it or kill its
 general, and the world keeps building; restore it and its missing years merge in.
 
 ### Inspiration
@@ -53,7 +54,11 @@ between trading partners. Armies march province by province, battles flash, fron
 treaties hand over land, and restless regions break away as new nations with their own rulers.
 Roads of boats, caravans, birds and smoke fill the map, clouds and storms drift past, cities
 grow walls as they grow, armies go round mountains and stop at enemy lines, and rulers and
-generals grow old and die. A chronicle tells the story as it happens.
+generals grow old and die. Each nation has a mood (aggression, expansion, trade, faith) that
+hardens in war and eases in peace, and the chronicle says when it turns. Modern nations launch
+rockets and put satellites in orbit, and in an all-out war one side may shoot a rival's satellite
+down. Armies, wars and the interface move with weight and flourish. A chronicle tells the story
+as it happens. Naval battles and ports `[check: if landed]`.
 
 Click a nation and its card docks on the left (one panel at a time, so the globe stays clear): its culture, politics, history with each neighbour, its
 ruler and general, and its treasury. A voice narrates its lore. Its anthem, written by Gemini
@@ -110,8 +115,11 @@ claims are settled on screen and the chronicle records the dispute.
 - **Solana** via `@solana/kit` 8.6, Token-2022 and the Memo program (never `web3.js`). The
   simulation stays the source of truth; the chain is a mirror that settles every 5 seconds, so
   replays stay exact and the simulation never waits on the network.
-- **Tiger Data** (optional): every event and each nation's stats go into hypertables with a
-  real-time continuous aggregate for territory over time.
+- **An LLM provider switch.** `LLM_PROVIDER` chooses Gemini, Gemma through the Gemini API,
+  local Gemma through Ollama, or a hybrid (local Gemma for ruler turns, Gemini for the rest). All
+  paths return the same schema-checked JSON, so the world does not care which model answered.
+- **A Windows desktop app.** `npm run demo` opens Terra Nova with settings, a preflight that
+  tests every enabled service (Gemini, ElevenLabs, Solana, Ollama) and then the game.
 - **The interface** was designed in Figma in an old-atlas style (parchment, serif type, ink
   borders), then calmed in the spirit of grand-strategy map games (one left panel, small war tabs,
   a node-graph network panel, icon map modes) and given a shared material system (depth, bevels,
@@ -156,7 +164,8 @@ claims are settled on screen and the chronicle records the dispute.
   you what happened to that nation.
 - A real token economy on Solana where every nation signs its own payments, with a fixed supply
   nobody can inflate.
-- Gemini used three ways beyond text: it reads a picture, hears a voice and watches the map.
+- Gemini used three ways beyond text: it reads a picture, hears a voice and watches the map, and
+  the same rulers can run on Gemma, even offline.
 - The team's own voices presenting the world to the judges.
 - A UI with real depth and material, not flat panels, in a single day.
 - A run that replays exactly, offline, from its event log.
@@ -187,15 +196,17 @@ claims are settled on screen and the chronicle records the dispute.
 TypeScript, Node.js 22, Express, ws (WebSockets), React 18, Vite, three.js, react-three-fiber,
 drei, zustand, quickhull3d, Google Gemini API (`@google/genai`; gemini-3.5-flash and
 gemini-3.5-flash-lite; image and audio input), ElevenLabs (text to speech, eleven_v3, Music API,
-voice cloning), Solana devnet (`@solana/kit`, Token-2022, Memo program), Tiger Data
-(TimescaleDB, `pg`), Blender (headless, Python), Figma, Claude Code, GitHub.
+voice cloning), Solana devnet (`@solana/kit`, Token-2022, Memo program), Gemma
+(through the Gemini API, or local with Ollama), Blender (headless, Python), Figma, Claude Code, GitHub.
 
 ---
 
 ## 2. Prize sections
 
-One section per prize we target (`docs/hackathon-plan.md` section 3, plus Solana from the
-decision of 14 Nov 19:20). For each: the criteria, how we meet them, and where to look.
+One section per prize we enter. Final review on 15 Nov 2026 (see `docs/prizes/final-review.md`
+for the full enter/skip table and the exact Devpost ticks). Not entered, by owner ruling: MLH
+Best Use of Entire and MLH Best Use of Tiger Data. Terra Nova is software only, so the hardware
+challenges are skipped. Items from the naval-battle and ports work are marked `[check: if landed]`.
 
 ### 2.1 Main track (theme: Composition)
 
@@ -204,14 +215,15 @@ Polish and Completion.
 
 | Criterion | How we meet it | Where |
 | --- | --- | --- |
-| Creativity and Innovation | A world, its history, its money and its music composed live by many independent authors; "idea mixing" of grand strategy, LLM agents, voice, music and a blockchain | Whole app; demo steps 1 to 4 |
-| Technical Competence | Event-sourced world shared by server and browser; deterministic seeded battles; per-nation agents on a switchable bus; spherical Voronoi globe with 100 models at speed; on-chain mirror with rate-limit handling | `packages/shared/src/world.ts`, `packages/shared/src/sim/`, `server/src/engine/bus.ts`, `server/src/agents/`, `server/src/chain/` |
-| Research and Learning | Research notes for every sponsor, Solana economy design, building styles, nation identity; "What we learned" above | `docs/prizes/`, `docs/research/` |
-| Polish and Completion | Figma design built to a 720 px projector; exact offline replay as a backup | `docs/design/`, `server/replays/demo-1.json` |
+| Creativity and Innovation | A world, its history, its money and its music composed live by many independent authors; "idea mixing" of grand strategy, LLM agents, voice, music and a blockchain. New this round: nations have a national mood that drifts with what happens to them, and wars reach orbit (satellites are launched, and shot down in all-out wars) | Whole app; demo steps 1 to 4; `docs/shots/satellite-strike.jpg` |
+| Technical Competence | Event-sourced world shared by server and browser; deterministic seeded battles; per-nation agents on a switchable bus; spherical Voronoi globe with 100 models at speed; on-chain mirror with rate-limit handling; an LLM provider switch (Gemini, Gemma through the Gemini API, local Gemma, or a mix) with a fallback to autopilot on any failure | `packages/shared/src/world.ts`, `packages/shared/src/sim/`, `server/src/engine/bus.ts`, `server/src/agents/`, `server/src/chain/`, `server/src/llm/` |
+| Research and Learning | Research notes for every sponsor, Solana economy design, building styles, nation identity, model-size trade-offs ("What we learned" above) | `docs/prizes/`, `docs/research/` |
+| Polish and Completion | Figma design built to a 720 px projector; exact offline replay as a backup; a Windows desktop app (`npm run demo`) with settings and a preflight that tests every enabled service before the demo; army, war and interface motion; naval battles and ports `[check: if landed]` | `docs/design/`, `server/replays/demo-1.json`, `desktop/`, `npm run demo:check` |
 
 Extra polish to point at: the material-system UI pass (`docs/shots/depth-*-after.jpg`,
-`materials-sheet.jpg`), the calm UI (`calm-ui-*.jpg`), a living world (`living-world-*.jpg`) and the
-animated news anchor (`news-anchor-*.jpg`). Weak spots: many rows are still `testing` (see Gaps).
+`materials-sheet.jpg`), the calm UI (`calm-ui-*.jpg`), a living world (`living-world-*.jpg`), the
+animated news anchor (`news-anchor-*.jpg`) and the army and battle cards (`army-card.jpg`,
+`battle-card.jpg`). Weak spots: many rows are still `testing` (see Gaps).
 
 ### 2.2 Neptune North: Actors work better together
 
@@ -221,70 +233,88 @@ Use their four criteria as headings in the Devpost text and at their stand.
   build one shared world and one chronicle. Agents publish events on a bus and each keeps its own
   replica. Where: `server/src/agents/nation.ts`, `server/src/engine/bus.ts`, `packages/shared/src/sim/sync.ts`.
 - **Independent decision-making.** No world controller. Each ruler decides only for its own
-  nation (Gemini, or autopilot from its temperament); each general acts as its own agent. Battles
-  are settled by a pure seeded function, so each side computes the outcome itself. Where:
-  `server/src/agents/ruler.ts`, `packages/shared/src/sim/war.ts`, `packages/shared/src/sim/council.ts`.
+  nation (an LLM, or autopilot from its national mood); each general acts as its own agent.
+  Battles are settled by a pure seeded function, so each side computes the outcome itself. Each
+  nation's mood (aggression, expansion, trade, faith) shifts with its own history and steers its
+  own choices. Where: `server/src/agents/ruler.ts`, `packages/shared/src/sim/war.ts`,
+  `packages/shared/src/sim/council.ts`.
 - **Resilience when communications fail.** Cut a link: the nation keeps building on stale
   beliefs, queues its events, and its "what it believes" map drifts from the truth. Silence a
   ruler: autopilot. Delete a nation: neighbours stop hearing its heartbeat and carve up the ruins.
   Kill or cut a general: a stand-in covers at reduced skill, then a successor inherits the
   predecessor's memory. Restore: missing events merge, disputes are settled by one deterministic
-  rule and written into the chronicle. Where: `server/src/engine/resilience.ts`,
-  `server/src/engine/council.ts`, `web/src/ui/` network panel and council on the nation card
-  (rows A7, A29, B7, C4, C11).
+  rule and written into the chronicle. The model layer fails the same way: if the Gemini API
+  drops, rulers fall to autopilot, or the provider switch can move them to local Gemma on the
+  same laptop with no internet at all. Where: `server/src/engine/resilience.ts`,
+  `server/src/engine/council.ts`, `server/src/llm/`, `web/src/ui/` network panel and council on
+  the nation card.
 - **Something we're excited about.** A world nobody controls that tells its own story, and the
   failure is the best part of the show.
 
 Honest limit to say out loud: all agents run in one Node process on one laptop and the cut is a
-software switch on the bus (multi-laptop agents, row A10, was cut by the owner).
+software switch on the bus (multi-laptop agents were cut by the owner).
 
 ### 2.3 Marshall Wace: New Worlds
 
 - **Criterion (brief):** explore New Worlds; open a door to the unexplored; any interpretation.
 - **How:** every run is literally a new world nobody has seen, from one line or a picture, and
-  it moves through ancient to stellar ages. Open the pitch with the words "New Worlds".
+  it moves through ancient to stellar ages, up to rockets, satellites and wars fought in orbit.
+  Open the pitch with the words "New Worlds".
 - **Data angle (MW is a data house):** the world is an event log; every run can be replayed, and
   its economy is an auditable on-chain ledger.
-- **Where:** Create screen (C1, C6), world bible (`server/src/engine/bibleAi.ts`), ages
+- **Where:** Create screen, world bible (`server/src/engine/bibleAi.ts`), ages
   (`packages/shared/src/sim/ages.ts`).
 
 ### 2.4 Waterstons: connecting things that aren't usually connected (weak fit)
 
-One honest line: we connected language models, a deterministic simulation, cloned human voices,
-generated music and a public blockchain into one living map, so anyone can watch how independent
-decision-makers cooperate and recover when their links fail. Who benefits is the weak part: say
-it is a teaching tool for distributed systems and resilience.
+One honest line: we connected language models (cloud or running locally), a deterministic
+simulation, cloned human voices, generated music and a public blockchain into one living map, so
+anyone can watch how independent decision-makers cooperate and recover when their links fail.
+Who benefits is the weak part: say it is a teaching tool for distributed systems and resilience.
+Tick only if the form is free; it costs nothing.
 
 ### 2.5 MLH Best Use of ElevenLabs
 
-- **Criterion (seen at other MLH events):** voice or audio is a meaningful part of the
-  experience, not a read-aloud button.
+- **Criterion (MLH brief, 13 Nov):** "natural, human-sounding audio ... realistic, dynamic, and
+  emotionally expressive voices ... Integrate fully autonomous audio experiences into your hack
+  and give your project a voice." Audio must be a meaningful part, not a read-aloud button.
 - **How:** four kinds of audio, all generated from the world's own events. Narration of each
   nation's lore in a voice picked from its style; an anthem sung by ElevenLabs Music from lyrics
   written from the nation's history; a war chant per nation played automatically when it fights
   (`eleven_v3` with a shouting tag); Terra Nova News read by news anchors in the team's own
-  cloned voices, who also narrate up to three nations and herald decrees. Prompts are shaped by
-  each nation's era and government. Cached on disk by content hash.
+  cloned voices, who also narrate up to three nations and herald decrees. Satellite shoot-downs
+  and national mood changes are reported in the chronicle and the news, so the voices speak what
+  just happened. Prompts are shaped by each nation's era and government. Cached on disk by
+  content hash. The desktop app and preflight check the remaining ElevenLabs characters before
+  the demo.
 - **Where:** `server/src/story/eleven.ts`, `anthem.ts`, `chant.ts`, `broadcast.ts`,
-  `teamVoices.ts`; `web/src/audio/` (rows A14 done, A15 and A16 `testing`). `[check]` listen to an anthem and a chant once, and
-  the animated anchor with sound.
+  `teamVoices.ts`; `web/src/audio/`. `[check]` listen to an anthem and a chant once, and the
+  animated anchor with sound.
 - In the write-up, name the features: TTS, eleven_v3 audio tags, Music API with composition plan,
   Instant Voice Cloning.
 
 ### 2.6 MLH Best Use of Gemini API
 
-- **Criterion (seen elsewhere):** Gemini does real work; multimodal input and structured output
-  count; say which models.
+- **Criterion (MLH, hackdays guide, partner programme page):** "Confirm that the winning project
+  actually uses the Gemini API in the app" and "Ask the team to show the integration in its code,
+  README, or demonstration." MLH brief: "build AI-powered apps that make your friends say WHOA."
 - **How:**
   - Text: the world bible at creation, every ruler's decisions as schema-checked JSON, lore,
     anthem lyrics from the real chronicle.
-  - Image in: a picture on the Create screen sets the world's mood, palette and setting (A17).
-  - Audio in: a spoken decree is heard directly by Gemini and turned into an event with an effect
-    (A20). `[check]` test with a real browser microphone.
+  - Image in: a picture on the Create screen sets the world's mood, palette and setting.
+  - Audio in: a spoken decree is heard directly by Gemini and turned into an event with an effect.
+    `[check]` test with a real browser microphone.
   - Image in, voice out: Terra Nova News, Gemini watching a capture of the globe plus the recent
-    chronicle (A21).
+    chronicle.
   - Models: `gemini-3.5-flash-lite` (rulers, bible, image and voice) and `gemini-3.5-flash`
     (lore). Token meter on the top bar, hard caps, autopilot on any failure.
+  - Provider switch (`LLM_PROVIDER`): `gemini` (default), `gemma-api` (Gemma through the Gemini
+    API, default `gemma-4-26b-a4b-it`), `hybrid` and `ollama`. The first three all go through the
+    Gemini API; this is the main entry. `ollama` is local Gemma (default `gemma4:e4b-it-qat`)
+    and is the offline option: say plainly in the write-up that it is a fallback, not the entry.
+    Lead with Gemini and Gemma through the Gemini API.
+- **Show the integration:** the README table "AI rulers (LLM)" and the `LLM_PROVIDER` rows, the
+  preflight line for Gemini, and the token meter in the demo.
 - **Where:** `server/src/llm/index.ts`, `server/src/engine/bibleAi.ts`, `server/src/agents/ruler.ts`,
   `server/src/story/loreAi.ts`, `server/src/story/broadcast.ts`, `server/src/engine/decrees.ts`.
 
@@ -297,43 +327,41 @@ it is a teaching tool for distributed systems and resilience.
   payment between nations is a memo plus TransferChecked signed by the paying nation's own key.
   Payments come from trade dues, reparations, plunder, seized treasuries, war chests, subsidies
   and pooled war funds. Verified live on 14 Nov: a 2-minute run confirmed 35 payments, all nations
-  in sync, drift 0. Explorer links are built for every transaction. The "why chain" sentence:
-  many small, frequent payments between independent agents that do not trust each other, each
-  signed by the payer, with a supply nobody can inflate.
+  in sync, drift 0 `[check: re-run on the final build]`. Explorer links are built for every
+  transaction. The "why chain" sentence: many small, frequent payments between independent agents
+  that do not trust each other, each signed by the payer, with a supply nobody can inflate. The
+  preflight checks the devnet endpoint and the Commons wallet before the demo. Ports and trade
+  routes by sea feed more payments `[check: if landed]`.
 - **Where:** `server/src/chain/genesis.ts`, `settle.ts`, `wallets.ts`, `routes.ts`
   (`GET /api/economy`); `packages/shared/src/sim/payments.ts`, `trade.ts`; the Treasury tab and
-  "Treasury on Solana" on the nation card (C9); `scripts/solana-keys.ts`; screenshot
+  "Treasury on Solana" on the nation card; `scripts/solana-keys.ts`; screenshot
   `docs/shots/solana-devnet-payment.jpg`.
 
-### 2.8 MLH Best Use of Tiger Data (stretch)
+### Not entered (owner rulings, do not tick)
 
-- **Criterion:** the most innovative, impactful and performance-driven use of Tiger Data.
-- **How:** every world event and each nation's stats go into two hypertables
-  (`world_events`, `nation_stats`) with a real-time continuous aggregate
-  (`nation_territory_10s`), served at `GET /api/stats/territory` and `GET /api/stats/summary`.
-  Off unless `TIGER_DATABASE_URL` is set; never blocks the tick.
-- **Where:** `server/src/tiger/store.ts`, `server/src/tiger/routes.ts` (row A11), and the
-  `TerritoryChart` in `web/src/ui/stats/`: one live line per nation from `GET /api/stats/territory`,
-  refreshed every 5 s, captioned "Powered by Tiger Data". `[check]` needs a Tiger Cloud URL in the
-  demo `.env` and the chart seen once with real data; otherwise untick this prize.
+- **MLH Best Use of Entire:** owner, 14 Nov. Entire keeps recording sessions as before.
+- **MLH Best Use of Tiger Data:** owner, off. The code stays optional and unused.
+- **No video:** owner, 14 Nov. Judging is the live table demo.
+- Skipped for fit or time: Vultr, MongoDB Atlas, the hardware challenges (Arduino, P&G sensors,
+  Waterstons hardware), QRT, SGX FX, Accenture, MicroGPT. See `docs/prizes/final-review.md`.
 
 ### Gaps
 
-- **Main track:** many rows are `testing` (A15, A16, A19, A26, A28, A29, A30, B5, B7, B9, C1 to
-  C4, C6 to C15) and need a human pass before the table demo.
+- **Main track:** many rows are still `testing` and need a human pass before the table demo.
+  Naval battles and ports are being built on the last night; mention them only if they landed.
 - **Neptune North:** strong. Risk is only the question "is it really distributed?": all agents in
-  one process, the cut is a software switch. Council kill (A29, C11) is `testing`.
+  one process, the cut is a software switch. Council kill is `testing`.
 - **Marshall Wace:** framing only; needs the pitch to open with "New Worlds" and a visit to
   their stand.
 - **Waterstons:** weak fit; the "who benefits" line is thin.
-- **ElevenLabs:** anthem and chant (A15, A16) not yet listened to by a person; character budget
-  is 30,000 per run on the Starter plan, so prepare the demo world's audio once.
+- **ElevenLabs:** anthem and chant not yet listened to by a person; character budget is 30,000 per
+  run on the Starter plan, so prepare the demo world's audio once.
 - **Gemini:** painted flags need image billing and return 503; spoken decrees not yet tested with
-  a real browser microphone (A20 note); the MLH Gemini category date label needs checking on the
-  DurHack Devpost.
-- **Solana:** the owner's devnet run of the exact ledger (#180) was clean; B10 hand test is pending; the Commons wallet must be
+  a real browser microphone; the MLH Gemini category date label ("Q1 2025 - Q1 2026" on MLH
+  pages) must be confirmed on the DurHack Devpost. We found no public MLH wording that mentions
+  Gemma either way, so the Gemma-through-the-Gemini-API entry rests on "uses the Gemini API".
+- **Solana:** the owner's devnet run of the exact ledger was clean; the Commons wallet must be
   funded from the faucet before the demo; keep the saved signature file as the fallback.
-- **Tiger Data:** the chart exists; needs a Tiger Cloud URL in the demo `.env` and one look at it.
 
 ---
 
