@@ -5,6 +5,8 @@ import * as THREE from 'three';
 import type { World } from '@terra/shared';
 import type { TileGeos } from '../placement';
 import { setFeet } from '../occupancy';
+import type { Foot } from '../occupancy';
+import type { TileGeo } from '../placement';
 import { isRuinedTile } from '../../war/ruins';
 import { buildPort, oceanNeighbour, spaceSig } from './buildPort';
 import type { PortParts } from './buildPort';
@@ -25,9 +27,22 @@ function gableGeometry(): THREE.BufferGeometry {
 
 const SETTLEMENTS = new Set<string>(['village', 'town', 'city', 'capital']);
 const KINDS = ['boxes', 'cyls', 'cones', 'roofs'] as const;
+
+/** Every part of a harbour as a square in the tangent axes of the sea tile it faces (structures/occupancy). */
+function seaFeet(parts: PortParts, g: TileGeo): Foot[] {
+  const feet: Foot[] = [];
+  for (const k of KINDS) {
+    const t = parts[k].tr;
+    for (let o = 0; o < t.length; o += 10) {
+      const x = t[o]!, y = t[o + 1]!, z = t[o + 2]!;
+      feet.push({ a: x * g.t1.x + y * g.t1.y + z * g.t1.z, b: x * g.t2.x + y * g.t2.y + z * g.t2.z, half: Math.hypot(t[o + 7]!, t[o + 9]!) * 0.5, ax: 1, ay: 0 });
+    }
+  }
+  return feet;
+}
 type Kind = typeof KINDS[number];
 
-interface Harbour { key: string; tile: number; parts: PortParts }
+interface Harbour { key: string; tile: number; ocean: number; parts: PortParts; sea: Foot[] }
 
 export class PortLayer {
   readonly group = new THREE.Group();
@@ -86,16 +101,21 @@ export class PortLayer {
       const key = `${s.kind}|${era}|${ocean}|${team}|${spaceSig(tile, fid)}`;
       seen.add(s.id);
       const had = this.harbours.get(s.id);
-      if (had?.key === key) { setFeet(tile, fid, had.parts.feet); continue; } // re-assert after a world clear
+      if (had?.key === key) { setFeet(tile, fid, had.parts.feet); setFeet(ocean, `${fid}:sea`, had.sea); continue; } // re-assert after a world clear
       const st = world.structures.find((x) => x.id === s.id)!;
       const parts = buildPort(world, st, this.tileGeos.get(tile), ocean, era, small, fid, team || '#b8b0a0');
-      this.harbours.set(s.id, { key, tile, parts });
+      // every part of the harbour, as squares on the sea tile it faces: fleets anchor clear of piers and the lighthouse
+      const sea = seaFeet(parts, this.tileGeos.get(ocean));
+      if (had && had.ocean !== ocean) setFeet(had.ocean, `${fid}:sea`, null);
+      this.harbours.set(s.id, { key, tile, ocean, parts, sea });
       setFeet(tile, fid, parts.feet);
+      setFeet(ocean, `${fid}:sea`, sea);
       this.dirty = true;
     }
     for (const [id, h] of this.harbours) {
       if (seen.has(id)) continue;
       setFeet(h.tile, `harbour:${id}`, null);
+      setFeet(h.ocean, `harbour:${id}:sea`, null);
       this.harbours.delete(id);
       this.dirty = true;
     }
@@ -146,7 +166,7 @@ export class PortLayer {
   }
 
   dispose(): void {
-    for (const [id, h] of this.harbours) setFeet(h.tile, `harbour:${id}`, null);
+    for (const [id, h] of this.harbours) { setFeet(h.tile, `harbour:${id}`, null); setFeet(h.ocean, `harbour:${id}:sea`, null); }
     this.harbours.clear();
     for (const k of KINDS) { this.meshes[k].geometry.dispose(); }
     (this.meshes.boxes.material as THREE.Material).dispose();

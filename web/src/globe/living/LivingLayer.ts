@@ -5,6 +5,7 @@
 // is close enough to see it, and sheds detail when it costs more than its frame budget.
 // Built by lane a in lane b's globe (owner decision, 14 Nov).
 import * as THREE from 'three';
+import { groundView } from '../camera/groundView';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { StructureKind, TechAge, World } from '@terra/shared';
 import type { ProvinceMesh } from '../mesh/buildProvinceMesh';
@@ -261,7 +262,14 @@ export class LivingLayer {
       for (let k = 0; k < 5; k++) {
         const a = hash01(seed, i * 31 + k * 5 + 1) * 6.28, d = Math.sqrt(hash01(seed, i * 31 + k * 5 + 2)) * wd * 0.55;
         const n = f.n.clone().addScaledVector(f.t1, Math.cos(a) * d).addScaledVector(f.t2, Math.sin(a) * d).normalize();
-        const dir = f.t1.clone().multiplyScalar(Math.cos(a * 3)).addScaledVector(f.t2, Math.sin(a * 3));
+        // a fleck lies along the nearest coast like a wave crest (its short side faces the shore), never end-on to it
+        let land = -1, near = Infinity;
+        for (const nb of t.neighbors) {
+          if (this.isSea(nb)) continue;
+          const dd = this.dirs[nb]!.distanceToSquared(n);
+          if (dd < near) { near = dd; land = nb; }
+        }
+        const dir = land >= 0 ? this.dirs[land]!.clone().sub(n) : f.t1.clone().multiplyScalar(Math.cos(a * 3)).addScaledVector(f.t2, Math.sin(a * 3));
         this.surf.push({
           n: n.clone(), pos: n.multiplyScalar(SEA_LEVEL + 0.0005), shore: dir, len: wd * (0.05 + 0.06 * hash01(seed, i * 31 + k * 5 + 3)),
           reach: wd * 0.05, ph: hash01(seed, i * 31 + k * 5 + 4), lod: 0.2 + 0.8 * hash01(seed, i * 31 + k * 5 + 5),
@@ -626,14 +634,15 @@ export class LivingLayer {
 
     // surf: a pale streak rolls in to every shore, brightest as it breaks
     if (!this.reduced) {
+      const low = groundView.tilt; // seen from low down a long bright streak reads as a stick: shorter and softer there
       for (const s of this.surf) {
         if (s.lod > q || s.n.dot(cam) < cosT || this.pSurf.full) continue;
         const cyc = (drift * 0.17 + s.ph) % 1;
-        const a = Math.sin(Math.PI * Math.min(1, cyc * 1.25)) * 0.34 * vis;
+        const a = Math.sin(Math.PI * Math.min(1, cyc * 1.25)) * 0.34 * vis * (1 - 0.45 * low);
         if (a < 0.02) continue;
         _p.copy(s.pos).addScaledVector(s.shore, -s.reach * (1 - cyc));
         standMatrix(_m, _p, s.shore, 1);
-        _m.scale(_s.set(s.len * (0.6 + 0.4 * cyc), 1, s.reach * (0.5 + 0.5 * cyc)));
+        _m.scale(_s.set(s.len * (0.6 + 0.4 * cyc) * (1 - 0.35 * low), 1, s.reach * (0.5 + 0.5 * cyc)));
         this.pSurf.push(_m, _c.copy(this.foam).multiplyScalar(a * day(s.n)));
         seen++;
       }

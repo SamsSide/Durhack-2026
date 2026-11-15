@@ -139,7 +139,9 @@ export function demoWonder(world: World | null, countryId: number, kind: WonderK
   if (tile == null || tile < 0 || world.owner[tile] !== countryId) tile = world.owner.findIndex((o) => o === countryId);
   if (tile < 0) { console.warn('__wonderDemo: that country owns no land'); return null; }
   // Next to the capital when we can, so the capital stays visible.
-  const nb = world.tiles[tile]!.neighbors.find((n) => world.owner[n] === countryId && world.tiles[n]!.terrain !== 'ocean');
+  // On empty land first: a wonder staged on a fort or a farm stands inside it.
+  const near = world.tiles[tile]!.neighbors.filter((n) => world.owner[n] === countryId && world.tiles[n]!.terrain !== 'ocean');
+  const nb = near.find((n) => !world.structures.some((st) => st.tile === n)) ?? near[0];
   if (nb != null && kind !== 'great_wall') tile = nb;
   const id = `demo-wonder-${++demoSeq}`;
   const rec: WonderRec = {

@@ -10,6 +10,7 @@ import type { ProvinceMesh } from '../mesh/buildProvinceMesh';
 import { CLOSE } from '../constants';
 import { TileGeos, hash01, smoothstep, clamp01 } from '../structures/placement';
 import type { TileGeo } from '../structures/placement';
+import { onOccupancy, setFeet } from '../structures/occupancy';
 import { useEventStream } from '../status/useEventStream';
 import { BUILD_TICKS, demoWonder, syncWonders, useWonders, wonderEvents } from './store';
 import type { WonderRec } from './store';
@@ -86,6 +87,14 @@ function Wonder({ rec, geo, mesh }: { rec: WonderRec; geo: TileGeo; mesh: Provin
     return () => { live = false; };
   }, [rec.kind]);
   const team = useWorld((s) => s.world?.countries[rec.owner]?.color ?? '#c9a24b');
+  // The wonder's square on its tile (structures/occupancy): houses, yards and units keep out of it.
+  useEffect(() => {
+    const fid = `wonder:${rec.id}`;
+    const put = (): void => setFeet(rec.tile, fid, [{ a: 0, b: 0, half: Math.min(SIZE_TILES * geo.width, MAX_SIZE * geo.h) * 0.55, ax: 1, ay: 0 }]);
+    put();
+    const off = onOccupancy((t) => { if (t === rec.tile) put(); }); // the structure layer clears every square when it is rebuilt
+    return () => { off(); setFeet(rec.tile, fid, null); };
+  }, [rec.id, rec.tile, geo]);
 
   // The scene graph: anchor on the tile, a scaled model inside, then scaffold, dust and reveal effects.
   const built = useMemo(() => {

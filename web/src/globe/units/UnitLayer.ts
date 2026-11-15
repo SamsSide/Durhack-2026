@@ -10,7 +10,8 @@ import { getPalette } from '../palette';
 import { COUNTER_H, COUNTER_W, drawAttrition, drawClash, drawCounter, drawLoss, drawScroll, drawSettler, drawShield, drawStatus, toTexture } from './draw';
 import { warLineOf } from '../../state/armyInfo';
 import type { WarTone } from '../../state/armyInfo';
-import { useBattles } from '../../state/battleInfo';
+import { BATTLE_GAP, useBattles } from '../../state/battleInfo';
+import { STACK, clearStackLifts, setStackLift, stackSlot } from '../status/cityStack';
 import { terrainEffects } from '../terrain/effects';
 import { unitIcon } from './era';
 import { ModelField, poseMatrix, standMatrix } from './ModelField';
@@ -19,10 +20,12 @@ import { VehicleFx } from './vehicleFx';
 import { Traders } from './traders';
 import { clockNow, msPerYear } from '../../state/calendar';
 import { UnitModels } from './unitModels';
+import { RestSpots } from './restSpots';
 import { formationSlots } from './formation';
 import type { Slot } from './formation';
 import { ROLE_BACK, ROLE_FLANK, ROLE_FRONT, firingFeed } from '../war/firingFeed';
 import { Pops, Smoke, Sparks, facing, tangentJitter } from './effects';
+import type { Pop } from './effects';
 import { arcHump, arcPoint, arrowGeometry, arrowMaterial, lineGeometry, lineMaterial, tileFanGeometry, writeArrow } from './ribbons';
 
 import { DISSOLVE_MS, DWELL_MS, dissolveAlpha, speedCap, tooFast, viewHeight } from './speed';
@@ -108,7 +111,17 @@ interface Chip {
   /** The war status line over the counter (only while at war). */
   stat: { sprite: THREE.Sprite; mat: THREE.SpriteMaterial; key: string; aspect: number } | null;
   statText: string; statTone: WarTone;
+  /** The order line gives way this pass: its box would cross another counter, a battle plate or another line. */
+  statHide: boolean;
 }
+
+/** A label's box on screen, in px (y grows downwards). */
+interface Box { x0: number; y0: number; x1: number; y1: number }
+const boxesHit = (a: Box, b: Box, pad = 2): boolean => a.x0 < b.x1 + pad && a.x1 > b.x0 - pad && a.y0 < b.y1 + pad && a.y1 > b.y0 - pad;
+/** A battle plate climbs at most this far (px) to clear the counters under it. */
+const PLATE_LIFT_MAX = 110;
+/** A loss number slides at most this far (px) sideways to find room, else it is not shown. */
+const POP_REACH = 150;
 
 interface Arrow {
   mesh: THREE.Mesh; mat: THREE.ShaderMaterial; geo: THREE.BufferGeometry;
@@ -143,6 +156,11 @@ export class UnitLayer {
   private readonly removedReason = new Map<string, string>();
   private readonly chips = new Map<string, Chip>();
   private statusAt = -1e9;
+  /** Screen boxes of the counters, battle plates and order lines from the last layout pass (layoutFurniture). */
+  private boxes: Box[] = [];
+  private cam: THREE.Camera | null = null;
+  private viewW = 1280;
+  private viewPx = 800;
   private readonly unitById = new Map<string, Unit>();
   private readonly dying: Chip[] = [];
   private readonly texCache = new Map<string, { tex: THREE.CanvasTexture; users: number }>();
@@ -171,6 +189,7 @@ export class UnitLayer {
   private readonly fx = new VehicleFx();
   private readonly traders: Traders;
   private readonly unitSize: number;
+  private readonly spots: RestSpots;
   private readonly ageSeen = new Map<number, TechAge>(); // from country_updated, until world.countries catches up
   private readonly agePop = new Map<number, number>();
   private readonly knownAge = new Map<number, TechAge>(); // last age we drew, to spot a real change
@@ -223,6 +242,7 @@ export class UnitLayer {
     }
     // about a town building: half a tile across, capped so nothing towers over a mountain
     this.unitSize = Math.min(0.04, Math.max(0.01, Math.sqrt((4 * Math.PI) / Math.max(1, world.tiles.length)) * 0.42));
+    this.spots = new RestSpots(world, mesh.heights, this.dirs, this.unitSize * 0.6);
     world.countries.forEach((c, i) => this.knownAge.set(i, c.techAge ?? 'ancient'));
     this.traders = new Traders({
       dirs: this.dirs,
@@ -245,6 +265,13 @@ export class UnitLayer {
     const d = this.dirs[tile];
     if (!d) return out.set(0, 0, 0);
     return out.copy(d).multiplyScalar((this.mesh.heights[tile] ?? 1) + extra);
+  }
+
+  /** Where a unit stands on a tile: its free spot (restSpots.ts), clear of the buildings there. */
+  private rest(tile: number, out: THREE.Vector3): THREE.Vector3 {
+    const d = this.spots.dir(tile);
+    if (!d) return out.set(0, 0, 0);
+    return out.copy(d).multiplyScalar((this.mesh.heights[tile] ?? 1) + CHIP_LIFT);
   }
 
   /** Real time one year takes at the effective speed (12 s at one month a second, 52 s at one week a second). */
@@ -287,13 +314,13 @@ export class UnitLayer {
 
   /** Where a unit is drawn right now (mid-march units are on the arc). */
   private statePos(st: UState, now: number, out: THREE.Vector3): THREE.Vector3 {
-    if (now >= st.t1 || st.from === st.to || !this.dirs[st.from] || !this.dirs[st.to]) return this.surf(st.to, CHIP_LIFT, out);
+    if (now >= st.t1 || st.from === st.to || !this.dirs[st.from] || !this.dirs[st.to]) return this.rest(st.to, out);
     if (st.dissolve) {
-      if (now - st.t0 >= (st.t1 - st.t0) / 2) return this.surf(st.to, CHIP_LIFT, out);
-      return st.ghost ? out.copy(st.ghost) : this.surf(st.from, CHIP_LIFT, out);
+      if (now - st.t0 >= (st.t1 - st.t0) / 2) return this.rest(st.to, out);
+      return st.ghost ? out.copy(st.ghost) : this.rest(st.from, out);
     }
     const s = easeInOut(Math.max(0, (now - st.t0) / (st.t1 - st.t0)));
-    const a = this.dirs[st.from]!, b = this.dirs[st.to]!;
+    const a = this.spots.dir(st.from)!, b = this.spots.dir(st.to)!;
     return arcPoint(out, a, b, this.mesh.heights[st.from]! + CHIP_LIFT, this.mesh.heights[st.to]! + CHIP_LIFT, s, arcHump(a, b) * 0.6);
   }
 
@@ -427,6 +454,7 @@ export class UnitLayer {
     if (this.disposed) return;
     const now = performance.now();
     const seen = new Set<string>();
+    this.spots.sync();
     this.traders.sync(this.world.units, now);
     for (const u of this.world.units) {
       if (u.kind === 'trader') continue;
@@ -490,7 +518,7 @@ export class UnitLayer {
         chip = {
           key, owner: g.owner, kind: g.kind, tile: g.tile, units: g.units, moving: g.moving,
           sprite, mat, texKey: '', aspect: 1, height: CHIP_H, stack: 0, pos: new THREE.Vector3(), dying: null,
-          absorbed: false, lift: null, mergeKey: '', stat: null, statText: '', statTone: 'attack',
+          absorbed: false, lift: null, mergeKey: '', stat: null, statText: '', statTone: 'attack', statHide: false,
         };
         this.chips.set(key, chip);
       }
@@ -617,6 +645,98 @@ export class UnitLayer {
     this.declutterAt = now;
   }
 
+  /**
+   * One layout rule for the labels of a fight, so none sits on another. Counters come first and never move
+   * here (declutter placed them). Each tile is one column in a fixed order: counter, its order line, then the
+   * battle plate, which climbs clear of every counter and of its own tile's order line. An order line gives
+   * way (hides) when it would cross another counter, a plate of another tile or another line. The loss
+   * numbers ask fitPop for room. Runs with declutter, a few times a second.
+   */
+  private layoutFurniture(camera: THREE.Camera, viewW: number, viewH: number, zoom: number, dist: number): void {
+    const px = ((camera as THREE.PerspectiveCamera).projectionMatrix.elements[5] ?? 1) * viewH / 2;
+    const chipBoxes: Box[] = [];
+    const lines: { chip: Chip; box: Box }[] = [];
+    const linesOn = 1 - smooth(2.3, 3.1, dist) > 0.02;
+    const hs = STATUS_H * zoom * px;
+    for (const chip of this.chips.values()) {
+      chip.statHide = false;
+      if (!chip.sprite.visible || chip.mat.opacity <= 0.02) continue;
+      _v.copy(chip.pos).project(camera);
+      if (_v.z > 1) continue;
+      const x = (_v.x + 1) * viewW / 2, y = (1 - _v.y) * viewH / 2;
+      const h = chip.sprite.scale.y * px, w = h * chip.aspect;
+      const y1 = y + chip.sprite.center.y * h;
+      chipBoxes.push({ x0: x - w / 2, x1: x + w / 2, y0: y1 - h, y1 });
+      if (chip.stat && linesOn) lines.push({ chip, box: { x0: x - hs * chip.stat.aspect / 2, x1: x + hs * chip.stat.aspect / 2, y0: y1 - h - 1.2 * hs, y1: y1 - h - 0.2 * hs } });
+    }
+    // an order line never covers a counter (its own sits just under it)
+    const kept = lines.filter((l) => {
+      const hit = chipBoxes.some((o) => boxesHit(l.box, o, 0));
+      if (hit) l.chip.statHide = true;
+      return !hit;
+    });
+    // battle plates, lowest on screen first
+    clearStackLifts();
+    const tick = this.world.tick;
+    const plates: { tile: number; x: number; y: number; w: number; h: number; base: number }[] = [];
+    for (const b of useBattles.getState().byTile.values()) {
+      if (tick - b.lastTick > BATTLE_GAP) continue;
+      const slot = stackSlot(b.tile, STACK.battle);
+      if (!slot || this.surf(b.tile, 0.012, _v).lengthSq() === 0 || facing(_v, _camDir) <= 0) continue;
+      _v.project(camera);
+      if (_v.z > 1) continue;
+      plates.push({ tile: b.tile, x: (_v.x + 1) * viewW / 2, y: (1 - _v.y) * viewH / 2 - slot.offset, w: slot.width, h: slot.height, base: slot.offset });
+    }
+    plates.sort((a, b) => b.y - a.y || a.tile - b.tile);
+    const plateBoxes: { tile: number; box: Box }[] = [];
+    for (const p of plates) {
+      let lift = 0;
+      const at = (): Box => ({ x0: p.x - p.w / 2, x1: p.x + p.w / 2, y0: p.y - lift - p.h, y1: p.y - lift });
+      for (let i = 0; i < 6; i++) {
+        const b = at();
+        let top = Infinity;
+        for (const o of chipBoxes) if (boxesHit(b, o)) top = Math.min(top, o.y0);
+        for (const l of kept) if (l.chip.tile === p.tile && boxesHit(b, l.box)) top = Math.min(top, l.box.y0);
+        for (const o of plateBoxes) if (boxesHit(b, o.box)) top = Math.min(top, o.box.y0);
+        if (top === Infinity) break;
+        const next = p.y - top + 4;
+        if (next > PLATE_LIFT_MAX || next <= lift) break;
+        lift = next;
+      }
+      if (lift > 0) setStackLift(p.tile, lift);
+      plateBoxes.push({ tile: p.tile, box: at() });
+    }
+    // the order lines left give way to the plates, then to each other
+    const lineBoxes: Box[] = [];
+    for (const l of kept) {
+      if (plateBoxes.some((o) => boxesHit(l.box, o.box)) || lineBoxes.some((o) => boxesHit(l.box, o))) { l.chip.statHide = true; continue; }
+      lineBoxes.push(l.box);
+    }
+    this.boxes = [...chipBoxes, ...plateBoxes.map((o) => o.box), ...lineBoxes];
+  }
+
+  /** Room for a loss number beside the labels already placed: it slides outwards past them, or stays hidden. */
+  private readonly fitPop = (p: Pop, h: number): number | null => {
+    if ((p.kind !== 'loss' && p.kind !== 'attrition') || !this.boxes.length || !this.cam) return p.dx;
+    _p.copy(p.pos).project(this.cam);
+    const x = (_p.x + 1) * this.viewW / 2, y = (1 - _p.y) * this.viewPx / 2;
+    const hp = h * ((this.cam as THREE.PerspectiveCamera).projectionMatrix.elements[5] ?? 1) * this.viewPx / 2, wp = hp * p.aspect;
+    // the whole rise of the number, bottom to top
+    const y0 = y - (p.kind === 'loss' ? 3.8 : 2.4) * hp, y1 = y - (p.kind === 'loss' ? 0.6 : 0.3) * hp;
+    const slide = (s: number): number | null => {
+      let cx = x + p.dx * wp;
+      for (let i = 0; i < 6; i++) {
+        const b: Box = { x0: cx - wp / 2, x1: cx + wp / 2, y0, y1 };
+        let edge: number | null = null;
+        for (const o of this.boxes) if (boxesHit(b, o)) edge = s > 0 ? Math.max(edge ?? -Infinity, o.x1) : Math.min(edge ?? Infinity, o.x0);
+        if (edge == null) return Math.abs(cx - x) > POP_REACH ? null : (cx - x) / wp;
+        cx = edge + s * (wp / 2 + 4);
+      }
+      return null;
+    };
+    return p.dx > 0 ? slide(1) : p.dx < 0 ? slide(-1) : slide(1) ?? slide(-1);
+  };
+
   private dropStatus(chip: Chip): void {
     const st = chip.stat;
     if (!st) return;
@@ -670,7 +790,7 @@ export class UnitLayer {
       const st = chip.stat;
       if (!st) continue;
       const f = facing(chip.pos, _camDir);
-      const show = f > 0 && !chip.absorbed && chip.sprite.visible && fade > 0.02;
+      const show = f > 0 && !chip.absorbed && !chip.statHide && chip.sprite.visible && fade > 0.02;
       st.sprite.visible = show;
       if (!show) continue;
       st.sprite.position.copy(chip.pos);
@@ -1031,6 +1151,7 @@ export class UnitLayer {
     const dt = this.lastNow ? Math.min(100, now - this.lastNow) : 16;
     this.lastNow = now;
     this.lastDt = dt;
+    this.spots.update(dt);
     this.followClock(now, now - (this.lastClockAt || now));
     this.lastClockAt = now;
     const dist = camera.position.length();
@@ -1073,6 +1194,7 @@ export class UnitLayer {
     if (now - this.declutterAt > DECLUTTER_MS) {
       this.declutter(camera, viewW, viewH, now);
       for (const chip of this.chips.values()) this.placeChip(chip, now, zoom);
+      this.layoutFurniture(camera, viewW, viewH, zoom, dist);
     }
     this.updateStatus(now, zoom, dist);
     for (let i = this.dying.length - 1; i >= 0; i--) {
@@ -1172,7 +1294,8 @@ export class UnitLayer {
     this.fx.update(camera, now, dt);
     this.sparks.update(now, dt);
     this.smoke.update(now, dt);
-    this.pops.update(now, _camDir, zoom);
+    this.cam = camera; this.viewW = viewW; this.viewPx = viewH;
+    this.pops.update(now, _camDir, zoom, this.fitPop);
   }
 
   /**
@@ -1427,6 +1550,8 @@ export class UnitLayer {
 
   dispose(): void {
     this.disposed = true;
+    clearStackLifts();
+    this.spots.dispose();
     this.field.dispose();
     this.fx.dispose();
     this.traders.dispose();
