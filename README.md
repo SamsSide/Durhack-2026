@@ -240,8 +240,37 @@ Needs **Node 22** or later.
 
 ```bash
 npm install
-npm run demo        # the live demo: real Gemini, ElevenLabs and Solana devnet, opened in the browser
+npm run demo        # opens the Terra Nova desktop app (Windows, from WSL): settings, checks, Start
 ```
+
+### The desktop app
+
+On Windows with WSL, `npm run demo` opens **Terra Nova** as its own desktop app. The first run
+builds it on Windows (`C:\terra-desktop`, about a minute) and puts a **Terra Nova** shortcut on the
+desktop; later runs rebuild only when `desktop/` changed. The server and the web still run in WSL
+through `scripts/demo.sh`; the app is the window around them and holds no keys.
+
+1. **Setup.** Pick the settings below (saved for next time), press **Run checks**: each check
+   appears as it finishes (PASS, WARN, FAIL, SKIP), including which GPU the game will render on
+   (it must be the NVIDIA one).
+2. **Start** is enabled when nothing failed (**Start anyway** beside it skips that). A splash shows
+   the progress (**Logs** streams the server log), then the game opens fullscreen on the external
+   1920x1080 display if one is connected.
+3. Between judges press `Ctrl+Shift+R`; `Ctrl+Shift+S` goes back to setup. Quitting the app stops
+   the demo.
+
+![The desktop app's setup window: settings on the left, live checks on the right](docs/shots/desktop-setup.jpg)
+
+| Setting | Choices |
+| --- | --- |
+| Demo mode | **Live** (`demo.sh live`) or **Mock rehearsal** (`demo.sh mock`, no API calls) |
+| AI rulers (LLM) | **Gemini API**, **Gemma via Gemini API**, **Local Gemma (Ollama)**, **Both** (local Gemma for ruler turns, Gemini for the rest) or **Mock** (`LLM_PROVIDER`, `LLM_MODE`); the Advanced fold sets the models, the Ollama host and the ports |
+| ElevenLabs voice | **On** or **Off** (`--no-voice`: no ElevenLabs calls) |
+| Solana devnet | **On** (`SOLANA_MODE=devnet`) or **Off** (mock ledger) |
+| World | **Type a new world** (the game opens on its Create screen), **Saved replay demo-1** (instant) or **Auto-prepared demo world** |
+
+If the app misbehaves at the table, `desktop/fallback/terra-chrome.bat` starts the same demo and
+opens it in a fullscreen Chrome app window; `npm run demo:terminal` is the old terminal flow.
 
 ### Preflight
 
@@ -255,19 +284,24 @@ Solana devnet RPC and commons balance. It ends with `READY` or `NOT READY: N fai
 
 | Command | What |
 | --- | --- |
-| `npm run demo` | The live demo: Gemini, ElevenLabs and Solana devnet (needs the keys below), opened in the browser |
+| `npm run demo` | Open the desktop app (Windows from WSL): settings, checks, then the game; elsewhere it runs `demo:terminal` |
+| `npm run demo:terminal` | The live demo from the terminal: Gemini, ElevenLabs and Solana devnet (needs the keys below), opened in the browser |
 | `npm run demo:mock` | A mock rehearsal: the whole app with no API calls |
+| `npm run demo:check` | The preflight checks, with the keys loaded as the demo loads them (`-- --mock` for a rehearsal) |
+| `npm run desktop:build` | Build the desktop app again by hand (copies `desktop/` to `C:\terra-desktop`) |
 | `npm run demo:reset` | A fresh prepared world between judges, servers kept running |
 | `npm run demo:stop` | Stop the demo |
 | `npm run demo:status` | Show what is running |
 
-Flags (pass them after `--`, e.g. `npm run demo -- --nations 8`):
+Flags (pass them after `--`, e.g. `npm run demo:terminal -- --nations 8`):
 
 | Flag | What |
 | --- | --- |
 | `--prompt "..."` | The world prompt (reset reuses the last one) |
 | `--nations N` | How many nations |
 | `--replay <id>` | Play a saved world instead of a new one: instant, no API calls |
+| `--no-world` | Start with no world: the app opens on its Create screen |
+| `--no-voice` | No ElevenLabs: the key is dropped after the keys files load |
 | `--lan` | Open the app to teammates on the same network |
 | `--no-open` | Do not open the browser |
 
@@ -348,6 +382,9 @@ Keys do nothing while you are typing in a text box.
 | `S` | Spotlight tour of the world's big moments on or off | Anywhere |
 | `H` | Open or close the chronicle timeline | Anywhere |
 | `End` | Show the closing card (what this world cost) | Anywhere |
+| `F11` | Fullscreen on or off | The desktop app |
+| `Ctrl+Shift+R` | Reset the world between judges (same world choice as setup) | The desktop app |
+| `Ctrl+Shift+S` | Back to the setup window | The desktop app |
 | `Q` / `E` | Turn the view left or right | Ground view (zoomed right in) |
 | `Left` / `Right` (or `Down` / `Up`) | Step back or forward; with `Shift`, 10 steps | Timeline scrubber |
 | `PageDown` / `PageUp` | 10 steps back or forward | Timeline scrubber |

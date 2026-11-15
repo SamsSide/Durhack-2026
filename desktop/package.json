@@ -1,0 +1,16 @@
+{
+  "name": "terra-nova-desktop",
+  "productName": "Terra Nova",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Terra Nova desktop launcher: a thin Windows shell that starts the demo in WSL and shows it in its own window",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win dir"
+  },
+  "devDependencies": {
+    "electron": "45.3.2",
+    "electron-builder": "26.18.0"
+  }
+}

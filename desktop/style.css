@@ -1,0 +1,70 @@
+/* Terra Nova desktop: the setup and splash windows. All colours, fonts and spacing live here,
+   taken from the game's own tokens (web/src/theme/tokens.css) so the launcher matches it. */
+@font-face {
+  font-family: 'Cinzel';
+  src: url('fonts/cinzel-latin-600-normal.woff') format('woff');
+  font-weight: 600;
+}
+:root {
+  --color-bg: #090b12;
+  --color-surface: #141823;
+  --color-surface-2: #1d2230;
+  --color-border: #343a4a;
+  --color-text: #efe6d0;
+  --color-text-muted: #aaa391;
+  --color-accent: #c9a24b;
+  --color-pass: #6fbf5a;
+  --color-fail: #e5534b;
+  --color-warn: #d99a3d;
+  --color-skip: #7d8596;
+  --font-display: 'Cinzel', 'Trajan Pro', 'Times New Roman', serif;
+  --font-body: 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Cascadia Mono', Consolas, ui-monospace, monospace;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 19px;
+  --text-xl: 26px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 40px;
+  --radius: 4px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: radial-gradient(ellipse at 50% -10%, #1b2236 0%, var(--color-bg) 60%);
+  color: var(--color-text);
+  font: var(--text-md)/1.45 var(--font-body);
+  user-select: none;
+}
+h1, h2 { font-family: var(--font-display); font-weight: 600; letter-spacing: 0.08em; margin: 0; }
+h1 { font-size: var(--text-xl); color: var(--color-accent); }
+h2 { font-size: var(--text-sm); color: var(--color-text-muted); text-transform: uppercase; margin-bottom: var(--space-3); }
+button, select, input { font: inherit; color: inherit; }
+button {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--color-accent); }
+button:disabled { opacity: 0.45; cursor: default; }
+button.primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #17120a;
+  font-weight: 600;
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--text-lg);
+}
+.link {
+  background: none; border: none; padding: 0;
+  color: var(--color-text-muted); text-decoration: underline; cursor: pointer; font-size: var(--text-sm);
+}
+.link:hover { color: var(--color-text); }
+.muted { color: var(--color-text-muted); }
+.mono { font-family: var(--font-mono); }
