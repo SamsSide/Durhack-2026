@@ -433,6 +433,7 @@ Keys do nothing while you are typing in a text box.
 | Click a battle badge | Select the battle: both sides, losses, battle-line grid |
 | Click a feed card or a dispatch tab | Fly to the place it reports on and select that nation |
 | Click a payment arc | Open that payment on the Solana Explorer |
+| Esc or Ctrl+W (desktop app, on a link window) | Close the Solana Explorer window and return to the game |
 | Hold the microphone button | Speak a decree |
 | Click the token meter | Show the closing card |
 | History button | Open the timeline scrubber |
