@@ -186,6 +186,7 @@ body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes, .minimap.mm-hidden, .
 .closing h1 { font-family: var(--font-display); font-weight: 700; letter-spacing: var(--tracking-caps); font-size: 26px; line-height: 34px; margin: 6px 0 0; }
 .cl-hero { display: flex; align-items: baseline; justify-content: center; gap: 16px; margin-top: 2px; }
 .cl-num { font-family: var(--font-mono); font-size: var(--text-hero); line-height: 104px; font-weight: 700; letter-spacing: -0.06em; }
+.cl-sep { margin: 0 -0.17em; }
 .cl-unit { font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gilt-hi); }
 /* The four facts sit in one sunk dark well, split by engraved rules. */
 .cl-stats {
