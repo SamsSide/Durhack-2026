@@ -73,7 +73,7 @@ export function routeFor(purpose: string, hasAudio = false): LlmRoute {
     case 'gemma-api': return 'gemma-api';
     // The world bible is one long answer (over a minute on a laptop model, while the founding screen
     // waits), so with a Gemini key it is the one text call `ollama` still sends to Gemini.
-    case 'ollama': return purpose === 'bible' && process.env.GEMINI_API_KEY && process.env.OLLAMA_BIBLE !== '1' ? 'gemini' : 'ollama';
+    case 'ollama': return purpose.startsWith('bible') && process.env.GEMINI_API_KEY && process.env.OLLAMA_BIBLE !== '1' ? 'gemini' : 'ollama';
     case 'hybrid': return localPurposes().includes(purpose) ? 'ollama' : 'gemini';
     default: return 'gemini';
   }
@@ -227,7 +227,7 @@ async function viaGemini(opts: LlmJsonOptions, model: string): Promise<Raw> {
 const OLLAMA_QUEUE_MAX = () => envNum('OLLAMA_QUEUE_MAX', 24);
 const OLLAMA_QUEUE_WAIT_MS = () => envNum('OLLAMA_QUEUE_WAIT_MS', 60_000);       // urgent calls
 const OLLAMA_ROUTINE_WAIT_MS = () => envNum('OLLAMA_ROUTINE_WAIT_MS', 40_000);  // a ruler turn older than this is stale
-const URGENT = new Set(['decree', 'lore', 'broadcast', 'bible']);
+const URGENT = new Set(['decree', 'lore', 'broadcast', 'bible', 'bible-image']);
 interface Waiting { run: () => void; fail: (e: Error) => void; at: number; maxWait: number; urgent: boolean }
 const urgentQ: Waiting[] = [], routineQ: Waiting[] = [];
 let localBusy = false, urgentRun = 0, restUntil = 0;
@@ -296,7 +296,7 @@ async function askOllama(opts: LlmJsonOptions, model: string): Promise<Raw> {
   const res = await fetch(`${ollamaHost()}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    signal: AbortSignal.timeout(opts.purpose === 'bible' ? OLLAMA_BIBLE_TIMEOUT_MS() : OLLAMA_TIMEOUT_MS()),
+    signal: AbortSignal.timeout(opts.purpose.startsWith('bible') ? OLLAMA_BIBLE_TIMEOUT_MS() : OLLAMA_TIMEOUT_MS()),
     body: JSON.stringify({
       model,
       stream: false,
@@ -326,11 +326,12 @@ export async function llmJson<T>(opts: LlmJsonOptions): Promise<T> {
     if (isCapped()) throw new LlmUnavailable('budget cap reached');
     calls++;
     recent.push(Date.now());
-  } else localCalls++;
+  }
 
   const started = Date.now();
   try {
     const raw = local ? await viaOllama(opts, model) : await viaGemini(opts, model);
+    if (local) localCalls++;   // counted once it has answered: a dropped or timed-out call is not a decision
     if (!local) { tokensIn += raw.tokensIn; tokensOut += raw.tokensOut; }
     if (!raw.text) throw new Error('empty response');
     const out = validate<T>(parseLooseJson(raw.text), opts.schema);
