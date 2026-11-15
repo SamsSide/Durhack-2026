@@ -65,11 +65,12 @@ export function ClosingCard() {
 
   const a = world.year - world.tick;   // one tick is one year from the founding, even after a page reload
   const b = world.year;
+  const local = budget?.localCalls ?? 0;   // answered by Gemma on this laptop: real decisions, no cloud tokens
   const wars = world.chronicle.filter((c) => c.kind === 'war' || c.kind === 'silence').length;
   const facts: [number, string][] = [
     [world.countries.length, 'nations, each ruled by its own AI'],
     [b - a, 'years of history'],
-    [budget?.calls ?? 0, 'decisions made by the rulers'],
+    [(budget?.calls ?? 0) + local, 'decisions made by the rulers'],
     [wars, 'wars and silences'],
   ];
   return (
@@ -82,7 +83,10 @@ export function ClosingCard() {
           {facts.map(([n, label]) => <div key={label}><b>{fmt(n)}</b><span>{label}</span></div>)}
         </div>
         <div className="cl-foot">
-          <span className="muted">Every decision is in the event log, so this world replays exactly, offline.</span>
+          <span className="muted">
+            {local > 0 ? `${fmt(local)} of those decisions came from Gemma running on this laptop, at no token cost. ` : ''}
+            Every decision is in the event log, so this world replays exactly, offline.
+          </span>
           <button className="tn-button tn-button--lacquer" autoFocus onClick={close}>Back to the world</button>
         </div>
       </div>
