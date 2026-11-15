@@ -56,3 +56,5 @@ body:not(:has(.tn-collapsed-chronicle)) .tn-collapsed-icon--help { left: var(--s
 .tn-help-seal { width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #c0443f, #7a1f1f 70%); box-shadow: 0 1px 2px rgba(0,0,0,.6), inset 0 0 0 3px rgba(0,0,0,.18); }
 
 @media (max-width: 1200px) { .tn-help-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Chronicle bar open: the help button sits above it at the left edge, so an open card stops above the button. */
+body:not(:has(.tn-collapsed-chronicle)):not(.tn-present) .hud.left-dock:has(.tn-card) { bottom: calc(var(--space-4) + var(--ticker-height) + var(--space-3) + 36px + var(--space-3)); }
