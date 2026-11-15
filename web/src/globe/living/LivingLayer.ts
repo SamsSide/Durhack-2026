@@ -430,8 +430,8 @@ export class LivingLayer {
             sx: 1, sy: 2.1, sz: 1, col: new THREE.Color(k ? L.color.farmerB : L.color.farmerA), lod: H(s.id, 630 + k),
           });
         }
-        // a small herd grazing beside it
-        const herd = 5 + Math.floor(H(s.id, 640) * 5);
+        // a small herd grazing beside it (a future glasshouse farm keeps none: up close they read as stray boxes)
+        const herd = age >= 5 ? 0 : 5 + Math.floor(H(s.id, 640) * 5);
         const pale = H(s.id, 641) < 0.6;
         for (let k = 0; k < herd; k++) {
           const a = a0 + 3.6 + (H(s.id, 650 + k) - 0.5) * 1.3, d = wd * (0.3 + 0.16 * H(s.id, 660 + k));
@@ -467,10 +467,13 @@ export class LivingLayer {
       });
     });
 
-    // wild herds on open country, a lone fishing boat here and there along the coast
+    // wild herds on open country (never on a settled tile, where they would stand among the buildings), a lone
+    // fishing boat here and there along the coast
+    const settled = new Set<number>();
+    for (const s of Object.values(w.structures)) settled.add(s.tile);
     w.tiles.forEach((t, i) => {
       const wd = this.width[i]!;
-      if ((t.terrain === 'plains' || t.terrain === 'hills') && H(i, 900) < 0.22) {
+      if ((t.terrain === 'plains' || t.terrain === 'hills') && !settled.has(i) && H(i, 900) < 0.22) {
         const f = this.frame(i);
         const a0 = H(i, 901) * 6.28, d0 = wd * (0.25 + 0.3 * H(i, 902)), herd = 4 + Math.floor(H(i, 903) * 5);
         for (let k = 0; k < herd; k++) {
