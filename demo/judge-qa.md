@@ -108,7 +108,8 @@ recorded) and MLH Tiger Data (the code is optional and off).
 16. *Why is the chain not the source of truth?* A battle cannot wait 1 to 2 s for a confirmation
     inside a 500 ms tick, exact replays need a local log, and a devnet outage must not freeze the
     world on stage. The sim records the debt; the chain proves it was paid, by whom and when.
-17. *Who signs?* The paying nation's own wallet signs the transfer; the Commons only pays fees.
+17. *Who signs?* The paying nation's own wallet signs the transfer; the Commons pays fees and, when a payer
+    is short, an advance.
 18. *Can a payment be paid twice?* No: a signed transaction is only rebuilt once its blockhash has
     expired and its signature is unknown to the chain.
 19. *What about rate limits?* Netting per pair per 5 s window, at most 4 transactions a window, no
@@ -131,7 +132,7 @@ recorded) and MLH Tiger Data (the code is optional and off).
 24. *How does the battle maths work?* A contest function with exponent 1.6 between Lanchester's
     linear and square laws, plus terrain, forts, landings, age gap, wonders and command.
 25. *Does it scale?* Comfortably at 1,200 provinces and up to 16 nations at ten years a second (the top gear) on one
-    laptop;
+    laptop on a replay (about 50 frames a second, with hitches, under local Gemma);
     the rules scan provinces per nation, so much larger maps would need spatial indexes. We have not
     benchmarked beyond the demo size.
 
