@@ -1,6 +1,6 @@
 // All structures of a world: one InstancedMesh per (kind, sub-mesh), pop-up animations, dust puffs, LOD.
 import * as THREE from 'three';
-import type { Terrain, World } from '@terra/shared';
+import type { Structure, Terrain, World } from '@terra/shared';
 import { hasModel, logMisses, modelFor } from './models';
 import type { ModelPart, ModelSet } from './models';
 import { clamp01, easeOutBack, hash01, smoothstep } from './placement';
@@ -385,6 +385,7 @@ export class StructureField {
       if (s.tile < 0 || s.tile >= this.world.tiles.length) continue;
       if ((s.kind as string) === 'wonder' || s.wonder) continue; // wonders, razed or not, are drawn by globe/wonders
       if (s.kind === 'ruin' && held.has(s.tile)) continue;
+      if (this.isHarbour(s)) continue; // a port on the shore is drawn whole by structures/ports, at the water's edge
       seen.add(s.id);
       const r = this.recs.get(s.id);
       if (!r) {
@@ -405,6 +406,16 @@ export class StructureField {
     for (const r of this.recs.values()) if (!seen.has(r.id) && r.anim?.type !== 'destroy') this.sink(r, now);
     this.first = false;
     logMisses(this.models);
+  }
+
+  /**
+   * A standing port with sea beside it: the harbour layer (structures/ports) builds the quay, sheds, piers and
+   * boats on the shore, so no landmark model is placed in the middle of the tile. A port in ruins, or one with
+   * no ocean neighbour, keeps its model here.
+   */
+  private isHarbour(s: Structure): boolean {
+    if (s.kind !== 'port' || shownKind(s) !== 'port') return false;
+    return this.shoreDir(s.tile, this.geos.get(s.tile)) !== null;
   }
 
   /** Start a structure's sink-and-fade; it is removed when that ends. */
