@@ -46,7 +46,7 @@ export function buildProvinceMesh(world: World): ProvinceMesh {
   for (const t of world.tiles) {
     heights[t.id] = tileHeight(t);
     const k = t.boundary.length;
-    verts += k * 3 + (t.terrain === 'ocean' ? 0 : k * 12);
+    verts += k * 3 + (t.terrain === 'ocean' ? 0 : k * 15);
   }
 
   // Shared boundary edges first, so each rim knows the neighbour across it.
@@ -62,6 +62,16 @@ export function buildProvinceMesh(world: World): ProvinceMesh {
       const ek = edgeKey(a, b);
       const e = seen.get(ek);
       if (e) e.tiles.push(tile.id); else seen.set(ek, { a, b, tiles: [tile.id] });
+    }
+  }
+  // Lowest ground at each corner (sea level if any ocean tile touches it): walls drop this far so
+  // tiles of different heights never leave a see-through crack at a shared corner.
+  const cornerFloor = new Map<string, number>();
+  for (const tile of world.tiles) {
+    const th = tile.terrain === 'ocean' ? SEA_LEVEL : heights[tile.id]!;
+    for (const v of tile.boundary) {
+      const ck = key(v), cur = cornerFloor.get(ck);
+      if (cur === undefined || th < cur) cornerFloor.set(ck, th);
     }
   }
   const neighbourAcross = (tileId: number, a: Vec3, b: Vec3): number => {
@@ -113,11 +123,13 @@ export function buildProvinceMesh(world: World): ProvinceMesh {
     }
     tileTopVertexCount[tile.id] = vi - tileVertexStart[tile.id]!;
     if (!sea) {
+      const hrs: number[] = [];
       for (let i = 0; i < k; i++) {
         const a = tile.boundary[i]!, b = tile.boundary[(i + 1) % k]!;
         const other = neighbourAcross(tile.id, a, b);
         const otherSea = other < 0 || world.tiles[other]!.terrain === 'ocean';
         const hr = rimHeight(h, other);
+        hrs.push(hr);
         const ho = other >= 0 ? heights[other]! : SEA_LEVEL;
         // Rim band: a light lip on a cliff top or coast, a slope for a gentle step, else plain top.
         const kind = hr !== h ? VK_SLOPE : (otherSea || ho < h - 1e-6 ? VK_LIP : VK_TOP);
@@ -133,8 +145,25 @@ export function buildProvinceMesh(world: World): ProvinceMesh {
         const out = norm([d[1] * m[2] - d[2] * m[1], d[2] * m[0] - d[0] * m[2], d[0] * m[1] - d[1] * m[0]]);
         const top = otherSea ? VK_COAST_TOP : VK_WALL_TOP, bot = otherSea ? VK_COAST_BOT : VK_WALL_TOP;
         const hb = otherSea ? SEA_LEVEL : Math.min(hr, ho);
-        push(a, hb, out, bot); push(b, hb, out, bot); push(b, hr, out, top);
-        push(a, hb, out, bot); push(b, hr, out, top); push(a, hr, out, top);
+        // The higher side of a step carries the wall down to the lowest ground at each corner.
+        const stepDown = !otherSea && ho < h - 1e-6;
+        const ha = stepDown ? Math.min(hb, cornerFloor.get(key(a)) ?? hb) : hb;
+        const hbb = stepDown ? Math.min(hb, cornerFloor.get(key(b)) ?? hb) : hb;
+        push(a, ha, out, bot); push(b, hbb, out, bot); push(b, hr, out, top);
+        push(a, ha, out, bot); push(b, hr, out, top); push(a, hr, out, top);
+      }
+      // Corner fillers: where the two rim bands meet at different heights, close the wedge between them.
+      for (let i = 0; i < k; i++) {
+        const a = tile.boundary[i]!;
+        const hp = hrs[(i + k - 1) % k]!, hc = hrs[i]!;
+        const ia = norm(inset(tile.center, a)), an = norm(a), cn = norm(tile.center);
+        const p1 = [ia[0] * h, ia[1] * h, ia[2] * h], p2 = [an[0] * hp, an[1] * hp, an[2] * hp], p3 = [an[0] * hc, an[1] * hc, an[2] * hc];
+        const u = [p2[0]! - p1[0]!, p2[1]! - p1[1]!, p2[2]! - p1[2]!], w = [p3[0]! - p1[0]!, p3[1]! - p1[1]!, p3[2]! - p1[2]!];
+        const nx = u[1]! * w[2]! - u[2]! * w[1]!, ny = u[2]! * w[0]! - u[0]! * w[2]!, nz = u[0]! * w[1]! - u[1]! * w[0]!;
+        const flip = nx * (an[0] - cn[0]) + ny * (an[1] - cn[1]) + nz * (an[2] - cn[2]) < 0;
+        const kind = VK_TOP;
+        push(ia, h, null, kind);
+        if (flip) { push(a, hc, null, kind); push(a, hp, null, kind); } else { push(a, hp, null, kind); push(a, hc, null, kind); }
       }
     }
     tileVertexCount[tile.id] = vi - tileVertexStart[tile.id]!;
