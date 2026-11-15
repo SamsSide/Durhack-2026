@@ -156,11 +156,15 @@ export function buildProvinceMesh(world: World): ProvinceMesh {
       for (let i = 0; i < k; i++) {
         const a = tile.boundary[i]!;
         const hp = hrs[(i + k - 1) % k]!, hc = hrs[i]!;
-        const ia = norm(inset(tile.center, a)), an = norm(a), cn = norm(tile.center);
+        const ia = norm(inset(tile.center, a)), an = norm(a);
         const p1 = [ia[0] * h, ia[1] * h, ia[2] * h], p2 = [an[0] * hp, an[1] * hp, an[2] * hp], p3 = [an[0] * hc, an[1] * hc, an[2] * hc];
         const u = [p2[0]! - p1[0]!, p2[1]! - p1[1]!, p2[2]! - p1[2]!], w = [p3[0]! - p1[0]!, p3[1]! - p1[1]!, p3[2]! - p1[2]!];
         const nx = u[1]! * w[2]! - u[2]! * w[1]!, ny = u[2]! * w[0]! - u[0]! * w[2]!, nz = u[0]! * w[1]! - u[1]! * w[0]!;
-        const flip = nx * (an[0] - cn[0]) + ny * (an[1] - cn[1]) + nz * (an[2] - cn[2]) < 0;
+        // Face the wedge towards the lower of the two bands (the only side it can be seen from). Its
+        // plane holds the centre-to-corner line, so a test against that line is rounding noise and
+        // left about half the wedges back-facing: see-through slivers at tile corners.
+        const side = norm(tile.boundary[hc < hp ? (i + 1) % k : (i + k - 1) % k]!);
+        const flip = nx * (side[0] - an[0]) + ny * (side[1] - an[1]) + nz * (side[2] - an[2]) < 0;
         const kind = VK_TOP;
         push(ia, h, null, kind);
         if (flip) { push(a, hc, null, kind); push(a, hp, null, kind); } else { push(a, hp, null, kind); push(a, hc, null, kind); }
