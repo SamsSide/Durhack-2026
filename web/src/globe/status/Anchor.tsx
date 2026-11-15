@@ -39,7 +39,7 @@ export function Anchor({ pos, dx = 0, dy = 0, limb, stack, noClip, children }: {
     const e = slot.current;
     if (e && !ro.current && typeof ResizeObserver !== 'undefined') {
       // drei's Html mounts its children a little later than our effects, so start measuring here
-      ro.current = new ResizeObserver(() => { e.height = el.offsetHeight * scale; });
+      ro.current = new ResizeObserver(() => { e.height = el.offsetHeight * scale; e.width = el.offsetWidth * scale; });
       ro.current.observe(el);
     }
     if (e) {

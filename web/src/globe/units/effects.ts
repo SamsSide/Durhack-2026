@@ -170,9 +170,11 @@ export class Smoke {
 export type PopKind = 'clash' | 'scroll' | 'loss' | 'attrition';
 const POPS = 32;
 
-interface Pop {
+export interface Pop {
   sprite: THREE.Sprite; mat: THREE.SpriteMaterial; born: number; life: number; kind: PopKind;
   pos: THREE.Vector3; dx: number; size: number; aspect: number;
+  /** The sideways offset it was given room for when it first showed (null: no room, stays hidden). */
+  fit: number | null | undefined;
 }
 
 /** Screen-size badges that pop in, hold and fade: drawn over everything, hidden on the far side. */
@@ -188,21 +190,22 @@ export class Pops {
       sprite.visible = false;
       sprite.renderOrder = 34;
       this.group.add(sprite);
-      this.pops.push({ sprite, mat, born: -1, life: 1, kind: 'clash', pos: new THREE.Vector3(), dx: 0, size: 0.03, aspect: 1 });
+      this.pops.push({ sprite, mat, born: -1, life: 1, kind: 'clash', pos: new THREE.Vector3(), dx: 0, size: 0.03, aspect: 1, fit: undefined });
     }
   }
 
   show(now: number, kind: PopKind, tex: THREE.Texture, pos: THREE.Vector3, size: number, aspect: number, life: number, dx = 0, delay = 0): void {
     const p = this.pops[this.next]!;
     this.next = (this.next + 1) % POPS;
-    p.kind = kind; p.born = now + delay; p.life = life; p.pos.copy(pos); p.dx = dx; p.size = size; p.aspect = aspect;
+    p.kind = kind; p.born = now + delay; p.life = life; p.pos.copy(pos); p.dx = dx; p.size = size; p.aspect = aspect; p.fit = undefined;
     p.mat.map = tex;
     p.mat.needsUpdate = true;
     p.sprite.position.copy(pos);
     p.sprite.visible = false;
   }
 
-  update(now: number, camDir: THREE.Vector3, zoom: number): void {
+  /** `fit` is asked once, when a pop first shows: the sideways offset that keeps it clear of other labels, or null to hide it. */
+  update(now: number, camDir: THREE.Vector3, zoom: number, fit?: (p: Pop, h: number) => number | null): void {
     for (const p of this.pops) {
       if (p.born < 0) continue;
       const t = (now - p.born) / p.life;
@@ -211,6 +214,8 @@ export class Pops {
       const f = facing(p.pos, camDir);
       p.sprite.visible = f > 0;
       if (!f) continue;
+      if (p.fit === undefined) p.fit = fit ? fit(p, p.size * zoom) : p.dx;
+      if (p.fit === null) { p.sprite.visible = false; continue; }
       const ms = now - p.born;
       let s = 1, a = 1, cy = 0.5;
       if (p.kind === 'attrition') {
@@ -228,7 +233,7 @@ export class Pops {
       }
       const h = p.size * zoom * s;
       p.sprite.scale.set(h * p.aspect, h, 1);
-      p.sprite.center.set(0.5 - p.dx, cy);
+      p.sprite.center.set(0.5 - p.fit, cy);
       p.mat.opacity = a * f;
     }
   }
