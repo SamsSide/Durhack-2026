@@ -76,6 +76,8 @@ export const mayStartWar = (world: World, countryId: number, tick: number): bool
 export const TRUCE_TICKS = 50;
 /** An offer stays open this long. */
 const OFFER_TTL = 30;
+/** Sea provinces within which a fleet at war sails for an enemy fleet or merchant ship before any coast. */
+const HUNT_RANGE = 24;
 
 // ---- strength -------------------------------------------------------------------------------
 
@@ -676,13 +678,12 @@ export function marchTurn(p: MarchInput): void {
     const caps = [...enemies].map((o) => view.countries[o]!.capitalTile).filter((t) => own[t] !== me).sort((x, y) => x - y);
     const toCap = costTo(view.tiles, caps, (t) => terrain(t) !== 'ocean', 150, undefined, `cap:${caps.join(',')}`);
     const front: { u: Unit; to: number; ratio: number; score: number }[] = [];
-    for (const u of [...armies, ...fleets]) {
+    for (const u of armies) {
       if (u.tile < 0) continue;
       for (const j of view.tiles[u.tile]!.neighbors) {
         const foe = hostile(j);
         if (foe < 0) continue;
-        if (u.kind === 'army' && terrain(j) === 'ocean') continue;
-        if (u.kind === 'fleet' && terrain(j) !== 'ocean' && rng() > 0.25) continue;   // fleets mostly fight at sea
+        if (terrain(j) === 'ocean') continue;
         const ratio = u.strength / Math.max(1, defenceEstimate(view, j, foe));
         front.push({ u, to: j, ratio, score: Math.min(ratio, 3) - 0.03 * (toCap.get(j) ?? 90) });
       }
@@ -693,6 +694,28 @@ export function marchTurn(p: MarchInput): void {
       if (best.ratio >= 0.7 || rng() < 0.15) {
         emit({ type: 'unit_moved', unitId: best.u.id, from: best.u.tile, to: best.to, arriveTick: tick + (best.u.kind === 'army' ? TERRAIN_EFFECTS[terrain(best.to)].move : 1) });
         best.u.tile = -1;                           // it has acted this turn
+      }
+    }
+    // Naval action, its own roll so fleets are not crowded out by the land front: a fleet next to an enemy
+    // fleet or merchant ship at sea engages it; now and then one bombards an enemy coast instead.
+    const naval: { u: Unit; to: number; ratio: number; score: number }[] = [];
+    for (const u of fleets) {
+      if (u.tile < 0) continue;
+      for (const j of view.tiles[u.tile]!.neighbors) {
+        const foe = hostile(j);
+        if (foe < 0) continue;
+        const sea = terrain(j) === 'ocean';
+        if (!sea && rng() > 0.25) continue;         // fleets mostly fight at sea
+        const ratio = u.strength / Math.max(1, defenceEstimate(view, j, foe));
+        naval.push({ u, to: j, ratio, score: Math.min(ratio, 3) + (sea ? 0.5 : 0) });
+      }
+    }
+    if (naval.length && rng() < Math.min(0.85, 0.3 + 0.3 * c.temperament.aggression) * edge) {
+      naval.sort((x, y) => (y.score - x.score) || (x.to - y.to));
+      const best = naval[0]!;
+      if (best.ratio >= 0.6 || rng() < 0.2) {
+        emit({ type: 'unit_moved', unitId: best.u.id, from: best.u.tile, to: best.to, arriveTick: tick + 1 });
+        best.u.tile = -1;
       }
     }
     // March: armies not yet at the front step towards it, along the cheapest road (round mountains,
@@ -727,12 +750,17 @@ export function marchTurn(p: MarchInput): void {
     }
     if (seaGoals.length && fleets.length) {
       const dist = bfs(seaGoals, (t) => terrain(t) === 'ocean', 120);
+      // An enemy fleet within a few days' sail draws the fleets to it before any coast does.
+      const huntGoals = seaGoals.filter((t) => view.tiles[t]!.neighbors.some((j) => terrain(j) === 'ocean' && enemyAt.has(j)));
+      const hunt = huntGoals.length ? bfs(huntGoals, (t) => terrain(t) === 'ocean', HUNT_RANGE) : null;
       let sails = 0;
       for (const u of fleets) {
         if (u.tile < 0 || sails >= 3) continue;
-        const d = dist.get(u.tile);
+        const near = hunt?.get(u.tile);
+        const d = near ?? dist.get(u.tile);
+        const field = near !== undefined ? hunt! : dist;
         if (d === undefined || d === 0 || rng() < 0.3) continue;
-        const next = view.tiles[u.tile]!.neighbors.filter((j) => dist.get(j) === d - 1);
+        const next = view.tiles[u.tile]!.neighbors.filter((j) => field.get(j) === d - 1);
         if (!next.length) continue;
         const to = next[Math.floor(rng() * next.length)]!;
         emit({ type: 'unit_moved', unitId: u.id, from: u.tile, to, arriveTick: tick + 1 });

@@ -74,9 +74,11 @@ export interface Fire {
   head: number; color: THREE.Color; streak: THREE.Color; solid: boolean;
   /** Passed back at impact, so the caller can size the burst. */
   scale: number;
+  /** Lands in the sea (a miss at a ship): passed back so the impact is a splash. */
+  wet?: boolean;
 }
 
-export type ImpactFn = (kind: Shot, at: THREE.Vector3, up: THREE.Vector3, scale: number, now: number) => void;
+export type ImpactFn = (kind: Shot, at: THREE.Vector3, up: THREE.Vector3, scale: number, now: number, wet: boolean) => void;
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _u = new THREE.Vector3();
 
@@ -96,6 +98,7 @@ export class Projectiles {
   private readonly sc: Float32Array;
   private readonly solid: Uint8Array;
   private readonly scale: Float32Array;
+  private readonly wet: Uint8Array;
   private readonly linePos: Float32Array;
   private readonly lineCol: Float32Array;
   private readonly lines: THREE.LineSegments;
@@ -120,6 +123,7 @@ export class Projectiles {
     this.sc = new Float32Array(n * 3);
     this.solid = new Uint8Array(n);
     this.scale = new Float32Array(n);
+    this.wet = new Uint8Array(n);
     this.linePos = new Float32Array(n * 6);
     this.lineCol = new Float32Array(n * 6);
     const g = new THREE.BufferGeometry();
@@ -145,7 +149,7 @@ export class Projectiles {
     this.p1[k] = f.p1.x; this.p1[k + 1] = f.p1.y; this.p1[k + 2] = f.p1.z;
     this.up[k] = f.up.x; this.up[k + 1] = f.up.y; this.up[k + 2] = f.up.z;
     this.h[i] = f.h; this.dur[i] = f.dur; this.born[i] = now + f.delay; this.tail[i] = f.tail;
-    this.headSize[i] = f.head; this.solid[i] = f.solid ? 1 : 0; this.scale[i] = f.scale;
+    this.headSize[i] = f.head; this.solid[i] = f.solid ? 1 : 0; this.scale[i] = f.scale; this.wet[i] = f.wet ? 1 : 0;
     this.hc[k] = f.color.r; this.hc[k + 1] = f.color.g; this.hc[k + 2] = f.color.b;
     this.sc[k] = f.streak.r; this.sc[k + 1] = f.streak.g; this.sc[k + 2] = f.streak.b;
     this.live++;
@@ -182,7 +186,7 @@ export class Projectiles {
         this.hide(i);
         _a.set(this.p1[k]!, this.p1[k + 1]!, this.p1[k + 2]!);
         _u.set(this.up[k]!, this.up[k + 1]!, this.up[k + 2]!);
-        onImpact(this.kind[i] as Shot, _a, _u, this.scale[i]!, now);
+        onImpact(this.kind[i] as Shot, _a, _u, this.scale[i]!, now, this.wet[i] === 1);
         continue;
       }
       live++;
