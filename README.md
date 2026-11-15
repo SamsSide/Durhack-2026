@@ -369,7 +369,8 @@ Which model answers is a switch (`LLM_MODE=live` only; mock never calls anything
 | `LLM_PROVIDER` | `gemini` (default), `gemma-api` (Gemma through the Gemini API), `ollama` (local Gemma) or `hybrid` |
 | `GEMMA_API_MODEL` | The Gemma id for `gemma-api` (default `gemma-4-26b-a4b-it`) |
 | `OLLAMA_HOST`, `OLLAMA_MODEL` | Where Ollama listens (default `http://localhost:11434`) and its model (default `gemma4:e4b-it-qat`; run `ollama pull gemma4:e4b-it-qat` once) |
-| `OLLAMA_TIMEOUT_MS`, `OLLAMA_BIBLE_TIMEOUT_MS` | How long a local answer may take (default 20000) and how long the world bible may take (default 75000) before the template is used |
+| `OLLAMA_TIMEOUT_MS` | How long a local answer may take (default 20000) |
+| `OLLAMA_BIBLE`, `OLLAMA_BIBLE_TIMEOUT_MS` | With `LLM_PROVIDER=ollama` the world bible (one long answer when a world is founded) still goes to Gemini when a Gemini key is set, because a laptop model needs over a minute for it. `OLLAMA_BIBLE=1` keeps it local, with this long to answer (default 75000) before the template is used |
 | `LLM_LOCAL_PURPOSES` | In `hybrid`, the purposes sent to Ollama (default `ruler`); the rest stay on Gemini |
 
 Check a setup with `LLM_PROVIDER=hybrid npx tsx server/scripts/check-llm.ts` (one tiny call per route,
