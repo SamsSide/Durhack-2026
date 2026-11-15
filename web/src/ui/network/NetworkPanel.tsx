@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useWorld } from '../../state/world';
 import { useSlowVersion } from '../useSlowVersion';
 import { useBelief } from '../../state/belief';
@@ -36,7 +36,10 @@ export function NetworkPanel() {
   const folded = !useLeftPanel((st) => st.networkOpen);
   const setNetworkOpen = useLeftPanel((st) => st.setNetworkOpen);
   const presence = usePresence(!folded);   // the open panel stays up while it slides away
-  const [pickedId, setPicked] = useState<number | null>(null);
+  // The pick lives in the left-panel store so opening the panel over a nation's card keeps that nation.
+  const pickedId = useLeftPanel((st) => st.pick);
+  const setPicked = useLeftPanel((st) => st.setPick);
+  useEffect(() => { setPicked(null); }, [setPicked]);   // a new world (the panel remounts per epoch) starts with no pick
   const isShort = useShort();
   const [tab, setTabState] = useState<NetTab>(readTab);
   const economy = useEconomy();

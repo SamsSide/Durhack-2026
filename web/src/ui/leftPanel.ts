@@ -13,6 +13,9 @@ export type LeftPanel = 'none' | 'network' | 'card';
 
 interface LeftPanelStore {
   networkOpen: boolean;
+  /** The nation picked on the Network graph. Opening the panel over a nation's card picks that nation. */
+  pick: number | null;
+  setPick(id: number | null): void;
   /** Open or fold the Network panel. Opening it closes the nation card. */
   setNetworkOpen(open: boolean): void;
 }
@@ -21,10 +24,15 @@ export const useLeftPanel = create<LeftPanelStore>((set) => ({
   // A card that is already open wins over a remembered open panel.
   // Owner (#275): every reload starts calm, so the Network panel always starts folded for the next judge.
   networkOpen: false,
+  pick: null,
+  setPick: (id) => set({ pick: id }),
   setNetworkOpen: (open) => {
-    if (open && useWorld.getState().selectedCountryId != null) useWorld.getState().select(null);
+    // The card and the panel share the left edge, so the card closes; the nation it showed stays
+    // picked on the graph, ready for Cut and Show beliefs without a second click.
+    const sel = open ? useWorld.getState().selectedCountryId : null;
+    if (sel != null) useWorld.getState().select(null);
     writeOpen(open);
-    set({ networkOpen: open });
+    set(sel != null ? { networkOpen: open, pick: sel } : { networkOpen: open });
   },
 }));
 

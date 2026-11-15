@@ -28,6 +28,16 @@ const LOOK: Record<Visible, OverlayLook & { creep: number }> = {
   rebellion: { a: '#6e0d09', b: '#e2361f', alpha: 0.45, freq: 80, flick: 0.9, creep: 1.6 },
 };
 
+// The lasting mark (#demo): after the show a plague or a famine stays on the provinces it struck as a
+// striped tint (and, for a plague, a slow drift of skulls) for as long as the sim counts it: the year of
+// the decree and the next (rules.ts reads the chronicle that far back). At speed that is a second or
+// two, so the mark also stays a minimum of wall time, long enough to be seen and pointed at.
+const LINGER_YEARS = 2;
+const LINGER_MIN_MS = 30_000;
+const LINGER_FADE_MS = 1500;
+const LINGER_LEVEL = 0.8;       // share of the show's tint that stays
+const LINGERS: Partial<Record<Visible, true>> = { plague: true, famine: true };
+
 const C = {
   flash: new THREE.Color('#fff4d6'), white: new THREE.Color('#ffffff'),
   fire0: new THREE.Color('#ffd166'), fire1: new THREE.Color('#b8321a'), spark: new THREE.Color('#ffb04a'),
@@ -125,6 +135,9 @@ export class DecreeSlot {
   private end = 0;
   private fxStart = 0;            // when the tint and the main show begin (a meteor: on impact)
   private impacted = false;
+  private year0 = 0;              // the world year the decree struck
+  private lingerEnd = 0;          // when the lasting mark is gone (0: not fading yet)
+  private readonly hatchDir = new THREE.Vector3(1, 0, 0);
   private readonly P = new THREE.Vector3();
   private readonly n = new THREE.Vector3();
   private readonly from = new THREE.Vector3();
@@ -198,6 +211,11 @@ export class DecreeSlot {
     this.end = this.start + 5000 + this.sev * 1250;
     this.fxStart = d.effect === 'meteor' ? this.start + 900 : this.start;
     this.impacted = false;
+    this.year0 = world.year;
+    this.lingerEnd = 0;
+    windAt(this.n, _t);
+    this.hatchDir.copy(_t).addScaledVector(_d.crossVectors(this.n, _t), 0.6).normalize();
+    this.overlay.hatch(0, this.hatchDir, 46 / this.U);
     this.nextA = this.nextB = this.start;
     this.nextBolt = this.start + 300;
     this.boltAt = -1;
@@ -220,6 +238,25 @@ export class DecreeSlot {
     for (const r of this.rings) { r.born = -1; r.mesh.visible = false; }
     this.beam.visible = false; this.halo.visible = false; this.bolt.visible = false;
     this.active = false;
+  }
+
+  /** True once the show is over and only the lasting mark is left: such a slot may be taken by a new decree. */
+  get lingering(): boolean { return this.active && performance.now() >= this.end; }
+
+  /** The lasting mark. Returns false once it has faded. */
+  private linger(pools: Pools, now: number, year: number): boolean {
+    if (!LINGERS[this.effect] || year < this.year0) return false;
+    if (!this.lingerEnd && now >= this.end + LINGER_MIN_MS && year >= this.year0 + LINGER_YEARS) this.lingerEnd = now + LINGER_FADE_MS;
+    if (this.lingerEnd && now >= this.lingerEnd) return false;
+    const fade = this.lingerEnd ? smooth(0, LINGER_FADE_MS, this.lingerEnd - now) : 1;
+    this.overlay.hatch(1, this.hatchDir, 46 / this.U);
+    this.overlay.frame(99, LINGER_LEVEL * fade, (now - this.fxStart) / 1000);
+    if (this.effect === 'plague' && !this.lingerEnd && now >= this.nextB) {
+      this.nextB = now + 900 + Math.random() * 700;
+      this.pick(_p, 0.01);
+      this.eg(pools.glyphs, now, _p.addScaledVector(_t, 0.008), _d.copy(_t).multiplyScalar(0.03).add(jitter(_j, _t, 0.006)), GLYPH.skull, 0.015, 0.019, 2600, 0.85, C.bone, this.tag);
+    }
+    return true;
   }
 
   /** The point the caption hangs from. */
@@ -303,16 +340,24 @@ export class DecreeSlot {
   }
 
   /** One frame; returns false once the show is over. */
-  tick(pools: Pools, now: number): boolean {
+  tick(pools: Pools, now: number, year: number): boolean {
     if (!this.active) return false;
-    if (now >= this.end) { this.stop(pools); return false; }
+    if (now >= this.end) {
+      if (this.linger(pools, now, year)) return true;
+      this.stop(pools);
+      return false;
+    }
     if (now < this.start) return true;
     const { fire, smoke, glyphs } = pools;
     const S = this.S, sev = this.sev, tag = this.tag;
     const look = LOOK[this.effect];
     const t = (now - this.fxStart) / 1000;
     const left = this.end - now;
-    const env = smooth(0, 0.5, t) * smooth(0, 1200, left);
+    // a decree with a lasting mark settles into it at the end of the show instead of fading out
+    const out = smooth(0, 1200, left);
+    const stays = LINGERS[this.effect] ? LINGER_LEVEL : 0;
+    const env = smooth(0, 0.5, t) * (stays + (1 - stays) * out);
+    if (stays) this.overlay.hatch(1 - out, this.hatchDir, 46 / this.U);
     this.overlay.frame(t / look.creep, t < 0 ? 0 : env, t);
     const busy = 1 / (0.6 + sev); // emission gap factor: a stronger decree emits more often
 

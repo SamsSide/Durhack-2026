@@ -4,7 +4,7 @@ import { useWorld } from '../../state/world';
 import { captureGlobe } from '../../globe/capture';
 
 /** The coloured label on a card (caps in the UI). */
-export type FeedTag = 'WAR' | 'PEACE' | 'FALL' | 'SECESSION' | 'CAPITAL' | 'SILENCE' | 'RETURN' | 'DECREE' | 'WONDER' | 'COUP' | 'TRADE' | 'DECADE';
+export type FeedTag = 'WAR' | 'PEACE' | 'FALL' | 'SECESSION' | 'CAPITAL' | 'SILENCE' | 'RETURN' | 'DECREE' | 'WONDER' | 'COUP' | 'TRADE' | 'DECADE' | 'DAWN';
 
 export interface FeedCard {
   id: string;
@@ -29,6 +29,10 @@ const QUIET_MS = 6000;         // low news is grouped into a decade card only af
 const WAR_WINDOW_MS = 60_000;  // one war card per pair per minute
 const KEY_TTL_MS = 10 * 60_000;
 const BIG_PAYMENT = 100;
+const DIGEST_MAX_AGE = 15;     // game years: a decade digest older than this is dropped, not shown late
+const DAWN_MAX_TICK = 3;       // a world this young is new: it gets the opening card
+const COUNT_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
+
 const THUMB_EVERY_MS = 3000;
 const THUMB_SIZE = { width: 288, height: 162 };
 
@@ -88,6 +92,24 @@ function lowText(b: Bucket): string {
   }
 }
 
+/** The opening card of a new world, from what the world already holds: its nations, name, era and year. */
+function dawnCard(world: World, now: number): FeedCard | null {
+  const nations = world.countries.filter((c) => c.alive);
+  if (!nations.length) return null;
+  const n = nations.length;
+  const count = COUNT_WORDS[n] ?? String(n);
+  const era = clean(world.era ?? '');
+  const title = `${count} ${n === 1 ? 'nation wakes' : 'nations wake'} in ${world.name}${era ? `: ${era}` : ''}.`;
+  return { id: `dawn:${world.id}@${now}`, tag: 'DAWN', title, year: world.year, countries: nations.slice(0, 6), tileId: nations[0]!.capitalTile, thumb: null, born: now, gone: false, goneAt: 0 };
+}
+
+/** Newest year on top: a card goes above the live cards of its year or older, never above a newer one. */
+function placeByYear(prev: FeedCard[], card: FeedCard): FeedCard[] {
+  let i = 0;
+  while (i < prev.length && prev[i]!.year > card.year) i++;
+  return [...prev.slice(0, i), card, ...prev.slice(i)];
+}
+
 /** Turns the store's recent events into a few important cards (newest on top). */
 export function useFeed(): { cards: FeedCard[]; world: World | null } {
   const world = useWorld((s) => s.world);
@@ -124,7 +146,20 @@ export function useFeed(): { cards: FeedCard[]; world: World | null } {
       keys.current = new Map();
       lastCardAt.current = 0;
       primed.current = false;
-      setCards([]);
+      // A new world opens with one card at once, so the first seconds are not an empty feed.
+      const dawn = world.tick <= DAWN_MAX_TICK ? dawnCard(world, Date.now()) : null;
+      setCards(dawn ? [dawn] : []);
+      if (dawn) {
+        lastCardAt.current = dawn.born;
+        // the picture waits a moment, until the new planet has replaced the one behind the create screen
+        window.setTimeout(() => {
+          if (!alive.current || worldId.current !== world.id) return;
+          void thumbnail().then((t) => {
+            if (!t || !alive.current) return;
+            setCards((prev) => prev.map((c) => (c.id === dawn.id && !c.thumb ? { ...c, thumb: t } : c)));
+          });
+        }, 2500);
+      }
     }
     const fresh: WorldEvent[] = [];
     for (const e of events) {
@@ -258,6 +293,9 @@ export function useFeed(): { cards: FeedCard[]; world: World | null } {
         keys.current.set(best.key, Math.max(keys.current.get(best.key) ?? 0, now + KEY_TTL_MS));
         return { id: `${best.key}@${now}`, tag: best.tag, title: best.title, year: best.year, countries: best.countries, tileId: best.tileId, thumb: null, born: now, gone: false, goneAt: 0 };
       }
+      // After a fast-forward a waiting digest can be decades old: it is dropped, not shown late.
+      const year = worldRef.current?.year;
+      if (year != null) for (const [k, b] of buckets.current) if (year - b.year > DIGEST_MAX_AGE) buckets.current.delete(k);
       if (now - lastCardAt.current >= QUIET_MS && buckets.current.size > 0) {
         let top: [string, Bucket] | null = null;
         // a lone item is not news: a DECADE card needs at least two of a kind
@@ -279,7 +317,7 @@ export function useFeed(): { cards: FeedCard[]; world: World | null } {
       if (card) {
         lastCardAt.current = now;
         // a new DECADE card replaces the one still showing, so the feed never stacks digests
-        setCards((prev) => [card, ...(card.tag === 'DECADE' ? prev.map((c) => (c.tag === 'DECADE' && !c.gone ? { ...c, gone: true, goneAt: now } : c)) : prev)].slice(0, KEEP_MAX));
+        setCards((prev) => placeByYear(card.tag === 'DECADE' ? prev.map((c) => (c.tag === 'DECADE' && !c.gone ? { ...c, gone: true, goneAt: now } : c)) : prev, card).slice(0, KEEP_MAX));
         void thumbnail().then((t) => {
           if (!t || !alive.current) return;
           setCards((prev) => prev.map((c) => (c.id === card.id && !c.thumb ? { ...c, thumb: t } : c)));

@@ -25,6 +25,9 @@ uniform float uFreq;
 uniform float uWave;
 uniform float uFlick;
 uniform float uEmber;
+uniform float uHatch;
+uniform float uHatchF;
+uniform vec3 uHatchDir;
 varying float vRank;
 varying vec3 vP;
 void main() {
@@ -39,7 +42,10 @@ void main() {
   float flick = 1.0 - uFlick * 0.5 * (0.5 + 0.5 * sin(uT * 14.0 + vRank * 37.0));
   m *= 1.0 - uEmber * 0.75 * vRank; // embers glow hottest at the centre of the strike
   vec3 col = mix(uA, uB, m);
-  gl_FragColor = vec4(col, uAlpha * reveal * (0.7 + 0.3 * m) * flick);
+  // the lasting mark: the tint thins to slanted stripes, so the land under it stays readable
+  float stripe = smoothstep(0.42, 0.58, abs(fract(dot(vP, uHatchDir) * uHatchF) - 0.5) * 2.0);
+  float hatch = mix(1.0, 0.12 + 0.88 * stripe, uHatch);
+  gl_FragColor = vec4(col, uAlpha * reveal * (0.7 + 0.3 * m) * flick * hatch);
 }`;
 
 export interface OverlayLook {
@@ -59,6 +65,7 @@ export class TileOverlay {
         uA: { value: new THREE.Color() }, uB: { value: new THREE.Color() },
         uCreep: { value: 0 }, uAlpha: { value: 0 }, uT: { value: 0 }, uFreq: { value: 60 },
         uWave: { value: 0 }, uFlick: { value: 0 }, uEmber: { value: 0 },
+        uHatch: { value: 0 }, uHatchF: { value: 50 }, uHatchDir: { value: new THREE.Vector3(1, 0, 0) },
       },
       transparent: true, depthWrite: false, side: THREE.DoubleSide,
       polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
@@ -113,6 +120,14 @@ export class TileOverlay {
     u.uAlpha!.value = this.alpha * env;
     u.uT!.value = t;
     this.mesh.visible = env > 0.001;
+  }
+
+  /** The lasting mark's stripes: amount 0..1, across `dir` (a tangent at the centre), `freq` stripes per unit. */
+  hatch(amount: number, dir: THREE.Vector3, freq: number): void {
+    const u = this.mat.uniforms;
+    u.uHatch!.value = amount;
+    u.uHatchF!.value = freq;
+    (u.uHatchDir!.value as THREE.Vector3).copy(dir);
   }
 
   hide(): void { this.mesh.visible = false; }

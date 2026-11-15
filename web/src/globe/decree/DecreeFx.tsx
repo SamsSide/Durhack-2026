@@ -1,3 +1,6 @@
+// The caption is the effect's name only: the result sentence is already on the feed card and beside the
+// decree box, and four copies of it at once was noise. A plague or a famine then leaves a lasting mark
+// on the provinces struck (see LINGER in effects.ts).
 // Decrees you can see (#288, "show, don't tell"). When a decree's own chronicle line arrives with its
 // outcome (`entry.decree`: effect, severity, target tiles, result), the camera flies to the target
 // (unless the user is dragging), the effect plays over the provinces hit for about 5 to 6 s, and a
@@ -116,6 +119,7 @@ export function DecreeFx() {
     let slot = -1;
     if (d.effect !== 'none' && tiles.length) {
       slot = fx.slots.findIndex((s) => !s.active);
+      if (slot < 0) slot = fx.slots.findIndex((s) => s.lingering);   // a lasting mark gives way to a new decree
       if (slot < 0) { slot = nextSlot.current; nextSlot.current = (slot + 1) % SLOTS; }
       if (!fx.slots[slot]!.play(fx.pools, mesh, world, { effect: d.effect, severity: d.severity, tiles }, now, delay)) slot = -1;
     }
@@ -186,7 +190,8 @@ export function DecreeFx() {
 
   useFrame(({ gl, camera: cam }) => {
     const now = performance.now();
-    for (const s of fx.slots) s.tick(fx.pools, now);
+    const year = useWorld.getState().world?.year ?? 0;
+    for (const s of fx.slots) s.tick(fx.pools, now, year);
     gl.getDrawingBufferSize(_size);
     const px = _size.y * 0.5 * cam.projectionMatrix.elements[5]!;
     fx.pools.fire.update(now, px);
@@ -202,7 +207,6 @@ export function DecreeFx() {
           <div className={`dc-plate dc-${c.effect}`} style={{ animationDuration: `${CAPTION_MS}ms` }}>
             <div className="tn-sheet dc-paper">
               <span className="dc-label">{c.label}</span>
-              <p className="dc-text">{c.text}</p>
             </div>
           </div>
         </Anchor>

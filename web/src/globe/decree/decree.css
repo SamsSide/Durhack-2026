@@ -2,20 +2,17 @@
    italic serif. Colours and fonts come from theme/tokens.css; the paper is tn-sheet (theme/materials.css).
    Lane b. */
 .dc-plate {
-  width: 260px;
+  width: max-content;
   animation: dc-life 5s ease forwards;
   will-change: transform, opacity;
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55));
 }
 .dc-paper {
-  padding: 6px 12px 8px;
+  padding: 5px 12px;
   border-left: 4px solid var(--dc-mark, var(--color-rubric));
 }
 .dc-label {
   display: block;
-  padding-bottom: 3px;
-  margin-bottom: 3px;
-  border-bottom: 1px solid var(--color-ink-faint);
   font-family: var(--font-display);
   font-size: 11px;
   line-height: 14px;
@@ -23,15 +20,6 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--dc-mark, var(--color-rubric));
-}
-.dc-text {
-  margin: 0;
-  white-space: normal;
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 15px;
-  line-height: 18px;
-  color: var(--color-ink);
 }
 /* one ink mark per effect, dark enough to read on the parchment */
 .dc-meteor { --dc-mark: #9a3412; }
