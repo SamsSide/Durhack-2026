@@ -3,6 +3,8 @@
 **Type one line, and watch a living 3D planet build itself, ruled by AI nations that keep going
 even when they cannot talk to each other.**
 
+![Terra Nova: a living planet where every nation is ruled by its own AI](docs/shots/devpost-thumbnail.jpg)
+
 ![Terra Nova: a living planet of AI nations, with the chronicle, the network panel, the decree box and the minimap](docs/shots/ui-qa-main.jpg)
 
 Type one line ("a drowned post-apocalyptic world"), or drop in a picture, and a planet of about
