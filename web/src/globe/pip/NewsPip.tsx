@@ -11,7 +11,8 @@ import * as THREE from 'three';
 import type { World } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import { tileHeight } from '../mesh/buildProvinceMesh';
-import { GROUND_CLEARANCE, TerrainLookup } from '../camera/groundView';
+import { GROUND_CLEARANCE, PROP_CLEARANCE, propTops, TerrainLookup } from '../camera/groundView';
+import { scanPropTops } from '../camera/propScan';
 import { sunDir } from '../celestial/sun';
 import { hideDetailFromMain, pipLod, PIP_MAIN_FAR, runPipPass } from './pipLod';
 import { PIP_H, PIP_MAX_SCALE, PIP_W, pipFeed } from './shot';
@@ -80,7 +81,7 @@ export function NewsPip() {
     c.matrixAutoUpdate = true;
     return c;
   }, []);
-  const live = useRef({ tile: -1, t0: 0, frame: null as Frame | null, lastStill: 0, spritesAt: 0, sprites: [] as THREE.Object3D[], pools: [] as THREE.InstancedMesh[], keys: [] as THREE.DirectionalLight[], moved: [] as THREE.DirectionalLight[], hidden: [] as THREE.Object3D[] });
+  const live = useRef({ propTop: 0, propAt: -1e9, tile: -1, t0: 0, frame: null as Frame | null, lastStill: 0, spritesAt: 0, sprites: [] as THREE.Object3D[], pools: [] as THREE.InstancedMesh[], keys: [] as THREE.DirectionalLight[], moved: [] as THREE.DirectionalLight[], hidden: [] as THREE.Object3D[] });
   const v = useMemo(() => ({ pos: new THREE.Vector3(), look: new THREE.Vector3(), off: new THREE.Vector3(), size: new THREE.Vector2(), sun: new THREE.Vector3(), realSun: new THREE.Vector3(), keyPos: [] as THREE.Vector3[] }), []);
 
   useEffect(() => () => { pipLod.camera = null; }, []);
@@ -100,9 +101,26 @@ export function NewsPip() {
       st.t0 = shot.t0;
       st.frame = frameOf(w, shot.tile);
       st.lastStill = 0;
+      st.propAt = -1e9;
+      st.propTop = 0;
     }
     const f = st.frame;
     if (!f) return;
+
+    // The tallest model on the tile and its ring (a temple, a tower), found a few times a second with the ground camera's
+    // prop scan. The scan writes the shared propTops, so it is saved and put back: the main camera never sees it.
+    if (now - st.propAt > 700) {
+      st.propAt = now;
+      const keep = new Map(propTops);
+      v.pos.copy(f.n).multiplyScalar(f.r);
+      scanPropTops(scene, v.pos, lookup, f.size * 3);
+      let top = 0;
+      const t = w.tiles[shot.tile];
+      for (const i of [shot.tile, ...(t?.neighbors ?? [])]) top = Math.max(top, propTops.get(i) ?? 0);
+      st.propTop = top;
+      propTops.clear();
+      for (const [k, val] of keep) propTops.set(k, val);
+    }
 
     // --- the move: push in and turn slowly round the tile ---
     const u = shot.still ? 0.6 : smooth((now - shot.t0) / (shot.duration * 1000));
@@ -114,7 +132,9 @@ export function NewsPip() {
     v.pos.copy(f.n).multiplyScalar(f.r + up).addScaledVector(v.off, back);
     // never inside a hill: stay clear of the ground under the camera
     const floor = lookup.ridgeAt(v.pos.x, v.pos.y, v.pos.z) + GROUND_CLEARANCE * 0.6;
-    if (v.pos.length() < floor) v.pos.setLength(floor);
+    // and above the tallest model around the tile, so no column or tower fills the lens
+    const clear = Math.max(floor, st.propTop > 0 ? st.propTop + PROP_CLEARANCE * 2 : 0);
+    if (v.pos.length() < clear) v.pos.setLength(clear);
     v.look.copy(f.n).multiplyScalar(f.r + 0.12 * f.size).addScaledVector(v.off, MOVE.lookShort * f.size);
     cam.position.copy(v.pos);
     cam.up.copy(f.n);

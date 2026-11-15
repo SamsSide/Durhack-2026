@@ -1,16 +1,16 @@
 // A small HTML tag pinned to a point on the globe; hidden when that point is on the far side. Lane b (B7).
-// With `stack`, the tag joins its city's marker column (cityStack.ts) instead of using a fixed dy.
+// With `noClip`, the tag hides rather than show cut off by the top bar. With `stack`, the tag joins its city's marker column (cityStack.ts) instead of using a fixed dy.
 import { useEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { P3 } from './geo';
-import { underHud } from './hudCover';
+import { underHud, underTopBar } from './hudCover';
 import { joinStack, leaveStack, stackOffset } from './cityStack';
 import type { StackEntry, StackSpec } from './cityStack';
 
-export function Anchor({ pos, dx = 0, dy = 0, limb, stack, children }: { pos: P3; dx?: number; dy?: number; limb?: number; stack?: StackSpec; children: ReactNode }) {
+export function Anchor({ pos, dx = 0, dy = 0, limb, stack, noClip, children }: { pos: P3; dx?: number; dy?: number; limb?: number; stack?: StackSpec; noClip?: boolean; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const dir = useMemo(() => new THREE.Vector3(...pos).normalize(), [pos]);
   const slot = useRef<StackEntry | null>(null);
@@ -33,7 +33,7 @@ export function Anchor({ pos, dx = 0, dy = 0, limb, stack, children }: { pos: P3
     const h = Math.min(1, 1 / dist);
     const minFacing = limb == null ? 0.15 : h + (1 - h) * limb;
     const covered = document.querySelector('.closing-veil') !== null;
-    const shown = facing > minFacing && !covered && !underHud(el);
+    const shown = facing > minFacing && !covered && !underHud(el) && !(noClip && underTopBar(el));
     el.style.opacity = shown ? '1' : '0'; // never over a HUD panel (#175)
     el.classList.toggle('gs-hidden', !shown); // and never clickable while hidden
     const e = slot.current;

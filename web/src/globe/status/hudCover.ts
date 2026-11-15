@@ -44,3 +44,17 @@ export function underHud(el: HTMLElement, pad = 6): boolean {
   seen.set(el, { slot, pad, hit });
   return hit;
 }
+
+const topSeen = new WeakMap<HTMLElement, { slot: number; hit: boolean }>();
+
+/** True when this element's box reaches up behind the top bar, so it would read as a clipped strip. Answer kept for the 100 ms slot. */
+export function underTopBar(el: HTMLElement): boolean {
+  const bar = typeof document === 'undefined' ? null : document.querySelector<HTMLElement>('.topbar');
+  if (!bar) return false;
+  const slot = hudSlot();
+  const last = topSeen.get(el);
+  if (last && last.slot === slot) return last.hit;
+  const hit = el.getBoundingClientRect().top < bar.getBoundingClientRect().bottom;
+  topSeen.set(el, { slot, hit });
+  return hit;
+}
