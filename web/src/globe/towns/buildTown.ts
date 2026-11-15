@@ -510,6 +510,6 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
   toWorld(0, 0, 0.00008, p);
   q.setFromRotationMatrix(tmpM.makeBasis(gx, g.n, tmpZ.crossVectors(gx, g.n)));
   const gk = kind === 'town' ? 1.1 : wallF + 0.05;
-  out.grounds.add(p, q, Rx * gk, ((Rx + Ry) / 2) * gk * sag, Ry * gk, new THREE.Color(S.GROUND));
+  out.grounds.add(p, q, Rx * gk, ((Rx + Ry) / 2) * gk * sag * 0.75, Ry * gk, new THREE.Color(S.GROUND));
   return out;
 }
