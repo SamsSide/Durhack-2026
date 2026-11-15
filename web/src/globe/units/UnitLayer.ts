@@ -20,6 +20,7 @@ import { VehicleFx } from './vehicleFx';
 import { Traders } from './traders';
 import { clockNow, msPerYear } from '../../state/calendar';
 import { UnitModels } from './unitModels';
+import { RestSpots } from './restSpots';
 import { formationSlots } from './formation';
 import type { Slot } from './formation';
 import { ROLE_BACK, ROLE_FLANK, ROLE_FRONT, firingFeed } from '../war/firingFeed';
@@ -188,6 +189,7 @@ export class UnitLayer {
   private readonly fx = new VehicleFx();
   private readonly traders: Traders;
   private readonly unitSize: number;
+  private readonly spots: RestSpots;
   private readonly ageSeen = new Map<number, TechAge>(); // from country_updated, until world.countries catches up
   private readonly agePop = new Map<number, number>();
   private readonly knownAge = new Map<number, TechAge>(); // last age we drew, to spot a real change
@@ -240,6 +242,7 @@ export class UnitLayer {
     }
     // about a town building: half a tile across, capped so nothing towers over a mountain
     this.unitSize = Math.min(0.04, Math.max(0.01, Math.sqrt((4 * Math.PI) / Math.max(1, world.tiles.length)) * 0.42));
+    this.spots = new RestSpots(world, mesh.heights, this.dirs, this.unitSize * 0.6);
     world.countries.forEach((c, i) => this.knownAge.set(i, c.techAge ?? 'ancient'));
     this.traders = new Traders({
       dirs: this.dirs,
@@ -262,6 +265,13 @@ export class UnitLayer {
     const d = this.dirs[tile];
     if (!d) return out.set(0, 0, 0);
     return out.copy(d).multiplyScalar((this.mesh.heights[tile] ?? 1) + extra);
+  }
+
+  /** Where a unit stands on a tile: its free spot (restSpots.ts), clear of the buildings there. */
+  private rest(tile: number, out: THREE.Vector3): THREE.Vector3 {
+    const d = this.spots.dir(tile);
+    if (!d) return out.set(0, 0, 0);
+    return out.copy(d).multiplyScalar((this.mesh.heights[tile] ?? 1) + CHIP_LIFT);
   }
 
   /** Real time one year takes at the effective speed (12 s at one month a second, 52 s at one week a second). */
@@ -304,13 +314,13 @@ export class UnitLayer {
 
   /** Where a unit is drawn right now (mid-march units are on the arc). */
   private statePos(st: UState, now: number, out: THREE.Vector3): THREE.Vector3 {
-    if (now >= st.t1 || st.from === st.to || !this.dirs[st.from] || !this.dirs[st.to]) return this.surf(st.to, CHIP_LIFT, out);
+    if (now >= st.t1 || st.from === st.to || !this.dirs[st.from] || !this.dirs[st.to]) return this.rest(st.to, out);
     if (st.dissolve) {
-      if (now - st.t0 >= (st.t1 - st.t0) / 2) return this.surf(st.to, CHIP_LIFT, out);
-      return st.ghost ? out.copy(st.ghost) : this.surf(st.from, CHIP_LIFT, out);
+      if (now - st.t0 >= (st.t1 - st.t0) / 2) return this.rest(st.to, out);
+      return st.ghost ? out.copy(st.ghost) : this.rest(st.from, out);
     }
     const s = easeInOut(Math.max(0, (now - st.t0) / (st.t1 - st.t0)));
-    const a = this.dirs[st.from]!, b = this.dirs[st.to]!;
+    const a = this.spots.dir(st.from)!, b = this.spots.dir(st.to)!;
     return arcPoint(out, a, b, this.mesh.heights[st.from]! + CHIP_LIFT, this.mesh.heights[st.to]! + CHIP_LIFT, s, arcHump(a, b) * 0.6);
   }
 
@@ -444,6 +454,7 @@ export class UnitLayer {
     if (this.disposed) return;
     const now = performance.now();
     const seen = new Set<string>();
+    this.spots.sync();
     this.traders.sync(this.world.units, now);
     for (const u of this.world.units) {
       if (u.kind === 'trader') continue;
@@ -1140,6 +1151,7 @@ export class UnitLayer {
     const dt = this.lastNow ? Math.min(100, now - this.lastNow) : 16;
     this.lastNow = now;
     this.lastDt = dt;
+    this.spots.update(dt);
     this.followClock(now, now - (this.lastClockAt || now));
     this.lastClockAt = now;
     const dist = camera.position.length();
@@ -1539,6 +1551,7 @@ export class UnitLayer {
   dispose(): void {
     this.disposed = true;
     clearStackLifts();
+    this.spots.dispose();
     this.field.dispose();
     this.fx.dispose();
     this.traders.dispose();
