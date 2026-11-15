@@ -23,6 +23,8 @@
 body:has(.tn-collapsed-chronicle) .tn-collapsed-icon--history { left: calc(var(--space-4) + 36px + var(--space-3)); bottom: calc(var(--space-4) + 2px); }
 body:has(.tn-collapsed-chronicle) .tn-collapsed-icon--decree { bottom: calc(var(--space-4) + 2px); }
 .tn-collapsed-chronicle .tn-ticker { display: none; }
+/* The timeline (H) opens over the folded chronicle: its icon would sit on the sheet's corner. */
+.tn-collapsed-chronicle:has(.tn-chron-timeline) > .tn-collapsed-icon--chronicle { display: none; }
 .tn-collapsed-icon--decree .tn-collapsed-tip { left: auto; right: 0; }
 .tn-collapsed-tip {
   position: absolute; bottom: calc(100% + var(--space-2)); left: 0;

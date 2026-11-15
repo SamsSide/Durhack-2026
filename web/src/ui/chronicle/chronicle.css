@@ -179,7 +179,7 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
 .tn-tl-entry:not(:disabled):hover .tn-tl-txt { text-decoration: underline; text-decoration-color: var(--color-ink-muted); }
 .tn-tl-entry .tn-yr { width: 58px; white-space: nowrap; }
 .tn-tl-k {
-  width: 76px; flex: none; color: var(--color-ink-muted);
+  width: 96px; flex: none; color: var(--color-ink-muted); /* fits PROCLAMATION, the longest kind */
   font-family: var(--font-display); font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
 }
 .tn-tl-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
