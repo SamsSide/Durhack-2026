@@ -25,7 +25,7 @@ export interface WorldStore {
   version: number;
   epoch: number;                  // bumps every time a different world arrives; key per-world UI on it
   agents: AgentStatus[];
-  budget: { calls: number; tokensIn: number; tokensOut: number; callsPerMin: number; capped: boolean; mode: 'mock' | 'live' } | null;
+  budget: { calls: number; tokensIn: number; tokensOut: number; callsPerMin: number; capped: boolean; mode: 'mock' | 'live'; provider?: 'gemini' | 'gemma-api' | 'ollama' | 'hybrid'; localCalls?: number } | null;
   connected: boolean;
   selectedCountryId: number | null;
   selectedTileId: number | null;

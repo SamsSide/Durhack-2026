@@ -50,9 +50,17 @@ async function postJson(url: string, body?: object): Promise<{ ok: boolean; erro
   }
 }
 
+const PROVIDER_LABEL = {
+  gemini: 'Gemini',
+  'gemma-api': 'Gemma through the Gemini API',
+  ollama: 'Gemma on this laptop',
+  hybrid: 'Gemini with Gemma on this laptop',
+} as const;
+
 export function CreateScreen() {
   const connected = useWorld((s) => s.connected);
   const mode = useWorld((s) => s.budget?.mode);
+  const provider = useWorld((s) => s.budget?.provider);
   const [prompt, setPrompt] = useState('');
   const [preset, setPreset] = useState<string | null>(null);
   const [nations, setNations] = useState(6);
@@ -162,7 +170,7 @@ export function CreateScreen() {
   };
   const pct = (v: number) => `${Math.round(v * 100)}%`;
   const fill = (v: number, min: number, max: number) => ({ '--tn-fill': `${((v - min) / (max - min)) * 100}%` }) as CSSProperties;
-  const modeNote = mode === 'mock' ? 'Mock mode \u00b7 no tokens will be spent' : mode === 'live' ? 'Live \u00b7 Gemini' : '';
+  const modeNote = mode === 'mock' ? 'Mock mode \u00b7 no tokens will be spent' : mode === 'live' ? `Live \u00b7 ${PROVIDER_LABEL[provider ?? 'gemini']}` : '';
 
   if (founding) {
     const steps = foundingSteps(nations);
