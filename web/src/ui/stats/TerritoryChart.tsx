@@ -5,6 +5,7 @@ import { useWorld } from '../../state/world';
 import { useStats } from './useStats';
 import type { TerritorySeries } from './useStats';
 import './stats.css';
+import { yearLabel } from '@terra/shared';
 
 // Plot box in px. The network panel is a fixed --net-width, so the chart draws 1:1 (no scaling of type).
 const W = 288, H = 150;
@@ -105,13 +106,13 @@ export function TerritoryChart() {
       <h3 className="tn-header-bar tn-st-title">Territory over time</h3>
       <header className="tn-st-head">
         <p className="tn-st-sub">Provinces held by each nation</p>
-        <p className={`tn-stat tn-st-year${hover != null ? ' tn-on' : ''}`}><span className="tn-stat__label">{hover != null ? 'Year' : 'Now'}</span><span className="tn-stat__value">{year}</span></p>
+        <p className={`tn-stat tn-st-year${hover != null ? ' tn-on' : ''}`}><span className="tn-stat__label">{hover != null ? 'Year' : 'Now'}</span><span className="tn-stat__value">{yearLabel(year)}</span></p>
       </header>
 
       <div className="tn-st-well">
       <svg
         className="tn-st-plot" viewBox={`0 0 ${W} ${H}`} width={W} height={H} tabIndex={0} role="img"
-        aria-label={`Provinces held by each nation from year ${yearOf.get(t0)} to year ${yearOf.get(t1)}. Use the arrow keys to read a year.`}
+        aria-label={`Provinces held by each nation from ${yearLabel(yearOf.get(t0) ?? 0)} to ${yearLabel(yearOf.get(t1) ?? 0)}. Use the arrow keys to read a year.`}
         onKeyDown={onKey} onBlur={() => setHover(null)}
       >
         {[0, top / 2, top].map((v) => (
@@ -120,9 +121,9 @@ export function TerritoryChart() {
             <text className="tn-st-tick" x={M.left - 6} y={y(v) + 4} textAnchor="end">{v}</text>
           </g>
         ))}
-        <text className="tn-st-tick" x={M.left} y={H - 5} textAnchor="start">{yearOf.get(t0)}</text>
-        {ticks.length > 4 && <text className="tn-st-tick" x={x(midTick)} y={H - 5} textAnchor="middle">{yearOf.get(midTick)}</text>}
-        <text className="tn-st-tick" x={W - M.right} y={H - 5} textAnchor="end">{yearOf.get(t1)}</text>
+        <text className="tn-st-tick" x={M.left} y={H - 5} textAnchor="start">{yearLabel(yearOf.get(t0) ?? 0)}</text>
+        {ticks.length > 4 && <text className="tn-st-tick" x={x(midTick)} y={H - 5} textAnchor="middle">{yearLabel(yearOf.get(midTick) ?? 0)}</text>}
+        <text className="tn-st-tick" x={W - M.right} y={H - 5} textAnchor="end">{yearLabel(yearOf.get(t1) ?? 0)}</text>
 
         {series.map((s) => {
           const d = s.points.map((p, i) => `${i ? 'L' : 'M'}${x(p.tick).toFixed(1)} ${y(p.tiles).toFixed(1)}`).join('');

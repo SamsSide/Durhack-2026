@@ -3,6 +3,7 @@ import { flagSvg } from '@terra/shared';
 import type { AgentStatus, Country, CouncilRole } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import { AutoIcon } from './NetworkGraph';
+import { yearShort } from '@terra/shared';
 
 /** A button that needs a second click within three seconds (Delete, Kill). */
 function TwoClick({ label, tip, className = '', onConfirm }: { label: string; tip: string; className?: string; onConfirm(): void }) {
@@ -62,7 +63,7 @@ export function NodeTray({ country, agent, tick, year, onControl, onOpenCard }: 
       <div className="tn-tray-top">
         <span className="tn-tray-flag tn-flag-plate" dangerouslySetInnerHTML={{ __html: flagSvg(country.flag, 30, 20) }} />
         <button type="button" className="tn-tray-name" title="Open its card (this folds the Network)" onClick={() => onOpenCard(country.id)}>{country.name}</button>
-        {gone && <span className="tn-state del">{deleted ? `Deleted Y${deletedYear}` : 'Fallen'}</span>}
+        {gone && <span className="tn-state del">{deleted ? `Deleted ${yearShort(deletedYear)}` : 'Fallen'}</span>}
       </div>
       {gone && <div className="tn-tray-sub ruin">{deleted ? 'Its neighbours are carving up its lands.' : 'Its lands lie in ruin.'}</div>}
       {agent && !gone && (

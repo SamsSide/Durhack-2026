@@ -5,6 +5,7 @@ import type { FeedCard, FeedTag } from './useFeed';
 
 type IconKind = 'city' | 'war' | 'treaty' | 'alliance' | 'fall' | 'born' | 'decree' | 'wonder' | 'death' | 'succession';
 import './feed.css';
+import { yearShort } from '@terra/shared';
 
 const ICONS: Record<IconKind, JSX.Element> = {
   // city tower
@@ -65,7 +66,7 @@ function Card({ card }: { card: FeedCard }) {
           {card.countries.map((c) => (
             <span key={c.id} className="tn-feed-flag tn-flag-plate" dangerouslySetInnerHTML={{ __html: flagSvg(c.flag, 24, 16) }} />
           ))}
-          <span className="tn-feed-year">Y{card.year}</span>
+          <span className="tn-feed-year">{yearShort(card.year)}</span>
         </span>
         <span className="tn-feed-title">{card.title}</span>
       </span>

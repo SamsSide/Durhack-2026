@@ -13,7 +13,7 @@
 
 /* Shared bits */
 .tn-ico { display: inline-block; flex: none; }
-.tn-yr { font-family: var(--font-mono); font-size: 12px; color: var(--color-rubric); font-weight: 600; flex: none; }
+.tn-yr { font-family: var(--font-mono); font-size: 12px; color: var(--color-rubric); font-weight: 600; flex: none; white-space: nowrap; }
 .tn-sw { display: inline-block; width: 12px; height: 12px; border: 1px solid var(--color-ink); flex: none; }
 
 /* The kind colours: one class per kind, used by the diamonds in SVG and HTML alike. */
@@ -177,7 +177,7 @@ button.tn-tl-name:focus-visible { outline: 2px solid var(--color-accent); outlin
 }
 .tn-tl-entry:disabled { cursor: default; }
 .tn-tl-entry:not(:disabled):hover .tn-tl-txt { text-decoration: underline; text-decoration-color: var(--color-ink-muted); }
-.tn-tl-entry .tn-yr { width: 40px; }
+.tn-tl-entry .tn-yr { width: 58px; white-space: nowrap; }
 .tn-tl-k {
   width: 76px; flex: none; color: var(--color-ink-muted);
   font-family: var(--font-display); font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;

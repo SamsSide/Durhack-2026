@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { requestBroadcastNow, useBroadcast } from './useBroadcast';
 import { AnchorWindow } from './AnchorWindow';
 import './news.css';
+import { yearShort } from '@terra/shared';
 
 /** Trigger one bulletin now (lane b's top-bar button). */
 export const requestBroadcast = requestBroadcastNow;
@@ -53,7 +54,7 @@ export function NewsBroadcast() {
             <span className="tn-news-year">
               {bulletin.anchor && <span className="tn-news-anchor">with {bulletin.anchor}</span>}
               {noSound && <span className="tn-news-nosound">(no sound)</span>}
-              Y{bulletin.year}
+              {yearShort(bulletin.year)}
             </span>
           </div>
           <div className="tn-news-script" ref={boxRef}>

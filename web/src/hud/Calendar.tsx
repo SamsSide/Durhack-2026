@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useWorld } from '../state/world';
 import { clockNow, monthDay, yearFraction } from '../state/calendar';
 import { Roll } from '../ui/motion/Roll';
+import { yearLabel } from '@terra/shared';
 
-const plainYear = (n: number) => String(n);
+const plainYear = yearLabel;
 
 const MONTH_BELOW = 1.01;   // the month shows up to two years a second; faster than that it is a blur
 const DAY_BELOW = 0.13;     // the day shows at one season a second or slower
@@ -37,7 +38,7 @@ export function Calendar() {
 
   const withDay = date.includes(' ');
   return (
-    <div className={`tb-year${date ? ' dated' : ''}`} title={date ? `${date}, year ${year}` : `Year ${year}`}>
+    <div className={`tb-year${date ? ' dated' : ''}`} title={date ? `${date}, ${yearLabel(year)}` : `Year ${yearLabel(year)}`}>
       <span className="cap">Year</span>
       <Roll className="num tn-gilt-text" value={year} format={plainYear} ms={220} />
       {date && <span className={`tb-date${withDay ? ' day' : ''}`} aria-label={date}>{date}</span>}

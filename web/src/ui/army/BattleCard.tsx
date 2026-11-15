@@ -14,6 +14,7 @@ import { TroopTile } from './TroopTile';
 import { MOCK_BATTLE_TILE, useMockBattle } from './mock';
 import './army.css';
 import { Roll } from '../motion/Roll';
+import { yearShort } from '@terra/shared';
 
 function Side({ side, label, leading }: { side: BattleSide; label: 'Attackers' | 'Defenders'; leading: boolean }) {
   const kept = side.startSoldiers > 0 ? side.soldiers / side.startSoldiers : 0;
@@ -80,7 +81,7 @@ export function BattleCard({ tile }: { tile: number }) {
             <h2 className="tn-name tn-engraved">Battle of {b.province}</h2>
             <div className="tn-battle-when">
               <span className="tn-battle-dur">{b.durationText}</span>
-              <span className="tn-battle-since">since Y{b.startYear}</span>
+              <span className="tn-battle-since">since {yearShort(b.startYear)}</span>
             </div>
           </div>
           <button type="button" className="tn-close tn-button tn-button--lacquer tn-button--round" aria-label="Close" onClick={close}><CloseIcon /></button>

@@ -2,7 +2,7 @@
 // decision. On any failure it throws RulerFailed and the caller (row A4) runs the nation on autopilot.
 // It never retries. RulerScheduler decides when each nation is next due, spreading calls under the cap.
 import {
-  MOVEMENTS, PRICE_BASE, isCombatant, landDevastation, marketPlan, memberAge, movementOf, politicsOf, readinessBand, readinessOf, relationOf,
+  MOVEMENTS, PRICE_BASE, isCombatant, landDevastation, marketPlan, memberAge, movementOf, politicsOf, readinessBand, readinessOf, relationOf, yearShort,
   type Stance, type TechAge, type World, type WorldEvent,
 } from '@terra/shared';
 import { getBudget, llmJson, rulerModel, type Schema } from '../llm';
@@ -65,7 +65,7 @@ export function makeDigest(world: World, countryId: number, focus: Focus = 'expa
   const rough = (['ice', 'desert', 'mountain', 'hills'] as const).find((k) => world.units.some((u) => u.owner === countryId && u.kind === 'army' && u.tile >= 0 && world.tiles[u.tile]!.terrain === k));
   const terrain = rough && (rough === 'ice' ? 'Our armies freeze in the ice fields.' : rough === 'desert' ? 'Our armies wither in the desert.'
     : rough === 'mountain' ? 'The mountain passes hold, and cost dearly to cross.' : 'The hill country slows every march and shelters its defenders.');
-  const lines = (es: typeof world.chronicle) => es.map((e) => `y${e.year}: ${e.text.slice(0, 120)}`);
+  const lines = (es: typeof world.chronicle) => es.map((e) => `${yearShort(e.year).toLowerCase()}: ${e.text.slice(0, 120)}`);
   // B11 (#204): one line on its politics and economy, and the movement that speaks through it.
   const pol = politicsOf(c);
   const mv = movementOf(pol.axis);

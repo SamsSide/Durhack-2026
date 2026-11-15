@@ -2,6 +2,7 @@ import { useWorld } from '../../state/world';
 import { useEconomy } from './useEconomy';
 import type { LedgerRow } from './useEconomy';
 import './economy.css';
+import { yearShort } from '@terra/shared';
 
 const shortSig = (s: string) => (s.length > 10 ? `${s.slice(0, 3)}…${s.slice(-3)}` : s);
 const compact = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(Math.round(n)));
@@ -29,7 +30,7 @@ export function LedgerPanel() {
   const row = (r: LedgerRow) => (
     <li key={r.id} className="tn-led-row">
       <div className="tn-led-top">
-        <span className="tn-led-year">Y{r.year}</span>
+        <span className="tn-led-year">{yearShort(r.year)}</span>
         {party(r.from)}<span className="tn-led-pays">pays</span>{party(r.to)}
       </div>
       <div className="tn-led-mid">

@@ -4,6 +4,7 @@ import type { ChronicleEntry, Country, WorldEvent } from '@terra/shared';
 import { useWorld } from '../../state/world';
 import type { CutPeriod } from './Timeline';
 import { fallenOf, ofName } from './kinds';
+import { yearShort } from '@terra/shared';
 
 const SHOW_MS = 8000;   // each tab fades out about 8 s after it appears
 const LEAVE_MS = 200;   // the tab-out fade (--motion-exit, plus a frame)
@@ -64,7 +65,7 @@ function Tab({ d, leaving }: { d: Dispatch; leaving: boolean }) {
           {d.kind === 'war' && <Flag c={d.b} />}
         </span>
         <span className="tn-h-text">{text}</span>
-        <span className="tn-h-year">Y{d.year}</span>
+        <span className="tn-h-year">{yearShort(d.year)}</span>
       </span>
       <span className="tn-h-more">
         {d.kind === 'war' && <span className="tn-h-quote">{d.title}{d.line ? `: ${d.line}` : ''}{d.by && <span>{d.by}</span>}</span>}

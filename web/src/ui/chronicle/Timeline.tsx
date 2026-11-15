@@ -4,6 +4,7 @@ import type { AgentStatus, ChronicleEntry, World } from '@terra/shared';
 import { Chevron, Diamond } from './Diamond';
 import { KIND_LABEL, LEGEND_ORDER, displayKind, fallenOf, ofName } from './kinds';
 import type { DisplayKind } from './kinds';
+import { yearLabel, yearRange, yearShort } from '@terra/shared';
 
 const NAME_W = 200;  // the left column of nation names
 const LANE_H_FULL = 34;
@@ -198,7 +199,7 @@ export function Timeline({ world, agents, observed, selectedId, onPick, onClose,
         }}
       >
         <div className="tn-tl-tip-k">
-          <Diamond kind={hovered.kind} /> Y{hoveredEntry.year} · {KIND_LABEL[hovered.kind]}
+          <Diamond kind={hovered.kind} /> {yearShort(hoveredEntry.year)} · {KIND_LABEL[hovered.kind]}
         </div>
         {hoveredEntry.text}
       </div>
@@ -213,7 +214,7 @@ export function Timeline({ world, agents, observed, selectedId, onPick, onClose,
       <h2 className="tn-cartouche tn-tl-plate">The Chronicle</h2>
       <div className="tn-tl-head">
         <div className="tn-tl-title">
-          <div className="tn-tl-sub">of {ofName(world.name)}, years {start} to {end}</div>
+          <div className="tn-tl-sub">of {ofName(world.name)}, years {yearRange(start, end)}</div>
         </div>
         <div className="tn-legend">
           {legend.map((k) => (
@@ -241,10 +242,10 @@ export function Timeline({ world, agents, observed, selectedId, onPick, onClose,
               <div className="tn-tl-corner" />
               <div className="tn-tl-axis" style={{ width: trackW }}>
                 {ticks.map((y) => (
-                  <div key={y} className="tn-tl-tick" style={{ left: x(y) }}>{y}</div>
+                  <div key={y} className="tn-tl-tick" style={{ left: x(y) }}>{yearLabel(y)}</div>
                 ))}
                 <div className="tn-tl-now" style={{ left: x(world.year) }}>
-                  <span>Now · {world.year}</span>
+                  <span>Now · {yearLabel(world.year)}</span>
                 </div>
               </div>
             </div>
@@ -343,7 +344,7 @@ export function Timeline({ world, agents, observed, selectedId, onPick, onClose,
                 onClick={() => onPick(e.countries)}
               >
                 <Diamond kind={k} />
-                <span className="tn-yr">Y{e.year}</span>
+                <span className="tn-yr">{yearShort(e.year)}</span>
                 <span className="tn-tl-k">{KIND_LABEL[k]}</span>
                 <span className="tn-tl-txt">{e.text}</span>
               </button>

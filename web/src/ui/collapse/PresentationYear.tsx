@@ -3,8 +3,9 @@ import { clockNow, monthDay, yearFraction } from '../../state/calendar';
 import { usePresentation } from './presentation';
 import { useEffect, useState } from 'react';
 import { Roll } from '../motion/Roll';
+import { yearLabel } from '@terra/shared';
 
-const plainYear = (n: number) => String(n);
+const plainYear = yearLabel;
 
 /** The year plate for presentation mode: top centre, lacquer with gilt text. Only visible while it is on. */
 export function PresentationYear() {

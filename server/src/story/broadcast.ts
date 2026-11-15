@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { militaryStrength } from '@terra/shared';
+import { militaryStrength, yearLabel } from '@terra/shared';
 import type { ChronicleEntry, ChronicleKind, NewsBattle, NewsFocus, StructureKind, World, WorldEvent } from '@terra/shared';
 import { currentMode, getBudget, llmJson, loreModel, routeFor, type Schema } from '../llm';
 import { speak, VoiceUnavailable } from './eleven';
@@ -85,9 +85,9 @@ function facts(w: World): { text: string; biggest: string; war: string | null } 
   const silent = w.agents.filter((a) => (a.link === 'cut' || a.deleted) && w.countries[a.countryId]?.alive)
     .map((a) => `${name(a.countryId)} (${a.deleted ? 'its ruler removed' : 'cut off, silent'})`);
   const fallen = w.countries.filter((c) => !c.alive).map((c) => c.name);
-  const chron = w.chronicle.slice(-20).map((e) => `- year ${e.year}: ${e.text}`).join('\n') || '- (nothing recorded yet)';
+  const chron = w.chronicle.slice(-20).map((e) => `- ${yearLabel(e.year)}: ${e.text}`).join('\n') || '- (nothing recorded yet)';
   const text = [
-    `World: ${w.name}. Era: ${w.era}. Year ${w.year}.`,
+    `World: ${w.name}. Era: ${w.era}. Year ${yearLabel(w.year)}.`,
     `Biggest nations (provinces): ${ranked.slice(0, 4).map((c) => `${c.name} ${counts.get(c.id) ?? 0}`).join(', ') || 'none'}.`,
     growing.length ? `Growing since the last bulletin: ${growing.map((x) => `${x.c.name} (+${x.d})`).join(', ')}.` : '',
     shrinking.length ? `Shrinking since the last bulletin: ${shrinking.map((x) => `${x.c.name} (${x.d})`).join(', ')}.` : '',
@@ -107,7 +107,7 @@ function template(w: World, f: ReturnType<typeof facts>): { headline: string; sc
   const recent = w.chronicle.slice(-2).map((e) => e.text.replace(/\s+/g, ' ').replace(/[.!]+$/, ''));
   const headline = f.war ? words(`War between ${f.war}`, 8) : words(`${f.biggest} leads ${w.name}`, 8);
   const script = [
-    `Good evening. This is the news from ${w.name}, in the year ${w.year}.`,
+    `Good evening. This is the news from ${w.name}, in the year ${yearLabel(w.year)}.`,
     f.war ? `The war between ${f.war} continues.` : `For now no war is raging across the map.`,
     ...recent.map((t) => `${t}.`),
     `${f.biggest} remains the largest nation on the map. More after the break.`,
