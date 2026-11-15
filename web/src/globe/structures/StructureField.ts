@@ -6,6 +6,8 @@ import type { ModelPart, ModelSet } from './models';
 import { clamp01, easeOutBack, hash01, smoothstep } from './placement';
 import type { TileGeo, TileGeos } from './placement';
 import { Trees } from './Trees';
+import { TerrainDetail } from '../terrain/TerrainDetail';
+import type { ProvinceMesh } from '../mesh/buildProvinceMesh';
 import { CLOSE } from '../constants';
 import { nationIdentity, refreshIdentities } from '../identity/identity';
 import type { Identity } from '../identity/identity';
@@ -65,6 +67,7 @@ export class StructureField {
   private recs = new Map<string, Rec>();
   private byTile = new Map<number, Rec[]>();
   private trees: Trees;
+  private terrain: TerrainDetail | null = null; // mountains, dunes, rocks: beside the trees, same zoom fade
   private puffs: Puff[] = [];
   private puffMesh: THREE.InstancedMesh;
   private puffLive = false;
@@ -87,10 +90,14 @@ export class StructureField {
   private sc = new THREE.Vector3();
   private col = new THREE.Color();
 
-  constructor(private world: World, private geos: TileGeos, private models: ModelSet) {
+  constructor(private world: World, private geos: TileGeos, private models: ModelSet, mesh?: ProvinceMesh) {
     clearOccupancy();
     this.trees = new Trees(world, geos, models);
     this.group.add(this.trees.group);
+    if (mesh) {
+      this.terrain = new TerrainDetail(world, geos, mesh);
+      this.group.add(this.terrain.group);
+    }
     const puffGeo = new THREE.IcosahedronGeometry(1, 0);
     const puffMat = new THREE.MeshStandardMaterial({ color: '#e6dcc3', flatShading: true, roughness: 1 });
     this.puffMesh = new THREE.InstancedMesh(puffGeo, puffMat, PUFF_POOL * PUFF_PARTS);
@@ -582,6 +589,7 @@ export class StructureField {
       level = Math.max(level, r.kind === 'city' || r.kind === 'capital' ? 2 : 1);
     }
     this.trees.setLevel(tile, level);
+    this.terrain?.setLevel(tile, level);
   }
 
   private puff(r: Rec, t0: number): void {
@@ -607,6 +615,7 @@ export class StructureField {
     if (wrote || this.propsDirty) this.writeProps(now);
     this.updateSmoke(now);
     this.trees.update(this.f);
+    this.terrain?.update(this.f);
     this.updatePuffs(now);
   }
 
@@ -817,6 +826,7 @@ export class StructureField {
     (this.puffMesh.material as THREE.Material).dispose();
     this.puffMesh.dispose();
     this.trees.dispose();
+    this.terrain?.dispose();
     for (const pp of this.propPools.values()) for (const mm of pp.meshes) mm.dispose();
     disposePropSet(this.propSet);
     this.smokeMesh.geometry.dispose();

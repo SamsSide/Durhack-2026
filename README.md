@@ -63,6 +63,13 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 
 ![Oaks, palms and a birch round a village, seen from the ground view](docs/shots/trees.jpg)
 
+- **Mountains and terrain detail:** mountain provinces carry ranges of faceted low-poly peaks that join
+  across province borders, with snow caps on the tall ones and towards the poles; hills roll, deserts
+  have dune fields and mesas, the ice has seracs and drifts, and boulders, scrub and shore reeds
+  appear close up. The detail takes each province's colour at its foot, so it sits in every map mode.
+
+![A snow-capped mountain range rising out of the hills, seen from the ground view](docs/shots/terrain.jpg)
+
 | | | |
 | --- | --- | --- |
 | ![The Found a World screen: prompt, picture, presets, era, nations, sea level and aggression](docs/shots/depth-create-after.jpg) | ![A walled capital seen from the ground view](docs/shots/ground-view-2.jpg) | ![A busy coast with boats, birds and a walled town](docs/shots/living-world-1.jpg) |
