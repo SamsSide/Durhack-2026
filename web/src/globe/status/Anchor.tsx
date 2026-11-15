@@ -34,7 +34,7 @@ export function Anchor({ pos, dx = 0, dy = 0, limb, stack, noClip, children }: {
     // limb (0..1): hide this share of the way from the horizon (cos = 1 / dist) to straight below
     const h = Math.min(1, 1 / dist);
     const minFacing = limb == null ? 0.15 : h + (1 - h) * limb;
-    const covered = document.querySelector('.closing-veil') !== null;
+    const covered = document.querySelector('.closing-veil, .tn-world-veil') !== null;
     // a low camera sees a short way: a tag past the planet's curve hides, however squarely it faces the camera
     const shown = facing > minFacing && horizonSight(camera.position, at) > 0.5 && !covered && !underHud(el) && !(noClip && underTopBar(el));
     el.style.opacity = shown ? '1' : '0'; // never over a HUD panel (#175)

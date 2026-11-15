@@ -8,7 +8,7 @@ import { Anchor } from './Anchor';
 import { capitalPoint } from './geo';
 import { STACK, cityKey } from './cityStack';
 
-const FAR = 2.5;       // camera distance past which a cut tag shrinks to its letter pile
+const FAR = 3.4;       // camera distance past which a cut tag shrinks to its letter pile (a new world opens at 3.05: the plate must show there)
 const LIMB = 0.3;      // cut tags hide well before the horizon (a blackout cuts every nation)
 
 // One marker per cut nation (B14): the sealed-letter pile and "SIGNAL LOST / silent 42 yrs · 49 queued".

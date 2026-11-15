@@ -1,5 +1,6 @@
 import { useWorld } from '../state/world';
 import { BIOME_COLORS } from '../globe/palette';
+import { TERRAIN_MOUNTAIN_CSS } from '../globe/mesh/colors';
 import { TERRAIN_LABELS, effectsLine } from '../globe/terrain/effects';
 import type { Terrain } from '@terra/shared';
 import { usePresence } from '../ui/motion/usePresence';
@@ -9,7 +10,7 @@ const ROWS: [Terrain, string][] = [
   ['plains', BIOME_COLORS.plains],
   ['forest', BIOME_COLORS.forest],
   ['hills', BIOME_COLORS.hills],
-  ['mountain', BIOME_COLORS.mountain],
+  ['mountain', TERRAIN_MOUNTAIN_CSS], // the lifted ground colour, not the raw biome slate
   ['desert', BIOME_COLORS.desert],
   ['ice', BIOME_COLORS.ice],
 ];

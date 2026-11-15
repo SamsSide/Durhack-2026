@@ -11,6 +11,8 @@ export type MapMode = 'political' | 'terrain' | 'diplomacy' | 'strength' | 'weal
 const tmp = new THREE.Color();
 /** What mountain ground is pulled half way toward in terrain mode: a warm stone grey. */
 const MOUNTAIN_LIFT = '#8d8478';
+/** Mountain ground as terrain mode draws it (the biome colour with the lift), for the legend swatch. */
+export const TERRAIN_MOUNTAIN_CSS = `#${new THREE.Color(BIOME_COLORS.mountain).lerp(new THREE.Color(MOUNTAIN_LIFT), 0.5).getHexString()}`;
 const WHITE = new THREE.Color('#ffffff');
 
 function strengthByCountry(world: World): { value: Float64Array; max: number } {

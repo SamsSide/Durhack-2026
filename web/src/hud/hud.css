@@ -322,3 +322,6 @@ body:has(.closing-veil) :is(.news-slot, .event-feed-slot, .left-net, .left-dock,
 /* Motion: a legend rises into place when its map mode is chosen and sinks as the next one arrives. */
 .legend-box { --m-y: var(--motion-slide-sm); animation: tn-m-in var(--motion-base) var(--motion-ease) backwards; }
 .legend-box.tn-m-out { animation: tn-m-out var(--motion-exit) var(--motion-ease-exit) forwards; pointer-events: none; }
+/* The Create screen or founding card over a running world: the war marker hides with the other globe anchors
+   (Anchor.tsx and EventBeacons.tsx hide theirs each frame), so no bright pin shows through the veil. */
+body:has(.tn-world-veil) .war-swords { opacity: 0 !important; }

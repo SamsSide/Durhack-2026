@@ -108,7 +108,7 @@ const BeaconView = memo(function BeaconView({ b, reduced }: { b: Beacon; reduced
     const facing = camera.position.dot(dir) / camera.position.length();
     const pin = el.querySelector<HTMLElement>('.ev-pin');
     // Below the HUD (#175): hidden while a panel (nation card, network, feed) covers it.
-    const show = facing > 0.2 && document.querySelector('.closing-veil') === null && !(pin && underHud(pin));
+    const show = facing > 0.2 && document.querySelector('.closing-veil, .tn-world-veil') === null && !(pin && underHud(pin));
     if (el.classList.contains('away') === show) el.classList.toggle('away', !show);
   });
   const [spent, setSpent] = useState(-1); // the generation whose pillar has finished
