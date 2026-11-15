@@ -35,6 +35,9 @@ A deeper simulation, so a Cold War style story (a space race, spies, an arms rac
 - **A space race.** Rival nations compete for firsts (first satellite, first crewed flight, a moon landing) with prestige for the winner; the satellites already launched from the modern age (#358) are the start.
 - **Prisoners of war and defectors.** Captured soldiers and scientists who change sides carry research with them.
 - **Farms and factories that are built, not only shown.** Nations choose where to build farms, mines and factories by terrain and need; output feeds food, industry and research, and shows on the globe as fields, mines and smoke stacks.
+- **A working economy with production chains.** Mines and farms feed factories, factories feed shops and the army; fuel depots supply armies and fleets. Several buildings can share one province. War needs the chain: an army without fuel or arms slows down, so factories, mines and fuel depots become targets.
+- **Allies that share and then drift apart.** Allies trade resources and build in each other's lands (a mine or a base in an ally's province), call each other to war, and sometimes one takes the other over. Over years shared resources, rivalries and grievances change how they see each other, and an alliance can sour into hostility. Builds on the existing relation stances and grievances.
+- **Nations whose character changes.** A friendly nation can turn hostile, or a harsh one mellow, over decades, driven by wars, rulers, prosperity and hardship. Builds on the national mood from #358 (temperament that shifts within bounds); this would widen those bounds and make the change visible in the story.
 - **Where people come from.** Migration between nations (refugees from wars, workers to rich cities) changes population and unrest.
 
 ## Demo and tooling
