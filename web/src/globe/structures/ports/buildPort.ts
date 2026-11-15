@@ -261,10 +261,12 @@ export function buildPort(world: World, s: Structure, g: TileGeo, ocean: number,
       const high = dk - pk > 0.0015;
       const walk = high ? pk : dk, w0 = high ? e : e - 0.03 * U;
       if (high) {
-        slab(e - 0.045 * U, e - 0.014 * U, 0, 2 * QH + 0.01 * U, C.stone);
-        box(e - 0.0295 * U, 0, dk, 0.035 * U, 0.0008, 2 * QH + 0.014 * U, C.coping);
-        slab(e - 0.014 * U, e, 0, 2 * QH, C.stoneDark, (dk + pk) / 2);
-        const steps = 6, s0 = e - 0.014 * U, sl = (face - 0.006 * U - s0) / steps;
+        // The wall's face stands just proud of the tile's own cliff (which is at `e`), or the cliff would hide it.
+        const wf = e + 0.004 * U;
+        slab(e - 0.045 * U, wf, 0, 2 * QH + 0.01 * U, C.stone);
+        box((e - 0.045 * U + wf) / 2 + 0.001 * U, 0, dk, wf - e + 0.049 * U, 0.0008, 2 * QH + 0.014 * U, C.coping);
+        slab(wf, wf + 0.01 * U, 0, 2 * QH, C.stoneDark, (dk + pk) / 2);
+        const steps = 6, s0 = wf, sl = (face - 0.006 * U - s0) / steps;
         for (let i = 0; i < steps; i++) slab(s0 + i * sl, s0 + (i + 1) * sl, 0.025 * U, 0.05 * U, C.coping, dk - ((dk - pk) * (i + 1)) / (steps + 1));
       }
       slab(w0, face, 0, 2 * QH, C.pile, walk - 0.0006);
