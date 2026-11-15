@@ -46,6 +46,7 @@
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
+  text-overflow: ellipsis;
   font-family: var(--font-display);
   font-size: 11px;
   line-height: 14px;
