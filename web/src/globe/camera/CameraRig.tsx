@@ -33,6 +33,9 @@ const isTyping = (t: EventTarget | null): boolean => {
 };
 const wrapPi = (a: number): number => a - Math.round(a / (2 * Math.PI)) * 2 * Math.PI;
 
+/** How far back a new world opens: the whole globe fits under the top bar. */
+const OPEN_DISTANCE = 3.05;
+
 export function CameraRig() {
   const ref = useRef<CameraControlsImpl>(null);
   const panel = useLeftPanelKind();
@@ -285,6 +288,39 @@ export function CameraRig() {
     if (!c || !centre) return;
     fly.current(centre, FLY_DISTANCE);
   }, [nonce]);
+
+  // A new world opens on the side of the planet with the most nations in view, far enough back to
+  // show the whole globe (it used to keep the last view, often empty ocean with the planet cropped).
+  const worldId = world?.id;
+  useEffect(() => {
+    const w = useWorld.getState().world;
+    if (!ref.current || !w) return;
+    const caps: (readonly [number, number, number])[] = [];
+    for (const c of w.countries) {
+      const centre = c && c.alive !== false ? w.tiles[c.capitalTile]?.center : undefined;
+      if (centre) caps.push(centre);
+    }
+    if (caps.length === 0) return;
+    const sum: [number, number, number] = [0, 0, 0];
+    for (const p of caps) { sum[0] += p[0]; sum[1] += p[1]; sum[2] += p[2]; }
+    let best: readonly [number, number, number] = caps[0]!, bestScore = -Infinity;
+    for (const cand of [sum, ...caps]) {
+      const len = Math.hypot(cand[0], cand[1], cand[2]);
+      if (len < 1e-6) continue;
+      let score = 0;
+      for (const p of caps) {
+        const d = (p[0] * cand[0] + p[1] * cand[1] + p[2] * cand[2]) / (len * (Math.hypot(p[0], p[1], p[2]) || 1));
+        if (d > 0.3) score += 1 + d * 0.5;   // a capital on the facing side, better near the middle
+      }
+      if (score > bestScore) { bestScore = score; best = cand; }
+    }
+    // keep the view near the equator band so the poles do not fill the opening shot
+    const len = Math.hypot(best[0], best[1], best[2]) || 1;
+    const y = Math.max(-0.5, Math.min(0.5, best[1] / len));
+    const flat = Math.hypot(best[0], best[2]) || 1;
+    const k = Math.sqrt(1 - y * y) / flat;
+    fly.current([best[0] * k, y, best[2] * k], OPEN_DISTANCE);
+  }, [worldId]);
 
   // Fly to a single tile: beacon clicks, the spotlight tour, 'terra:focus-tile' from the feed.
   useEffect(() => onFocusTile((tile) => {
