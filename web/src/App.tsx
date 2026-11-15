@@ -18,7 +18,7 @@ const NewsBroadcast = (ui as unknown as Record<string, ComponentType | undefined
 const overlay: CSSProperties = { position: 'absolute', zIndex: 5 };
 // The Create screen or the founding card over a running world: the veil is nearly opaque, so the old world's
 // chips, labels, feed cards, scrolls and markers (in the canvas and in the HUD) drop away and the globe is a
-// dim shape behind the card. With no world yet the light veil stays, and the real Earth shows through it.
+// dim shape behind the card (`tn-world-veil` also tells the globe's HTML anchors to hide: bright pins showed through). With no world yet the light veil stays, and the real Earth shows through it.
 const VEIL_OVER_WORLD = 'radial-gradient(ellipse at center, rgba(5,6,10,.88), rgba(5,6,10,.96))';
 
 export function App() {
@@ -96,7 +96,7 @@ export function App() {
       <ClosingCard />
       {world && <HoverTooltip />}
       {createP.mounted && (
-        <div className={createP.leaving ? 'tn-m-veil-out' : undefined} style={{ ...overlay, inset: 0, zIndex: 10, background: world ? VEIL_OVER_WORLD : 'radial-gradient(ellipse at center, rgba(5,6,10,.35), rgba(5,6,10,.7))', display: 'grid', placeItems: 'center' }} onClick={() => world && setCreating(false)}>
+        <div className={`${world ? 'tn-world-veil' : ''}${createP.leaving ? ' tn-m-veil-out' : ''}`} style={{ ...overlay, inset: 0, zIndex: 10, background: world ? VEIL_OVER_WORLD : 'radial-gradient(ellipse at center, rgba(5,6,10,.35), rgba(5,6,10,.7))', display: 'grid', placeItems: 'center' }} onClick={() => world && setCreating(false)}>
           <div className={createP.leaving ? 'tn-m-out tn-m-from-below' : undefined} onClick={(e) => e.stopPropagation()}>
             <CreateScreen />
           </div>
