@@ -527,10 +527,13 @@ More detail, the algorithms and the problems we hit: [`docs/documentation.md`](d
 | [`assets/`](assets/) | Blender sources and model previews |
 | [`scripts/`](scripts/) | The demo scripts, Solana key setup, git hooks and team scripts |
 | [`docs/`](docs/) | How it works, the submission, contracts, research, screenshots and plans |
+| [`demo/`](demo/) | The demo pack: the 2-minute script, a cheat sheet, judge Q&A and a short read on how it works |
 | [`check.sh`](check.sh) | The smoke gate |
 
 ## Docs
 
+- [`demo/`](demo/README.md): the demo pack. Start here for the table demo: how to launch it, the
+  timed script, a one-page cheat sheet, judge Q&A and a five-minute read on how it all works
 - [`docs/documentation.md`](docs/documentation.md): how Terra Nova works, its algorithms, the
   problems we hit and judge Q&A
 - [`docs/submission.md`](docs/submission.md): the submission text

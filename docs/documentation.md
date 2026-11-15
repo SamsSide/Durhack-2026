@@ -217,7 +217,7 @@ P(attacker wins) = A^1.6 / (A^1.6 + D^1.6)
   (4.9), the nation falls if it is down to its last few provinces or lost its capital and is small
   (`shouldFall`), and the loser's general may die (4.6).
 - **Complexity:** O(units + structures) per attack. Fine at demo scale (hundreds of units).
-- **Why not an LLM or a referee:** a battle every few ticks at 64x speed must be instant, cheap and
+- **Why not an LLM or a referee:** a battle every few ticks at ten years a second must be instant, cheap and
   agreed by every replica with no messages.
 - **Reference:** [Lanchester's laws](https://en.wikipedia.org/wiki/Lanchester%27s_laws).
 
@@ -456,9 +456,10 @@ stateDiagram-v2
 
 ### 4.12 The pacing director
 
-`server/src/engine/clock.ts`, `engine/bigMoments.ts`. Speed is continuous from 0.1x to 64x of a base
-rate of 2 years a second. The clock turns wall time into whole ticks and carries the fraction, so
-64x is 128 ticks a second without drift (at most 16 ticks per timer fire). With pacing `auto`, the
+`server/src/engine/clock.ts`, `engine/bigMoments.ts`. Speed is continuous from 1/104 to 5 times a base
+rate of 2 years a second: one week a second up to ten years a second, shown as ten gears, and new
+worlds start at three months a second. The clock turns wall time into whole ticks and carries the
+fraction, so the top gear is 10 ticks a second without drift (at most 16 ticks per timer fire). With pacing `auto`, the
 chosen speed is a ceiling: a **big moment** (a war declared, a battle for a capital, a fall, a new
 nation, a decree, a cut, a return, a dispute) drops the speed to `min(target, 1)` for 8 seconds,
 then it eases back exponentially over 3 seconds. Pause always wins. The same director runs in live,
@@ -579,10 +580,9 @@ canonical order, derived ones are held back, and every payment is clamped to wha
 - **The chain records payments between nations only**, not income; treasuries live in the sim. Devnet may reset,
   which would break old Explorer links.
 - **Painted flags** need Gemini image billing and are off.
-- **Not built yet:** the timeline scrubber (B9); lane b's economy rows B10 to B13 are in progress.
-  Rows still `testing` (a person has not signed them off): Tiger Data (A11, needs a database URL),
-  anthems and chants (A15, A16), future and stellar ages (A26), terrain (A28), councils (A29),
-  wonders (A30).
+- **Not signed off by a person** (rows still `testing` in the lane files): the timeline scrubber
+  (B9), economy depth (B11), Tiger Data (A11, needs a database URL and is off), anthems and chants
+  (A15, A16), future and stellar ages (A26), terrain (A28), councils (A29), wonders (A30).
 - **Scale:** rules scan all provinces per nation per turn (O(nations x provinces)); fine at 1,200
   provinces and 16 nations, not tuned beyond.
 
@@ -591,6 +591,10 @@ canonical order, derived ones are held back, and every payment is clamped to wha
 None known at the time of writing; the mismatches found on 14 Nov were fixed in the docs.
 
 ## 8. Judge prep
+
+*The demo pack is in [`demo/`](../demo/README.md): the script, a one-page cheat sheet, this judge
+Q&A and a short "how it works" read, copied from here and from `docs/submission.md` section 3. Fix
+the source first, then the copy.*
 
 ### The 30-second pitch
 
@@ -603,24 +607,30 @@ anthem sung from what really happened to it."
 
 ### The 2-minute demo
 
-Given live at the table on the owner's laptop, again for every judge (no video); the timed script
-and the reset routine are in `docs/submission.md` section 3. The outline:
+Given live at the table on the owner's laptop, again for every judge (no video). It starts from a
+prepared world a few hundred years in, in presentation mode; the timed script and the reset routine
+are in `docs/submission.md` section 3 (copy in `demo/script.md`). The seven beats:
 
-1. A judge gives a prompt (and a picture). Six nations, Create: a planet forms with named nations,
-   leaders and flags (about 5 to 7 s).
-2. Speed up: borders spread, camps become cities, ages advance, ships cross the oceans; the director
-   slows down for every war.
-3. Click a nation: the card, its council, its narrated lore and its anthem.
-4. A war: armies march, battles, chants; the ledger shows plunder and reparations with Explorer
-   links.
-5. **The moment:** cut a nation mid-war, show its beliefs drifting, neighbours notice the silence;
-   delete another and watch it carved up; restore and see the disputes settled and "the Silence" in
-   the chronicle.
-6. Speak a decree ("a plague sweeps the southern coast"); Terra Nova News reports it.
-7. Close on the token meter and the Entire session history.
+1. Orbit, gears at a few years a second: "a new world composed live by AIs", every nation with its
+   own Gemini ruler and its own wallet.
+2. **The moment:** cut a nation in the Network panel and press Show beliefs: its map drifts from
+   the truth while it keeps ruling.
+3. Kill its ruler: a stand-in covers, then a successor inherits the memory. Restore the link: the
+   missing years merge in, the dispute is settled by one rule and "the Silence" is in the chronicle.
+4. The globe and the money: ten years a second for a few seconds, then click a gold payment arc and
+   open it in the Solana Explorer.
+5. Ages from bows to starships: two map modes, and a satellite shot down (or the port and sea
+   battle beat) if one has happened.
+6. Click a nation: the card, its ruler, mood and treasury, its narrated lore and its anthem.
+7. Hold the mic and speak a decree ("a plague in the north"); Terra Nova News reports it. Close on
+   the closing card (End): the token meter.
 
-**If the live demo breaks:** play `demo-1` (`POST /api/replays/demo-1/play`): no API calls, exact
-replay, cached audio. Mock mode (`npm run mock`) needs no keys. Screenshot of a confirmed devnet
+A judge can give their own prompt on the Create screen afterwards (the world bible takes about 5 s,
+about 7 s with a picture).
+
+**If the live demo breaks:** play the saved replay `demo-1` (World: Saved replay demo-1 in setup, or
+`npm run demo:reset -- --replay demo-1`): no API calls, exact replay, cached audio. The failure
+plays are in `docs/demo.md` section 6. Mock mode (`npm run mock`) needs no keys. Screenshot of a confirmed devnet
 payment: `docs/shots/solana-devnet-payment.jpg`.
 
 ### Prize angles
@@ -632,7 +642,11 @@ payment: `docs/shots/solana-devnet-payment.jpg`.
 | MLH Gemini | Gemini rules every nation and is multimodal: a picture in, speech in, the map image in for the news | `llm/index.ts`, `bibleAi.ts`, `decrees.ts`, `broadcast.ts` |
 | MLH ElevenLabs | Narration, history-driven anthems, war chants, a news anchor in the team's own voices | `server/src/story/` |
 | MLH Solana | Every coin between nations is a Token-2022 transfer signed by the payer's own wallet, with a memo | `server/src/chain/` |
-| MLH Entire | Built by agents on three laptops, every session recorded and linked to commits | `.entire/`, `Entire-Checkpoint` trailers |
+| Waterstons (weak fit, one line) | Language models, a simulation, cloned voices, generated music and a public chain connected into one living map | the whole app |
+| Main track (Composition) | A world, its history, money and music composed live by many authors | the demo itself |
+
+Not entered (owner rulings), so never present them as entries: MLH Entire (sessions are still
+recorded) and MLH Tiger Data (the code is optional and off).
 
 ### Likely questions with answers
 
@@ -690,12 +704,13 @@ payment: `docs/shots/solana-devnet-payment.jpg`.
 20. *Is the supply real?* Fixed at 1,000,000 with the mint authority revoked at genesis; every
     incoming transfer must carry a memo.
 
-**Entire and process**
+**Process**
 
 21. *How did you split the work?* Three lanes (world and story, globe, interface), a contract file
     for every interface, mocks first, PRs only to `main`, cross-lane requests as GitHub issues.
-22. *How did you use AI?* Claude Code agents built most of the code from short plans; Entire records
-    each session and links it to commits (pushing sessions is off until the owner turns it on).
+22. *How did you use AI?* Claude Code agents built most of the code from short plans, one lane per
+    person, with a smoke gate on every pull request. Sessions are recorded with Entire and linked to
+    commits; we did not enter the Entire prize.
 
 **Technical depth**
 
@@ -703,7 +718,8 @@ payment: `docs/shots/solana-devnet-payment.jpg`.
     relaxation; the convex hull gives the triangulation in O(n log n).
 24. *How does the battle maths work?* A contest function with exponent 1.6 between Lanchester's
     linear and square laws, plus terrain, forts, landings, age gap, wonders and command.
-25. *Does it scale?* Comfortably at 1,200 provinces and up to 16 nations at 64x speed on one laptop;
+25. *Does it scale?* Comfortably at 1,200 provinces and up to 16 nations at ten years a second (the top gear) on one
+    laptop;
     the rules scan provinces per nation, so much larger maps would need spatial indexes. We have not
     benchmarked beyond the demo size.
 
@@ -725,8 +741,8 @@ payment: `docs/shots/solana-devnet-payment.jpg`.
 
 Short answers for the features that landed late.
 
-- **Time gears.** Speed runs from a week a second to ten years a second (new worlds start at a
-  month a second); the client shows month and day between yearly ticks and units glide, and the
+- **Time gears.** Speed runs from a week a second to ten years a second (new worlds start at
+  three months a second); the client shows month and day between yearly ticks and units glide, and the
   pacing director still slows for big moments.
 - **Prepare mode.** `prepare: true` pauses a new world while lore, narration, chants, anthems and
   each ruler's first decision are made in parallel within the budgets; a readiness panel shows
@@ -752,8 +768,10 @@ Short answers for the features that landed late.
   trimmed by the shared `applyEvent`; the full log streams from `GET /api/world/log` on disk.
 - **Stability fixes.** The payment-arc label loop that froze the tab was removed and the server
   now survives chain and socket errors.
-- **Timeline scrubber and Tiger Data chart.** The scrubber rebuilds the globe at any past year
-  from the log; the territory chart reads the continuous aggregate every 5 s.
+- **Timeline scrubber.** The scrubber rebuilds the globe at any past year from the log.
+- **Territory chart (optional, off for the demo).** A Stats tab in the Network panel charts each
+  nation's territory from Tiger Data; the tab only exists when `TIGER_DATABASE_URL` is set and the
+  database answers. We did not enter the Tiger Data prize.
 
 ### How the interface shows it
 
@@ -877,8 +895,9 @@ name. Deeper answers are in "Likely questions with answers" above.
 
 1. *How does it run 1,200 provinces smoothly?* Instanced models, layers that rewrite only what
    changed, a capped pixel ratio, and world reads at most ten times a second.
-2. *Does it hold 60 frames a second?* At a month a second, yes in orbit. At ten years a second it
-   does not yet on a busy laptop; we say so.
+2. *Does it hold 60 frames a second?* Yes in orbit at normal speeds: about 150 on the demo laptop
+   (production build, RTX GPU), 130 at ground level. At the top gear with local Gemma answering it
+   drops to about 50 with visible hitches; a saved replay holds about 145 at ten years a second.
 3. *Is the Solana payment real?* A real devnet Token-2022 transfer plus a memo, signed by the paying
    nation's own key. Click an arc to open it in the Explorer.
 4. *Why isn't the treasury on chain?* The simulation is the source of truth; the chain is a mirror
@@ -904,7 +923,9 @@ name. Deeper answers are in "Likely questions with answers" above.
    image and the chronicle, and an animated anchor reads it in one of our cloned voices.
 6. *How did you build against other lanes?* Against mocks of the contracts in `docs/contracts.md`,
    swapped for the real thing at the checkpoint.
-7. *What is not finished?* Many rows are still `testing`; painted flags need image billing.
+7. *What is not finished?* Painted flags need image billing. The hand tests run on the final build
+   passed, but not every row in the lane files has been signed off by a person (many still say
+   `testing`).
 
 ## 9. Who built what
 
