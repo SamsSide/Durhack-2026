@@ -373,6 +373,7 @@ Which model answers is a switch (`LLM_MODE=live` only; mock never calls anything
 | `GEMMA_API_MODEL` | The Gemma id for `gemma-api` (default `gemma-4-26b-a4b-it`) |
 | `OLLAMA_HOST`, `OLLAMA_MODEL` | Where Ollama listens (default `http://localhost:11434`) and its model (default `gemma4:e4b-it-qat`; run `ollama pull gemma4:e4b-it-qat` once) |
 | `OLLAMA_TIMEOUT_MS` | How long a local answer may take (default 20000) |
+| `OLLAMA_QUEUE_MAX`, `OLLAMA_QUEUE_WAIT_MS`, `OLLAMA_ROUTINE_WAIT_MS` | Local calls wait in line and are sent one at a time, decrees, lore, news and the bible first: the longest line (default 24), and how long an urgent call (default 60000) or a ruler turn or chant (default 20000) may wait before it is dropped |
 | `OLLAMA_BIBLE`, `OLLAMA_BIBLE_TIMEOUT_MS` | With `LLM_PROVIDER=ollama` the world bible (one long answer when a world is founded) still goes to Gemini when a Gemini key is set, because a laptop model needs over a minute for it. `OLLAMA_BIBLE=1` keeps it local, with this long to answer (default 75000) before the template is used |
 | `LLM_LOCAL_PURPOSES` | In `hybrid`, the purposes sent to Ollama (default `ruler`); the rest stay on Gemini |
 

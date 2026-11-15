@@ -218,7 +218,57 @@ async function viaGemini(opts: LlmJsonOptions, model: string): Promise<Raw> {
   };
 }
 
-async function viaOllama(opts: LlmJsonOptions, model: string): Promise<Raw> {
+// --- the local queue ----------------------------------------------------------
+// Ollama answers one request at a time on a laptop GPU. Sent all at once (a prepare run, six rulers
+// in the same year) the later ones sat in its queue until their own timeout fired and failed. So calls
+// wait here in line instead, and each one's timeout starts when it is actually sent. What a person
+// is waiting for (a decree, lore for an open card, the news, the bible) goes ahead of ruler turns
+// and chants. A call that would wait too long is dropped so stale ruler turns never pile up.
+const OLLAMA_QUEUE_MAX = () => envNum('OLLAMA_QUEUE_MAX', 24);
+const OLLAMA_QUEUE_WAIT_MS = () => envNum('OLLAMA_QUEUE_WAIT_MS', 60_000);       // urgent calls
+const OLLAMA_ROUTINE_WAIT_MS = () => envNum('OLLAMA_ROUTINE_WAIT_MS', 20_000);  // a ruler turn older than this is stale
+const URGENT = new Set(['decree', 'lore', 'broadcast', 'bible']);
+interface Waiting { run: () => void; fail: (e: Error) => void; at: number; maxWait: number }
+const urgentQ: Waiting[] = [], routineQ: Waiting[] = [];
+let localBusy = false;
+
+function nextLocal(): void {
+  if (localBusy) return;
+  const now = Date.now();
+  for (;;) {
+    const w = urgentQ.shift() ?? routineQ.shift();
+    if (!w) return;
+    if (now - w.at > w.maxWait) { w.fail(new Error('local model busy: waited too long in the queue')); continue; }
+    localBusy = true;
+    w.run();
+    return;
+  }
+}
+
+function inLocalQueue<T>(purpose: string, job: () => Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const q = URGENT.has(purpose) ? urgentQ : routineQ;
+    if (urgentQ.length + routineQ.length >= OLLAMA_QUEUE_MAX()) {
+      // full: an urgent call takes the place of the oldest routine one; a routine call is refused
+      const dropped = q === urgentQ ? routineQ.shift() : undefined;
+      if (!dropped) { reject(new Error('local model busy: queue full')); return; }
+      dropped.fail(new Error('local model busy: dropped for an urgent call'));
+    }
+    q.push({
+      at: Date.now(),
+      maxWait: q === urgentQ ? OLLAMA_QUEUE_WAIT_MS() : OLLAMA_ROUTINE_WAIT_MS(),
+      fail: reject,
+      run: () => { job().then(resolve, reject).finally(() => { localBusy = false; nextLocal(); }); },
+    });
+    nextLocal();
+  });
+}
+
+function viaOllama(opts: LlmJsonOptions, model: string): Promise<Raw> {
+  return inLocalQueue(opts.purpose, () => askOllama(opts, model));
+}
+
+async function askOllama(opts: LlmJsonOptions, model: string): Promise<Raw> {
   const res = await fetch(`${ollamaHost()}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
