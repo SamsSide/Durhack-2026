@@ -19,6 +19,11 @@ import { usePipHidden } from '../pip/pipLod';
 
 const RENDER_ORDER = 900; // before the names (1000) so the clouds never veil them
 const COVER = 0.61;       // noise threshold: higher means fewer, smaller clouds
+// A new world opens under a thin sky, so no cloud sits on a capital or its name while the nations are
+// first seen; the cover fades back to normal afterwards. One uniform, no extra work per frame.
+const OPEN_THIN = 0.2;    // added to the threshold at the opening
+const OPEN_HOLD_S = 16;   // seconds the sky stays thin
+const OPEN_FADE_S = 12;   // seconds for the clouds to gather again
 
 /** Quality levels: march steps, render-target scale of the drawing buffer, and a pixel cap. */
 const LEVELS = [
@@ -98,7 +103,7 @@ export function Clouds() {
     };
   }, [quality]);
 
-  const st = useRef({ tick: 0, tickWorld: '', drift: 0, avg: 16, since: -3, trial: false, before: 16, hold: 0, clearFor: -2 as number, clearK: 0 }).current;
+  const st = useRef({ tick: 0, tickWorld: '', drift: 0, avg: 16, since: -3, trial: false, before: 16, hold: 0, clearFor: -2 as number, clearK: 0, openWorld: '', openAt: -1e9 }).current;
 
   useFrame(({ gl, camera }, dtRaw) => {
     const dt = Math.min(dtRaw, 0.1);
@@ -158,6 +163,8 @@ export function Clouds() {
       (u.uSysP!.value as THREE.Vector4[])[i]!.set(w.intensity, w.storm, w.spin, w.rain);
       (u.uFlash!.value as THREE.Vector4[])[i]!.set(w.flashPos.x, w.flashPos.y, w.flashPos.z, Math.max(w.flash, w.storm > 0.3 ? quality.flash : 0)); // quality.flash: dev hold for screenshots
     }
+    if (world && st.openWorld !== world.id) { st.openWorld = world.id; st.openAt = world.tick <= 3 ? now : -1e9; }
+    u.uCover!.value = COVER + OPEN_THIN * (1 - smooth01((now - st.openAt - OPEN_HOLD_S) / OPEN_FADE_S));
     u.uTime!.value = st.drift;
     u.uSteps!.value = q.steps;
     u.uClearK!.value = st.clearK;
