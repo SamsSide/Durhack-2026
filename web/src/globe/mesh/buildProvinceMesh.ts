@@ -152,8 +152,11 @@ export function buildProvinceMesh(world: World): ProvinceMesh {
         const stepDown = !otherSea && ho < h - 1e-6;
         const ha = stepDown ? Math.min(hb, cornerFloor.get(key(a)) ?? hb) : hb;
         const hbb = stepDown ? Math.min(hb, cornerFloor.get(key(b)) ?? hb) : hb;
-        push(a, ha, out, bot); push(b, hbb, out, bot); push(b, hr, out, top);
-        push(a, ha, out, bot); push(b, hr, out, top); push(a, hr, out, top);
+        // A gentle step's wall is lit as the ground above it (the up normal), not as a side face: in shade it
+        // read as a thin dark triangle on flat owned land even with the land colour.
+        const wn = !otherSea && hr !== h ? null : out;
+        push(a, ha, wn, bot); push(b, hbb, wn, bot); push(b, hr, wn, top);
+        push(a, ha, wn, bot); push(b, hr, wn, top); push(a, hr, wn, top);
       }
       // Corner fillers: where the two rim bands meet at different heights, close the wedge between them.
       for (let i = 0; i < k; i++) {
