@@ -50,6 +50,8 @@ export function PreparePanel() {
   if (!mounted || !prepare || !world) return null;
   const { done, ready, total, items } = prepare;
   const failed = items.filter((it) => it.status === 'failed').length;
+  // voice off (or no ElevenLabs key): only lore and the first ruler turns are made
+  const silent = !items.some((it) => it.kind === 'narration' || it.kind === 'chant' || it.kind === 'anthem');
   const ids = [...new Set(items.map((it) => it.countryId))];
   const nations = world.countries.filter((c) => ids.includes(c.id));
   const pct = total > 0 ? Math.min(100, ((ready + failed) / total) * 100) : 0;
@@ -63,7 +65,8 @@ export function PreparePanel() {
             <h2 className="tn-prep-title">{done ? 'The world is ready' : 'Preparing the world'}</h2>
             <p className="tn-prep-sub">{done
               ? `${world.name} waits paused. Press play to begin.`
-              : 'The world waits paused while lore, voices, chants and anthems are made.'}</p>
+              : silent ? 'The world waits paused while lore and the first ruler turns are made. Voice is off.'
+                : 'The world waits paused while lore, voices, chants and anthems are made.'}</p>
           </div>
           <button type="button" className="tn-button tn-button--lacquer tn-button--sm tn-prep-hide" onClick={hide} title="Hide (Esc)">Hide</button>
         </header>
@@ -95,7 +98,7 @@ export function PreparePanel() {
 
         <footer className="tn-prep-foot">
           <p className="tn-prep-note">{done
-            ? (failed > 0 ? 'What failed will be made again when it is first needed.' : 'Every voice, chant and anthem is waiting.')
+            ? (failed > 0 ? 'What failed will be made again when it is first needed.' : silent ? 'Lore and the first ruler turns are waiting. Voice is off.' : 'Every voice, chant and anthem is waiting.')
             : 'You can start at any time. The rest carries on in the background.'}</p>
           <button type="button" className={`tn-button tn-button--gilt tn-button--lg tn-prep-play${done ? ' ready' : ''}`} onClick={play} autoFocus>
             <svg width="12" height="14" viewBox="0 0 12 14" aria-hidden="true"><path d="M1 1L11 7L1 13Z" fill="currentColor" /></svg>
