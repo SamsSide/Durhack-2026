@@ -54,6 +54,7 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   moored boats. The look follows the nation's tech age: timber jetties and a lighthouse, then stone quays with a
   crane and steamers, then a container terminal with gantry cranes and a container ship, then floating docks.
   Coastal towns get a small pier of the same age.
+  ![A modern container port with gantry cranes beside the capital](docs/shots/ports.jpg)
 - **Wonders** from the Great Wall to a space elevator.
 - **Trees by climate:** oak, birch and poplar woods in temperate land, pine and snowy pine towards the
   poles and the mountains, palms on hot coasts, acacia and scrub by the deserts.
