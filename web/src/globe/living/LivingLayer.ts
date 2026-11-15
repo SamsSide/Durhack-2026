@@ -614,7 +614,10 @@ export class LivingLayer {
         _h.copy(f.t1).multiplyScalar(-sa).addScaledVector(f.t2, ca);
         if (f.sp < 0) _h.negate();
         const flap = Math.sin(life * 9 + k * 2.4 + f.ph * 9);
-        standMatrix(_m, _p, _h, f.size * vis, -0.35 * Math.sign(f.sp));
+        // a bird that wheels right past a low camera would fill the view as a dark shard: it shrinks away
+        const nearCam = THREE.MathUtils.smoothstep(_p.distanceTo(camera.position), 0.035, 0.13);
+        if (nearCam <= 0) continue;
+        standMatrix(_m, _p, _h, f.size * vis * nearCam, -0.35 * Math.sign(f.sp));
         _m.scale(_s.set(0.72 + 0.28 * flap, 1 + 1.5 * flap, 1));
         this.pBird.push(_m, _c);
       }
