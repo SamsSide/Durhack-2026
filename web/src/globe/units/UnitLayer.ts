@@ -21,6 +21,8 @@ import { Traders } from './traders';
 import { clockNow, msPerYear } from '../../state/calendar';
 import { UnitModels } from './unitModels';
 import { RestSpots } from './restSpots';
+import { TerrainLookup, groundView } from '../camera/groundView';
+import { groundSight, horizonSight } from '../status/sight';
 import { formationSlots } from './formation';
 import type { Slot } from './formation';
 import { ROLE_BACK, ROLE_FLANK, ROLE_FRONT, firingFeed } from '../war/firingFeed';
@@ -66,6 +68,7 @@ const LOSS_MS = 2000;
 // counter with the summed strength; other overlapping counters are lifted one slot at a time.
 const MERGE_PX = 24;
 const DECLUTTER_MS = 150;
+const SIGHT_MS = 160;           // a counter going behind a hill or the horizon fades over about this long
 const MAX_LIFT = 4;
 
 function tok(name: string, fallback: string): string {
@@ -109,6 +112,8 @@ interface Chip {
   dying: { start: number; shatter: boolean } | null;
   /** Hidden this frame because a nearby counter of the same nation shows its strength. */
   absorbed: boolean;
+  sight: number;          // 0..1: how clearly the camera sees its spot (0 behind the horizon, a hill or a town)
+  sightGoal: number;      // what `sight` eases towards, re-read a few times a second
   stackN: number;         // how many army and fleet counters rest on its tile (itself included)
   fitAt: number;          // when its place in the tile was last eased (0 = never)
   fitK: number;           // figure spacing, as a share of the open-ground spacing (the formation fits the tile)
@@ -214,6 +219,7 @@ export class UnitLayer {
   private lastNow = 0;
   private declutterAt = -1e9;
   private lastDt = 16;
+  private readonly terrain: TerrainLookup;
   private clockMs = msPerYear();   // real ms a year took at the last frame
   private viewH = 1.2;             // height of the view at the planet's surface, in globe units
   private lastClockAt = 0;
@@ -254,6 +260,7 @@ export class UnitLayer {
     // about a town building: half a tile across, capped so nothing towers over a mountain
     this.unitSize = Math.min(0.04, Math.max(0.01, Math.sqrt((4 * Math.PI) / Math.max(1, world.tiles.length)) * 0.42));
     this.spots = new RestSpots(world, mesh.heights, this.dirs, this.unitSize * 0.6);
+    this.terrain = new TerrainLookup(world);
     world.countries.forEach((c, i) => this.knownAge.set(i, c.techAge ?? 'ancient'));
     this.traders = new Traders({
       dirs: this.dirs,
@@ -531,7 +538,7 @@ export class UnitLayer {
         chip = {
           key, owner: g.owner, kind: g.kind, tile: g.tile, units: g.units, moving: g.moving,
           sprite, mat, texKey: '', aspect: 1, height: CHIP_H, stack: 0, pos: new THREE.Vector3(), dying: null,
-          absorbed: false, stackN: 1, fitAt: 0, fitK: 1, fitOff: 0, fitS: 1, fitIn: 0, lift: null, mergeKey: '', stat: null, statText: '', statTone: 'attack', statHide: false,
+          absorbed: false, sight: 1, sightGoal: 1, stackN: 1, fitAt: 0, fitK: 1, fitOff: 0, fitS: 1, fitIn: 0, lift: null, mergeKey: '', stat: null, statText: '', statTone: 'attack', statHide: false,
         };
         this.chips.set(key, chip);
       }
@@ -614,7 +621,7 @@ export class UnitLayer {
     const items: { chip: Chip; x: number; y: number; w: number; h: number; str: number }[] = [];
     for (const chip of this.chips.values()) {
       chip.lift = null;
-      if (chip.kind === 'settler' || chip.moving || !chip.units.length || facing(chip.pos, _camDir) <= 0) { this.unmerge(chip); continue; }
+      if (chip.kind === 'settler' || chip.moving || !chip.units.length || facing(chip.pos, _camDir) <= 0 || chip.sightGoal <= 0) { this.unmerge(chip); continue; }
       _v.copy(chip.pos).project(camera);
       if (_v.z > 1) { this.unmerge(chip); continue; }
       const hPx = chip.sprite.scale.y * p11 * viewH / 2;
@@ -811,7 +818,7 @@ export class UnitLayer {
       const hs = STATUS_H * zoom, h = chip.height * zoom;
       st.sprite.scale.set(hs * st.aspect, hs, 1);
       st.sprite.center.set(0.5, -((1 - chip.sprite.center.y) * h + 0.2 * hs) / hs);
-      st.mat.opacity = fade * (chip.mat.opacity > 0 ? 1 : 0) * Math.min(1, f * 3);
+      st.mat.opacity = fade * (chip.mat.opacity > 0 ? 1 : 0) * Math.min(1, f * 3) * chip.sight;
     }
   }
 
@@ -1204,8 +1211,14 @@ export class UnitLayer {
     for (const [c, until] of this.fallen) if (until < now) this.fallen.delete(c);
 
     // counters
-    for (const chip of this.chips.values()) this.placeChip(chip, now, zoom);
+    const see = 1 - Math.exp(-dt / SIGHT_MS);
+    for (const chip of this.chips.values()) {
+      chip.sight += (chip.sightGoal - chip.sight) * see;
+      if (Math.abs(chip.sightGoal - chip.sight) < 0.02) chip.sight = chip.sightGoal;
+      this.placeChip(chip, now, zoom);
+    }
     if (now - this.declutterAt > DECLUTTER_MS) {
+      this.readSight(camera);
       this.declutter(camera, viewW, viewH, now);
       for (const chip of this.chips.values()) this.placeChip(chip, now, zoom);
       this.layoutFurniture(camera, viewW, viewH, zoom, dist);
@@ -1345,12 +1358,29 @@ export class UnitLayer {
     if (!this.disposed) this.field.rewind();
   }
 
+  /**
+   * Which counters the camera can really see (status/sight.ts): one behind the planet's curve is hidden at any
+   * zoom, and once the camera tilts towards the ground, so is one behind nearer high ground or a town. Counters
+   * draw over the scene, so without this a fleet beyond a hill appears to sit in the field in front of it.
+   */
+  private readSight(camera: THREE.Camera): void {
+    const low = groundView.tilt > 0.05;
+    for (const chip of this.chips.values()) {
+      if (chip.pos.lengthSq() === 0) { chip.sightGoal = 1; continue; }
+      // judged above the model's head, where the counter floats, so a unit seen over a crest keeps its counter
+      _j.copy(chip.pos).setLength(chip.pos.length() + this.unitSize * 1.5);
+      let s = horizonSight(camera.position, _j);
+      if (s > 0 && low && !groundSight(this.terrain, camera.position, _j, chip.tile)) s = 0;
+      chip.sightGoal = s;
+    }
+  }
+
   private placeChip(chip: Chip, now: number, zoom: number): void {
     const lead = chip.moving ?? chip.units[0];
     if (!lead) { chip.sprite.visible = false; return; }
     this.statePos(lead, now, chip.pos);
     chip.sprite.position.copy(chip.pos);
-    const f = facing(chip.pos, _camDir);
+    const f = facing(chip.pos, _camDir) * chip.sight;
     chip.sprite.visible = f > 0;
     if (!f) return;
     let hop = 0;

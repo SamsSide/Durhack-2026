@@ -7,12 +7,14 @@ import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { P3 } from './geo';
 import { underHud, underTopBar } from './hudCover';
+import { horizonSight } from './sight';
 import { joinStack, leaveStack, stackOffset } from './cityStack';
 import type { StackEntry, StackSpec } from './cityStack';
 
 export function Anchor({ pos, dx = 0, dy = 0, limb, stack, noClip, children }: { pos: P3; dx?: number; dy?: number; limb?: number; stack?: StackSpec; noClip?: boolean; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const dir = useMemo(() => new THREE.Vector3(...pos).normalize(), [pos]);
+  const at = useMemo(() => new THREE.Vector3(...pos), [pos]);
   const slot = useRef<StackEntry | null>(null);
   const curY = useRef<number | null>(null);
   const tile = stack?.tile, priority = stack?.priority, scale = stack?.scale ?? 1;
@@ -33,7 +35,8 @@ export function Anchor({ pos, dx = 0, dy = 0, limb, stack, noClip, children }: {
     const h = Math.min(1, 1 / dist);
     const minFacing = limb == null ? 0.15 : h + (1 - h) * limb;
     const covered = document.querySelector('.closing-veil') !== null;
-    const shown = facing > minFacing && !covered && !underHud(el) && !(noClip && underTopBar(el));
+    // a low camera sees a short way: a tag past the planet's curve hides, however squarely it faces the camera
+    const shown = facing > minFacing && horizonSight(camera.position, at) > 0.5 && !covered && !underHud(el) && !(noClip && underTopBar(el));
     el.style.opacity = shown ? '1' : '0'; // never over a HUD panel (#175)
     el.classList.toggle('gs-hidden', !shown); // and never clickable while hidden
     const e = slot.current;
