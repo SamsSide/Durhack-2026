@@ -45,6 +45,13 @@
 
 /* Header: the government type rides the frame's top edge as a cartouche */
 .tn-card > .tn-cartouche { max-width: calc(100% - 64px); overflow: hidden; text-overflow: ellipsis; }
+/* The government ribbon: a long title ("Theocratic Elective Principality") wraps to a second line
+   instead of losing letters; past two lines it ends with an ellipsis on the right only. */
+.tn-card > .tn-gov {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  width: max-content; white-space: normal; text-align: center; text-wrap: balance;
+  line-height: 1.25; letter-spacing: .1em;
+}
 .tn-head { display: flex; gap: 14px; align-items: center; padding-top: 6px; }
 .tn-head-text { flex: 1; min-width: 0; }
 .tn-flag { width: 64px; height: 44px; line-height: 0; }

@@ -280,9 +280,6 @@ export function Timeline({ world, agents, observed, selectedId, onPick, onClose,
                   return (
                     <g key={`s${i}-${b.c}-${b.from}`}>
                       <rect className="tn-tl-silence" x={bx} y={by} width={bw} height={LANE_H - 6} rx={1} />
-                      {bw > 56 && (
-                        <text className="tn-tl-silence-label" x={bx + bw / 2} y={by + (LANE_H - 6) / 2 + 3.5} textAnchor="middle">Silence</text>
-                      )}
                     </g>
                   );
                 })}
@@ -324,6 +321,26 @@ export function Timeline({ world, agents, observed, selectedId, onPick, onClose,
                     );
                   })}
                 </g>
+                {/* The band's label, drawn after the diamonds so none covers it: in the first slot of
+                    the band (middle, start, end) that is clear of this lane's diamonds, on a small
+                    backing in the band's own colour. */}
+                {bands.map((b, i) => {
+                  const bx = x(b.from);
+                  const bw = Math.max(4, x(b.to) - bx);
+                  if (bw <= 56) return null;
+                  const by = laneIndex(b.c) * LANE_H + 3;
+                  const W = 58;
+                  const xs = layout.marks.filter((m) => m.lane === b.c).map((m) => x(m.year));
+                  const clear = (l: number) => xs.every((mx) => mx + DIA + 2 < l || mx - DIA - 2 > l + W);
+                  const slots = [bx + (bw - W) / 2, bx + DIA + 4, bx + bw - W - DIA - 4].filter((l) => l >= bx && l + W <= bx + bw);
+                  const lx = slots.find(clear) ?? slots[0] ?? bx + (bw - W) / 2;
+                  return (
+                    <g key={`sl${i}-${b.c}-${b.from}`}>
+                      <rect className="tn-tl-silence" x={lx} y={by + 4} width={W} height={LANE_H - 14} rx={1} />
+                      <text className="tn-tl-silence-label" x={lx + W / 2} y={by + (LANE_H - 6) / 2 + 3.5} textAnchor="middle">Silence</text>
+                    </g>
+                  );
+                })}
               </svg>
               {tip}
             </div>
