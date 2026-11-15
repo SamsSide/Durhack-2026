@@ -226,18 +226,22 @@ async function viaGemini(opts: LlmJsonOptions, model: string): Promise<Raw> {
 // and chants. A call that would wait too long is dropped so stale ruler turns never pile up.
 const OLLAMA_QUEUE_MAX = () => envNum('OLLAMA_QUEUE_MAX', 24);
 const OLLAMA_QUEUE_WAIT_MS = () => envNum('OLLAMA_QUEUE_WAIT_MS', 60_000);       // urgent calls
-const OLLAMA_ROUTINE_WAIT_MS = () => envNum('OLLAMA_ROUTINE_WAIT_MS', 20_000);  // a ruler turn older than this is stale
+const OLLAMA_ROUTINE_WAIT_MS = () => envNum('OLLAMA_ROUTINE_WAIT_MS', 40_000);  // a ruler turn older than this is stale
 const URGENT = new Set(['decree', 'lore', 'broadcast', 'bible']);
-interface Waiting { run: () => void; fail: (e: Error) => void; at: number; maxWait: number }
+interface Waiting { run: () => void; fail: (e: Error) => void; at: number; maxWait: number; urgent: boolean }
 const urgentQ: Waiting[] = [], routineQ: Waiting[] = [];
-let localBusy = false;
+let localBusy = false, urgentRun = 0;
 
 function nextLocal(): void {
   if (localBusy) return;
   const now = Date.now();
   for (;;) {
-    const w = urgentQ.shift() ?? routineQ.shift();
+    // urgent first, but after two in a row a waiting ruler turn gets its go, so a long run of lore
+    // (a prepare run) never starves the rulers
+    const fair = urgentRun >= 2 && routineQ.length > 0;
+    const w = (fair ? routineQ.shift() : urgentQ.shift()) ?? urgentQ.shift() ?? routineQ.shift();
     if (!w) return;
+    urgentRun = w.urgent ? urgentRun + 1 : 0;
     if (now - w.at > w.maxWait) { w.fail(new Error('local model busy: waited too long in the queue')); continue; }
     localBusy = true;
     w.run();
@@ -257,6 +261,7 @@ function inLocalQueue<T>(purpose: string, job: () => Promise<T>): Promise<T> {
     q.push({
       at: Date.now(),
       maxWait: q === urgentQ ? OLLAMA_QUEUE_WAIT_MS() : OLLAMA_ROUTINE_WAIT_MS(),
+      urgent: q === urgentQ,
       fail: reject,
       run: () => { job().then(resolve, reject).finally(() => { localBusy = false; nextLocal(); }); },
     });
