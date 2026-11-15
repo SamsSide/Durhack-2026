@@ -12,7 +12,7 @@ const FAR = 2.5;       // camera distance past which a cut tag shrinks to its le
 const LIMB = 0.3;      // cut tags hide well before the horizon (a blackout cuts every nation)
 
 // One marker per cut nation (B14): the sealed-letter pile and "SIGNAL LOST / silent 42 yrs · 49 queued".
-function SignalLost({ countryId, pos }: { countryId: number; pos: [number, number, number] }) {
+function SignalLost({ countryId, tile, pos }: { countryId: number; tile: number; pos: [number, number, number] }) {
   const [years, queued] = useWorld((s) => {
     const a = s.agents.find((x) => x.countryId === countryId);
     return `${s.world && a ? Math.max(0, s.world.tick - a.lastHeardTick) : 0}:${a?.pendingEvents ?? 0}`;
@@ -20,7 +20,8 @@ function SignalLost({ countryId, pos }: { countryId: number; pos: [number, numbe
   const ref = useRef<HTMLDivElement>(null);
   useFrame(({ camera }) => { ref.current?.classList.toggle('far', camera.position.length() > FAR); });
   return (
-    <Anchor pos={pos} dy={34} limb={LIMB}>
+    // In the capital's marker column, above the council pips: hung below the capital it sat on the nation's own name.
+    <Anchor pos={pos} limb={LIMB} stack={{ tile, priority: STACK.council + 5 }}>
       <div ref={ref} className="gs-cut">
         <LetterPile count={queued} />
         <div className="tn-plate gs-tag cut">
@@ -59,7 +60,7 @@ export function StatusMarkers() {
   return (
     <>
       {items.map((it) => it.kind === 'cut'
-        ? <SignalLost key={it.key} countryId={it.id} pos={it.pos} />
+        ? <SignalLost key={it.key} countryId={it.id} tile={it.tile} pos={it.pos} />
         : <Anchor key={it.key} pos={it.pos} stack={{ tile: it.tile, priority: STACK.auto }}><div className="gs-auto" title="On autopilot">A</div></Anchor>)}
     </>
   );
