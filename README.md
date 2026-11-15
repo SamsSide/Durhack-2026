@@ -117,8 +117,8 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 - **Decree visuals:** the camera flies to the target, then the effect plays out: meteor, plague,
   famine, storm, flood, prophet, gold rush or rebellion, with a result caption.
 
-### Terra Nova News
-
+### Terra Nova News A meteor leaves its crater provinces scorched (ash on the map, less
+  income and fewer people) until the years heal them.
 - Gemini watches the globe and writes a bulletin; an **animated, lip-synced anchor** reads it in
   a broadcast window, in one of the team's own cloned voices (ElevenLabs).
 - The broadcast **cuts to a live picture-in-picture** of the place each story is about. A story
