@@ -8,7 +8,7 @@ fix this. Anyone may edit; it is the judges' briefing. Last rebuilt 14 Nov from 
 
 Terra Nova turns one line of text ("a drowned post-apocalyptic world"), and optionally a picture,
 into a living 3D planet. Gemini writes a world bible (nations, leaders, ideologies, founding
-myths); code generates about 500 provinces on a sphere and places the nations; then every nation is
+myths); code generates about 1,200 provinces on a sphere and places the nations; then every nation is
 run by its own independent agent with its own copy of the world and its own Gemini ruler. Nations
 settle, build, trade, pay each other, move through the ages from spears to starships, raise
 wonders, fight wars province by province, lose generals and crown successors. You can cut a
@@ -136,7 +136,7 @@ sequenceDiagram
   outward normal is its circumcentre on the sphere; a province's boundary is the ring of
   circumcentres of the triangles around its point, so every province is a convex polygon and its
   neighbours are the points it shares an edge with.
-- **Complexity:** O(n log n) for the hull, O(n) to build cells. n = 500 by default: a few
+- **Complexity:** O(n log n) for the hull, O(n) to build cells. n = 1,200 by default: a few
   milliseconds.
 - **Why:** irregular provinces read as a political map (the owner's call, `decisions.md` 15:20);
   hexagons were the fallback and were never needed. Fibonacci points give near-uniform cell sizes
@@ -583,7 +583,7 @@ canonical order, derived ones are held back, and every payment is clamped to wha
   Rows still `testing` (a person has not signed them off): Tiger Data (A11, needs a database URL),
   anthems and chants (A15, A16), future and stellar ages (A26), terrain (A28), councils (A29),
   wonders (A30).
-- **Scale:** rules scan all provinces per nation per turn (O(nations x provinces)); fine at 500
+- **Scale:** rules scan all provinces per nation per turn (O(nations x provinces)); fine at 1,200
   provinces and 16 nations, not tuned beyond.
 
 ### Where the code and the plan or contracts differ
@@ -703,7 +703,7 @@ payment: `docs/shots/solana-devnet-payment.jpg`.
     relaxation; the convex hull gives the triangulation in O(n log n).
 24. *How does the battle maths work?* A contest function with exponent 1.6 between Lanchester's
     linear and square laws, plus terrain, forts, landings, age gap, wonders and command.
-25. *Does it scale?* Comfortably at 500 provinces and up to 16 nations at 64x speed on one laptop;
+25. *Does it scale?* Comfortably at 1,200 provinces and up to 16 nations at 64x speed on one laptop;
     the rules scan provinces per nation, so much larger maps would need spatial indexes. We have not
     benchmarked beyond the demo size.
 
@@ -843,7 +843,7 @@ For each feature: what the judge sees, what is happening underneath, and the one
 - **Lane a (SamsSide), world, story and sound:** event log and `applyTickBatch`; the battle function;
   cut and restore with the dispute rule; the Gemini pipeline and budgets; ElevenLabs anthems.
   Tricky question: "how can replicas agree without a referee?" (section 4.2).
-- **Lane b (CutGrass88), the globe and the economy:** rendering 500 provinces with instancing; map
+- **Lane b (CutGrass88), the globe and the economy:** rendering 1,200 provinces with instancing; map
   modes; units by age; payment arcs; the Solana ledger and its rate-limit design. Tricky question:
   "why isn't the treasury on chain?" (Q16).
 - **Lane c (Justin-CODING-PY), interface:** the Create screen, nation card with council controls,
