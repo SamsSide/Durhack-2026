@@ -50,6 +50,7 @@ const FIGURE_K = 1.5;          // figures a little larger than their footprint, 
 const FORMATION_GAP = 0.6;     // figure spacing, as a share of the unit size
 const FORMATION_W = 3.0;       // a formation's width, for stepping two on one tile apart
 const AGE_POP_MS = 750;         // bounce when a nation reaches a new age
+const SINK_MS = 2800;           // a fleet beaten at sea rolls over and goes under this slowly
 const CLASH_MS = 2500;          // battle badge, smoke and loss numbers linger so a judge sees them
 const BATTLE_SMOKE_MS = 3000;
 const LOSS_MS = 2000;
@@ -121,7 +122,7 @@ interface Column { pos: THREE.Vector3; n: THREE.Vector3; until: number; nextAt: 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _j = new THREE.Vector3(), _camDir = new THREE.Vector3(), _mainDir = new THREE.Vector3();
 /** The news picture-in-picture draws models only this close to its camera (cosine of the angle at the centre, about 25 degrees). */
 const PIP_REACH = 0.9;
-const _n = new THREE.Vector3(), _side = new THREE.Vector3(), _mm = new THREE.Matrix4();
+const _aim = new THREE.Vector3(), _n = new THREE.Vector3(), _side = new THREE.Vector3(), _mm = new THREE.Matrix4();
 const _p = new THREE.Vector3(), _fwd = new THREE.Vector3(), _right = new THREE.Vector3(), _fm = new THREE.Matrix4();
 const smooth = (e0: number, e1: number, x: number): number => {
   const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
@@ -689,10 +690,19 @@ export class UnitLayer {
     chip.texKey = '';
   }
 
+  /** How long a dying counter's model lingers: a beaten fleet goes down slowly, the rest are quick. */
+  private dyingMs(chip: Chip): number {
+    return chip.dying?.shatter ? (chip.kind === 'fleet' ? SINK_MS : 750) : 450;
+  }
+
   private killChip(chip: Chip, now: number, shatter: boolean): void {
     this.dropStatus(chip);
     chip.dying = { start: now, shatter };
     this.dying.push(chip);
+    // a fleet beaten at sea goes down: Firing draws the foam ring and the bubbles (naval battles)
+    if (shatter && chip.kind === 'fleet' && chip.pos.lengthSq() > 0) {
+      firingFeed.sink(chip.pos, this.unitSize, ageIndex(this.ageFor(chip.owner)), now);
+    }
     if (shatter) {
       this.sparks.burst(now, chip.pos, 14, 0.008, new THREE.Color(this.colorOf(chip.owner)), 700, 0.05);
       this.sparks.burst(now, chip.pos, 6, 0.006, this.col.parchment, 500, 0.04);
@@ -1068,9 +1078,9 @@ export class UnitLayer {
     for (let i = this.dying.length - 1; i >= 0; i--) {
       const chip = this.dying[i]!;
       const d = chip.dying!;
-      const life = d.shatter ? 750 : 450;
-      const t = (now - d.start) / life;
-      if (t >= 1) { this.dropChip(chip); this.dying.splice(i, 1); continue; }
+      const life = this.dyingMs(chip);
+      if (now - d.start >= life) { this.dropChip(chip); this.dying.splice(i, 1); continue; }
+      const t = Math.min(1, (now - d.start) / (d.shatter ? 750 : 450));   // the counter itself is gone in under a second
       const f = facing(chip.pos, _camDir);
       chip.sprite.visible = f > 0;
       const h = chip.height * zoom * (d.shatter ? 1 + 0.5 * t : 1 - 0.3 * t);
@@ -1086,7 +1096,7 @@ export class UnitLayer {
       for (const chip of this.chips.values()) this.drawModel(chip, now, 1);
       for (const chip of this.dying) {
         const d = chip.dying!;
-        this.drawModel(chip, now, Math.max(0, 1 - (now - d.start) / (d.shatter ? 750 : 450)));
+        this.drawModel(chip, now, Math.max(0, 1 - (now - d.start) / this.dyingMs(chip)));
       }
     }
     this.traders.update(this.field, _camDir, dist, now, dt);
@@ -1187,7 +1197,7 @@ export class UnitLayer {
       this.drawModel(chip, now, k);
     };
     for (const chip of this.chips.values()) draw(chip, 1);
-    for (const chip of this.dying) draw(chip, Math.max(0, 1 - (now - chip.dying!.start) / (chip.dying!.shatter ? 750 : 450)));
+    for (const chip of this.dying) draw(chip, Math.max(0, 1 - (now - chip.dying!.start) / this.dyingMs(chip)));
     this.field.end();
     this.pipFill = false;
     this.near = mainNear;
@@ -1242,6 +1252,9 @@ export class UnitLayer {
     const model = this.models.resolve(age, chip.kind);
     const alpha = this.alphaOf(lead, now);
     if (alpha <= 0.02) return;
+    // a beaten fleet keeps its size while it rolls over and goes under; only the last moments shrink it
+    const sinkT = chip.kind === 'fleet' && chip.dying?.shatter ? Math.min(1, (now - chip.dying.start) / SINK_MS) : -1;
+    if (sinkT >= 0) k = sinkT > 0.8 ? (1 - sinkT) / 0.2 : 1;
     const front = chip.kind === 'army' ? this.models.resolveFigure(age, 'front') : null;
     const calm = reducedMotion();
     // a formation beaten in battle goes down figure by figure, not as one shrinking block
@@ -1255,7 +1268,7 @@ export class UnitLayer {
     const face = lead.face.lengthSq() > 1e-12 ? lead.face : lead.head;
     // several counters on one tile: step the models sideways so they do not overlap
     const stack = Math.max(0, chip.stack);
-    const step = front ? this.unitSize * scale * FORMATION_W : size * 0.9;
+    const step = front ? this.unitSize * scale * FORMATION_W : size * (chip.kind === 'fleet' ? 1.5 : 0.9);   // hulls lie beam to beam, not on top of each other
     if (stack) {
       _side.crossVectors(_n, face.lengthSq() > 1e-12 ? face : _w.set(0, 1, 0)).normalize();
       _v.addScaledVector(_side, ((stack % 2) ? 1 : -1) * Math.ceil(stack / 2) * step);
@@ -1350,9 +1363,31 @@ export class UnitLayer {
     const P = sea ? hullPose(lead.amp, lead.seed, now, ai >= 6) : gaitPose(gaitOf(ai, 'whole'), lead.stride, lead.amp, lead.surge, lead.seed, now);
     const ht = (now - hopAt) / 380;
     if (ht >= 0 && ht < 1) P.lift += Math.sin(Math.PI * ht) * 0.5;
+    if (sea && sinkT >= 0 && !calm) {
+      // down by the stern: heels over, noses up, and slips below the swell
+      const e = sinkT * sinkT;
+      P.roll += 1.25 * e; P.pitch += 0.5 * e; P.lift -= 1.3 * e;
+    }
+    // a fleet in a sea fight (Firing sets the aim): ancient rams come bow-on, the rest turn broadside
+    let kick = 0;
+    if (sea && sinkT < 0 && !moving && k >= 1 && alpha >= 1 && firingFeed.fighting(chip.key, now) && firingFeed.aimOf(chip.key, _aim)) {
+      _aim.sub(_v);
+      _aim.addScaledVector(_n, -_aim.dot(_n));
+      if (_aim.lengthSq() > 1e-12) {
+        _aim.normalize();
+        if (ai > 0) {
+          _side.crossVectors(_n, _aim);
+          if (face.lengthSq() > 1e-12 && _side.dot(face) < 0) _side.negate();
+          _aim.copy(_side);
+        }
+        lead.head.copy(_aim);
+      }
+      kick = Math.exp(-firingFeed.sinceShot(chip.key, now) / 160);
+      if (!calm) { P.roll += 0.06 * kick; P.lift += 0.01 * kick; }
+    }
     if (P.lift) _v.addScaledVector(_n, P.lift * size);
     this.field.push(model, poseMatrix(_mm, _v, face, size, P.pitch, P.roll, P.sy), team);
-    if (!sea && k >= 1 && alpha >= 1) firingFeed.figure(firingFeed.army(chip.key, chip.owner, ai, chip.tile, _v), ROLE_BACK, _v, size * 0.5);
+    if (k >= 1 && alpha >= 1) firingFeed.figure(firingFeed.army(chip.key, chip.owner, ai, chip.tile, _v, sea), ROLE_BACK, _v, size * 0.5);
     if (fx) this.fx.emit({ anchors: model.anchors, stand: _mm, size, moving, facing: f }, now, this.lastDt);
   }
 
