@@ -142,6 +142,7 @@ export class DecreeSlot {
   private readonly n = new THREE.Vector3();
   private readonly from = new THREE.Vector3();
   private pts: THREE.Vector3[] = [];
+  private land: number[] = [];   // indices into pts of the struck provinces that are land
   private ns: THREE.Vector3[] = [];
   private hot: number[] = [];     // indices into pts that get banners and fires
   private nextA = 0;
@@ -192,6 +193,8 @@ export class DecreeSlot {
       this.U = Math.min(3.5, Math.max(1, _p.distanceTo(_d) / 0.08));
     } else this.U = 1;
     this.pts = []; this.ns = [];
+    this.land = [];
+    tiles.forEach((t, i) => { const tt = world.tiles[t]!; if (tt.terrain !== 'ocean') this.land.push(i); });
     const ranks: number[] = [];
     let far = 1e-6;
     for (const t of tiles) {
@@ -253,7 +256,8 @@ export class DecreeSlot {
     this.overlay.frame(99, LINGER_LEVEL * fade, (now - this.fxStart) / 1000);
     if (this.effect === 'plague' && !this.lingerEnd && now >= this.nextB) {
       this.nextB = now + 900 + Math.random() * 700;
-      this.pick(_p, 0.01);
+      // the lasting skulls stand on struck land only, close to the middle of the province (never the sea)
+      this.pick(_p, 0.006, this.land);
       this.eg(pools.glyphs, now, _p.addScaledVector(_t, 0.008), _d.copy(_t).multiplyScalar(0.03).add(jitter(_j, _t, 0.006)), GLYPH.skull, 0.015, 0.019, 2600, 0.85, C.bone, this.tag);
     }
     return true;
@@ -280,8 +284,8 @@ export class DecreeSlot {
     r.mesh.visible = true;
   }
 
-  private pick(out: THREE.Vector3, spread = 0.012): THREE.Vector3 {
-    const i = Math.floor(Math.random() * this.pts.length);
+  private pick(out: THREE.Vector3, spread = 0.012, from?: number[]): THREE.Vector3 {
+    const i = from?.length ? from[Math.floor(Math.random() * from.length)]! : Math.floor(Math.random() * this.pts.length);
     _t.copy(this.ns[i]!);
     return out.copy(this.pts[i]!).add(jitter(_j, _t, spread * this.U));
   }
