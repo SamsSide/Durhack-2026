@@ -39,7 +39,7 @@ export function leaveStack(e: StackEntry): void {
 
 /** Pixels from the city dot up to the bottom of this marker. Ties go to the marker that came first. */
 export function stackOffset(e: StackEntry, lifted = true): number {
-  let y = BASE + (lifted && e.priority >= STACK.battle ? lifts.get(e.tile) ?? 0 : 0);
+  let y = BASE + (baseLifts.get(e.tile) ?? 0) + (lifted && e.priority >= STACK.battle ? lifts.get(e.tile) ?? 0 : 0);
   for (const o of entries) {
     if (o === e || o.tile !== e.tile || o.height <= 0) continue;
     if (o.priority < e.priority || (o.priority === e.priority && o.seq < e.seq)) y += o.height + GAP;
@@ -50,10 +50,26 @@ export function stackOffset(e: StackEntry, lifted = true): number {
 // Battle furniture (the unit counters and their order lines are sprites drawn by UnitLayer, outside this
 // column): UnitLayer lifts a tile's battle plate, and whatever stacks above it, clear of the counters on screen.
 const lifts = new Map<number, number>();
+// A unit counter standing right at a city (a fleet in its harbour, a garrison): the whole column starts above it,
+// so the ruler's pip never sits on the counter's number.
+const baseLifts = new Map<number, number>();
 
 /** Forget every lift (the start of a layout pass). */
 export function clearStackLifts(): void {
   lifts.clear();
+  baseLifts.clear();
+}
+
+/** Start a tile's whole column `px` higher than usual (clear of a unit counter at the city). */
+export function setBaseLift(tile: number, px: number): void {
+  baseLifts.set(tile, px);
+}
+
+/** The tiles that have a marker column now. */
+export function stackTiles(): Set<number> {
+  const out = new Set<number>();
+  for (const e of entries) if (e.height > 0) out.add(e.tile);
+  return out;
 }
 
 /** Raise a tile's battle plate and the markers above it by `px` more than the column asks for. */

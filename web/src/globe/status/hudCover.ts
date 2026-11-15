@@ -1,9 +1,9 @@
-// The screen rectangles the HUD panels cover (nation card, network panel, event feed cards), measured every
+// The screen rectangles the HUD panels cover (nation card, network panel, event feed cards, minimap, decree box), measured every
 // 200 ms, so globe tags pinned with drei Html can hide instead of drawing over a panel (#175). Lane b.
 
 type Rect = { l: number; t: number; r: number; b: number };
 
-const SELECTORS = ['.left-dock:not(.out)', '.tn-net', '.event-feed-slot .tn-feed-card', '.ledger-slot', '.news-slot'];
+const SELECTORS = ['.left-dock:not(.out)', '.tn-net', '.event-feed-slot .tn-feed-card', '.ledger-slot', '.news-slot', '.minimap:not(.mm-hidden)', '.mm-modes:not(.mm-hidden)', '.decree-slot'];
 // B8: reading a box makes the browser lay the page out on the spot (1 to 2 ms each time it is not already
 // clean), and every pinned tag asked every frame. All readers now share one clock of 100 ms slots: the panels
 // are measured every second slot, each tag's answer is kept for its slot, and the caption layout runs once a

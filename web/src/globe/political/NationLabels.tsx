@@ -14,7 +14,7 @@ import { groundView } from '../camera/groundView';
 import { getPalette } from '../palette';
 import { useProvinceMesh } from '../mesh/context';
 import { statusOf } from '../status/statusTint';
-import { boxesCross, labelAxis, labelFont, mainBody, nationBoxes, subscribeFont } from './labelLayout';
+import { boxesCross, labelAxis, labelFont, mainBody, nationBoxes, subscribeFont, capitalBoxes, counterBoxes } from './labelLayout';
 import { capitalPoint } from '../status/geo';
 import type { LabelAxis } from './labelLayout';
 
@@ -113,7 +113,7 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
   const shift = useRef(0); // px the name has stepped across its land, clear of its capital
   const giveWay = useRef(1); // a region name fades to 0 under a nation name
   const cap = useMemo(() => (data.cap ? new THREE.Vector3(...data.cap) : null), [data.cap]);
-  useEffect(() => () => { nationBoxes.delete(data.key); }, [data.key]);
+  useEffect(() => () => { nationBoxes.delete(data.key); capitalBoxes.delete(data.key); }, [data.key]);
 
   const n = Math.max(1, data.name.length);
   const dir = useMemo(() => new THREE.Vector3(...data.dir), [data.dir]);
@@ -137,6 +137,13 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
     const inner = innerRef.current;
     if (!g || !inner) return;
     const d = camera.position.length();
+    if (data.kind === 'nation') {
+      // where this nation's capital marker is on screen, kept even while the name itself is faded out up close
+      if (cap && camera.position.dot(cap) / d > 0.3) {
+        tmp.ndc.copy(cap).project(camera);
+        capitalBoxes.set(data.key, { x: ((tmp.ndc.x + 1) / 2) * size.width, y: ((tmp.ndc.y + 1) / 2) * size.height + CAP_UP, hw: CAP_R * 0.75, hh: CAP_R * 0.75, c: 1, s: 0 });
+      } else capitalBoxes.delete(data.key);
+    }
     // Re-anchor on the land in view (throttled), and glide there so the name never jumps.
     const an = anchor.current;
     const nowA = performance.now();
@@ -220,10 +227,12 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
     if (roomPx < 0) alpha = 0;
     const halfPx = (f * (w0 + ls * n)) / 2 / wpp, thickPx = (0.6 * f) / wpp;
     if (data.kind === 'region') {
-      // a region name gives way to a nation name: it fades where their boxes cross
+      // a region name gives way to a nation name, a capital's marker and a unit counter: it fades where their boxes cross
       const me = { x: sx, y: sy, hw: halfPx, hh: thickPx, c: ux, s: uy };
       let under = false;
       for (const b of nationBoxes.values()) if (boxesCross(me, b)) { under = true; break; }
+      if (!under) for (const b of capitalBoxes.values()) if (boxesCross(me, b)) { under = true; break; }
+      if (!under) for (const b of counterBoxes) if (boxesCross(me, b)) { under = true; break; }
       giveWay.current += ((under ? 0 : 1) - giveWay.current) * 0.2;
       alpha *= giveWay.current;
     }
@@ -242,6 +251,9 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
           const away = perp > 0 ? -1 : 1;
           if (reach - Math.abs(perp) <= room) want = away * (reach - Math.abs(perp));
           else if (reach + Math.abs(perp) <= room) want = -away * (reach + Math.abs(perp));
+          // a small nation has no land to spare: the name still clears its own capital, by the shorter way, even
+          // if that carries it over the border (a name over the sea reads; a name through the capital does not)
+          else want = away * (reach - Math.abs(perp));
         }
       }
       shift.current = Math.abs(want - shift.current) < 0.5 ? want : shift.current + (want - shift.current) * 0.12;

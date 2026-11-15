@@ -11,7 +11,7 @@ import { COUNTER_H, COUNTER_W, drawAttrition, drawClash, drawCounter, drawLoss, 
 import { warLineOf } from '../../state/armyInfo';
 import type { WarTone } from '../../state/armyInfo';
 import { BATTLE_GAP, useBattles } from '../../state/battleInfo';
-import { STACK, clearStackLifts, setStackLift, stackSlot } from '../status/cityStack';
+import { STACK, clearStackLifts, setBaseLift, setStackLift, stackSlot, stackTiles } from '../status/cityStack';
 import { terrainEffects } from '../terrain/effects';
 import { unitIcon } from './era';
 import { ModelField, poseMatrix, standMatrix } from './ModelField';
@@ -21,6 +21,9 @@ import { Traders } from './traders';
 import { clockNow, msPerYear } from '../../state/calendar';
 import { UnitModels } from './unitModels';
 import { RestSpots } from './restSpots';
+import { counterBoxes } from '../political/labelLayout';
+import { TerrainLookup, groundView } from '../camera/groundView';
+import { groundSight, horizonSight } from '../status/sight';
 import { formationSlots } from './formation';
 import type { Slot } from './formation';
 import { ROLE_BACK, ROLE_FLANK, ROLE_FRONT, firingFeed } from '../war/firingFeed';
@@ -52,6 +55,11 @@ const MODEL_FAR = 2.4;          // and gone above this (orbit shows counters onl
 const FIGURE_K = 1.5;          // figures a little larger than their footprint, so a formation reads at mid zoom
 const FORMATION_GAP = 0.6;     // figure spacing, as a share of the unit size
 const FORMATION_W = 3.0;       // a formation's width, for stepping two on one tile apart
+const FORMATION_R = 2.0;       // the furthest figure from a formation's middle, in figure spacings
+const FIT_ROOM = 0.86;         // one formation fills this share of its tile's inner radius
+const FIT_SPAN = 1.05;         // several on one tile: their middles spread over this share of the inner radius
+const FIT_MIN = 0.42;          // figure spacing never closes up below this share of its open-ground value
+const FIT_MS = 320;            // closing up, stepping aside and falling in ease over about this long
 const AGE_POP_MS = 750;         // bounce when a nation reaches a new age
 const SINK_MS = 2800;           // a fleet beaten at sea rolls over and goes under this slowly
 const CLASH_MS = 2500;          // battle badge, smoke and loss numbers linger so a judge sees them
@@ -61,6 +69,7 @@ const LOSS_MS = 2000;
 // counter with the summed strength; other overlapping counters are lifted one slot at a time.
 const MERGE_PX = 24;
 const DECLUTTER_MS = 150;
+const SIGHT_MS = 160;           // a counter going behind a hill or the horizon fades over about this long
 const MAX_LIFT = 4;
 
 function tok(name: string, fallback: string): string {
@@ -104,6 +113,14 @@ interface Chip {
   dying: { start: number; shatter: boolean } | null;
   /** Hidden this frame because a nearby counter of the same nation shows its strength. */
   absorbed: boolean;
+  sight: number;          // 0..1: how clearly the camera sees its spot (0 behind the horizon, a hill or a town)
+  sightGoal: number;      // what `sight` eases towards, re-read a few times a second
+  stackN: number;         // how many army and fleet counters rest on its tile (itself included)
+  fitAt: number;          // when its place in the tile was last eased (0 = never)
+  fitK: number;           // figure spacing, as a share of the open-ground spacing (the formation fits the tile)
+  fitOff: number;         // how far along the tile's axis its model stands from the resting spot (world units)
+  fitS: number;           // model size on a shared tile, as a share of its size alone (three or more stand a little smaller)
+  fitIn: number;          // 0..1: how firmly its figures are held inside the tile's outline (0 on the march)
   /** Screen slot from the declutter pass (replaces the per-tile stack while set). */
   lift: number | null;
   /** The merged texture this counter holds (summed strength), '' when it shows its own. */
@@ -120,8 +137,11 @@ interface Box { x0: number; y0: number; x1: number; y1: number }
 const boxesHit = (a: Box, b: Box, pad = 2): boolean => a.x0 < b.x1 + pad && a.x1 > b.x0 - pad && a.y0 < b.y1 + pad && a.y1 > b.y0 - pad;
 /** A battle plate climbs at most this far (px) to clear the counters under it. */
 const PLATE_LIFT_MAX = 110;
+/** A city's marker column starts at most this far (px) above its usual place to clear a counter at the city. */
+const COLUMN_LIFT_MAX = 90;
 /** A loss number slides at most this far (px) sideways to find room, else it is not shown. */
 const POP_REACH = 150;
+const CLASH_REACH = 90;          // px a battle badge may slide off its tile's middle to clear an order line
 
 interface Arrow {
   mesh: THREE.Mesh; mat: THREE.ShaderMaterial; geo: THREE.BufferGeometry;
@@ -203,6 +223,7 @@ export class UnitLayer {
   private lastNow = 0;
   private declutterAt = -1e9;
   private lastDt = 16;
+  private readonly terrain: TerrainLookup;
   private clockMs = msPerYear();   // real ms a year took at the last frame
   private viewH = 1.2;             // height of the view at the planet's surface, in globe units
   private lastClockAt = 0;
@@ -243,6 +264,7 @@ export class UnitLayer {
     // about a town building: half a tile across, capped so nothing towers over a mountain
     this.unitSize = Math.min(0.04, Math.max(0.01, Math.sqrt((4 * Math.PI) / Math.max(1, world.tiles.length)) * 0.42));
     this.spots = new RestSpots(world, mesh.heights, this.dirs, this.unitSize * 0.6);
+    this.terrain = new TerrainLookup(world);
     world.countries.forEach((c, i) => this.knownAge.set(i, c.techAge ?? 'ancient'));
     this.traders = new Traders({
       dirs: this.dirs,
@@ -501,11 +523,13 @@ export class UnitLayer {
       perTile.set(g.tile, list);
     }
     const stackOf = new Map<string, number>();
+    const stackN = new Map<string, number>();
     for (const list of perTile.values()) {
       list.sort();
       // settlers sit below armies; count only armies and fleets in the stack
       let k = 0;
       for (const key of list) stackOf.set(key, groups.get(key)!.kind === 'settler' ? -1 : k++);
+      for (const key of list) stackN.set(key, k);
     }
 
     for (const [key, g] of groups) {
@@ -518,13 +542,14 @@ export class UnitLayer {
         chip = {
           key, owner: g.owner, kind: g.kind, tile: g.tile, units: g.units, moving: g.moving,
           sprite, mat, texKey: '', aspect: 1, height: CHIP_H, stack: 0, pos: new THREE.Vector3(), dying: null,
-          absorbed: false, lift: null, mergeKey: '', stat: null, statText: '', statTone: 'attack', statHide: false,
+          absorbed: false, sight: 1, sightGoal: 1, stackN: 1, fitAt: 0, fitK: 1, fitOff: 0, fitS: 1, fitIn: 0, lift: null, mergeKey: '', stat: null, statText: '', statTone: 'attack', statHide: false,
         };
         this.chips.set(key, chip);
       }
       chip.units = g.units;
       chip.moving = g.moving;
       chip.stack = stackOf.get(key) ?? 0;
+      chip.stackN = stackN.get(key) ?? 1;
       const color = this.colorOf(g.owner);
       const flag = g.kind === 'settler' ? null : this.flag(g.owner);
       const strength = g.units.reduce((s, u) => s + u.strength, 0);
@@ -600,7 +625,7 @@ export class UnitLayer {
     const items: { chip: Chip; x: number; y: number; w: number; h: number; str: number }[] = [];
     for (const chip of this.chips.values()) {
       chip.lift = null;
-      if (chip.kind === 'settler' || chip.moving || !chip.units.length || facing(chip.pos, _camDir) <= 0) { this.unmerge(chip); continue; }
+      if (chip.kind === 'settler' || chip.moving || !chip.units.length || facing(chip.pos, _camDir) <= 0 || chip.sightGoal <= 0) { this.unmerge(chip); continue; }
       _v.copy(chip.pos).project(camera);
       if (_v.z > 1) { this.unmerge(chip); continue; }
       const hPx = chip.sprite.scale.y * p11 * viewH / 2;
@@ -658,6 +683,7 @@ export class UnitLayer {
     const lines: { chip: Chip; box: Box }[] = [];
     const linesOn = 1 - smooth(2.3, 3.1, dist) > 0.02;
     const hs = STATUS_H * zoom * px;
+    counterBoxes.length = 0;
     for (const chip of this.chips.values()) {
       chip.statHide = false;
       if (!chip.sprite.visible || chip.mat.opacity <= 0.02) continue;
@@ -667,6 +693,7 @@ export class UnitLayer {
       const h = chip.sprite.scale.y * px, w = h * chip.aspect;
       const y1 = y + chip.sprite.center.y * h;
       chipBoxes.push({ x0: x - w / 2, x1: x + w / 2, y0: y1 - h, y1 });
+      if (!chip.absorbed) counterBoxes.push({ x, y: viewH - (y1 - h / 2), hw: w / 2, hh: h / 2, c: 1, s: 0 });   // region names step back from counters
       if (chip.stat && linesOn) lines.push({ chip, box: { x0: x - hs * chip.stat.aspect / 2, x1: x + hs * chip.stat.aspect / 2, y0: y1 - h - 1.2 * hs, y1: y1 - h - 0.2 * hs } });
     }
     // an order line never covers a counter (its own sits just under it)
@@ -675,8 +702,33 @@ export class UnitLayer {
       if (hit) l.chip.statHide = true;
       return !hit;
     });
-    // battle plates, lowest on screen first
     clearStackLifts();
+    // a city's marker column (the ruler's pip, council marks) starts above a counter standing at the city
+    for (const tile of stackTiles()) {
+      if (tile < 0) continue;
+      let lo = Infinity, hi = 0, w = 0;
+      for (const pr of [STACK.auto, STACK.pips, STACK.council]) {
+        const slot = stackSlot(tile, pr);
+        if (!slot) continue;
+        lo = Math.min(lo, slot.offset); hi = Math.max(hi, slot.offset + slot.height); w = Math.max(w, slot.width);
+      }
+      if (lo === Infinity || this.surf(tile, 0.012, _v).lengthSq() === 0 || facing(_v, _camDir) <= 0) continue;
+      _v.project(camera);
+      if (_v.z > 1) continue;
+      const x = (_v.x + 1) * viewW / 2, y = (1 - _v.y) * viewH / 2;
+      let lift = 0;
+      for (let i = 0; i < 3; i++) {
+        const b: Box = { x0: x - w / 2, x1: x + w / 2, y0: y - hi - lift, y1: y - lo - lift };
+        let top = Infinity;
+        for (const o of chipBoxes) if (boxesHit(b, o)) top = Math.min(top, o.y0);
+        if (top === Infinity) break;
+        const next = y - lo - top + 4;
+        if (next > COLUMN_LIFT_MAX || next <= lift) break;
+        lift = next;
+      }
+      if (lift > 0) setBaseLift(tile, lift);
+    }
+    // battle plates, lowest on screen first
     const tick = this.world.tick;
     const plates: { tile: number; x: number; y: number; w: number; h: number; base: number }[] = [];
     for (const b of useBattles.getState().byTile.values()) {
@@ -715,25 +767,32 @@ export class UnitLayer {
     this.boxes = [...chipBoxes, ...plateBoxes.map((o) => o.box), ...lineBoxes];
   }
 
-  /** Room for a loss number beside the labels already placed: it slides outwards past them, or stays hidden. */
+  /** Room for a loss number beside the labels already placed: it slides outwards past them, or stays hidden.
+   *  A battle badge slides the same way, clear of the order lines and counters, but shows where it is if it cannot. */
   private readonly fitPop = (p: Pop, h: number): number | null => {
-    if ((p.kind !== 'loss' && p.kind !== 'attrition') || !this.boxes.length || !this.cam) return p.dx;
+    const clash = p.kind === 'clash';
+    if ((!clash && p.kind !== 'loss' && p.kind !== 'attrition') || !this.boxes.length || !this.cam) return p.dx;
     _p.copy(p.pos).project(this.cam);
     const x = (_p.x + 1) * this.viewW / 2, y = (1 - _p.y) * this.viewPx / 2;
     const hp = h * ((this.cam as THREE.PerspectiveCamera).projectionMatrix.elements[5] ?? 1) * this.viewPx / 2, wp = hp * p.aspect;
-    // the whole rise of the number, bottom to top
-    const y0 = y - (p.kind === 'loss' ? 3.8 : 2.4) * hp, y1 = y - (p.kind === 'loss' ? 0.6 : 0.3) * hp;
+    // the whole rise of the number, bottom to top (a badge stays where it is, centred on its tile)
+    const y0 = clash ? y - hp / 2 : y - (p.kind === 'loss' ? 3.8 : 2.4) * hp, y1 = clash ? y + hp / 2 : y - (p.kind === 'loss' ? 0.6 : 0.3) * hp;
     const slide = (s: number): number | null => {
       let cx = x + p.dx * wp;
       for (let i = 0; i < 6; i++) {
         const b: Box = { x0: cx - wp / 2, x1: cx + wp / 2, y0, y1 };
         let edge: number | null = null;
         for (const o of this.boxes) if (boxesHit(b, o)) edge = s > 0 ? Math.max(edge ?? -Infinity, o.x1) : Math.min(edge ?? Infinity, o.x0);
-        if (edge == null) return Math.abs(cx - x) > POP_REACH ? null : (cx - x) / wp;
+        if (edge == null) return Math.abs(cx - x) > (clash ? CLASH_REACH : POP_REACH) ? null : (cx - x) / wp;
         cx = edge + s * (wp / 2 + 4);
       }
       return null;
     };
+    if (clash) {
+      const r = slide(1), l = slide(-1);
+      if (r == null || l == null) return r ?? l ?? p.dx;
+      return Math.abs(r - p.dx) <= Math.abs(l - p.dx) ? r : l;   // the shorter way
+    }
     return p.dx > 0 ? slide(1) : p.dx < 0 ? slide(-1) : slide(1) ?? slide(-1);
   };
 
@@ -797,7 +856,7 @@ export class UnitLayer {
       const hs = STATUS_H * zoom, h = chip.height * zoom;
       st.sprite.scale.set(hs * st.aspect, hs, 1);
       st.sprite.center.set(0.5, -((1 - chip.sprite.center.y) * h + 0.2 * hs) / hs);
-      st.mat.opacity = fade * (chip.mat.opacity > 0 ? 1 : 0) * Math.min(1, f * 3);
+      st.mat.opacity = fade * (chip.mat.opacity > 0 ? 1 : 0) * Math.min(1, f * 3) * chip.sight;
     }
   }
 
@@ -1190,8 +1249,14 @@ export class UnitLayer {
     for (const [c, until] of this.fallen) if (until < now) this.fallen.delete(c);
 
     // counters
-    for (const chip of this.chips.values()) this.placeChip(chip, now, zoom);
+    const see = 1 - Math.exp(-dt / SIGHT_MS);
+    for (const chip of this.chips.values()) {
+      chip.sight += (chip.sightGoal - chip.sight) * see;
+      if (Math.abs(chip.sightGoal - chip.sight) < 0.02) chip.sight = chip.sightGoal;
+      this.placeChip(chip, now, zoom);
+    }
     if (now - this.declutterAt > DECLUTTER_MS) {
+      this.readSight(camera);
       this.declutter(camera, viewW, viewH, now);
       for (const chip of this.chips.values()) this.placeChip(chip, now, zoom);
       this.layoutFurniture(camera, viewW, viewH, zoom, dist);
@@ -1331,12 +1396,29 @@ export class UnitLayer {
     if (!this.disposed) this.field.rewind();
   }
 
+  /**
+   * Which counters the camera can really see (status/sight.ts): one behind the planet's curve is hidden at any
+   * zoom, and once the camera tilts towards the ground, so is one behind nearer high ground or a town. Counters
+   * draw over the scene, so without this a fleet beyond a hill appears to sit in the field in front of it.
+   */
+  private readSight(camera: THREE.Camera): void {
+    const low = groundView.tilt > 0.05;
+    for (const chip of this.chips.values()) {
+      if (chip.pos.lengthSq() === 0) { chip.sightGoal = 1; continue; }
+      // judged above the model's head, where the counter floats, so a unit seen over a crest keeps its counter
+      _j.copy(chip.pos).setLength(chip.pos.length() + this.unitSize * 1.5);
+      let s = horizonSight(camera.position, _j);
+      if (s > 0 && low && !groundSight(this.terrain, camera.position, _j, chip.tile)) s = 0;
+      chip.sightGoal = s;
+    }
+  }
+
   private placeChip(chip: Chip, now: number, zoom: number): void {
     const lead = chip.moving ?? chip.units[0];
     if (!lead) { chip.sprite.visible = false; return; }
     this.statePos(lead, now, chip.pos);
     chip.sprite.position.copy(chip.pos);
-    const f = facing(chip.pos, _camDir);
+    const f = facing(chip.pos, _camDir) * chip.sight;
     chip.sprite.visible = f > 0;
     if (!f) return;
     let hop = 0;
@@ -1382,20 +1464,20 @@ export class UnitLayer {
     const calm = reducedMotion();
     // a formation beaten in battle goes down figure by figure, not as one shrinking block
     const felled = !!front && !!chip.dying?.shatter && !calm;
-    const scale = this.near * (felled ? 1 : k) * this.popScale(chip.owner, now) * (0.35 + 0.65 * alpha);
+    const scale = this.near * (felled ? 1 : k) * this.popScale(chip.owner, now) * (0.35 + 0.65 * alpha) * (chip.fitAt ? chip.fitS : 1);
     const size = this.unitSize * (model.footprint / 0.5) * scale;
     _n.copy(chip.pos).normalize();
     _v.copy(chip.pos).addScaledVector(_n, 0.0003 - CHIP_LIFT);
     let hopAt = -1e9;
     for (const u of chip.units) if (u.hopAt > hopAt) hopAt = u.hopAt;
     const face = lead.face.lengthSq() > 1e-12 ? lead.face : lead.head;
-    // several counters on one tile: step the models sideways so they do not overlap
-    const stack = Math.max(0, chip.stack);
+    // the model keeps to its own tile: several counters on one tile stand apart along the tile's own axis, no
+    // further than the outline allows, and a formation closes its ranks to the room it has (fitTile)
     const step = front ? this.unitSize * scale * FORMATION_W : size * (chip.kind === 'fleet' ? 1.5 : 0.9);   // hulls lie beam to beam, not on top of each other
-    if (stack) {
-      _side.crossVectors(_n, face.lengthSq() > 1e-12 ? face : _w.set(0, 1, 0)).normalize();
-      _v.addScaledVector(_side, ((stack % 2) ? 1 : -1) * Math.ceil(stack / 2) * step);
-    }
+    this.fitTile(chip, now, step, front ? this.unitSize * scale * FORMATION_GAP * FORMATION_R : 0, size);
+    const held = chip.fitIn > 0;
+    if (chip.fitOff) _v.addScaledVector(this.spots.axis(chip.tile, _side), chip.fitOff).setLength(chip.pos.length() + 0.0003 - CHIP_LIFT);
+    if (held && !front) this.spots.keepIn(chip.tile, _v, size * (chip.kind === 'fleet' ? 0.3 : 0.45), chip.fitIn);
     const team = this.team(chip.owner);
     const fx = !this.pipFill && this.near > 0.5 && k >= 1 && alpha >= 1;
     const moving = !!chip.moving && !lead.dissolve;
@@ -1406,7 +1488,7 @@ export class UnitLayer {
       _fwd.setFromMatrixColumn(_mm, 2);
       _right.setFromMatrixColumn(_mm, 0).negate(); // standMatrix's +x is up x forward, which is the left
       const r = _v.length();
-      const gap = this.unitSize * scale * FORMATION_GAP;
+      const gap = this.unitSize * scale * FORMATION_GAP * chip.fitK;
       let strength = 0;
       for (const u of chip.units) strength += u.strength;
       const slots = formationSlots(strength);
@@ -1473,7 +1555,9 @@ export class UnitLayer {
           }
         }
         const fs = this.unitSize * (fig.footprint / 0.5) * scale * FIGURE_K * grow;
-        _p.copy(_v).addScaledVector(_right, x * gap).addScaledVector(_fwd, z * gap + P.fwd * fs).setLength(r + P.lift * fs);
+        _p.copy(_v).addScaledVector(_right, x * gap).addScaledVector(_fwd, z * gap + P.fwd * fs);
+        if (held) this.spots.keepIn(chip.tile, _p, fs * 0.4, chip.fitIn);
+        _p.setLength(r + P.lift * fs);
         this.field.push(fig, poseMatrix(_fm, _p, face, fs, P.pitch, P.roll, P.sy), team);
         order++;
         if (q > 0 || grow < 1) continue; // down, or not yet up: it neither fires nor smokes
@@ -1515,6 +1599,34 @@ export class UnitLayer {
   }
 
   /**
+   * A model's place inside its tile, eased so nothing jumps: how far along the tile's axis it stands from the
+   * resting spot (several counters share the tile side by side), how close a formation's figures stand (it fits
+   * the tile's inner radius, and a shared tile closes the ranks further), and how firmly the outline holds it
+   * (not at all on the march, fully once it rests). `step` is the open-ground distance between two models,
+   * `reach` a formation's open-ground radius (0 for a single model), `body` the model's own size.
+   */
+  private fitTile(chip: Chip, now: number, step: number, reach: number, body: number): void {
+    if (chip.fitAt === now) return;   // the news picture draws the same counters in the same frame
+    const rest = !chip.moving;
+    const n = rest ? Math.max(1, chip.stackN) : 1, i = rest ? Math.max(0, chip.stack) : 0;
+    const rin = this.spots.inradius(chip.tile);
+    // a hull is long and the sea beside it is still sea: fleets may spread to the tile's edge
+    const sep = n > 1 ? Math.min(step, (rin * (chip.kind === 'fleet' ? 1.7 : FIT_SPAN)) / (n - 1)) : 0;
+    const off = (i - (n - 1) / 2) * sep;
+    const room = (n > 1 ? Math.max(sep * 0.6, rin * 0.34) : rin * FIT_ROOM) - body * 0.2;
+    const fit = reach > 0 ? Math.min(1, Math.max(FIT_MIN, room / reach)) : 1;
+    if (!chip.fitAt) { chip.fitK = reach > 0 ? Math.min(1, Math.max(FIT_MIN, (rin * FIT_ROOM - body * 0.2) / reach)) : 1; chip.fitOff = 0; chip.fitS = 1; chip.fitIn = 0; }
+    const e = chip.fitAt ? 1 - Math.exp(-Math.min(100, Math.max(0, now - chip.fitAt)) / FIT_MS) : 0;
+    chip.fitAt = now;
+    if (chip.dying) return;
+    chip.fitK += (fit - chip.fitK) * e;
+    chip.fitOff += (off - chip.fitOff) * e;
+    chip.fitS += ((n >= 3 ? 0.8 : n === 2 ? 0.92 : 1) - chip.fitS) * e;
+    chip.fitIn += ((rest ? 1 : 0) - chip.fitIn) * e;
+    if (Math.abs(off - chip.fitOff) < 1e-5) chip.fitOff = off;
+  }
+
+  /**
    * The seven places of a formation (three in front, two flanks, two behind), eased towards the layout
    * for its strength: figures shuffle to their new spots instead of jumping, a place no longer wanted
    * empties one figure at a time (presence runs down while it falls), a new one fills as it stands up.
@@ -1550,6 +1662,7 @@ export class UnitLayer {
 
   dispose(): void {
     this.disposed = true;
+    counterBoxes.length = 0;
     clearStackLifts();
     this.spots.dispose();
     this.field.dispose();
