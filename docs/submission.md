@@ -385,7 +385,7 @@ Three people speak, each about their own lane: [name A] (lane a: world, agents, 
 - A **prepared world**: created earlier with Prepare ticked, readiness panel green, audio cached, a
   few hundred years in so there are cities, a war under way and at least one gold payment in the
   ledger. Six named nations with flags.
-- Presentation mode on (key **P**): globe, top bar and minimap only. Time running at a few years a
+- Presentation mode on (key **P**): the globe and the year plate only. Time running at a few years a
   second, camera in orbit. Nobody touches the mouse until [name A] starts.
 - A second window with the Solana Explorer page of a recent payment, as a safety shot.
 - Backup if live breaks: the saved replay `demo-1` (setup World setting, or `Ctrl+Shift+R` after
@@ -420,8 +420,7 @@ satellite beat (1:05 to 1:20), spoken by [name B]:
 | --- | --- | --- | --- | --- | --- |
 | 1:05 to 1:20 | [name B] | "Nations now build ports and fight at sea. A port opens a sea trade route, and every cargo is another signed payment." | Zoom to a port city; click a sea battle or trade route if one is on screen | Ships in battle, port, a payment arc | Solana; main track |
 
-`[check: if landed]` Do not rehearse this beat until the feature is merged and seen on the
-prepared world.
+Landed overnight (#371, #372, #382) and seen in the desktop app: rehearse it once on the prepared world before using it.
 
 ### 20-second version (a judge in a hurry)
 
