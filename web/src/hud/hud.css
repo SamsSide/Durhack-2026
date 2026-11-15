@@ -162,6 +162,15 @@ body:has(.tn-news) .minimap, body:has(.tn-news) .mm-modes, .minimap.mm-hidden, .
   pointer-events: none;
 }
 .news-slot > * { pointer-events: auto; }
+/* A small screen (a 1080p projector at 150% is 1280 x 720): with a nation card open the news sits
+   between the card and the decree box instead of on top of the card. */
+@media (max-width: 1560px) {
+  body:has(.left-dock:not(.out) .tn-card) .news-slot {
+    left: calc(var(--space-4) + 340px + var(--space-3));
+    transform: none;
+    width: clamp(460px, calc(100vw - 368px - 430px), 720px);
+  }
+}
 .onair { display: inline-flex; align-items: center; gap: 6px; }
 
 
