@@ -801,6 +801,62 @@ For each feature: what the judge sees, what is happening underneath, and the one
   chronicle and dispatches, network panel, decree box, ledger panel, projector layout. Tricky
   question: "what does the network panel actually switch?" (the bus link per nation).
 
+### Per-person judge Q&A
+
+Each of the three answers about their own lane. Short answers; if it is another lane's, hand over by
+name. Deeper answers are in "Likely questions with answers" above.
+
+**[name A], lane a (SamsSide): world, agents, Gemini, story and sound**
+
+1. *Is there really no central controller?* The runner is a clock and an observer. Each nation
+   decides its own events on its own replica; shared things are pure functions of shared data.
+2. *How do replicas agree without a referee?* Battles and disputes are deterministic seeded
+   functions of shared inputs, so every replica computes the same answer (section 4.2).
+3. *What exactly is the LLM doing?* Little: one short schema-checked JSON decision per ruler every
+   30 to 45 s, plus the world bible, lore, anthem lyrics, decrees and the news. Rules move the world.
+4. *What if Gemini fails?* The nation drops to autopilot from its mood; the provider switch can move
+   rulers to Gemma through the Gemini API or to local Gemma on this laptop with no internet.
+5. *Does local Gemma count as Gemini?* Our entry is the Gemini API, including Gemma through it.
+   Local Gemma is the offline fallback. We found no public MLH wording that says either way.
+6. *Is it really distributed?* No: all agents run in one Node process and the cut is a software
+   switch on the bus. Multi-laptop agents were cut. The design (replicas, messages, merge) is what
+   would carry over.
+7. *How are the anthems made?* Gemini writes lyrics from the nation's real chronicle; ElevenLabs
+   Music sings them; the cache is by content hash.
+
+**[name B], lane b (CutGrass88): the globe and the economy**
+
+1. *How does it run 1,200 provinces smoothly?* Instanced models, layers that rewrite only what
+   changed, a capped pixel ratio, and world reads at most ten times a second.
+2. *Does it hold 60 frames a second?* At a month a second, yes in orbit. At ten years a second it
+   does not yet on a busy laptop; we say so.
+3. *Is the Solana payment real?* A real devnet Token-2022 transfer plus a memo, signed by the paying
+   nation's own key. Click an arc to open it in the Explorer.
+4. *Why isn't the treasury on chain?* The simulation is the source of truth; the chain is a mirror
+   that settles every 5 seconds, so replays stay exact and the sim never waits on the network.
+5. *What stops someone printing money?* Fixed supply of 1,000,000 and the mint authority revoked at
+   genesis.
+6. *What about devnet rate limits?* Payments are netted into 5-second windows, sent a few at a
+   time and confirmed by polling; the overflow rolls into the next window.
+7. *What are the armies and satellites?* Instanced models driven by sim state, so a bigger army or
+   a launch is a real event, not decoration.
+
+**[name C], lane c (Justin-CODING-PY): the interface**
+
+1. *What does the network panel actually switch?* The bus link per nation, a ruler's silence, a
+   deletion, or a general's death: real controls on the agents, shown as a node graph.
+2. *How did you design it?* In Figma, in an old-atlas style, then calmed to one left panel and given
+   a shared material system; it is built to a 720 px projector.
+3. *Why a collapsed screen?* A 2-minute demo: presentation mode shows the globe, top bar and
+   minimap, and the chronicle, ledger and decree open on click.
+4. *How does the spoken decree work?* Hold the mic: the browser records audio, Gemini hears it
+   directly (no separate speech-to-text) and the engine turns it into an event.
+5. *How does the news anchor work?* The page captures the globe, Gemini writes a bulletin from the
+   image and the chronicle, and an animated anchor reads it in one of our cloned voices.
+6. *How did you build against other lanes?* Against mocks of the contracts in `docs/contracts.md`,
+   swapped for the real thing at the checkpoint.
+7. *What is not finished?* Many rows are still `testing`; painted flags need image billing.
+
 ## 9. Who built what
 
 | Lane | Person | Main PRs |

@@ -370,62 +370,82 @@ Tick only if the form is free; it costs nothing.
 There is **no video**. Judging is a 2-minute live demo on the owner's laptop (1920x1080) running
 the real app, given again for every judge who comes to the table. Two minutes is the hard
 maximum. Matches `docs/hackathon-plan.md` section 2. Where a sponsor form asks for a demo video
-link, write "live demo at the table; no video" `[check]` if the form insists on a link.
+link, write "live demo at the table; no video" `[check]` if the form insists on a link. The full
+setup, failure plays and rehearsal checklist are in `docs/demo.md`; this section is the script.
+
+Three people speak, each about their own lane: [name A] (lane a: world, agents, story and sound),
+[name B] (lane b: the globe and the economy) and [name C] (lane c: the interface). The brief was
+10 s, three times 40 s and 10 s, which is 2:20; to keep the 2:00 maximum each lane gets about 35 s
+(lane c 30 s). Say about 85 words in 35 s; do not add words.
 
 ### On screen before a judge arrives
 
-- Start it with one command: `npm run demo` (live; stops any old copy, starts a stable server and a
-  production build of the web, makes a prepared world, opens the browser). `npm run demo:mock` is the
-  same with no API calls, for rehearsals. `npm run demo:status` says what is running;
-  `npm run demo:stop` ends it. Logs are in `.demo/`.
-- The app running in live mode (`LLM_MODE=live`, `SOLANA_MODE=devnet`) on a **prepared world**:
-  created earlier with Prepare ticked, readiness panel green, audio cached, a few hundred years
-  in so there are cities, a war under way and at least one gold payment in the ledger.
-- Presentation mode on (key **P**) and the collapsed-by-default screen from lane c (#276): globe,
-  top bar and minimap only; chronicle, history, decree and ledger open on click. Time paused or
-  at 1 month a second, camera in orbit.
-- A second browser tab with the Solana Explorer page of a recent payment, as a safety shot.
-- Backup if live breaks: replay `demo-1` from the Create screen (Replay button, or
-  `POST /api/replays/demo-1/play`); no API calls, exact, audio cached.
+- The desktop app, started with `npm run demo` (see `docs/demo.md`), checks green, in the game
+  window, fullscreen (F11). Setting: LLM **Both**, Solana on, voice per the runbook.
+- A **prepared world**: created earlier with Prepare ticked, readiness panel green, audio cached, a
+  few hundred years in so there are cities, a war under way and at least one gold payment in the
+  ledger. Six named nations with flags.
+- Presentation mode on (key **P**): globe, top bar and minimap only. Time running at a few years a
+  second, camera in orbit. Nobody touches the mouse until [name A] starts.
+- A second window with the Solana Explorer page of a recent payment, as a safety shot.
+- Backup if live breaks: the saved replay `demo-1` (setup World setting, or `Ctrl+Shift+R` after
+  choosing it): no API calls, exact, audio cached.
 
-### The script (say the words in quotes; click what is in the middle column)
+### The script (2:00)
 
-| Time | Click and do | Say |
-| --- | --- | --- |
-| 0:00 to 0:10 | Nothing to click. Slow orbit, six named nations with flags. Press the gears to a few years a second | "Terra Nova: a new world composed live by AIs. Every nation has its own Gemini ruler, deciding on its own." |
-| 0:10 to 0:25 | Time runs: borders spread, ages advance. Click a gold payment arc: the Solana Explorer page opens (Success, devnet, memo). Back | "Every payment is a real Solana transfer signed by the paying nation, with the reason in the memo." |
-| 0:25 to 0:50 | **The moment.** Open the Network panel, cut one nation. Press Show beliefs: its map drifts, pulsing holo over what it no longer knows | "I cut this nation off. It keeps ruling on what it last knew. No central server; this is what it believes." |
-| 0:50 to 1:05 | Click that nation, kill its ruler (two clicks). A stand-in covers, then a successor with the old memory | "Kill its ruler and the council recovers; the successor inherits the memory." |
-| 1:05 to 1:25 | Restore the link: missing years merge in, disputes settled, "the Silence" in the chronicle. Hold the mic: "a plague in the north" | "Bring it back and the history merges in. A spoken decree is heard by Gemini and the engine applies it." |
-| 1:25 to 1:45 | Open Terra Nova News: the animated anchor reads the plague, in the ElevenLabs voice | "The news reads a picture of the globe and a voice reports it." |
-| 1:45 to 2:00 | Gears to 10 years a second for a few seconds, then key End for the token meter, one sentence for the prize the judge is here for | "Ten years a second, no referee: rules and seeded functions move the world. This whole world cost N tokens." |
+| Time | Who | Say | Clicks and keys | On screen | Prize |
+| --- | --- | --- | --- | --- | --- |
+| 0:00 to 0:10 | [name A] | "Terra Nova: a new world composed live by AIs. Every nation has its own Gemini ruler, its own wallet, and nobody is in charge." | None. Slow orbit; gears at a few years a second | Planet with six flags, borders spreading, ages advancing | Main track; Marshall Wace (New Worlds); Gemini |
+| 0:10 to 0:25 | [name A] | "Each nation has its own copy of the world and decides alone. Watch: I cut this one off. It keeps ruling on what it last knew." | Click a nation, open Network panel, cut its link, press Show beliefs | Its map drifts, out-of-date provinces pulse holo | Neptune North (independent decisions, resilience) |
+| 0:25 to 0:45 | [name A] | "Kill its ruler: a stand-in covers, then a successor inherits the memory. Restore the link: the missing years merge in and the clash is settled by one rule, written in the chronicle." | Kill ruler (two clicks), wait for stand-in, restore the link, open chronicle (H) for "the Silence", Esc | Council marks, merge, chronicle line | Neptune North; Gemini (autopilot or local Gemma if a model fails) |
+| 0:45 to 1:05 | [name B] | "I built the globe: 1,200 provinces, 100 models, ten years a second. Every payment between nations is a real Solana transfer signed by the paying nation, reason in the memo, supply fixed, mint authority revoked." | Gears to 10 years a second for 3 s, back down; click a gold payment arc; Explorer page opens; back | Fast-forward, armies, towns, then Explorer: Success, devnet, memo | Solana; main track (technical) |
+| 1:05 to 1:20 | [name B] | "Ages run from bows to starships. In a late war a rival's satellite can be shot down, and the chronicle says so." | Press 1 to 6 for map modes (show 2); open the satellite shot-down on the chronicle or feed, if one has happened | Map mode change; orbit or launch scene | Main track (creativity); Marshall Wace |
+| 1:20 to 1:35 | [name C] | "I built the interface from our Figma design. One calm left panel: this nation's ruler, mood, treasury, its narrated lore and an anthem sung from what really happened to it." | Click a nation; card docks left; press play on its anthem (or narration) for 3 s | Nation card, ruler, treasury, anthem playing | ElevenLabs; main track (polish) |
+| 1:35 to 1:50 | [name C] | "Hold the mic: a plague in the north. Gemini hears it as audio and the engine applies it. Terra Nova News then reports it, read by our own cloned voices." | Hold Space on the decree mic, speak; open Terra Nova News | Decree box, event, animated anchor | Gemini (audio in, image in); ElevenLabs (cloned voices) |
+| 1:50 to 2:00 | [name A] | "No video, no referee: rules and seeded functions move the world, and the LLM only sets focus. This whole world cost N tokens. Which part do you want to break?" | Key End for the closing card (token meter); offer the mouse | Token meter and closing card | Gemini; close on the judge's prize |
 
+If a speaker's beat slips, drop the satellite beat (1:05 to 1:20) first, then the ruler kill.
 Tailor the last sentence to the judge: Neptune North, "agents that keep working apart"; Solana,
 "every coin is a signed transfer"; ElevenLabs, "anthems and the anchor are sung and spoken from
-what happened"; Marshall Wace, "a new world from one line".
+what happened"; Marshall Wace, "a new world from one line"; Gemini, "text, picture, speech and
+the map all go through Gemini".
+
+### Optional beat, if landed (naval battles and ports)
+
+Only if the naval-battle and port work is merged on `main` and has been seen running on the
+prepared world (see `docs/prizes/final-review.md`: do not claim it otherwise). It replaces the
+satellite beat (1:05 to 1:20), spoken by [name B]:
+
+| Time | Who | Say | Clicks and keys | On screen | Prize |
+| --- | --- | --- | --- | --- | --- |
+| 1:05 to 1:20 | [name B] | "Nations now build ports and fight at sea. A port opens a sea trade route, and every cargo is another signed payment." | Zoom to a port city; click a sea battle or trade route if one is on screen | Ships in battle, port, a payment arc | Solana; main track |
+
+`[check: if landed]` Do not rehearse this beat until the feature is merged and seen on the
+prepared world.
 
 ### 20-second version (a judge in a hurry)
 
-Orbit, gears up: "Every nation is run by its own AI." Cut a nation, Show beliefs: "Cut off, it
-keeps going on what it last knew." Restore: "Bring it back and its history merges in." Offer to
-show the rest.
+[name A] alone: orbit, gears up: "Every nation is run by its own AI." Cut a nation, Show beliefs:
+"Cut off, it keeps going on what it last knew." Restore: "Bring it back and its history merges
+in." Offer to show the rest. The 30-second and 20-second add-on versions are in `docs/demo.md`.
 
 ### Reset routine between judges (about 10 seconds)
 
 1. Press **Escape** to close any open panel or card, then **P** to return to presentation mode.
 2. If the link was cut, restore it; unpause time; set the gears back to a few years a second.
 3. If the world has run too far (late ages, many nations dead, a quiet stretch with no war) or
-   anything looks broken: run `npm run demo:reset` in the terminal. It keeps the servers, makes a
-   fresh prepared world with the same prompt and mode (about a minute live, prints
-   `Preparing 14/30` as it goes), and the open tab switches to it by itself, no reload. Press play.
-4. Instant fallback, no API calls: `npm run demo:reset -- --replay demo-1` plays the saved world in
-   a known strong state at once, so a stack of judges does not burn the Gemini or ElevenLabs
-   budget. Press **Home** on the timeline scrubber to jump a replay back to tick 0, then run the gears.
+   anything looks broken: press **Ctrl+Shift+R** in the desktop app. It makes a fresh world with
+   the same world choice as setup (about a minute live). From a terminal, `npm run demo:reset`
+   does the same and the open tab switches to it by itself, no reload. Press play.
+4. Instant fallback, no API calls: choose Saved replay demo-1 in setup, or
+   `npm run demo:reset -- --replay demo-1`. Press **Home** on the timeline scrubber to jump a
+   replay back to tick 0, then run the gears.
 5. Run the next reset while the current judge is still at the table only if it is a replay; a live
-   reset replaces the world on screen. Refresh the Explorer tab only if the devnet page has expired.
+   reset replaces the world on screen. Refresh the Explorer window only if the devnet page has
+   expired.
 
 Safety shots: the Explorer page (`docs/shots/solana-devnet-payment.jpg`), the 10-years-a-second
-gear (`gears-10y.jpg`) and the Tiger Data territory chart `[check]`.
+gear (`gears-10y.jpg`) and `docs/shots/satellite-strike.jpg`.
 
 ---
 
@@ -438,15 +458,17 @@ gear (`gears-10y.jpg`) and the Tiger Data territory chart `[check]`.
 - [ ] Fund the Commons wallet from the devnet faucet; run `SOLANA_MODE=devnet` once and save a
       fresh Explorer link for the demo and the write-up `[check]`.
 - [ ] Re-confirm the "35 payments, drift 0" figure on the final build or drop the number `[check]`.
-- [ ] Rehearse the 2-minute table demo and the reset routine (section 3) three times in a row;
+- [ ] Rehearse the 2-minute table demo and the reset routine (section 3, checklist in `docs/demo.md`) three times in a row;
       there is no video to upload. If a form requires a demo link, write "live demo at the table;
       no video" `[check]`.
 - [ ] Make the repository public (or confirm judges can see it).
-- [ ] Optional: set `TIGER_DATABASE_URL` and look at the chart, or untick Tiger Data.
+- [ ] Leave Tiger Data and Entire unticked (owner rulings).
 - [ ] Copy section 1 into the Devpost fields; use the gallery shots from `docs/shots/`.
 - [ ] Add all three team members to the Devpost project (SamsSide, CutGrass88, Justin-CODING-PY).
-- [ ] Tick the prizes: main track; Neptune North; Marshall Wace New Worlds; Waterstons; MLH
-      ElevenLabs, Gemini, Solana; Tiger Data only if the chart works.
+- [ ] Tick the prizes, as in `docs/prizes/final-review.md`: main track; Neptune North; Marshall
+      Wace New Worlds; MLH Gemini, ElevenLabs, Solana; Waterstons if the form allows; DEV
+      Writing Challenge (optional, after submitting). Leave unticked: Entire, Tiger Data,
+      Vultr, MongoDB Atlas, hardware, QRT, SGX FX, Accenture, P&G, MicroGPT.
 - [ ] Check the MLH Gemini category label on the DurHack Devpost `[check]`.
 - [ ] Visit the Neptune North and Marshall Wace stands; rehearse the demo three times (CP3).
 - [ ] Bring a speaker for the audio and the saved replay as the offline backup.
