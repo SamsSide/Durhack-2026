@@ -347,8 +347,8 @@ The breakaway becomes a new nation with its own agent and ruler: a new actor joi
 
 `sim/payments.ts`, `settleMove` in `sim/war.ts`, `applyTickBatch` in `sim/sync.ts`.
 
-- **Sources:** trade dues (every 10 years per pact, one in three by hash, the poorer partner pays 4%
-  for the other's main good); reparations the year after a peace from the side that lost ground
+- **Sources:** goods-market bills (every 5 years per buyer, one merged bill to each seller for the
+  goods it bought, capped at 15% of the buyer's treasury, bills under 8 skipped); reparations the year after a peace from the side that lost ground
   (15 to 40%); plunder of a sacked town or city (7 or 12% of the defender's treasury); seizure of a
   fallen capital (30%, or 70% if the nation falls); war chests from allies not in the war (12%);
   pooled funds between allies fighting together (20% from the weaker); subsidies from a strong rich
@@ -409,7 +409,7 @@ flowchart LR
   it rebuilt with a fresh blockhash. A resend of a group already in flight is ignored.
 - **Honesty check:** per nation, `ledger = float + confirmed in - confirmed out + advances` and
   `onChain` (read from devnet) must agree; `drift` is reported in `GET /api/economy`.
-- **Replays** send nothing; a sidecar `server/replays/<id>.chain.json` keeps the real signatures
+- **Replays** send nothing; a sidecar `server/replays/<id>.ledger.json` keeps the real signatures
   from a recorded live run so Explorer links still open.
 - **Libraries:** `@solana/kit` 8.6, `@solana/kit-plugin-rpc` and `-signer` 0.23,
   `@solana-program/token-2022` 0.20, `@solana-program/memo` 0.16 (never `@solana/web3.js`).
