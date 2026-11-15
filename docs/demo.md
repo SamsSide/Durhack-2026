@@ -133,3 +133,31 @@ Do it three times in a row, with a timer, all three speakers, on the real laptop
 - [ ] Optional naval and port beat rehearsed only if it is merged and seen running.
 - [ ] Speaker connected and loud enough for a busy hall; laptop on power, sleep off, notifications off.
 - [ ] Everyone knows who answers which question: `docs/documentation.md` section 8, "Per-person judge Q&A".
+
+## 8. What the overnight test run found (15 Nov, in the desktop app)
+
+Everything below was seen in the Electron app on the demo laptop, not in Chrome.
+
+- **Frame rate.** Production build, RTX laptop GPU: about 150 fps from orbit and 130 at ground level
+  with every feature on. Close every other tab or window that shows the game before judging: three
+  forgotten Chrome tabs halved the frame rate.
+- **Local Gemma shares the GPU with the picture.** With LLM Local or Both, the game drops to about
+  90 fps and hitches for 35 to 60 ms whenever the model answers; at the top speed gear it falls to
+  about 40 fps. With the Gemini API it stays smooth. If the picture matters more than showing the
+  local model, pick Gemini API or Gemma via Gemini API; if you show local Gemma, keep the gears at
+  one season a second and say that the model is running on the same card.
+- **Local calls wait in line.** They are sent one at a time, decrees, lore and news first. A
+  "Prepare for a demo" run on local Gemma with voice off takes about a minute and ends 12 of 12.
+- **The world bible.** With LLM Local it still goes to Gemini when a key is set (13 s to found a
+  world); local Gemma needed over 73 s. `OLLAMA_BIBLE=1` keeps it local.
+- **Voice Off is really off now.** It used to keep calling ElevenLabs; the account has about 20
+  characters left, so anthems and the anchor are silent until it is topped up. With voice off the
+  Anthem button shows the lyrics and the news shows "(no sound)".
+- **A small screen.** A 1080p projector at 150% scaling gives a 1280 x 720 page: the Create button
+  and the news window now fit. At 100% scaling nothing changes.
+- **The Solana beat.** A click on a payment or a treasury link opens the Explorer in a window over
+  the game; **Esc** (or Ctrl+W) closes it.
+- **Between judges.** Ctrl+Shift+R gives the Create screen in about 15 s. The saved replay is the
+  first row of Saved worlds on the Create screen ("The Drowned Age", Replay).
+- **The opening shot.** A new world opens facing the side with the most nations, whole planet in
+  view; clouds part when the camera flies to a nation.
