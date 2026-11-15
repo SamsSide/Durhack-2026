@@ -46,7 +46,7 @@ a globe you can spin and zoom. Gemini writes a world bible: each nation gets a n
 government, an ideology, a founding myth, a flag and a building style. Place names quietly echo
 Durham colleges and North East towns.
 
-Then time runs, from a week a second to ten years a second (new worlds start at a month a
+Then time runs, from a week a second to ten years a second (new worlds start at three months a
 second, and a director slows down for big moments). Each nation is an independent agent with its own copy of the world. It claims
 land, builds camps that become towns and cities, raises wonders, and moves through the ages, from
 bows and galleys to tanks, maglev freighters and starships. Merchant ships cross the oceans
@@ -377,6 +377,9 @@ Three people speak, each about their own lane: [name A] (lane a: world, agents, 
 [name B] (lane b: the globe and the economy) and [name C] (lane c: the interface). The brief was
 10 s, three times 40 s and 10 s, which is 2:20; to keep the 2:00 maximum each lane gets about 35 s
 (lane c 30 s). Say about 85 words in 35 s; do not add words.
+
+*The demo pack is in [`demo/`](../demo/README.md): `demo/script.md` is a copy of this section. Fix
+this section first, then the copy.*
 
 ### On screen before a judge arrives
 
