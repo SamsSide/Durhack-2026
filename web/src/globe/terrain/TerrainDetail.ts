@@ -27,6 +27,10 @@ interface Poly { edges: Edge[]; inR: number }
 const KIND: Record<DetailKind, number> = Object.fromEntries(DETAIL_KINDS.map((k, i) => [k, i])) as Record<DetailKind, number>;
 const FADE = new Set<number>([KIND.rockA, KIND.rockB, KIND.scrub, KIND.reed]);
 const NO_SNOW = 2;
+/** The largest scale a peak may have: the camera only clears props it can see (MAX_PROP in camera/propScan.ts). */
+const PEAK_MAX = 0.058;
+/** A group of touching mountain tiles this big is a range: its peaks line up into ridges along its long axis. */
+const RANGE_MIN = 4;
 /** How often the province colours are re-read, in frames. */
 const COLOR_EVERY = 6;
 
@@ -54,9 +58,12 @@ export class TerrainDetail {
   private col = new THREE.Color();
   private p = new THREE.Vector3();
   private counts = DETAIL_KINDS.map(() => 0);
+  /** Per mountain tile in a range: the range's long axis (a world direction). */
+  private rangeAxis = new Map<number, THREE.Vector3>();
 
   constructor(private world: World, private geos: TileGeos, private mesh: ProvinceMesh) {
     this.shown = new Float32Array(world.tiles.length * 3).fill(-1);
+    this.findRanges();
     for (const t of world.tiles) {
       if (t.terrain === 'ocean') continue;
       this.place(t);
@@ -98,6 +105,42 @@ export class TerrainDetail {
   }
 
   // ---- placement ---------------------------------------------------------------------------
+
+  /** Group touching mountain tiles and find each large group's long axis (the main direction its tiles spread in). */
+  private findRanges(): void {
+    const tiles = this.world.tiles;
+    const seen = new Set<number>();
+    for (const t of tiles) {
+      if (t.terrain !== 'mountain' || seen.has(t.id)) continue;
+      const group = [t.id];
+      seen.add(t.id);
+      for (let i = 0; i < group.length; i++) {
+        for (const nb of tiles[group[i]!]!.neighbors) {
+          if (tiles[nb]?.terrain !== 'mountain' || seen.has(nb)) continue;
+          seen.add(nb);
+          group.push(nb);
+        }
+      }
+      if (group.length < RANGE_MIN) continue;
+      let mx = 0, my = 0, mz = 0;
+      for (const id of group) { const c = tiles[id]!.center; mx += c[0]; my += c[1]; mz += c[2]; }
+      mx /= group.length; my /= group.length; mz /= group.length;
+      let xx = 0, xy = 0, xz = 0, yy = 0, yz = 0, zz = 0;
+      for (const id of group) {
+        const c = tiles[id]!.center, x = c[0] - mx, y = c[1] - my, z = c[2] - mz;
+        xx += x * x; xy += x * y; xz += x * z; yy += y * y; yz += y * z; zz += z * z;
+      }
+      // Power iteration: the direction the group is longest in.
+      let ax = 0.61, ay = 0.53, az = 0.59;
+      for (let k = 0; k < 24; k++) {
+        const nx = xx * ax + xy * ay + xz * az, ny = xy * ax + yy * ay + yz * az, nz = xz * ax + yz * ay + zz * az;
+        const l = Math.hypot(nx, ny, nz) || 1;
+        ax = nx / l; ay = ny / l; az = nz / l;
+      }
+      const axis = new THREE.Vector3(ax, ay, az);
+      for (const id of group) this.rangeAxis.set(id, axis);
+    }
+  }
 
   /** The tile's outline in its tangent plane, each edge with the neighbour across it. */
   private poly(t: World['tiles'][number], g: TileGeo): Poly {
@@ -225,31 +268,82 @@ export class TerrainDetail {
         const cap = (height / W - 0.3) * 1.3 + Math.max(0, lat - 0.35) * 1.1 + (icy ? 0.35 : 0) + (t.elevation - 0.9) * 0.8 - (dry ? 0.2 : 0);
         return cap < 0.08 ? NO_SNOW : 1 - Math.min(lat > 0.7 || icy ? 0.8 : 0.5, cap);
       };
-      const peak = (a: number, b: number, rad: number, i: number, u: number, keep: boolean, up = 0): void => {
-        const height = rad * (0.95 + 0.5 * u) * (i === 0 ? 1.15 : 1);
+      // How high this province stands in its range: every province differs, and one that outranks all its
+      // mountain neighbours carries the group's tallest summit.
+      const rank = (id: number): number => hash01(id * 131, 95);
+      let deep = true, crown = true;
+      for (const e of poly.edges) {
+        if (e.kind !== 'mtn') deep = false;
+        else if (rank(e.other) > rank(t.id)) crown = false;
+      }
+      const lift = (0.84 + 0.3 * rank(t.id)) * (deep ? 1.08 : 1) * (crown ? 1.2 : 1);
+      const peak = (a: number, b: number, rad: number, i: number, u: number, keep: boolean, up = 0, tall = 1): void => {
+        rad = Math.min(rad, PEAK_MAX);
+        const height = Math.min(PEAK_MAX, rad * (0.95 + 0.5 * u) * (i === 0 ? 1.15 : 1) * lift * tall);
         const kind = KIND.peak0 + Math.floor(h(i, 61 + (keep ? 7 : 0)) * 4);
         this.add(t, g, kind, a, b, rad, height, rad, null, { keep, up, snow: snowFor(rad, height), mix: 1 });
       };
-      // Link peaks on every edge shared with another mountain tile (placed by the lower id), so a range reads as one.
+      // In a range the ridges run along its long axis; a lone massif keeps its ring of summits.
+      const axis = this.rangeAxis.get(t.id);
+      let ux = 0, uy = 0;
+      if (axis) {
+        const turn = (h(0, 96) - 0.5) * 0.5;
+        const x = axis.dot(g.t1), y = axis.dot(g.t2), l = Math.hypot(x, y);
+        if (l > 0.2) { ux = (x * Math.cos(turn) - y * Math.sin(turn)) / l; uy = (x * Math.sin(turn) + y * Math.cos(turn)) / l; }
+      }
+      const ridged = ux !== 0 || uy !== 0;
+      // Link peaks on edges shared with another mountain tile (placed by the lower id), so a range reads as one.
+      // In a range only the edges a ridge crosses get one, which leaves valleys between the ridges.
       let links = 0;
       poly.edges.forEach((e, i) => {
         if (e.kind !== 'mtn') return;
         links++;
         if (t.id > e.other) return;
+        if (ridged && Math.abs(e.nx * ux + e.ny * uy) < 0.6) return;
         const rad = W * (0.3 + 0.12 * h(i, 62));
         const slide = (h(i, 63) - 0.5) * 0.3 * e.len;
         const a = e.mx * 0.97 - e.ny * slide, b = e.my * 0.97 + e.nx * slide;
         taken.push([a, b, rad]);
         peak(a, b, rad, i + 1, h(i, 64), true, Math.min(0, (this.geos.get(e.other).h - g.h)));
       });
-      // The summits: a ring round the centre, the first one the tallest.
-      this.scatter(t, poly, taken, links ? 5 : 6, 1, (i) => W * (i === 0 ? 0.4 : 0.24 + 0.13 * h(i, 65)), (rad) => rad * 0.96 + W * 0.03, 0.62, true, seaGap,
-        (a, b, rad, i, u) => peak(a, b, rad, i, u, false), 0.86);
-      // Foothills toward the lowlands, in the province's own colour.
-      this.scatter(t, poly, taken, 3, 2, (i) => W * (0.15 + 0.08 * h(i, 66)), (rad) => rad + W * 0.04, 0.7, false, seaGap, (a, b, rad, i, u) => {
-        this.add(t, g, KIND.knoll, a, b, rad * 1.15, rad * (0.4 + 0.25 * u), rad, null, { snow: knollFrost, mix: 0.55 });
-      });
-      rocks(4, 3, 0.035, 0.075);
+      let summits = links ? 5 : 6;
+      if (ridged) {
+        // One ridge beside the centre (armies stand in the middle): the summit, then a shoulder each way along
+        // the axis, each lower than the last. Deep inside the range the ridge is bigger and there are fewer peaks.
+        summits = deep ? 4 : 5;
+        const side = h(0, 97) < 0.5 ? -1 : 1;
+        const main = W * (deep ? 0.46 : 0.4) * (crown ? 1.1 : 1);
+        const off = main * 0.96 + W * 0.03;
+        const cx = -uy * side * off, cy = ux * side * off;
+        const along = (h(0, 98) - 0.5) * 0.2 * W;
+        const spots: [number, number, number][] = [[along, main, 1.12], [along + main * 0.95, main * (0.66 + 0.14 * h(1, 99)), 0.94], [along - main * 0.95, main * (0.56 + 0.14 * h(2, 99)), 0.86]];
+        let placed = 0;
+        spots.forEach(([d, rad, tall], i) => {
+          const a = cx + ux * d, b = cy + uy * d;
+          if (!this.fits(poly, a, b, rad, true, seaGap)) return;
+          for (const q of taken) if (Math.hypot(a - q[0], b - q[1]) < (rad + q[2]) * 0.5) return;
+          taken.push([a, b, rad]);
+          peak(a, b, rad, i, h(i, 100), false, 0, tall);
+          placed++;
+        });
+        summits -= placed;
+        // The rest are lesser peaks round the ring (a second, lower line across the valley).
+        if (summits > 0) {
+          this.scatter(t, poly, taken, summits, 1, (i) => W * (0.2 + 0.12 * h(i, 65)), (rad) => rad * 0.96 + W * 0.03, 0.62, true, seaGap,
+            (a, b, rad, i, u) => peak(a, b, rad, i + 3, u, false, 0, 0.8), 0.86);
+        }
+      } else {
+        // The summits: a ring round the centre, the first one the tallest.
+        this.scatter(t, poly, taken, summits, 1, (i) => W * (i === 0 ? 0.4 : 0.24 + 0.13 * h(i, 65)), (rad) => rad * 0.96 + W * 0.03, 0.62, true, seaGap,
+          (a, b, rad, i, u) => peak(a, b, rad, i, u, false), 0.86);
+      }
+      // Foothills toward the lowlands, in the province's own colour (none deep inside a range: there are no lowlands there).
+      if (!(ridged && deep)) {
+        this.scatter(t, poly, taken, 3, 2, (i) => W * (0.15 + 0.08 * h(i, 66)), (rad) => rad + W * 0.04, 0.7, false, seaGap, (a, b, rad, i, u) => {
+          this.add(t, g, KIND.knoll, a, b, rad * 1.15, rad * (0.4 + 0.25 * u), rad, null, { snow: knollFrost, mix: 0.55 });
+        });
+      }
+      rocks(ridged ? 2 : 4, 3, 0.035, 0.075);
       return;
     }
     if (t.terrain === 'hills') {
