@@ -91,6 +91,25 @@ export function labelAxis(world: World, tiles: number[], centre: V3): LabelAxis 
   };
 }
 
+/** A name's box on screen: centre and half sizes in px (y up), turned by the unit vector (c, s). */
+export interface ScreenBox { x: number; y: number; hw: number; hh: number; c: number; s: number }
+
+/** The nation names on screen this frame, by label key. Region names give way to them. */
+export const nationBoxes = new Map<string, ScreenBox>();
+
+/** True when two turned boxes overlap (separating axes). */
+export function boxesCross(a: ScreenBox, b: ScreenBox): boolean {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const axes = [a.c, a.s, -a.s, a.c, b.c, b.s, -b.s, b.c];
+  for (let i = 0; i < 8; i += 2) {
+    const ax = axes[i]!, ay = axes[i + 1]!;
+    const ra = a.hw * Math.abs(a.c * ax + a.s * ay) + a.hh * Math.abs(-a.s * ax + a.c * ay);
+    const rb = b.hw * Math.abs(b.c * ax + b.s * ay) + b.hh * Math.abs(-b.s * ax + b.c * ay);
+    if (Math.abs(dx * ax + dy * ay) > ra + rb) return false;
+  }
+  return true;
+}
+
 // Cinzel for the globe names. troika needs a .woff/.ttf URL (not woff2); fontsource on jsDelivr
 // serves a pinned one. Checked once: if it can't be fetched (offline venue), labels keep the default font.
 const CINZEL_URL = '/fonts/cinzel-latin-600-normal.woff'; // self-hosted copy of @fontsource/cinzel 5.0.13 (SIL OFL)

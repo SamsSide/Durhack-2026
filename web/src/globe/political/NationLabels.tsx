@@ -14,7 +14,8 @@ import { groundView } from '../camera/groundView';
 import { getPalette } from '../palette';
 import { useProvinceMesh } from '../mesh/context';
 import { statusOf } from '../status/statusTint';
-import { labelAxis, labelFont, mainBody, subscribeFont } from './labelLayout';
+import { boxesCross, labelAxis, labelFont, mainBody, nationBoxes, subscribeFont } from './labelLayout';
+import { capitalPoint } from '../status/geo';
 import type { LabelAxis } from './labelLayout';
 
 const RENDER_ORDER = 1000; // after the globe, borders and units: never hidden by terrain
@@ -32,6 +33,8 @@ const LIMB = 0.9; // names stay inside this share of the visible disc
 const ENGRAVE_FILL = '#f1e3bd'; // warm parchment lettering
 const ENGRAVE_EDGE = '#1a120a'; // thin dark engraved edge
 const PANEL_GAP = 10; // px kept clear of the side panels
+const CAP_R = 44; // px: the room a capital's marker and its counters take round their middle
+const CAP_UP = 26; // px: that middle sits this far above the capital's dot
 
 /** The free screen band between the network panel (left) and the nation card (also left), in px. */
 const band = { left: 0, right: Infinity, t: 0 };
@@ -58,6 +61,8 @@ interface LabelData extends LabelAxis {
   /** Unit centres of the labelled tiles (x, y, z per tile), to anchor on the part in view. */
   pts: Float32Array;
   flag: FlagSpec;
+  /** A nation's capital (a point on the globe): its name steps aside from the marker there. */
+  cap?: [number, number, number];
 }
 
 const ANCHOR_EVERY = 120; // ms between re-anchoring on the visible part of the land
@@ -105,6 +110,10 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
   const meas = useRef<{ w: number; ls: number } | null>(null);
   const applied = useRef({ ls: -1, t: 0 });
   const strikeKey = useRef('');
+  const shift = useRef(0); // px the name has stepped across its land, clear of its capital
+  const giveWay = useRef(1); // a region name fades to 0 under a nation name
+  const cap = useMemo(() => (data.cap ? new THREE.Vector3(...data.cap) : null), [data.cap]);
+  useEffect(() => () => { nationBoxes.delete(data.key); }, [data.key]);
 
   const n = Math.max(1, data.name.length);
   const dir = useMemo(() => new THREE.Vector3(...data.dir), [data.dir]);
@@ -151,7 +160,7 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
     const deleted = statusOf(data.owner) === 'deleted';
     if (deleted) alpha *= 0.5;
     g.visible = alpha > 0.01;
-    if (!g.visible) return;
+    if (!g.visible) { nationBoxes.delete(data.key); return; }
 
     // Lift above the tallest terrain plus a margin that grows as the camera pulls back.
     const R = TOP + 0.004 + 0.008 * Math.max(0, d - 1);
@@ -184,7 +193,7 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
     const fov = ((camera as THREE.PerspectiveCamera).fov ?? 45) * (Math.PI / 180);
     const wpp = (2 * dist * Math.tan(fov / 2)) / Math.max(1, size.height); // world units per pixel
     tmp.ndc.copy(tmp.pos).project(camera);
-    const sx = ((tmp.ndc.x + 1) / 2) * size.width;
+    const sx = ((tmp.ndc.x + 1) / 2) * size.width, sy = ((tmp.ndc.y + 1) / 2) * size.height; // px, y up
     const fb = freeBand(size.width);
     const roomPx = Math.min(sx - fb.left, fb.right - sx);
     const panelHalf = Math.abs(ux) > 0.05 ? (Math.max(0, roomPx) * wpp) / Math.abs(ux) : Infinity;
@@ -209,8 +218,41 @@ function FlagLabel({ data, font }: { data: LabelData; font: string | undefined }
     alpha *= clamp01((1.25 - need / Math.max(1e-6, halfMax)) / 0.25);
     alpha *= clamp01(0.8 + (f / wpp - TINY) / 8); // a tiny name dims a little, never vanishes for size alone
     if (roomPx < 0) alpha = 0;
+    const halfPx = (f * (w0 + ls * n)) / 2 / wpp, thickPx = (0.6 * f) / wpp;
+    if (data.kind === 'region') {
+      // a region name gives way to a nation name: it fades where their boxes cross
+      const me = { x: sx, y: sy, hw: halfPx, hh: thickPx, c: ux, s: uy };
+      let under = false;
+      for (const b of nationBoxes.values()) if (boxesCross(me, b)) { under = true; break; }
+      giveWay.current += ((under ? 0 : 1) - giveWay.current) * 0.2;
+      alpha *= giveWay.current;
+    }
     g.visible = alpha > 0.01;
-    if (!g.visible) return;
+    if (!g.visible) { nationBoxes.delete(data.key); return; }
+    if (data.kind === 'nation') {
+      // Step across the land, clear of the nation's own capital marker, when the land is thick enough.
+      let want = 0;
+      if (cap && camera.position.dot(cap) / d > 0.3) {
+        tmp.ndc.copy(cap).project(camera);
+        const cx = ((tmp.ndc.x + 1) / 2) * size.width - sx, cy = ((tmp.ndc.y + 1) / 2) * size.height + CAP_UP - sy;
+        const along = cx * ux + cy * uy, perp = -cx * uy + cy * ux;
+        const reach = thickPx + CAP_R;
+        if (Math.abs(along) < halfPx + CAP_R && Math.abs(perp) < reach) {
+          const room = (0.5 * across - 0.6 * f) / wpp; // px the name can move and stay on its land
+          const away = perp > 0 ? -1 : 1;
+          if (reach - Math.abs(perp) <= room) want = away * (reach - Math.abs(perp));
+          else if (reach + Math.abs(perp) <= room) want = -away * (reach + Math.abs(perp));
+        }
+      }
+      shift.current = Math.abs(want - shift.current) < 0.5 ? want : shift.current + (want - shift.current) * 0.12;
+      const sh = shift.current;
+      if (sh !== 0) {
+        tmp.pos.addScaledVector(tmp.right, -uy * sh * wpp).addScaledVector(tmp.up, ux * sh * wpp).setLength(R);
+        g.position.copy(tmp.pos);
+      }
+      if (alpha > 0.15) nationBoxes.set(data.key, { x: sx - uy * sh, y: sy + ux * sh, hw: halfPx + (showFlag ? (1.6 * f) / wpp : 0), hh: thickPx, c: ux, s: uy });
+      else nationBoxes.delete(data.key);
+    }
 
     inner.rotation.z = angle;
     inner.scale.setScalar(f);
@@ -345,7 +387,8 @@ export function NationLabels() {
         if (!c || c.alive === false || tiles.length === 0 || !c.name) continue;
         const body = mainBody(world, tiles);
         const centre = mesh.centroidOf(body);
-        out.push({ key: `n${id}`, name: c.name, kind: 'nation', owner: id, dir: unit(centre), pts: centres(world, body), flag: c.flag, ...labelAxis(world, body, centre) });
+        const cap = c.capitalTile != null && world.tiles[c.capitalTile] && world.owner[c.capitalTile] === id ? capitalPoint(mesh, world, id) ?? undefined : undefined;
+        out.push({ key: `n${id}`, name: c.name, kind: 'nation', owner: id, dir: unit(centre), pts: centres(world, body), flag: c.flag, cap, ...labelAxis(world, body, centre) });
       }
       for (const r of world.regions) {
         if (!r.name || r.tiles.length === 0) continue;
