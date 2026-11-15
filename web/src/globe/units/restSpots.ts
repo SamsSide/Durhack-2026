@@ -1,4 +1,4 @@
-// Where a unit rests on its tile, so it never stands inside a building: the tile centre when that is free,
+// Where a unit rests on its tile, so it never stands inside a building: the middle of the tile's outline when that is free,
 // else the nearest free spot beside whatever fills it (the structure layer's footprints in structures/occupancy,
 // the close-up town's disc, a harbour's piers and lighthouse on the sea tile it faces). One spot per tile, the
 // same every time for the same buildings; a spot only changes when a building takes it, and then the unit
@@ -27,6 +27,7 @@ export class RestSpots {
   private readonly spots = new Map<number, Spot>();
   private readonly towns = new Map<number, number>();   // tile -> town radius, in tile widths
   private readonly rims = new Map<number, number[]>();  // tile -> its edges as (nx, ny, d) triples, normals pointing in
+  private readonly hearts = new Map<number, { a: number; b: number; r: number }>();
   private readonly moving = new Set<Spot>();
   private readonly off: () => void;
 
@@ -69,6 +70,69 @@ export class RestSpots {
       if (at.a !== s.a || at.b !== s.b) { s.a = at.a; s.b = at.b; this.moving.add(s); }
     }
     return s.dir;
+  }
+
+  /** The middle of the tile's outline (the point furthest from every edge, near enough; a tile's own centre can
+   *  sit well to one side of a lopsided outline) in the tile's tangent axes, and its distance to the nearest edge. */
+  private heart(tile: number): { a: number; b: number; r: number } {
+    let m = this.hearts.get(tile);
+    if (m) return m;
+    m = { a: 0, b: 0, r: this.need };
+    const t = this.world.tiles[tile];
+    if (t && t.boundary.length >= 3) {
+      const g = this.geos.get(tile), rim = this.rim(tile, g);
+      const clear = (a: number, b: number): number => {
+        let c = Infinity;
+        for (let i = 0; i < rim.length; i += 3) c = Math.min(c, a * rim[i]! + b * rim[i + 1]! - rim[i + 2]!);
+        return c;
+      };
+      let a = 0, b = 0, c = clear(0, 0);
+      for (let it = 0; it < 24; it++) {
+        // step away from the nearest edge while that leaves more room
+        let near = 0, least = Infinity;
+        for (let i = 0; i < rim.length; i += 3) { const v = a * rim[i]! + b * rim[i + 1]! - rim[i + 2]!; if (v < least) { least = v; near = i; } }
+        const step = g.width * 0.1 * (1 - it / 24);
+        const na = a + rim[near]! * step, nb = b + rim[near + 1]! * step, nc = clear(na, nb);
+        if (nc > c) { a = na; b = nb; c = nc; }
+      }
+      if (c > 0 && c < Infinity) m = { a, b, r: c };
+    }
+    this.hearts.set(tile, m);
+    return m;
+  }
+
+  /** How far the tile's outline is from its middle at the nearest edge (world units): the room a formation has. */
+  inradius(tile: number): number {
+    return this.heart(tile).r;
+  }
+
+  /** A fixed direction across the tile (unit vector on its surface), the same every time: two counters on one
+   *  tile stand apart along it. */
+  axis(tile: number, out: THREE.Vector3): THREE.Vector3 {
+    const g = this.geos.get(tile);
+    const ang = hash01(tile, 29) * Math.PI;
+    return out.copy(g.t1).multiplyScalar(Math.cos(ang)).addScaledVector(g.t2, Math.sin(ang));
+  }
+
+  /** Moves a point on the tile (world space, any height) back inside the tile's outline, `margin` in from every
+   *  edge; `k` (0..1) is how much of the move to make. The point keeps its height. */
+  keepIn(tile: number, p: THREE.Vector3, margin: number, k = 1): void {
+    if (k <= 0 || !this.world.tiles[tile]) return;
+    const g = this.geos.get(tile);
+    const up = p.dot(g.n);
+    if (up <= 1e-6) return;
+    const len = p.length(), s = g.h / up;
+    let a = p.dot(g.t1) * s, b = p.dot(g.t2) * s;
+    const a0 = a, b0 = b;
+    const rim = this.rim(tile, g), m = Math.min(margin, this.inradius(tile) * 0.6);
+    for (let pass = 0; pass < 2; pass++) {
+      for (let i = 0; i < rim.length; i += 3) {
+        const v = a * rim[i]! + b * rim[i + 1]! - rim[i + 2]! - m;
+        if (v < 0) { a -= v * rim[i]!; b -= v * rim[i + 1]!; }
+      }
+    }
+    if (a === a0 && b === b0) return;
+    p.addScaledVector(g.t1, ((a - a0) * k) / s).addScaledVector(g.t2, ((b - b0) * k) / s).setLength(len);
   }
 
   /** Glide the spots that changed. */
@@ -121,7 +185,8 @@ export class RestSpots {
     const feet = feetOn(tile);
     const g = this.geos.get(tile);
     const town = (this.towns.get(tile) ?? 0) * g.width;
-    if (!feet.length && !town) return { a: 0, b: 0 };
+    const mid = this.heart(tile);
+    if (!feet.length && !town) return { a: mid.a, b: mid.b };
     // a hull is longer than a formation is deep: fleets keep more water between them and the piers
     const rim = this.rim(tile, g), need = this.need * (this.world.tiles[tile]?.terrain === 'ocean' ? 1.6 : 1), edge = RIM * g.width;
     const room = (a: number, b: number): number => {
@@ -136,14 +201,14 @@ export class RestSpots {
       return c;
     };
     if (keep && room(keep.a, keep.b) >= 0) return { a: keep.a, b: keep.b };
-    let best = { a: 0, b: 0 }, most = room(0, 0);
+    let best = { a: mid.a, b: mid.b }, most = room(mid.a, mid.b);
     if (most >= 0) return best;
     const turn = hash01(tile, 17) * Math.PI * 2;
     for (let ring = 1; ring <= 7; ring++) {
       const r = g.width * 0.12 * ring;
       for (let k = 0; k < 12; k++) {
         const ang = turn + (k + ring * 0.5) * (Math.PI / 6);
-        const a = Math.cos(ang) * r, b = Math.sin(ang) * r;
+        const a = mid.a + Math.cos(ang) * r, b = mid.b + Math.sin(ang) * r;
         const c = room(a, b);
         if (c >= 0) return { a, b };
         if (c > most) { most = c; best = { a, b }; }
