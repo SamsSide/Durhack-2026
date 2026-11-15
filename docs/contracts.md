@@ -606,6 +606,12 @@ this table from `@terra/shared`.
   (`capital`, `city`, `town`, `temple`, `fort`). Lane b picks `styles[country.buildingStyle][kind]`,
   then `styles[STYLE_FALLBACK[style]][kind]` (`norse` to medieval, `south_asian` and `sahel` to
   desert, `industrial` to scrap; exported from `@terra/shared`), then `models[kind]`, then the box.
+
+  **Tree variants (owner, 15 Nov):** the manifest may also have
+  `"trees": { "<name>": { "file": "trees/<name>.glb", "footprint": n } }` (optional; `oak`, `pine`,
+  `snowpine`, `poplar`, `palm`, `acacia`, `birch`, `bush`). Each is at most 600 triangles with the
+  trunk at the origin and at most one `team` material, used for fruit. `models.tree` stays as the
+  fallback when the section or a variant is missing.
   Every other kind stays shared. Gemini picks each nation's style in the world bible (at most two
   nations per style); `mockWorld()` gives its nations five different styles.
 
