@@ -82,3 +82,4 @@
 - 14 Nov (owner, #317): one warmonger per world and earlier first wars; a war-report scene on the news.
 - 14 Nov 23:15 (owner, #345): industrial and modern towns lose their medieval walls (lane a); battle readability (status line over armies, fire on the battle line, attack arrow) goes to lane b once `a/anim-war` has merged; smaller army groups parked; after-demo ideas live in `docs/future.md` (lane a owns it).
 - 14 Nov (owner, #317): satellites from the modern age; a national mood that shifts with what happens; satellites can be shot down in future-age wars; towns modernise through the ages.
+- 14 Nov 23:50 (owner): an LLM provider switch: Gemini, Gemma through the Gemini API, local Gemma (Ollama) or hybrid; audio and painted flags stay on Gemini.
