@@ -5,6 +5,7 @@ import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerE
 import { closeTimeline, goLive, openTimeline, scrubTo, startTimeline, useTimeline, yearOf } from './engine';
 import type { Marker, MarkerKind } from './engine';
 import './timeline.css';
+import { yearLabel, yearRange, yearShort } from '@terra/shared';
 
 const KIND_LABEL: Record<MarkerKind, string> = {
   war: 'War', fall: 'Fall', secession: 'Secession', wonder: 'Wonder', death: 'Death',
@@ -128,7 +129,7 @@ export function TimelineScrubber() {
 
       <div className="tls-year" aria-live="polite">
         <span className="tls-cap">{inPast ? 'Viewing' : status === 'loading' ? 'Reading' : 'Year'}</span>
-        <span className="tls-num">{status === 'loading' ? `${Math.round(progress * 100)}%` : ready ? yearOf(at) : '...'}</span>
+        <span className="tls-num">{status === 'loading' ? `${Math.round(progress * 100)}%` : ready ? yearLabel(yearOf(at)) : '...'}</span>
       </div>
 
       {status === 'error' ? (
@@ -148,7 +149,7 @@ export function TimelineScrubber() {
           aria-valuemin={ready ? yearOf(0) : 0}
           aria-valuemax={ready ? yearOf(maxTick) : 0}
           aria-valuenow={ready ? yearOf(at) : 0}
-          aria-valuetext={ready ? (inPast ? `Year ${yearOf(at)}` : `Year ${yearOf(at)}, live`) : 'Reading the chronicle'}
+          aria-valuetext={ready ? (inPast ? `Year ${yearLabel(yearOf(at))}` : `Year ${yearLabel(yearOf(at))}, live`) : 'Reading the chronicle'}
           aria-disabled={!ready}
           onPointerDown={onDown}
           onPointerMove={onMove}
@@ -166,7 +167,7 @@ export function TimelineScrubber() {
               tabIndex={-1}
               className={`tls-mark tls-k-${m.kind}`}
               style={{ left: `${Math.min(100, (m.tick / maxTick) * 100)}%` }}
-              aria-label={`Year ${m.year}, ${KIND_LABEL[m.kind]}: ${m.text}`}
+              aria-label={`Year ${yearLabel(m.year)}, ${KIND_LABEL[m.kind]}: ${m.text}`}
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => scrubTo(m.tick)}
               onMouseEnter={() => setTip(m)}
@@ -178,14 +179,14 @@ export function TimelineScrubber() {
           {ready && <div className="tls-thumb" style={{ left: `${pct}%` }} />}
           {ready && tip && (
             <div className={`tls-tip tn-tooltip${tipSide}`} style={{ left: `${tipPct}%` }} role="tooltip">
-              <div className="tls-tip-k"><i className={`tls-dia tls-k-${tip.kind}`} />Y{tip.year} · {KIND_LABEL[tip.kind]}</div>
+              <div className="tls-tip-k"><i className={`tls-dia tls-k-${tip.kind}`} />{yearShort(tip.year)} · {KIND_LABEL[tip.kind]}</div>
               {tip.text}
             </div>
           )}
         </div>
       )}
 
-      {ready && <span className="tls-range">{yearOf(0)} to {yearOf(maxTick)}</span>}
+      {ready && <span className="tls-range">{yearRange(yearOf(0), yearOf(maxTick))}</span>}
       <button type="button" className={`tn-button tn-button--lacquer tn-button--sm tls-live${inPast ? '' : ' on'}`} onClick={() => void goLive()} disabled={viewTick == null} title="Return to the present (Escape)">
         <i />Live
       </button>

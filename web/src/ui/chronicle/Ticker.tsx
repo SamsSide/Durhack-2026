@@ -4,6 +4,7 @@ import type { ChronicleEntry, World } from '@terra/shared';
 import { Chevron, Diamond } from './Diamond';
 import { displayKind } from './kinds';
 import type { DisplayKind } from './kinds';
+import { yearShort } from '@terra/shared';
 
 const SHOWN = 12;        // entries the belt starts with, and the ones it repeats when nothing is new
 const SPEED = 40;        // px a second at rest
@@ -75,7 +76,7 @@ const Cell = memo(function Cell({ entry, kind, pick }: {
         title={entry.text}
       >
         <Diamond kind={kind} />
-        <span className="tn-yr">Y{entry.year}</span>
+        <span className="tn-yr">{yearShort(entry.year)}</span>
         <span className="tn-t-txt">{entry.text}</span>
       </button>
       <span className="tn-t-sep" />

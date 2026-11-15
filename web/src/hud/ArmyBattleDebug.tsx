@@ -5,6 +5,7 @@ import { formatSoldiers, useArmyInfo } from '../state/armyInfo';
 import { useBattleInfo } from '../state/battleInfo';
 import type { LineBlock, LineSide } from '../state/battleInfo';
 import { useWorld } from '../state/world';
+import { yearShort } from '@terra/shared';
 
 const box: CSSProperties = {
   width: 'var(--left-panel-width, 340px)', maxHeight: '100%', overflow: 'auto', boxSizing: 'border-box',
@@ -79,7 +80,7 @@ function BattleDebug({ tile }: { tile: number }) {
   return (
     <div style={box}>
       <Header title={`Battle of ${b.province}`} onClose={close} />
-      <div style={muted}>Since {b.startYear}, {b.durationText}{b.active ? '' : ' (over)'} · {b.clashes.length} {b.clashes.length === 1 ? 'clash' : 'clashes'} · {b.leader === 'even' ? 'even' : `${b.leader} ahead`}</div>
+      <div style={muted}>Since {yearShort(b.startYear)}, {b.durationText}{b.active ? '' : ' (over)'} · {b.clashes.length} {b.clashes.length === 1 ? 'clash' : 'clashes'} · {b.leader === 'even' ? 'even' : `${b.leader} ahead`}</div>
       <div style={{ margin: '8px 0' }}>{side(b.attacker, 'Attacker')}</div>
       <div style={{ display: 'grid', gap: 10, padding: 8, border: '1px solid #444', margin: '6px 0' }}>
         <Side line={b.line.attacker} color={b.attacker.color} facing="down" />

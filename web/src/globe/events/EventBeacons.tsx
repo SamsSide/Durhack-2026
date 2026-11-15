@@ -17,6 +17,7 @@ import { KIND_META } from './kinds';
 import { PILLAR_MS, clearBeacons, pruneBeacons, pushStory, useBeacons } from './store';
 import type { Beacon } from './store';
 import './events.css';
+import { yearLabel } from '@terra/shared';
 
 const PILLAR_H = 0.16;
 const LABEL_MS = 4500;  // a caption shows this long (the ev-label animation)
@@ -128,7 +129,7 @@ const BeaconView = memo(function BeaconView({ b, reduced }: { b: Beacon; reduced
             <button
               type="button"
               className="ev-pin"
-              title={`${b.title} (year ${b.year})`}
+              title={`${b.title} (${yearLabel(b.year)})`}
               aria-label={`${KIND_META[b.kind].label}: ${b.title}. Fly there.`}
               onClick={(e) => { e.stopPropagation(); focusTile(b.tile, 'user'); }}
             >

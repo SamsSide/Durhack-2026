@@ -15,6 +15,7 @@ import { EconomyTab, PoliticsBlock, StatusChips, useMarketPlan } from './Economy
 import { CloseIcon, Lines, Meter, nameClass, useCardClass, useShort } from './shared';
 import './card.css';
 import { Roll } from '../motion/Roll';
+import { yearLabel, yearShort } from '@terra/shared';
 
 const STANCE_ORDER: Stance[] = ['war', 'hostile', 'alliance', 'trade', 'neutral'];
 
@@ -213,7 +214,7 @@ function Nation({ countryId }: { countryId: number }) {
           <Flag countryId={countryId} spec={country.flag} />
           <div className="tn-head-text">
             <h2 className={nameClass(country.name)}>{country.name}</h2>
-            {!country.alive && <div className="tn-fallen">{fallYear != null ? `Fallen in Y${fallYear}` : 'Fallen'}</div>}
+            {!country.alive && <div className="tn-fallen">{fallYear != null ? `Fallen in ${yearShort(fallYear)}` : 'Fallen'}</div>}
           </div>
           <button type="button" className="tn-close tn-button tn-button--lacquer tn-button--round" aria-label="Close" onClick={() => select(null)}><CloseIcon /></button>
         </header>
@@ -223,12 +224,12 @@ function Nation({ countryId }: { countryId: number }) {
             <span className="tn-cap">{ruler ? 'Ruler' : 'Led by'}</span>
             <span className="tn-ruler-name">{ruler ? ruler.name : country.leader}</span>
           </div>
-          {rulerAge != null && <span className="tn-ruler-age" title={`Born in Y${ruler!.born}`}>aged {rulerAge}</span>}
+          {rulerAge != null && <span className="tn-ruler-age" title={`Born in ${yearShort(ruler!.born!)}`}>aged {rulerAge}</span>}
         </div>
         {silenced && (
           <div className="tn-silence">
             <div className="tn-silence-top"><span className="tn-silence-cap">Link cut</span><span className="tn-silence-yrs">silent {silentYears} {silentYears === 1 ? 'yr' : 'yrs'}</span></div>
-            <div className="tn-silence-txt">It rules on from the world as it knew it in Y{world.year - silentYears}.{!isShort && ' Its map no longer matches the truth.'}</div>
+            <div className="tn-silence-txt">It rules on from the world as it knew it in {yearLabel(world.year - silentYears)}.{!isShort && ' Its map no longer matches the truth.'}</div>
           </div>
         )}
         <div className="tn-pair">

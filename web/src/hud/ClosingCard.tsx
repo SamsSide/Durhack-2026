@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useWorld } from '../state/world';
 import { usePresence } from '../ui/motion/usePresence';
 import './hud.css';
+import { yearRange } from '@terra/shared';
 
 // Window event any code can dispatch to open the closing card.
 export const CLOSING_EVENT = 'terra:closing';
@@ -76,7 +77,7 @@ export function ClosingCard() {
   return (
     <div className={`closing-veil ${leaving ? 'tn-m-veil-out' : 'tn-m-veil-in'}`} onClick={close}>
       <div className={`closing tn-lacquer tn-frame tn-frame--corners tn-m-from-below ${leaving ? 'tn-m-out' : 'tn-m-in'}`} role="dialog" aria-label="What this world cost" onClick={(e) => e.stopPropagation()}>
-        <div className="cap tn-cartouche">{world.name} · years {a} to {b}</div>
+        <div className="cap tn-cartouche">{world.name} · years {yearRange(a, b)}</div>
         <h1 className="tn-gilt-text">This whole world cost</h1>
         <div className="cl-hero"><span className="cl-num tn-gilt-text">{fmt(count)}</span><span className="cl-unit">tokens</span></div>
         <div className="cl-stats tn-m-stagger">

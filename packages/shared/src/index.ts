@@ -21,3 +21,4 @@ export * from './sim/economy';
 export * from './sim/mood';
 export * from './sim/paths';
 export * from './sim/walls';
+export * from './year';

@@ -1,6 +1,6 @@
 // Template lore built from a country's fields and its real chronicle (mock mode and the fallback
 // when Gemini is off, capped or fails). Everything here is derived from real world data.
-import { regionOwner, relationOf, type Country, type Stance, type World } from '@terra/shared';
+import { regionOwner, relationOf, yearLabel, type Country, type Stance, type World } from '@terra/shared';
 
 /** "a" or "an" before a government name. */
 const article = (w: string): string => (/^[aeiou]/i.test(w) ? 'an' : 'a');
@@ -48,7 +48,7 @@ const STANCE_WORDS: Record<Stance, string> = {
 function history(world: World, id: number, c: Country): string {
   const mine = chronicleOf(world, id, 6);
   if (!mine.length) return `${c.name} has no recorded history yet.`;
-  return mine.map((e) => `In year ${e.year}: ${e.text}`).join(' ');
+  return mine.map((e) => `In ${yearLabel(e.year)}: ${e.text}`).join(' ');
 }
 
 function relationsLore(world: World, id: number, c: Country): RelationLore[] {
@@ -59,7 +59,7 @@ function relationsLore(world: World, id: number, c: Country): RelationLore[] {
     .map(({ o, r }) => {
       const shared = world.chronicle.filter((e) => e.countries.includes(id) && e.countries.includes(o.id)).slice(-1)[0];
       const since = world.year - (world.tick - r.since);
-      const base = `${c.name} has been ${STANCE_WORDS[r.stance]} ${o.name} since year ${since}.`;
+      const base = `${c.name} has been ${STANCE_WORDS[r.stance]} ${o.name} since ${yearLabel(since)}.`;
       return { with: o.id, stance: r.stance, story: shared ? `${shared.text} ${base}` : base };
     });
 }

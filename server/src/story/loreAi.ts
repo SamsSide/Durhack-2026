@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { relationOf, type World } from '@terra/shared';
+import { relationOf, yearLabel, type World } from '@terra/shared';
 import { llmJson, loreModel, LlmUnavailable, type Schema } from '../llm';
 import type { WorldRunner } from '../runner';
 import { warmChants } from './chant';
@@ -53,7 +53,7 @@ export function countryPrompt(world: World, id: number): string {
   const idn = nationIdentity(world, c);
   const provinces = world.owner.filter((o) => o === id).length;
   const regions = [...new Set(world.regions.filter((r) => r.name && world.owner[r.capitalTile] === id).map((r) => r.name))].slice(0, 6);
-  const chron = chronicleOf(world, id, 25).map((e) => `- year ${e.year}: ${e.text}`).join('\n') || '- (nothing recorded yet)';
+  const chron = chronicleOf(world, id, 25).map((e) => `- ${yearLabel(e.year)}: ${e.text}`).join('\n') || '- (nothing recorded yet)';
   const rels = world.countries
     .filter((o) => o.id !== id)
     .map((o) => ({ o, r: relationOf(world, id, o.id) }))
@@ -66,7 +66,7 @@ export function countryPrompt(world: World, id: number): string {
     `Founding myth: ${c.foundingMyth}`,
     `Temperament (0-1): aggression ${t.aggression}, expansion ${t.expansion}, trade ${t.trade}, faith ${t.faith}.`,
     `Holds ${provinces} provinces and ${c.population} people. Regions: ${regions.join(', ') || 'none named'}.`,
-    `Current year ${world.year}.`,
+    `Current year ${yearLabel(world.year)}.`,
     `Relations with neighbours:\n${rels}`,
     `Real chronicle (oldest first):\n${chron}`,
     `Voice: ${idn.chronicleTone} ${idn.narrationTone} Its anthem and words feel of the ${idn.eraKey.replace('_', ' ')} era. Use the voice for tone only, never to add facts.`,

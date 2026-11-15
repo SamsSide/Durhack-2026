@@ -7,6 +7,7 @@ import type { Bulletin } from './useBroadcast';
 import { beatsFor, type Beat } from './focus';
 import { pipFeed, setPipShot } from '../../globe/pip/shot';
 import { WarReport } from './WarReport';
+import { yearShort } from '@terra/shared';
 
 /** The ident stays up this long after the bulletin starts (the voice opens with "Terra Nova News."). */
 const IDENT_HOLD_S = 1.5;
@@ -204,7 +205,7 @@ export function AnchorWindow({ bulletin, footage }: Props) {
       }
       if (cut > 0 && shot) {
         ctx.globalAlpha = cut;
-        drawFootage(ctx, T, shot, cutT, `THE WORLD  ·  Y${b.year}`, still);
+        drawFootage(ctx, T, shot, cutT, `THE WORLD  ·  ${yearShort(b.year)}`, still);
         ctx.globalAlpha = 1;
       }
       // the ident wipes away behind a gilt bar

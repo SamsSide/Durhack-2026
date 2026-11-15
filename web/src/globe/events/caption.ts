@@ -4,6 +4,7 @@ import { useWorld } from '../../state/world';
 import { iconUrl } from './icons';
 import { KIND_META } from './kinds';
 import type { Story } from './kinds';
+import { yearLabel } from '@terra/shared';
 
 export interface CaptionUi { show(s: Story): void; hide(): void; setOn(on: boolean): void; destroy(): void }
 
@@ -39,7 +40,7 @@ export function mountCaption(parent: HTMLElement): CaptionUi {
       text.className = 'ev-c-text';
       const kind = document.createElement('span');
       kind.className = 'ev-c-kind';
-      kind.textContent = `${KIND_META[s.kind].label}, year ${s.year}`;
+      kind.textContent = `${KIND_META[s.kind].label}, ${yearLabel(s.year)}`;
       const title = document.createElement('span');
       title.className = 'ev-c-title';
       title.textContent = s.title;
