@@ -100,7 +100,7 @@ export function RulerScrolls() {
   return (
     <>
       {scrolls.map((sc) => (
-        <Anchor key={sc.key} pos={sc.pos} stack={{ tile: sc.tile, priority: STACK.scroll }}>
+        <Anchor key={sc.key} pos={sc.pos} noClip stack={{ tile: sc.tile, priority: STACK.scroll }}>
           <div className="rs-scroll" style={{ animationDuration: `${LIFE_MS}ms` }}>
             <div className="rs-rod" />
             <div className="tn-sheet rs-paper">
