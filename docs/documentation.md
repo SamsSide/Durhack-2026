@@ -255,6 +255,50 @@ One table, `TERRAIN_EFFECTS` (`sim/terrain.ts`), read by the sim, the rulers' di
   3.8, 5.2, 7, capped at 150 strength); battles give 1.15 per age of lead. Stellar nations launch up
   to four satellites. Progress is kept in the agent's memory, not the world.
 
+### 4.5a How the prompt shapes the world
+
+One line of text (and an optional picture) sets far more than the names. The lore model writes the
+world bible once; everything after it is seeded code, so the same bible and seed always give the same
+planet. Three layers, each checked by the next (`server/src/engine/promptShape.ts`, `bibleAi.ts`,
+`packages/shared/src/sim/worldgen.ts`):
+
+1. **The words of the prompt, by rule.** Plain keyword rules read the prompt and the chosen era for a
+   setting (`ERA_KINDS` in `sim/ages.ts`: stone, bronze, classical, medieval, sail, industrial, modern,
+   near future, far future, post-apocalyptic), a year it names ("in 1349", "900 BC", "17th century",
+   "the 1920s"), the planet (`shapeFromText`: drowned or archipelago means a high sea and many
+   landmasses, one great continent means one landmass and a low sea, frozen means cold, desert means
+   hot and dry, jungle means hot, wet and wooded), a nation count ("seven kingdoms"), the kind of
+   state ("whaling republics", "tribes"), and a lean on every temperament (war, trade and faith words).
+   The template bible (mock mode, or a failed call) is built from these alone.
+2. **The model.** In live mode Gemini also returns `startYear` and a `shape` object in its JSON, told
+   the same year spans and examples. `repairBible` then checks it against layer 1: a year the prompt
+   names wins; a model year outside the setting's span is pulled into it; a shape field the prompt's
+   own words set wins, and the model fills the rest. With a picture, the model first says what it sees
+   (`imageReading.subject`) and lets it drive the era, year, shape, styles and colours; the words win
+   where they disagree with the picture.
+3. **Worldgen.** `generateWorld` applies `bible.shape`: the sea level (the Create screen's slider wins
+   once moved off its 0.55 default), one wide blob, a few, or 11 to 16 small ones for the landmasses,
+   the ice line (latitude 0.9, 0.7 when cold, 0.97 when hot), the desert belt and the moisture cuts for
+   desert and forest, and the height cuts for hills and mountains. On a shaped planet a capital must
+   stand on ice-free ground with four ice-free provinces joined to it. With no shape, every constant
+   and the random stream are the old ones, so an old seed gives its old planet.
+
+**Year and age together.** `bible.startAge` is the setting's age (stone, bronze and classical start
+ancient; medieval, sail as gunpowder, industrial, modern; the far future starts in the future age;
+after a fall the survivors start ancient again), or, for a prompt with only a year, the latest age
+that year allows. The calendar gates (`AGE_EARLIEST_YEAR`, satellites from 1957) are unchanged: they
+only stop a nation stepping up early, so a clockwork world founded in 1780 starts industrial and may
+turn modern from 1900, while a stone age world founded in 9000 BC stays ancient until the year 500.
+
+**Building styles.** Each setting has a list of styles that fit it (`KIND_STYLES`); a style from the
+model or the rules that is not on it is swapped for the least-used one that is, the climate's first
+(norse and highland on ice, desert and egyptian on sand, mesoamerican in jungle).
+
+**Proof.** `npx tsx server/scripts/check-prompt.ts` founds eight worlds from one seed and fails unless
+they differ as their prompts ask (ice, desert, forest and sea shares, landmass counts, start years
+and ages, styles); `--live` does the same with Gemini writing each bible, `--image <file>` checks
+the picture path.
+
 ### 4.6 The council: deaths, cover, succession, coups
 
 `sim/council.ts` (pure) and `server/src/engine/council.ts` (the `CouncilKeeper`).

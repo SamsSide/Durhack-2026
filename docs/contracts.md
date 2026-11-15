@@ -499,6 +499,32 @@ this table from `@terra/shared`.
 | `GET /api/decree/:entryId/herald` | a | none (`entryId` is the id of a `decree` chronicle entry) | `audio/mpeg`: the decree read out by the royal herald (one of the team's voices), cached; `503 { "error": "voice unavailable" }`; mock: a bundled sample. The X6 module plays it automatically when a decree entry arrives |
 | `GET /api/economy` | a | none | `{ "mode": "devnet", "cluster": "devnet", "currency": { "name": "Drowned Age Crown", "symbol": "TNC", "mint": "Ab1...", "url": "https://explorer.solana.com/address/Ab1...?cluster=devnet", "supply": 1000000, "mintAuthority": null }, "commons": { "address": "Co1...", "url": "...", "balance": 812000 }, "nations": [ { "countryId": 2, "address": "Na2...", "url": "...", "onChain": 10120, "ledger": 10120, "drift": 0, "sim": 151.2, "inSync": true } ], "totals": { "payments": 1284, "volume": 18230.5, "transactions": 402, "feesSol": 0.0061 }, "recent": [ "the last 50 ledger rows, as in X2" ] }` (row A27). The chain records every coin that moves between nations while income and spending stay in the sim: `ledger` is the nation's genesis float (10,000) plus confirmed payments in, minus confirmed payments out, plus any Commons advance; `drift` is `onChain - ledger`; `inSync` is `|drift| <= 0.01` (a nation with a payment still in flight counts as in sync); `sim` is the treasury, for information. Mock mode answers at once with fake addresses and `simulated` rows; `503 { "error": "economy off" }` with `SOLANA_MODE=off` |
 
+  **The world bible (optional fields, owner, 15 Nov).** `POST /api/world` writes a world bible
+  (`WorldBible` in `@terra/shared`: `name`, `era`, `startYear`, `nations`) and builds the world from
+  it. Two fields were added, both optional and additive; a bible without them (every saved world and
+  replay) builds exactly as before, and nothing in `World`, the snapshot or the events changed shape:
+
+  ```ts
+  startAge?: TechAge;        // the tech age every nation starts in; missing means startAge(era)
+  shape?: {                  // the planet, read from the prompt or the picture; every field optional
+    seaLevel?: number;       // 0.3 to 0.8, share of ocean (stops at 0.7 on a cold planet)
+    landmasses?: 'one' | 'few' | 'many';
+    climate?: 'cold' | 'temperate' | 'hot';
+    dryness?: number;        // 0 wet to 1 dry; 0.5 is the usual mix
+    forest?: number;         // 0 bare to 1 wooded; 0.5 is the usual mix
+    mountains?: number;      // 0 flat to 1 rugged; 0.5 is the usual mix
+  };
+  ```
+
+  `startYear` (already there) now follows the prompt: a year or century the prompt names wins ("in
+  1349", "900 BC", "17th century"), else a year inside the era's span (stone age 10000 to 4000 BC,
+  bronze 3000 to 1200 BC, classical 500 BC to 400, medieval 800 to 1400, age of sail 1500 to 1750,
+  industrial 1800 to 1900, modern 1900 to 1999, near future 2040 to 2099, far future and
+  post-apocalyptic 2150 and later). It is clamped to -10000 to 5000; a negative `World.year` is a BC
+  year. Request fields at their Create screen defaults are read as "not chosen": `seaLevel: 0.55`
+  lets `shape.seaLevel` decide (any other value wins over the prompt), and `nations: 6` lets a count
+  in the prompt decide ("seven warring kingdoms"), in the template bible.
+
   Lore response:
 
 ```json

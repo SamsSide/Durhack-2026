@@ -35,6 +35,13 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   or a preset, with the era, the number of nations (3 to 10), sea level and aggression.
   Until the world exists, the real Earth turns behind the form and the founding panel, in the
   game's own tiles (coastlines from Natural Earth, public domain).
+- **The prompt shapes the whole planet, not only its names.** "A frozen world" grows the ice caps,
+  "desert empires" dries the land, "a drowned archipelago" raises the sea and breaks the land into
+  islands, "one great continent" joins it up; the governments, temperaments and building styles
+  fit the setting too. A picture does the same: Gemini says what it sees and builds from it.
+- **The starting year follows the prompt.** A stone age world starts around 9000 BC, a medieval
+  one around 1100, a far-future one after 2150, and a prompt that names a year or a century ("in
+  1349", "900 BC", "17th century") starts there, in the technology age that year allows.
 - **About 1,200 provinces** on a spherical Voronoi globe, each with terrain and a good; nations
   and places are named after Durham colleges and North East towns.
 - **Technology ages** from ancient through medieval, gunpowder, industrial and modern to the
