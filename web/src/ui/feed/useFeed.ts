@@ -68,6 +68,16 @@ const clean = (s: string) => s.replace(/\s+/g, ' ').trim();
 interface DecreeInfo { result?: string; target?: { tiles?: number[] } }
 const decreeOf = (e: ChronicleEntry): DecreeInfo | undefined => (e as ChronicleEntry & { decree?: DecreeInfo }).decree;
 
+function lowPart(b: Bucket): string {
+  const n = b.count;
+  switch (b.cat) {
+    case 'rulers': return `${n} new ruler${n === 1 ? '' : 's'}`;
+    case 'generals': return `${n} general${n === 1 ? '' : 's'} fell`;
+    case 'cities': return `${n} ${n === 1 ? 'city' : 'cities'} founded`;
+    default: return `${n} ${n === 1 ? 'town' : 'towns'} grew`;
+  }
+}
+
 function lowText(b: Bucket): string {
   const n = b.count;
   switch (b.cat) {
@@ -253,8 +263,11 @@ export function useFeed(): { cards: FeedCard[]; world: World | null } {
         // a lone item is not news: a DECADE card needs at least two of a kind
         for (const kv of buckets.current) if (kv[1].count >= 2 && (!top || kv[1].count > top[1].count)) top = kv;
         if (top) {
-          buckets.current.delete(top[0]);
-          return { id: `low:${top[0]}@${now}`, tag: 'DECADE', title: lowText(top[1]), year: top[1].year, countries: [], thumb: null, born: now, gone: false, goneAt: 0 };
+          // one card per decade: everything else that happened in it joins the same line
+          const same = [...buckets.current].filter((kv) => kv[1].decade === top![1].decade).sort((a, b) => b[1].count - a[1].count);
+          for (const kv of same) buckets.current.delete(kv[0]);
+          const title = same.length === 1 ? lowText(top[1]) : `This decade: ${same.map((kv) => lowPart(kv[1])).join(', ')}`;
+          return { id: `low:${top[0]}@${now}`, tag: 'DECADE', title, year: top[1].year, countries: [], thumb: null, born: now, gone: false, goneAt: 0 };
         }
       }
       return null;
@@ -265,7 +278,8 @@ export function useFeed(): { cards: FeedCard[]; world: World | null } {
       const card = worldRef.current ? release(now) : null;
       if (card) {
         lastCardAt.current = now;
-        setCards((prev) => [card, ...prev].slice(0, KEEP_MAX));
+        // a new DECADE card replaces the one still showing, so the feed never stacks digests
+        setCards((prev) => [card, ...(card.tag === 'DECADE' ? prev.map((c) => (c.tag === 'DECADE' && !c.gone ? { ...c, gone: true, goneAt: now } : c)) : prev)].slice(0, KEEP_MAX));
         void thumbnail().then((t) => {
           if (!t || !alive.current) return;
           setCards((prev) => prev.map((c) => (c.id === card.id && !c.thumb ? { ...c, thumb: t } : c)));

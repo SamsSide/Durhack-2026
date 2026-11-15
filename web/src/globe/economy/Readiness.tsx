@@ -23,10 +23,13 @@ function Pool({ rings }: { rings: Ring[] }) {
   const group = useRef<THREE.Group>(null);
   useEffect(() => () => { geo.dispose(); }, [geo]);
   useEffect(() => () => { mats.forEach((m) => m.dispose()); }, [mats]);
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
     const g = group.current;
     if (!g) return;
     const t = clock.elapsedTime;
+    // From orbit the ring marks the capital; close up it would be a red slab through the town, so it thins out.
+    const near = THREE.MathUtils.smoothstep(camera.position.length(), 1.3, 1.9);
+    const fade = 0.12 + 0.88 * near;
     g.children.forEach((child, i) => {
       const ring = rings[Math.floor(i / 2)];
       if (!ring) return;
@@ -39,7 +42,7 @@ function Pool({ rings }: { rings: Ring[] }) {
       child.scale.set(s, s, s);
       const mat = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
       mat.color.copy(AMBER).lerp(RED, Math.min(1, (ring.r - MIN_READINESS) / 40));
-      mat.opacity = halo ? (1 - phase) * (0.35 + 0.5 * k) : 0.55 + 0.35 * k;
+      mat.opacity = (halo ? (1 - phase) * (0.35 + 0.5 * k) : 0.55 + 0.35 * k) * fade;
     });
   });
   return (
