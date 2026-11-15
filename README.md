@@ -166,6 +166,11 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   status; click a battle badge for both sides, losses and the battle-line grid.
 - **War effects:** explosions by era, smoke over the front, and cities turning to ruins and rebuilding; devastation, war
   readiness and politics that drift to extremes under war.
+- **Naval battles you can see:** fleets at war hunt each other across the sea and trade broadsides by age:
+  arrows (ancient), fire pots (medieval), cannon with smoke puffs (gunpowder), gun flashes and shell
+  splashes (industrial and modern), beams (future and later). Missed shots splash in the sea, hits
+  flash on the hull, a beaten ship rolls over and sinks in a ring of foam, and a raiding fleet shells the coast.
+  ![Two industrial fleets trading broadsides](docs/shots/naval-battle.jpg)
 - **Army and battle cards:** click an army's counter to see its flag, status (marching,
   fighting or garrisoned), general, soldiers, war readiness and its front, flank and back troops
   by age. Click a battle's badge to see "Battle of" the province, how long it has raged, both
