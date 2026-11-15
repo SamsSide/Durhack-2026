@@ -62,6 +62,7 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   hut villages (round thatched huts, hide tents, a palisade, standing stones and a great fire at the capital)
   until a nation reaches the medieval age; modern and future nations swap tipi camps, barns, sailing boats and
   ox carts for small towns of their style, glasshouse farms, launches and vans.
+  ![A stone age capital: a great thatched hut inside standing stones, round huts and a stake palisade](docs/shots/stone-age.jpg)
 - **Ports and docks:** a port is one harbour at the water's edge, on the tile's longest stretch of shore: a quay
   along the coast, a yard with warehouses roofed in the nation's colour, a flag, crates, piers out into the sea and
   moored boats. The look follows the nation's tech age: timber jetties and a lighthouse, then stone quays with a
@@ -80,6 +81,8 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   appear close up. The detail takes each province's colour at its foot, so it sits in every map mode.
 
 ![A snow-capped mountain range rising out of the hills, seen from the ground view](docs/shots/terrain.jpg)
+
+![Inside a mountain range: ridges of faceted peaks with snow caps and valleys between them](docs/shots/mountains.jpg)
 
 | | | |
 | --- | --- | --- |
