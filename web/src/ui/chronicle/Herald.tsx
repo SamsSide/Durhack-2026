@@ -188,6 +188,9 @@ export function Herald({ observed }: { observed: CutPeriod[] }) {
           line: by ? `Conquered by ${by.name}. Its lands are being divided.` : 'Deleted from the world. Its neighbours are carving up its lands.',
         });
       } else if (e.type === 'chronicle' && e.entry.kind === 'decree') {
+        // The feed card and the plate beside the decree box already carry this line; a third copy here was
+        // noise. Presentation mode hides both, so there the tab is still the notice.
+        if (!document.body.classList.contains('tn-present')) continue;
         // One tab per decree: the entry that carries a result, or the "-b" consequence entry; never the bare decree text.
         const info = decreeOf(e.entry);
         const line = info?.result || (/-b$/.test(e.entry.id) ? e.entry.text : '');
