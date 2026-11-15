@@ -368,7 +368,8 @@ export class StructureField {
   }
 
   private addPlatform(r: Rec): void {
-    const pos = r.pos.clone().addScaledVector(r.g.n, -0.06 * r.size);
+    // From a little under the ground up to the building's base (r.pos already includes the lift).
+    const pos = r.pos.clone().addScaledVector(r.g.n, -(r.lift + 0.06 * r.size));
     this.addProp('platform', r, pos, r.size * 0.95, r.lift + 0.06 * r.size);
   }
 
