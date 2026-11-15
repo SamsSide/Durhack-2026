@@ -95,7 +95,7 @@ export function propsFor(ctx: PropCtx): PropSpec[] {
     if (BANNER_GOVS.has(id.gov) || (id.gov === 'monarchy' && id.era === 'bronze')) out.push({ kind: 'obelisk', ang: 0.95, rad: 0.5, scale: 0.9 });
     if (id.era === 'modern') out.push({ kind: 'mast', ang: -0.95, rad: 0.5, scale: 1.0 });
     if (id.era === 'future') out.push({ kind: 'ring', ang: 0, rad: 0, scale: 1.1, lift: 1.1 });
-    if (id.era === 'post_apoc') out.push({ kind: 'barrel', ang: 0.6, rad: 0.45, scale: 0.55, smoke: { color: '#1b1b1b', puffs: 3 } });
+    if (id.era === 'post_apoc') out.push({ kind: 'barrel', ang: 0.6, rad: 0.45, scale: 0.55, smoke: { color: '#4a4541', puffs: 3 } });
   }
   if (kind === 'city') {
     if (id.era === 'industrial') out.push({ kind: 'smokestack', ang: 0.2, rad: 0.5, scale: 0.8, smoke: { color: '#4d4d4d', puffs: 2 } });
