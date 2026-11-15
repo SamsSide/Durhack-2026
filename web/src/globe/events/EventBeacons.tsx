@@ -29,7 +29,7 @@ const hit = (a: Box, b: Box) => a.l < b.r + GAP && a.r + GAP > b.l && a.t < b.b 
 
 /**
  * Keep captions apart: the newest MAX_LABELS fresh captions in view are shown, each lifted clear of the
- * captions placed before it and of the status tags (disputes, signal lost); anything that can't fit is hidden.
+ * captions placed before it, of the status tags (disputes, signal lost) and of the battle plates; anything that can't fit is hidden.
  */
 function layoutLabels(): void {
   const now = performance.now();
@@ -39,7 +39,7 @@ function layoutLabels(): void {
     return now - born < LABEL_MS && !el.closest('.ev-anchor.away');
   }).sort((a, b) => Number(b.dataset.born) - Number(a.dataset.born));
   const obstacles: Box[] = [];
-  for (const t of document.querySelectorAll<HTMLElement>('.gs-tag')) {
+  for (const t of document.querySelectorAll<HTMLElement>('.gs-tag, .bb-plate')) {
     const a = t.closest<HTMLElement>('.gs-anchor');
     if (a && a.style.opacity === '0') continue;
     const r = t.getBoundingClientRect();

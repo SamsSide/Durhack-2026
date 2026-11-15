@@ -139,6 +139,7 @@ const boxesHit = (a: Box, b: Box, pad = 2): boolean => a.x0 < b.x1 + pad && a.x1
 const PLATE_LIFT_MAX = 110;
 /** A loss number slides at most this far (px) sideways to find room, else it is not shown. */
 const POP_REACH = 150;
+const CLASH_REACH = 90;          // px a battle badge may slide off its tile's middle to clear an order line
 
 interface Arrow {
   mesh: THREE.Mesh; mat: THREE.ShaderMaterial; geo: THREE.BufferGeometry;
@@ -739,25 +740,32 @@ export class UnitLayer {
     this.boxes = [...chipBoxes, ...plateBoxes.map((o) => o.box), ...lineBoxes];
   }
 
-  /** Room for a loss number beside the labels already placed: it slides outwards past them, or stays hidden. */
+  /** Room for a loss number beside the labels already placed: it slides outwards past them, or stays hidden.
+   *  A battle badge slides the same way, clear of the order lines and counters, but shows where it is if it cannot. */
   private readonly fitPop = (p: Pop, h: number): number | null => {
-    if ((p.kind !== 'loss' && p.kind !== 'attrition') || !this.boxes.length || !this.cam) return p.dx;
+    const clash = p.kind === 'clash';
+    if ((!clash && p.kind !== 'loss' && p.kind !== 'attrition') || !this.boxes.length || !this.cam) return p.dx;
     _p.copy(p.pos).project(this.cam);
     const x = (_p.x + 1) * this.viewW / 2, y = (1 - _p.y) * this.viewPx / 2;
     const hp = h * ((this.cam as THREE.PerspectiveCamera).projectionMatrix.elements[5] ?? 1) * this.viewPx / 2, wp = hp * p.aspect;
-    // the whole rise of the number, bottom to top
-    const y0 = y - (p.kind === 'loss' ? 3.8 : 2.4) * hp, y1 = y - (p.kind === 'loss' ? 0.6 : 0.3) * hp;
+    // the whole rise of the number, bottom to top (a badge stays where it is, centred on its tile)
+    const y0 = clash ? y - hp / 2 : y - (p.kind === 'loss' ? 3.8 : 2.4) * hp, y1 = clash ? y + hp / 2 : y - (p.kind === 'loss' ? 0.6 : 0.3) * hp;
     const slide = (s: number): number | null => {
       let cx = x + p.dx * wp;
       for (let i = 0; i < 6; i++) {
         const b: Box = { x0: cx - wp / 2, x1: cx + wp / 2, y0, y1 };
         let edge: number | null = null;
         for (const o of this.boxes) if (boxesHit(b, o)) edge = s > 0 ? Math.max(edge ?? -Infinity, o.x1) : Math.min(edge ?? Infinity, o.x0);
-        if (edge == null) return Math.abs(cx - x) > POP_REACH ? null : (cx - x) / wp;
+        if (edge == null) return Math.abs(cx - x) > (clash ? CLASH_REACH : POP_REACH) ? null : (cx - x) / wp;
         cx = edge + s * (wp / 2 + 4);
       }
       return null;
     };
+    if (clash) {
+      const r = slide(1), l = slide(-1);
+      if (r == null || l == null) return r ?? l ?? p.dx;
+      return Math.abs(r - p.dx) <= Math.abs(l - p.dx) ? r : l;   // the shorter way
+    }
     return p.dx > 0 ? slide(1) : p.dx < 0 ? slide(-1) : slide(1) ?? slide(-1);
   };
 
