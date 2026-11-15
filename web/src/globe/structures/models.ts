@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { STYLE_FALLBACK } from '@terra/shared';
 import type { BuildingStyle, Country } from '@terra/shared';
-import { ageStyle, nextAgeStyle } from '../towns/ageStyle';
+import { PRIMITIVE, ageStyle, nextAgeStyle } from '../towns/ageStyle';
+import { builtModels } from './built';
 
 export interface ModelPart { geometry: THREE.BufferGeometry; material: THREE.Material; team: boolean }
 interface Entry { file: string; footprint: number }
@@ -74,6 +75,14 @@ export function loadModels(): Promise<ModelSet> {
       const m = new Map<string, Entry>();
       for (const [kind, e] of Object.entries(kinds ?? {})) if (e?.file) m.set(kind, { file: e.file, footprint: e.footprint || DEFAULT_FOOTPRINT });
       if (m.size) set.styles.set(style, m);
+    }
+    // Models built in code (structures/built): the stone age set. Always there, no download.
+    for (const b of builtModels()) {
+      const file = `built:${b.style}/${b.kind}`;
+      set.files.set(file, b.parts);
+      const m = set.styles.get(b.style) ?? new Map<string, Entry>();
+      if (!m.has(b.kind)) m.set(b.kind, { file, footprint: b.footprint });
+      set.styles.set(b.style, m);
     }
     const trees = manifest.trees ?? {}; // tree variants, kept as 'tree:<name>'
     await Promise.all([...STRUCTURE_KINDS, 'tree', ...Object.keys(trees).map((k) => `tree:${k}`)].map(async (key) => {
@@ -153,7 +162,8 @@ const NOMAD_KINDS = new Set(['camp', 'village', 'town']);
 /**
  * The model for a kind in a nation: nomadic entry (camp, village, town), then its style, then the
  * style's fallback, then the shared model, then the box. `key` names the instanced mesh group.
- * `style` defaults to the nation's style for its tech age (towns/ageStyle).
+ * `style` defaults to the nation's style for its tech age (towns/ageStyle); the structure field passes
+ * 'primitive' for a tribe of a very early world (models built in code, structures/built).
  */
 export function modelFor(set: ModelSet, kind: string, country?: Country, style: string = ageStyle(country)): Resolved {
   const usable = (style: string): Entry | null => {
@@ -164,7 +174,7 @@ export function modelFor(set: ModelSet, kind: string, country?: Country, style: 
   if (country?.nomadic && NOMAD_KINDS.has(kind)) hit = usable('nomadic');
   if (!hit && set.styles.size) {
     for (const s of chain(style)) { hit = usable(s); if (hit) break; }
-    if (!hit && import.meta.env.DEV && STYLED.has(kind)) set.misses.add(`${style}/${kind}`);
+    if (!hit && import.meta.env.DEV && STYLED.has(kind) && style !== PRIMITIVE) set.misses.add(`${style}/${kind}`);
   }
   if (hit) return { key: hit.file, parts: set.files.get(hit.file)!, footprint: hit.footprint, real: true };
   const shared = set.parts.get(kind);

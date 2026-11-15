@@ -3,6 +3,7 @@
 // a modern style that fits its identity; future and stellar build arcologies. Pure and deterministic.
 // Used by the close-up towns (houses, walls) and by the structure models (the landmark in each town).
 import * as THREE from 'three';
+import { eraKind } from '@terra/shared';
 import type { BuildingStyle, Country, TechAge, World } from '@terra/shared';
 import { govOf } from '../identity/identity';
 import { hash01 } from '../structures/placement';
@@ -40,6 +41,32 @@ export function ageStyle(c: AgeInput | undefined): BuildingStyle {
   if (FUTURE.has(age)) return 'arcology';
   if (MODERN.has(age)) return modernStyleOf(c);
   return own;
+}
+
+/** The pseudo style of a tribe in a very early world: camps, round huts and palisades, no dressed stone. */
+export const PRIMITIVE = 'primitive';
+
+let earlyKey = '', earlyVal = false;
+/**
+ * A very early world: its setting is the stone age, or its calendar is still before the first cities
+ * (3000 BC, where the server's `kindForYear` ends the stone age). Bronze age and classical worlds also
+ * start in the `ancient` tech age, so the age alone cannot tell.
+ */
+export function earlyWorld(world: Pick<World, 'era' | 'year'>): boolean {
+  if (world.year < -3000) return true;
+  const era = world.era ?? '';
+  if (era !== earlyKey) { earlyKey = era; earlyVal = eraKind(era) === 'stone'; }
+  return earlyVal;
+}
+
+/** True while a nation of a very early world is still in its first age: it lives in camps and hut villages. */
+export function isPrimitive(world: Pick<World, 'era' | 'year'>, c: Pick<Country, 'techAge' | 'buildingStyle'> | undefined): boolean {
+  return !!c && (c.techAge ?? 'ancient') === 'ancient' && c.buildingStyle !== 'arcology' && earlyWorld(world);
+}
+
+/** The style a nation's landmarks are drawn in: `PRIMITIVE` for a tribe of a very early world, else its age style. */
+export function settingStyle(world: Pick<World, 'era' | 'year'>, c: AgeInput | undefined): string {
+  return isPrimitive(world, c) ? PRIMITIVE : ageStyle(c);
 }
 
 /** The style it will move to at its next age (preloaded so the switch never waits on a download). */

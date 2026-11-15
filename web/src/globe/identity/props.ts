@@ -80,7 +80,11 @@ export interface PropSpec {
   smoke?: Smoke;
 }
 
-export interface PropCtx { kind: string; id: Identity; border: boolean; coastal: boolean }
+export interface PropCtx {
+  kind: string; id: Identity; border: boolean; coastal: boolean;
+  /** A tribe of a very early world (towns/ageStyle): standing stones only, nothing carved, forged or built of dressed stone. */
+  primitive?: boolean;
+}
 
 const BANNER_GOVS = new Set<Gov>(['communist', 'junta']);
 
@@ -89,6 +93,10 @@ export function propsFor(ctx: PropCtx): PropSpec[] {
   const { kind, id } = ctx;
   const out: PropSpec[] = [];
   const era = id.eraIndex;
+  if (ctx.primitive) {
+    if (kind === 'village' || kind === 'camp' || kind === 'town') out.push({ kind: 'stones', ang: 0.4, rad: 0.5, scale: 0.8 });
+    return out;
+  }
   if (kind === 'capital') {
     if (BANNER_GOVS.has(id.gov)) out.push({ kind: 'banner', ang: -0.5, rad: 0.5, scale: 1.0 }, { kind: 'banner', ang: 0.5, rad: 0.5, scale: 1.0 });
     if (id.gov === 'monarchy' || id.gov === 'democracy' || id.era === 'classical') out.push({ kind: 'statue', ang: 0, rad: 0.42, scale: 0.55 });

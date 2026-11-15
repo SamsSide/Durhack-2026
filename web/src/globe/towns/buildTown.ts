@@ -9,7 +9,7 @@ import type { TileGeo } from '../structures/placement';
 import { nationIdentity } from '../identity/identity';
 import { wallTint } from '../identity/look';
 import * as S from './style';
-import { ageStyle } from './ageStyle';
+import { ageStyle, isPrimitive } from './ageStyle';
 import { feetOn, inFeet, occupancyVersion } from '../structures/occupancy';
 
 /** World-space instances of one kind: 10 floats each (pos 3, quat 4, scale 3) and an RGB colour. */
@@ -27,6 +27,7 @@ export interface RiverSample { p: THREE.Vector3; side: THREE.Vector3; half: numb
 
 export interface TownParts {
   houses: PartBuf;   // gabled houses (roof colour per instance)
+  huts: PartBuf;     // round huts under a thatch cone: the homes of a stone age tribe
   walls: PartBuf;    // plain boxes: square towers, gate blocks, pylons
   towers: PartBuf;   // round towers and palisade posts
   crens: PartBuf;    // stone wall segments with battlements
@@ -41,7 +42,7 @@ export interface TownParts {
   tier: CityTier;
 }
 
-export const PART_NAMES = ['grounds', 'flats', 'houses', 'walls', 'towers', 'crens', 'stakes', 'caps', 'roofs4', 'roofsC', 'shields'] as const;
+export const PART_NAMES = ['grounds', 'flats', 'houses', 'huts', 'walls', 'towers', 'crens', 'stakes', 'caps', 'roofs4', 'roofsC', 'shields'] as const;
 export type PartName = typeof PART_NAMES[number];
 /** Parts that rise when a settlement's walls go up a tier. */
 export const WALL_PARTS: ReadonlySet<PartName> = new Set(['walls', 'towers', 'crens', 'stakes', 'caps', 'roofs4', 'roofsC', 'shields']);
@@ -60,12 +61,17 @@ export function wantsShield(world: World, owner: number): boolean {
   return styleOf(world, owner) === 'arcology' || age === 'future' || age === 'stellar';
 }
 
+/** A tribe of a very early world (ageStyle.isPrimitive): round huts and a palisade, no streets and no stone. */
+export function primitiveTown(world: World, owner: number): boolean {
+  return isPrimitive(world, world.countries[owner]);
+}
+
 /**
  * What a town's look depends on; a change rebuilds it. `tier` is its wall tier (cityTier in @terra/shared).
  * The part after '#' is the age look (style and shields): a change there alone is an age step, shown as a wave.
  */
 export function townKey(world: World, s: Structure, tier: CityTier = cityTier(world, s.id)): string {
-  return `${s.kind}|${s.owner}|${tier}|o${occupancyVersion(s.tile)}#${styleOf(world, s.owner)}|${wantsShield(world, s.owner) ? 1 : 0}`;
+  return `${s.kind}|${s.owner}|${tier}|o${occupancyVersion(s.tile)}#${styleOf(world, s.owner)}|${wantsShield(world, s.owner) ? 1 : 0}${primitiveTown(world, s.owner) ? '|p' : ''}`;
 }
 /** True when two town keys differ only in the age look. */
 export function ageOnly(a: string, b: string): boolean {
@@ -131,7 +137,7 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
   const plazaR = Math.max(0.18, Math.min(0.3, (0.4 * landmark) / w)) * w;
 
   const out: TownParts = {
-    houses: new PartBuf(), walls: new PartBuf(), towers: new PartBuf(), flats: new PartBuf(), grounds: new PartBuf(),
+    houses: new PartBuf(), huts: new PartBuf(), walls: new PartBuf(), towers: new PartBuf(), flats: new PartBuf(), grounds: new PartBuf(),
     crens: new PartBuf(), stakes: new PartBuf(), caps: new PartBuf(), roofs4: new PartBuf(), roofsC: new PartBuf(), shields: new PartBuf(),
     river: null, tier,
   };
@@ -191,11 +197,12 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
 
   // ---- street grid: houses, courtyards, parks ------------------------------------------------
   const style = styleOf(world, s.owner);
-  const roofs = S.ROOFS[style] ?? S.ROOFS.medieval;
+  const prim = primitiveTown(world, s.owner);
+  const roofs = prim ? S.THATCH : S.ROOFS[style] ?? S.ROOFS.medieval;
   const tint = wallTint(nationIdentity(world, s.owner), s.owner);
   const roofCols = roofs.map((r) => new THREE.Color(r).multiply(tint));
-  const heightK = S.HEIGHT_K[style] ?? 1;
-  const target = S.KIND_N[kind] ?? 40;
+  const heightK = prim ? 1 : S.HEIGHT_K[style] ?? 1;
+  const target = (S.KIND_N[kind] ?? 40) * (prim ? S.HUT_SHARE : 1);
   const area = Math.PI * Rx * Ry - Math.PI * plazaR * plazaR;
   const pitch = Math.sqrt((area * (8.5 / 16)) / target);
   const o1 = H(9), o2 = H(10);
@@ -213,7 +220,8 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
   // gatehouses, a ring road round the town instead. Future and stellar towns get energy shields.
   const ageNow = world.countries[s.owner]?.techAge;
   const pastWalls = !wantsShield(world, s.owner) && (ageNow === 'industrial' || ageNow === 'modern');
-  const wallTier: CityTier = pastWalls ? 0 : tier;
+  // A tribe's biggest work is a palisade: one ring of stakes (always round its capital), never stone.
+  const wallTier: CityTier = pastWalls ? 0 : prim ? (tier > 0 || kind === 'capital' ? 1 : 0) : tier;
   const hasCore = big && wallTier >= 3;
   const dim = S.WALL_DIM;
   const coreDim = tier >= 4 ? dim.keep : dim.stone;
@@ -246,6 +254,7 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
   for (const sl of slots) {
     const k = `${sl.i}:${sl.j}`;
     if (sl.yard) {
+      if (prim) continue; // open ground between the huts
       toWorld(sl.x, sl.y, 0.00012, p);
       quatAt(0, sl.x, sl.y, q);
       const sz = pitch * (sl.yard === 2 ? 1.02 : 0.86);
@@ -253,12 +262,18 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
       continue;
     }
     if (hash01(`${id}:${k}`, 13) > keep) continue;
-    const jx = (hash01(`${id}:${k}`, 14) - 0.5) * 0.12 * pitch, jy = (hash01(`${id}:${k}`, 15) - 0.5) * 0.12 * pitch;
+    const jit = prim ? 0.7 : 0.12; // huts stand where they like, houses keep to the street
+    const jx = (hash01(`${id}:${k}`, 14) - 0.5) * jit * pitch, jy = (hash01(`${id}:${k}`, 15) - 0.5) * jit * pitch;
     toWorld(sl.x + jx, sl.y + jy, 0, p);
     quatAt((hash01(`${id}:${k}`, 16) - 0.5) * 0.12, sl.x, sl.y, q);
     const fp = pitch * 0.8 * (0.85 + 0.15 * hash01(`${id}:${k}`, 17));
     const hh = pitch * (0.55 + 0.35 * hash01(`${id}:${k}`, 18)) * heightK;
     c.copy(roofCols[Math.floor(hash01(`${id}:${k}`, 19) * roofCols.length)]!);
+    if (prim) {
+      const d = fp * (0.8 + 0.3 * hash01(`${id}:${k}`, 20));
+      out.huts.add(p, q, d, d * (0.8 + 0.3 * hash01(`${id}:${k}`, 18)), d, c);
+      continue;
+    }
     out.houses.add(p, q, fp, hh, fp * (0.8 + 0.2 * hash01(`${id}:${k}`, 20)), c);
   }
 
@@ -465,17 +480,18 @@ export function buildTown(world: World, s: Structure, g: TileGeo, tier: CityTier
   };
 
   if (wallTier > 0) {
-    const outerMode: Mode = shield ? 'shield' : tier === 1 ? 'palisade' : 'stone';
+    const wt = prim ? wallTier : tier;
+    const outerMode: Mode = shield ? 'shield' : wt === 1 ? 'palisade' : 'stone';
     const coreMode: Mode = shield ? 'shield' : 'stone';
-    const od = shield ? dim.shield : tier === 1 ? dim.palisade : dim.stone;
-    const gates = tier >= 4 ? 4 : tier === 3 ? 3 : big ? 2 : tier;
-    ring({ f: wallF, mode: outerMode, h: od.h, t: od.t, towR: od.towR, towH: od.towH, gates, gateW: od.gate, fort: tier >= 4 });
+    const od = shield ? dim.shield : wt === 1 ? dim.palisade : dim.stone;
+    const gates = wt >= 4 ? 4 : wt === 3 ? 3 : big ? 2 : wt;
+    ring({ f: wallF, mode: outerMode, h: od.h, t: od.t, towR: od.towR, towH: od.towH, gates, gateW: od.gate, fort: wt >= 4 });
     if (hasCore) {
       const cd = shield ? dim.shield : coreDim;
       const kk = shield && tier >= 4 ? 1.35 : 1;
       ring({ f: coreF, mode: coreMode, h: cd.h * kk, t: cd.t, towR: cd.towR, towH: cd.towH * kk, gates: 4, gateW: cd.gate, fort: false });
     }
-  } else if (big || pastWalls) {
+  } else if ((big || pastWalls) && !prim) {
     // No walls yet (or no longer): a ring road around the town instead.
     const perim = Math.PI * (Rx + Ry) * wallF;
     const M = Math.max(24, Math.round(perim / (0.06 * w)));
