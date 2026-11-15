@@ -33,7 +33,7 @@ export function Structures() {
     const { styles, nomadic } = stylesInUse(world.countries);
     void ensureStyles(models, styles, nomadic).then(() => {
       if (!live) return;
-      f = new StructureField(world, new TileGeos(world, mesh.heights), models);
+      f = new StructureField(world, new TileGeos(world, mesh.heights), models, mesh);
       field.current = f;
       stale.current = true;
       syncedAt.current = -1e9;
