@@ -17,6 +17,7 @@ import { disposePropSet, makePropSet, propsFor } from '../identity/props';
 import type { PropKind, PropSet, Smoke } from '../identity/props';
 import { shownKind, updateRuins } from '../war/ruins';
 import { ageSwapDelay, isPrimitive, settingStyle } from '../towns/ageStyle';
+import { ageIndex } from '@terra/shared';
 import { clearOccupancy, setFeet } from './occupancy';
 import type { Foot } from './occupancy';
 
@@ -357,7 +358,7 @@ export class StructureField {
     const base = r.slot === 0 ? hash01(r.tile, 5) * Math.PI * 2 + 2.4 : hash01(r.id, 5) * Math.PI * 2;
     const out = new THREE.Vector3();
     const c = this.world.countries[r.owner];
-    for (const sp of propsFor({ kind: r.kind, id, border, coastal, primitive: isPrimitive(this.world, c) })) {
+    for (const sp of propsFor({ kind: r.kind, id, border, coastal, primitive: isPrimitive(this.world, c), age: ageIndex(c?.techAge) })) {
       const rad = sp.rad * (TIGHT[r.terr] ?? 1);
       const ra = Math.cos(base + sp.ang) * rad * r.g.width, rb = Math.sin(base + sp.ang) * rad * r.g.width;
       this.geos.point(r.g, r.off[0] + ra, r.off[1] + rb, 0.0004 + r.lift + (sp.lift ?? 0) * r.size, out);

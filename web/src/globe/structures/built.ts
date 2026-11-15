@@ -1,5 +1,6 @@
 // Landmark models built in code, for looks the downloaded model sets do not cover: the camps, hut villages
-// and standing stones of a stone age tribe (style 'primitive', see towns/ageStyle). Same unit as the GLB models: one footprint wide (x and z from -0.5
+// and standing stones of a stone age tribe (style 'primitive', see towns/ageStyle), and the glasshouse farm
+// of a future nation (style 'arcology'). Same unit as the GLB models: one footprint wide (x and z from -0.5
 // to 0.5), base at y = 0, a few hundred triangles each. Every colour lives in BUILT_COLORS.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -19,6 +20,11 @@ export const BUILT_COLORS = {
   soil: '#7a5a3c',
   crop: '#7f9a4a',
   ember: '#ff9a3a',
+  pad: '#cfd6da',
+  glass: '#a9dcd6',
+  rib: '#eef2f4',
+  hydro: '#6fae6a',
+  glow: '#59dcff',
 } as const;
 type Col = keyof typeof BUILT_COLORS | 'team';
 
@@ -43,7 +49,7 @@ class Kit {
       list.forEach((g) => g.dispose());
       if (!geometry) continue;
       const team = col === 'team';
-      const glow = col === 'ember';
+      const glow = col === 'ember' || col === 'glow';
       const color = team ? '#ffffff' : BUILT_COLORS[col];
       const material = glow
         ? new THREE.MeshBasicMaterial({ color, toneMapped: false })
@@ -199,6 +205,25 @@ function fort(): ModelPart[] {
   return k.parts();
 }
 
+// ---- the future farm -----------------------------------------------------------------------------------
+
+/** A glasshouse farm: three long glass halls on a pale pad, rows of green between them, a small mast. */
+function glasshouse(): ModelPart[] {
+  const k = new Kit();
+  k.box('pad', 0.96, 0.02, 0.96, 0, 0, 0);
+  for (const x of [-0.3, 0, 0.3]) {
+    k.box('glass', 0.2, 0.1, 0.66, x, 0.02, -0.08);
+    k.add('glass', new THREE.CylinderGeometry(0.115, 0.115, 0.66, 3).rotateX(-Math.PI / 2).scale(1, 0.45, 1).translate(x, 0.12 + 0.0575 * 0.45, -0.08)); // a pitched glass roof
+    for (let i = 0; i < 5; i++) k.box('rib', 0.214, 0.125, 0.014, x, 0.02, -0.4 + i * 0.16);
+    k.box('rib', 0.03, 0.012, 0.68, x, 0.166, -0.08);
+    k.box('hydro', 0.16, 0.008, 0.14, x, 0.02, 0.36);
+  }
+  for (const x of [-0.15, 0.15]) k.box('glow', 0.012, 0.006, 0.9, x, 0.02, 0);
+  k.cyl('rib', 0.035, 0.045, 0.2, 6, 0.4, 0.02, 0.4);
+  k.cyl('team', 0.06, 0.06, 0.025, 8, 0.4, 0.22, 0.4);
+  return k.parts();
+}
+
 export interface Built { style: string; kind: string; footprint: number; parts: ModelPart[] }
 
 /** Every model built in code, made once (the model set keeps them for the life of the page). */
@@ -211,5 +236,6 @@ export function builtModels(): Built[] {
     { style: 'primitive', kind: 'farm', footprint: 0.8, parts: farm() },
     { style: 'primitive', kind: 'temple', footprint: 0.7, parts: temple() },
     { style: 'primitive', kind: 'fort', footprint: 0.7, parts: fort() },
+    { style: 'arcology', kind: 'farm', footprint: 0.8, parts: glasshouse() },
   ];
 }

@@ -76,7 +76,7 @@ export function loadModels(): Promise<ModelSet> {
       for (const [kind, e] of Object.entries(kinds ?? {})) if (e?.file) m.set(kind, { file: e.file, footprint: e.footprint || DEFAULT_FOOTPRINT });
       if (m.size) set.styles.set(style, m);
     }
-    // Models built in code (structures/built): the stone age set. Always there, no download.
+    // Models built in code (structures/built): the stone age set and the future farm. Always there, no download.
     for (const b of builtModels()) {
       const file = `built:${b.style}/${b.kind}`;
       set.files.set(file, b.parts);
@@ -158,25 +158,34 @@ export function partsFor(set: ModelSet, kind: string): ModelPart[] {
 }
 const STYLED = new Set(['capital', 'city', 'town', 'temple', 'fort']);
 const NOMAD_KINDS = new Set(['camp', 'village', 'town']);
+/** Styles of the modern age and later: their small places are drawn as a small town of the style, never a tipi camp or thatched cottages. */
+const LATE_STYLES = new Set(['western_modern', 'soviet_bloc', 'arcology']);
+const SMALL_KINDS = new Set(['camp', 'village']);
 
 /**
  * The model for a kind in a nation: nomadic entry (camp, village, town), then its style, then the
  * style's fallback, then the shared model, then the box. `key` names the instanced mesh group.
  * `style` defaults to the nation's style for its tech age (towns/ageStyle); the structure field passes
  * 'primitive' for a tribe of a very early world (models built in code, structures/built).
+ * Small things follow the age too: in a modern or future style a camp or village is the style's town model
+ * at the small size, and a future farm is a glasshouse.
  */
 export function modelFor(set: ModelSet, kind: string, country?: Country, style: string = ageStyle(country)): Resolved {
+  const late = LATE_STYLES.has(style) && SMALL_KINDS.has(kind);
+  const as = late ? 'town' : kind;
   const usable = (style: string): Entry | null => {
-    const e = set.styles.get(style)?.get(kind);
+    const e = set.styles.get(style)?.get(as);
     return e && set.files.has(e.file) ? e : null;
   };
   let hit: Entry | null = null;
-  if (country?.nomadic && NOMAD_KINDS.has(kind)) hit = usable('nomadic');
+  if (country?.nomadic && NOMAD_KINDS.has(kind) && !late) hit = usable('nomadic');
   if (!hit && set.styles.size) {
     for (const s of chain(style)) { hit = usable(s); if (hit) break; }
     if (!hit && import.meta.env.DEV && STYLED.has(kind) && style !== PRIMITIVE) set.misses.add(`${style}/${kind}`);
   }
-  if (hit) return { key: hit.file, parts: set.files.get(hit.file)!, footprint: hit.footprint, real: true };
+  // A camp or village drawn as a town keeps its own (smaller) footprint.
+  // (and its own instanced group: the field shows groups of big kinds from orbit, small ones only close up).
+  if (hit) return { key: late ? `${hit.file}#small` : hit.file, parts: set.files.get(hit.file)!, footprint: late ? footprintFor(set, kind) : hit.footprint, real: true };
   const shared = set.parts.get(kind);
   if (shared) return { key: `${kind}:shared`, parts: shared, footprint: footprintFor(set, kind), real: true };
   return { key: `${kind}:box`, parts: set.fallback, footprint: footprintFor(set, kind), real: false };
