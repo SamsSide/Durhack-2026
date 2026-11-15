@@ -31,7 +31,7 @@ const ICONS: Record<IconKind, JSX.Element> = {
 
 const ICON_OF: Record<FeedTag, IconKind> = {
   WAR: 'war', PEACE: 'treaty', FALL: 'fall', SECESSION: 'born', CAPITAL: 'city', SILENCE: 'death', RETURN: 'born',
-  DECREE: 'decree', WONDER: 'wonder', COUP: 'succession', TRADE: 'alliance', DECADE: 'city',
+  DECREE: 'decree', WONDER: 'wonder', COUP: 'succession', TRADE: 'alliance', DECADE: 'city', DAWN: 'born',
 };
 
 function Icon({ kind }: { kind: IconKind }) {
@@ -54,6 +54,11 @@ function open(card: FeedCard) {
 }
 
 function Card({ card }: { card: FeedCard }) {
+  // The opening card carries every nation's flag: too many for the tag row, so they get a row of their own.
+  const dawn = card.tag === 'DAWN';
+  const flags = card.countries.map((c) => (
+    <span key={c.id} className="tn-feed-flag tn-flag-plate" dangerouslySetInnerHTML={{ __html: flagSvg(c.flag, 24, 16) }} />
+  ));
   return (
     <button type="button" className={`tn-feed-card tn-lacquer tn-frame tn-frame--slim${card.gone ? ' tn-feed-out' : ''}`} onClick={() => open(card)} aria-label={`${card.tag}: ${card.title}`}>
       <span className="tn-feed-thumb">
@@ -63,12 +68,11 @@ function Card({ card }: { card: FeedCard }) {
       <span className="tn-feed-text">
         <span className="tn-feed-flags">
           <span className={`tn-feed-tag tn-feed-tag-${card.tag.toLowerCase()}`}>{card.tag}</span>
-          {card.countries.map((c) => (
-            <span key={c.id} className="tn-feed-flag tn-flag-plate" dangerouslySetInnerHTML={{ __html: flagSvg(c.flag, 24, 16) }} />
-          ))}
+          {!dawn && flags}
           <span className="tn-feed-year">{yearShort(card.year)}</span>
         </span>
         <span className="tn-feed-title">{card.title}</span>
+        {dawn && <span className="tn-feed-flags tn-feed-flagrow">{flags}</span>}
       </span>
     </button>
   );
