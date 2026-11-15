@@ -58,6 +58,10 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   (everyone else) at the industrial age, and builds shielded arcologies in the future and stellar
   ages. Industrial and modern towns pull down their old stone walls for a ring road. Each age step
   sweeps out from the capital, town by town, over about three seconds.
+- **Stone age and far-future worlds look their age:** a world founded in the stone age starts as camps and
+  hut villages (round thatched huts, hide tents, a palisade, standing stones and a great fire at the capital)
+  until a nation reaches the medieval age; modern and future nations swap tipi camps, barns, sailing boats and
+  ox carts for small towns of their style, glasshouse farms, launches and vans.
 - **Ports and docks:** a port is one harbour at the water's edge, on the tile's longest stretch of shore: a quay
   along the coast, a yard with warehouses roofed in the nation's colour, a flag, crates, piers out into the sea and
   moored boats. The look follows the nation's tech age: timber jetties and a lighthouse, then stone quays with a
