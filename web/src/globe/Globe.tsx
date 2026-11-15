@@ -5,8 +5,6 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { World } from '@terra/shared';
 import { useWorld } from '../state/world';
-import { getPalette } from './palette';
-import { SEA_LEVEL } from './constants';
 import { useBelief } from '../state/belief';
 import { buildProvinceMesh } from './mesh/buildProvinceMesh';
 import type { ProvinceMesh } from './mesh/buildProvinceMesh';
@@ -44,6 +42,7 @@ import { RulerScrolls } from './show/RulerScrolls';
 import { registerCapture } from './capture';
 import { setStatuses } from './status/statusTint';
 import { NewsPip } from './pip/NewsPip';
+import { Earth } from './earth/Earth';
 
 const SPACE = '#0b0f14';
 
@@ -198,18 +197,6 @@ function Scene({ world }: { world: World }) {
   );
 }
 
-/** Before a world exists (the Create and founding screens): a bare ocean, so the far side of the
- *  atmosphere and clouds does not show through an empty planet. */
-function UnformedSea() {
-  const color = useMemo(() => getPalette().ocean, []);
-  return (
-    <mesh>
-      <sphereGeometry args={[SEA_LEVEL, 96, 64]} />
-      <meshStandardMaterial color={color} roughness={0.85} metalness={0} />
-    </mesh>
-  );
-}
-
 export function Globe() {
   const world = useWorld((s) => s.world);
   const space = typeof document !== 'undefined'
@@ -226,7 +213,8 @@ export function Globe() {
       <Launch />
       <Atmosphere />
       <Clouds />
-      {world ? <Scene world={world} /> : <UnformedSea />}
+      {/* no world yet (the Create and founding screens): the real Earth, about to be remade */}
+      {world ? <Scene world={world} /> : <Earth />}
       <CameraRig />
       <CaptureBridge />
     </Canvas>

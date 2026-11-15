@@ -33,6 +33,8 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
 
 - **Found a world** from a line of text, a picture (Gemini reads its mood, palette and setting)
   or a preset, with the era, the number of nations (3 to 10), sea level and aggression.
+  Until the world exists, the real Earth turns behind the form and the founding panel, in the
+  game's own tiles (coastlines from Natural Earth, public domain).
 - **About 1,200 provinces** on a spherical Voronoi globe, each with terrain and a good; nations
   and places are named after Durham colleges and North East towns.
 - **Technology ages** from ancient through medieval, gunpowder, industrial and modern to the
