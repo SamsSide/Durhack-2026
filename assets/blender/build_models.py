@@ -3,6 +3,9 @@
 Run (from the repo root):
   blender --background --factory-startup --python assets/blender/build_models.py
 
+Careful: this rewrites every base GLB and writes a fresh manifest (see the README for what to run
+after it). To rebuild only farm, camp, factory and ruin, run build_base.py instead.
+
 Blender is Z-up; the glTF exporter converts to +Y up. Each model is built in a bmesh with
 its base on z = 0, centred on x/y, and fitted into a 1 x 1 x 1 box.
 """
@@ -15,6 +18,9 @@ from contextlib import contextmanager
 import bmesh
 import bpy
 from mathutils import Euler, Matrix, Vector
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import base_defs  # noqa: E402  (farm, camp, factory, ruin)
 
 ROOT = os.getcwd()
 if "--" in sys.argv:
@@ -85,22 +91,24 @@ class Builder:
         return self.mats.index(mat)
 
     def _finish(self, n, mat):
+        # n is the set of faces from before the piece was made: bmesh reuses freed face slots, so
+        # "the faces after index n" is unreliable (it gave stray `timber` triangles on spheres)
         idx = self._slot(mat)
-        self.bm.faces.ensure_lookup_table()
-        for f in self.bm.faces[n:]:
-            f.material_index = idx
+        for f in self.bm.faces:
+            if f not in n:
+                f.material_index = idx
 
     def _m(self, x, y, z, rot):
         return self.stack[-1] @ Matrix.Translation((x, y, z)) @ Euler(rot, "XYZ").to_matrix().to_4x4()
 
     def box(self, x, y, z0, sx, sy, sz, mat, rot=(0, 0, 0)):
-        n = len(self.bm.faces)
+        n = set(self.bm.faces)
         m = self._m(x, y, z0 + sz / 2, rot) @ Matrix.Diagonal((sx, sy, sz, 1))
         bmesh.ops.create_cube(self.bm, size=1.0, matrix=m)
         self._finish(n, mat)
 
     def cyl(self, x, y, z0, r, h, mat, seg=8, r2=None, rot=(0, 0, 0), centered=False):
-        n = len(self.bm.faces)
+        n = set(self.bm.faces)
         zc = z0 if centered else z0 + h / 2
         m = self._m(x, y, zc, rot)
         bmesh.ops.create_cone(self.bm, cap_ends=True, cap_tris=False, segments=seg,
@@ -114,14 +122,14 @@ class Builder:
         self.cone(x, y, z0, r, h, mat, seg=4, rot=(0, 0, math.pi / 4))
 
     def sphere(self, x, y, z, r, mat, sub=1, squash=1.0):
-        n = len(self.bm.faces)
+        n = set(self.bm.faces)
         m = self._m(x, y, z, (0, 0, 0)) @ Matrix.Diagonal((1, 1, squash, 1))
         bmesh.ops.create_icosphere(self.bm, subdivisions=sub, radius=r, matrix=m)
         self._finish(n, mat)
 
     def gable(self, x, y, z0, w, d, h, mat, rz=0.0, over=0.02):
         """Gable roof, ridge along local x. w along x, d along y."""
-        n = len(self.bm.faces)
+        n = set(self.bm.faces)
         m = self._m(x, y, z0, (0, 0, rz))
         a, b = w / 2 + over, d / 2 + over
         co = [(-a, -b, 0), (a, -b, 0), (a, b, 0), (-a, b, 0), (-a, 0, h), (a, 0, h)]
@@ -183,18 +191,7 @@ class Builder:
 # ---------------------------------------------------------------- models
 
 def m_camp():
-    b = Builder()
-    b.pyramid(-0.25, 0.12, 0, 0.27, 0.36, "team")
-    b.pyramid(0.22, 0.25, 0, 0.22, 0.30, "team")
-    b.box(-0.25, -0.02, 0, 0.1, 0.04, 0.12, "dark")  # tent door
-    b.cone(0.0, -0.28, 0, 0.1, 0.12, "terracotta", seg=6)  # fire
-    for a in (0, 1, 2):
-        ang = a * math.pi / 3
-        b.box(0.0, -0.28, 0, 0.26, 0.05, 0.05, "timber", rot=(0, 0, ang))
-    b.cyl(0.38, -0.25, 0, 0.02, 0.5, "timber", seg=5)
-    b.box(0.38, -0.25, 0.28, 0.2, 0.02, 0.18, "team")
-    b.box(-0.38, -0.3, 0, 0.12, 0.12, 0.1, "timber")  # crate
-    return b.build("camp")
+    return base_defs.build("camp")
 
 
 def m_village():
@@ -279,22 +276,7 @@ def m_capital():
 
 
 def m_farm():
-    b = Builder()
-    for i in range(4):
-        b.box(-0.2, -0.38 + i * 0.2, 0, 0.55, 0.15, 0.05, "field" if i % 2 == 0 else "wheat")
-    # furrows on wheat strips
-    for i in (1, 3):
-        for j in range(4):
-            b.box(-0.36 + j * 0.12, -0.38 + i * 0.2, 0.05, 0.05, 0.12, 0.025, "thatch")
-    with b.at(0.3, 0.1, 0.0):
-        b.box(0, 0, 0, 0.26, 0.4, 0.2, "timber")
-        b.gable(0, 0, 0.2, 0.26, 0.4, 0.16, "team", rz=math.pi / 2)
-        b.box(0.135, 0, 0, 0.02, 0.12, 0.13, "dark")
-    b.cyl(0.36, -0.28, 0, 0.07, 0.3, "stone", seg=8)
-    b.cone(0.36, -0.28, 0.3, 0.085, 0.1, "team", seg=8)
-    b.cyl(-0.1, 0.42, 0, 0.07, 0.1, "thatch", seg=7, r2=0.045)
-    b.cyl(0.1, 0.4, 0, 0.06, 0.08, "thatch", seg=7, r2=0.04)
-    return b.build("farm")
+    return base_defs.build("farm")      # remodelled: base_defs.py (build_base.py builds only those four)
 
 
 def m_port():
@@ -361,41 +343,11 @@ def m_temple():
 
 
 def m_factory():
-    b = Builder()
-    for i, y in enumerate((-0.25, 0.05)):
-        b.box(-0.1, y, 0, 0.62, 0.26, 0.22, "terracotta")
-        for k in range(3):  # sawtooth roof
-            b.gable(-0.3 + k * 0.2, y, 0.22, 0.2, 0.26, 0.1, "team", rz=0.0, over=0.0)
-    b.box(0.0, 0.34, 0, 0.5, 0.2, 0.16, "plaster")
-    b.gable(0.0, 0.34, 0.16, 0.5, 0.2, 0.1, "team")
-    for x, h in ((0.28, 0.9), (0.38, 0.72), (0.2, 0.62)):
-        b.cyl(x, -0.2, 0, 0.055, h * 0.9, "terracotta", seg=8, r2=0.04)
-        b.cyl(x, -0.2, h * 0.9, 0.047, 0.04, "dark", seg=8)
-    b.sphere(0.3, -0.2, 0.93, 0.05, "steel", sub=1)
-    b.box(0.32, 0.1, 0, 0.14, 0.14, 0.1, "timber")
-    return b.build("factory")
+    return base_defs.build("factory")
 
 
 def m_ruin():
-    b = Builder()
-    b.box(0, 0, 0, 0.9, 0.8, 0.03, "stone")
-    b.box(-0.2, 0.32, 0.03, 0.5, 0.07, 0.3, "stone")
-    b.box(0.2, 0.32, 0.03, 0.2, 0.07, 0.14, "stone")
-    b.box(-0.36, 0.1, 0.03, 0.07, 0.4, 0.2, "stone")
-    b.box(0.38, 0.05, 0.03, 0.07, 0.34, 0.1, "stone")
-    b.box(-0.05, -0.32, 0.03, 0.3, 0.07, 0.08, "stone")
-    b.cyl(0.18, -0.1, 0.03, 0.06, 0.32, "plaster", seg=7)
-    b.cyl(-0.12, 0.0, 0.03, 0.06, 0.16, "plaster", seg=7)
-    b.cyl(0.3, -0.3, 0.03, 0.06, 0.09, "plaster", seg=7, rot=(0, math.pi / 2, 0.4), centered=False)
-    # rubble and moss
-    for x, y, s, a in [(0.05, 0.1, 0.12, 0.4), (-0.25, -0.2, 0.1, 1.0), (0.12, -0.3, 0.09, 0.2), (0.28, 0.2, 0.1, 0.7), (-0.05, 0.2, 0.08, 1.2)]:
-        b.box(x, y, 0.03, s, s * 0.8, s * 0.7, "stone", rot=(0.15, 0.1, a))
-    b.box(-0.2, 0.05, 0.03, 0.2, 0.18, 0.02, "leaf")
-    b.box(0.32, -0.05, 0.03, 0.14, 0.1, 0.02, "leaf")
-    # a tattered banner on a leaning pole
-    b.cyl(-0.38, -0.3, 0.03, 0.012, 0.4, "timber", seg=4, rot=(0.1, 0, 0))
-    b.box(-0.34, -0.3, 0.26, 0.14, 0.015, 0.1, "team")
-    return b.build("ruin")
+    return base_defs.build("ruin")
 
 
 def soldier(b, x, y, spear_h=0.52):

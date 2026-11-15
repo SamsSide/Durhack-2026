@@ -14,6 +14,40 @@ Rules every model follows:
   water, dark, skin, steel).
 - Adding a model: write `m_<key>()`, add it to `MODELS` and `FOOTPRINT`, and add the key to X4.
 
+## Farm, camp, factory and ruin (remodelled 15 Nov)
+
+These four are in `base_defs.py` (on the styles `Builder`, palette `base`: the first-day palette plus
+soil, hide, brick and soot tones). Rebuild **only** them, with no other GLB and no manifest change (their
+keys, files and footprints stay as they are):
+
+    blender --background --factory-startup --python assets/blender/build_base.py
+    python3 assets/blender/verify_base.py      # triangles, bounds, one `team` material, manifest entries
+
+- No Linux Blender on the WSL laptops: run the Windows one from the repo root,
+  `"/mnt/c/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup
+  --python "$(wslpath -w assets/blender/build_base.py)"`. To pass a knob through, list it in `WSLENV`
+  (`WSLENV=ONLY:PREVIEW_ONLY:PREVIEW_OUT/p:BEFORE_DIR/p`).
+- It renders `assets/preview-base-remodel.png` and `assets/preview-base-remodel-40px.png` (globe scale).
+  The committed sheet has the first-day models in the back row: that needs `BEFORE_DIR=<folder with the
+  old farm.glb, camp.glb, factory.glb, ruin.glb>` (take them from git: `git show bdce575:web/public/models/farm.glb`);
+  without it only the new row is drawn. `assets/preview.png` still shows the first-day versions of these four.
+- Knobs: `ONLY=farm,ruin` (build, export and show just those), `PREVIEW_ONLY=1` (nothing exported),
+  `PREVIEW_OUT`, `PREVIEW_PX`, `PREVIEW_TILT`, `PREVIEW_TURN` (see the docstring).
+- **Do not run `build_models.py` to change one model.** It rewrites every base GLB (`tree.glb` goes back to
+  the old single tree, `port.glb` to the first-day port) and writes a fresh manifest without `styles`,
+  `ages`, `wonders` and `trees`; after it you must run `build_styles.py`, `build_ages.py`,
+  `build_future.py`, `build_wonders.py`, `build_launch.py` and `build_trees.py` again. It does call
+  `base_defs.py` for these four, so a full rebuild gives the same four files.
+- `team` parts: the barn roof (farm), the tent bands and the banner (camp), the saw-tooth roof and the dock
+  awning (factory), only the torn banner (ruin; lane b also darkens the whole ruin). No effect anchors:
+  the contract keeps those to unit models, and lane b places building smoke itself.
+- Pieces in `base_defs.py` any later model can use: `limb`, `prism` (an upright outline with a thickness:
+  banners, hides, gable ends), `blockwall` and `jagwall` (broken walls), `blob`, `roof` (gable or gambrel),
+  `fence`, `wheel`, `crate`, `tuft`. Every face gets its material when its piece is made (the old
+  `Builder` in `build_models.py` set materials by face index, which went wrong on spheres; that is fixed
+  there too).
+- Budget: about 1,100 triangles each (65 to 75 KB; flat shading stores every corner).
+
 ## Building styles (row A22, contract X4 `styles`)
 
 30 models: 6 styles (`medieval`, `classical`, `desert`, `east_asian`, `mesoamerican`, `scrap`) x 5 kinds
