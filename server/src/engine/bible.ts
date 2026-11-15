@@ -4,6 +4,7 @@ import { diversifyStyles, isNomadic, pickBuildingStyle } from '@terra/shared';
 import { hashString, mulberry32, pick, type BibleNation, type FlagSpec, type Rng, type WorldBible } from '@terra/shared';
 import type { NewWorldOptions } from '../runner';
 import { governmentKeyOf, steerFlag, worldEraKey } from '../story/identity';
+import { makeNationColorsDistinct } from './nationColors';
 import { fitStyles, KIND_MODS, KIND_NAME, moodFromText, nationsFromPrompt, polityFor, settingOf, shapeFromText, worldNoun } from './promptShape';
 
 interface EraKit {
@@ -187,6 +188,7 @@ export function mockBible(opts: NewWorldOptions, seed: number): WorldBible {
       regionNames,
     });
   }
+  makeNationColorsDistinct(nations); // the same guard as the model's bible: no two nations in near-identical colours
   // Flags (A24): layout and emblem follow the government (a ruined era leans on skulls and flames), at most two alike.
   const eraKey = worldEraKey({ era: opts.era ?? eraName, prompt: opts.prompt, name: worldName });
   const used = new Map<string, number>();

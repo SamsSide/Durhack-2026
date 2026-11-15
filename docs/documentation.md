@@ -281,7 +281,12 @@ planet. Three layers, each checked by the next (`server/src/engine/promptShape.t
    the ice line (latitude 0.9, 0.7 when cold, 0.97 when hot), the desert belt and the moisture cuts for
    desert and forest, and the height cuts for hills and mountains. On a shaped planet a capital must
    stand on ice-free ground with four ice-free provinces joined to it. With no shape, every constant
-   and the random stream are the old ones, so an old seed gives its old planet.
+   and the random stream are the old ones, so an old seed gives its old planet. Capitals also keep to
+   landmasses with room: where the old split would put a nation on a landmass under 8 ice-free provinces
+   (or more than one per 8 on it) and the planet has bigger ones, the nations go to those instead.
+   Nation colours are made distinct after the bible is repaired (`engine/nationColors.ts`, used by the
+   model path and the template path): any colour within 0.09 of an earlier one in OKLab (or near the sea,
+   ice or blank map) moves to the hue farthest from the colours taken, and its flag follows.
 
 **Year and age together.** `bible.startAge` is the setting's age (stone, bronze and classical start
 ancient; medieval, sail as gunpowder, industrial, modern; the far future starts in the future age;

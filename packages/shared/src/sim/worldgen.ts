@@ -250,7 +250,7 @@ const PREF: Partial<Record<Terrain, number>> = { plains: 1, coast: 1, hills: 0.9
 /** How many nations each landmass gets: the big ones only, at least two per landmass used so that
  *  every nation has a neighbour to meet (and fight) early, the rest by size. Landmasses too small for
  *  two (share under 1.2 nations) are left empty rather than given a lonely nation. */
-function allocate(n: number, sizes: number[]): number[] {
+function allocate(n: number, sizes: number[], free: number[] = sizes): number[] {
   const order = sizes.map((s, i) => i).sort((a, b) => sizes[b]! - sizes[a]!);
   let used = order.filter((i) => sizes[i]! >= 20);
   if (!used.length) used = order.slice(0, 1);
@@ -260,6 +260,34 @@ function allocate(n: number, sizes: number[]): number[] {
     if (n * sizes[used[used.length - 1]!]! / total >= 1.2) break;
     used = used.slice(0, -1);
   }
+  // Room (owner, 15 Nov): a nation needs about ROOM_PER_NATION ice-free provinces on its own landmass. When
+  // the planet has enough such landmasses, scrap the ones too small and cap each at what it can hold; a
+  // planet with none that big (a sea world of crumbs) is allocated as before, to the largest.
+  const cap = (i: number) => Math.max(1, Math.floor(free[i]! / ROOM_PER_NATION));
+  const before = spread(n, sizes, used);
+  if (before.every((a, i) => a === 0 || (free[i]! >= ROOM_PER_NATION && a <= cap(i)))) return before; // nobody is cramped: the planet is built exactly as before
+  const roomy = order.filter((i) => free[i]! >= 2 * ROOM_PER_NATION);
+  if (roomy.reduce((a, i) => a + cap(i), 0) >= n) {
+    const alloc = sizes.map(() => 0);
+    used = roomy.slice(0, Math.max(1, Math.floor(n / 2)));
+    while (used.length > 1 && n * free[used[used.length - 1]!]! / used.reduce((a, i) => a + free[i]!, 0) < 1.2) used = used.slice(0, -1);
+    if (used.reduce((a, i) => a + cap(i), 0) < n) used = roomy;
+    for (const i of used) alloc[i] = Math.min(2, n);
+    let left = n - used.reduce((a, i) => a + alloc[i]!, 0);
+    while (left > 0) {
+      let best = -1;
+      for (const i of used) if (alloc[i]! < cap(i) && (best < 0 || free[i]! / (alloc[i]! + 1) > free[best]! / (alloc[best]! + 1))) best = i;
+      if (best < 0) break;
+      alloc[best]!++; left--;
+    }
+    if (left <= 0) return alloc;
+  }
+  // Not enough room for everyone at 8 each: still only the landmasses with room for two nations, the rest crowd in.
+  return roomy.length ? spread(n, free, roomy.slice(0, Math.max(1, Math.floor(n / 2)))) : before;
+}
+
+/** At least two nations on each used landmass, the rest to the one with most land per nation. */
+function spread(n: number, sizes: number[], used: number[]): number[] {
   const alloc = sizes.map(() => 0);
   for (const i of used) alloc[i] = Math.min(2, n);
   let left = n - used.reduce((a, i) => a + alloc[i]!, 0);
@@ -270,6 +298,9 @@ function allocate(n: number, sizes: number[]): number[] {
   }
   return alloc;
 }
+
+/** Ice-free land provinces each nation wants on its landmass at founding (see allocate). */
+const ROOM_PER_NATION = 8;
 
 /** Capitals: nations go to the larger landmasses (allocate), and within each landmass capitals are
  *  spread by farthest-point sampling over the regions' central tiles. Deterministic from the rng. */
@@ -304,7 +335,7 @@ function placeCapitals(
   }
   const usable = shaped && home.size >= n;
   for (const r of regions) if (compOf[r.capitalTile]! >= 0 && (!usable || home.has(r))) regionsIn[compOf[r.capitalTile]!]!.push(r);
-  const alloc = allocate(n, comps.map((c) => (usable ? c.filter(open).length : c.length)));
+  const alloc = allocate(n, comps.map((c) => (usable ? c.filter(open).length : c.length)), comps.map((c) => c.filter(open).length));
   // A landmass cannot hold more capitals than it has regions; the overflow goes to the largest with room.
   let spill = 0;
   alloc.forEach((a, ci) => { const room = regionsIn[ci]!.length; if (a > room) { spill += a - room; alloc[ci] = room; } });
