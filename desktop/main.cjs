@@ -305,6 +305,32 @@ function openGame() {
     else if (ctrlShift && key === 'r') { e.preventDefault(); resetWorld(); }
     else if (ctrlShift && key === 'i') { e.preventDefault(); }
   });
+  // A link out of the game (a payment on the Solana Explorer) opens as a tidy window over the game,
+  // not Electron's default 800 x 600 one with a menu bar; Esc or Ctrl+W closes it.
+  gameWin.webContents.setWindowOpenHandler(({ url }) => {
+    if (!/^https:\/\//i.test(url)) return { action: 'deny' };
+    const b = (gameWin && !gameWin.isDestroyed() ? gameWin.getBounds() : targetDisplay().bounds);
+    const width = Math.min(1280, Math.round(b.width * 0.8)), height = Math.min(860, Math.round(b.height * 0.82));
+    log('link', url.slice(0, 120));
+    return {
+      action: 'allow',
+      overrideBrowserWindowOptions: {
+        x: Math.round(b.x + (b.width - width) / 2), y: Math.round(b.y + (b.height - height) / 2), width, height,
+        parent: gameWin, frame: true, fullscreen: false, autoHideMenuBar: true, icon: ICON, backgroundColor: '#ffffff',
+        title: 'Terra Nova: link (Esc closes)',
+        webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+      },
+    };
+  });
+  gameWin.webContents.on('did-create-window', (child) => {
+    child.setMenuBarVisibility(false);
+    child.webContents.on('before-input-event', (e, input) => {
+      if (input.type !== 'keyDown') return;
+      const key = (input.key || '').toLowerCase();
+      if (input.key === 'Escape' || (input.control && key === 'w')) { e.preventDefault(); child.close(); }
+    });
+    child.on('closed', () => { if (gameWin && !gameWin.isDestroyed()) gameWin.focus(); });
+  });
   gameWin.webContents.on('did-fail-load', (_e, code, desc, failedUrl) => {
     if (code === -3) return; // aborted by a newer load
     // The web may still be warming up; try again shortly.
