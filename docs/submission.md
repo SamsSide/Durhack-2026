@@ -418,7 +418,7 @@ satellite beat (1:05 to 1:20), spoken by [name B]:
 
 | Time | Who | Say | Clicks and keys | On screen | Prize |
 | --- | --- | --- | --- | --- | --- |
-| 1:05 to 1:20 | [name B] | "Nations now build ports and fight at sea. A port opens a sea trade route, and every cargo is another signed payment." | Zoom to a port city; click a sea battle or trade route if one is on screen | Ships in battle, port, a payment arc | Solana; main track |
+| 1:05 to 1:20 | [name B] | "Nations now build ports and fight at sea. A port opens a sea trade route, and the goods they trade are settled in signed payments." | Zoom to a port city; click a sea battle or trade route if one is on screen | Ships in battle, port, a payment arc | Solana; main track |
 
 Landed overnight (#371, #372, #382) and seen in the desktop app: rehearse it once on the prepared world before using it.
 
