@@ -329,6 +329,14 @@ function openGame() {
       const key = (input.key || '').toLowerCase();
       if (input.key === 'Escape' || (input.control && key === 'w')) { e.preventDefault(); child.close(); }
     });
+    // The same two keys from inside the page, in case the window's own key hook does not see them.
+    child.webContents.on('dom-ready', () => {
+      child.webContents.executeJavaScript(
+        "window.addEventListener('keydown', function (e) { if (e.key === 'Escape' || (e.ctrlKey && e.key.toLowerCase() === 'w')) window.close(); }, true); 0",
+        true,
+      ).catch(() => {});
+    });
+    child.once('ready-to-show', () => { child.focus(); child.webContents.focus(); });
     child.on('closed', () => { if (gameWin && !gameWin.isDestroyed()) gameWin.focus(); });
   });
   gameWin.webContents.on('did-fail-load', (_e, code, desc, failedUrl) => {
