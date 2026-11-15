@@ -214,6 +214,9 @@ export class RestSpots {
         if (c > most) { most = c; best = { a, b }; }
       }
     }
+    // a sea tile with no open water left (a one-tile inland sea ringed by harbours): the fleet lies in the middle
+    // of it, clear of every shore, rather than squeezed in among the piers
+    if (this.world.tiles[tile]?.terrain === 'ocean') return { a: mid.a, b: mid.b };
     return best;
   }
 }

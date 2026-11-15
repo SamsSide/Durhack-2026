@@ -11,7 +11,7 @@ import { COUNTER_H, COUNTER_W, drawAttrition, drawClash, drawCounter, drawLoss, 
 import { warLineOf } from '../../state/armyInfo';
 import type { WarTone } from '../../state/armyInfo';
 import { BATTLE_GAP, useBattles } from '../../state/battleInfo';
-import { STACK, clearStackLifts, setStackLift, stackSlot } from '../status/cityStack';
+import { STACK, clearStackLifts, setBaseLift, setStackLift, stackSlot, stackTiles } from '../status/cityStack';
 import { terrainEffects } from '../terrain/effects';
 import { unitIcon } from './era';
 import { ModelField, poseMatrix, standMatrix } from './ModelField';
@@ -137,6 +137,8 @@ interface Box { x0: number; y0: number; x1: number; y1: number }
 const boxesHit = (a: Box, b: Box, pad = 2): boolean => a.x0 < b.x1 + pad && a.x1 > b.x0 - pad && a.y0 < b.y1 + pad && a.y1 > b.y0 - pad;
 /** A battle plate climbs at most this far (px) to clear the counters under it. */
 const PLATE_LIFT_MAX = 110;
+/** A city's marker column starts at most this far (px) above its usual place to clear a counter at the city. */
+const COLUMN_LIFT_MAX = 90;
 /** A loss number slides at most this far (px) sideways to find room, else it is not shown. */
 const POP_REACH = 150;
 const CLASH_REACH = 90;          // px a battle badge may slide off its tile's middle to clear an order line
@@ -700,8 +702,33 @@ export class UnitLayer {
       if (hit) l.chip.statHide = true;
       return !hit;
     });
-    // battle plates, lowest on screen first
     clearStackLifts();
+    // a city's marker column (the ruler's pip, council marks) starts above a counter standing at the city
+    for (const tile of stackTiles()) {
+      if (tile < 0) continue;
+      let lo = Infinity, hi = 0, w = 0;
+      for (const pr of [STACK.auto, STACK.pips, STACK.council]) {
+        const slot = stackSlot(tile, pr);
+        if (!slot) continue;
+        lo = Math.min(lo, slot.offset); hi = Math.max(hi, slot.offset + slot.height); w = Math.max(w, slot.width);
+      }
+      if (lo === Infinity || this.surf(tile, 0.012, _v).lengthSq() === 0 || facing(_v, _camDir) <= 0) continue;
+      _v.project(camera);
+      if (_v.z > 1) continue;
+      const x = (_v.x + 1) * viewW / 2, y = (1 - _v.y) * viewH / 2;
+      let lift = 0;
+      for (let i = 0; i < 3; i++) {
+        const b: Box = { x0: x - w / 2, x1: x + w / 2, y0: y - hi - lift, y1: y - lo - lift };
+        let top = Infinity;
+        for (const o of chipBoxes) if (boxesHit(b, o)) top = Math.min(top, o.y0);
+        if (top === Infinity) break;
+        const next = y - lo - top + 4;
+        if (next > COLUMN_LIFT_MAX || next <= lift) break;
+        lift = next;
+      }
+      if (lift > 0) setBaseLift(tile, lift);
+    }
+    // battle plates, lowest on screen first
     const tick = this.world.tick;
     const plates: { tile: number; x: number; y: number; w: number; h: number; base: number }[] = [];
     for (const b of useBattles.getState().byTile.values()) {
