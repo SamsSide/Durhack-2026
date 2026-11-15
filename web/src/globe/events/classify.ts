@@ -66,7 +66,9 @@ export function classify(events: WorldEvent[], w: World, cache: StructureCache):
         const live = w.structures.find((s) => s.id === e.structureId);
         const info = live ? { tile: live.tile, owner: live.owner, kind: live.kind } : cache.get(e.structureId);
         if (!info) break;
-        const from = info.kind;
+        // the world may already hold the upgraded structure: then the kind it grew from is the one remembered, else a town
+        const before = cache.get(e.structureId)?.kind;
+        const from = info.kind !== e.kind ? info.kind : before && before !== e.kind ? before : 'town';
         cache.set(e.structureId, { ...info, kind: e.kind });
         const adj = w.countries[info.owner]?.adjective;
         if (byDecree) add('decree', info.tile, info.owner, `A decree turns a ${from} of ${name(w, info.owner)} into a ${e.kind}`);

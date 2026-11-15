@@ -85,7 +85,7 @@
    sit on the frame); the lanes scroll inside .tn-tl-scroll. */
 .tn-tl {
   width: 100%;
-  height: min(400px, 50vh);
+  height: min(424px, 50vh);   /* six nation rows (the default world) fit above the scrollbar */
   display: flex; flex-direction: column;
   padding: 24px 24px 14px;
   margin-bottom: 4px;              /* clear of the chronicle bar's moulding */
