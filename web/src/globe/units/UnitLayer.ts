@@ -21,6 +21,7 @@ import { Traders } from './traders';
 import { clockNow, msPerYear } from '../../state/calendar';
 import { UnitModels } from './unitModels';
 import { RestSpots } from './restSpots';
+import { counterBoxes } from '../political/labelLayout';
 import { TerrainLookup, groundView } from '../camera/groundView';
 import { groundSight, horizonSight } from '../status/sight';
 import { formationSlots } from './formation';
@@ -679,6 +680,7 @@ export class UnitLayer {
     const lines: { chip: Chip; box: Box }[] = [];
     const linesOn = 1 - smooth(2.3, 3.1, dist) > 0.02;
     const hs = STATUS_H * zoom * px;
+    counterBoxes.length = 0;
     for (const chip of this.chips.values()) {
       chip.statHide = false;
       if (!chip.sprite.visible || chip.mat.opacity <= 0.02) continue;
@@ -688,6 +690,7 @@ export class UnitLayer {
       const h = chip.sprite.scale.y * px, w = h * chip.aspect;
       const y1 = y + chip.sprite.center.y * h;
       chipBoxes.push({ x0: x - w / 2, x1: x + w / 2, y0: y1 - h, y1 });
+      if (!chip.absorbed) counterBoxes.push({ x, y: viewH - (y1 - h / 2), hw: w / 2, hh: h / 2, c: 1, s: 0 });   // region names step back from counters
       if (chip.stat && linesOn) lines.push({ chip, box: { x0: x - hs * chip.stat.aspect / 2, x1: x + hs * chip.stat.aspect / 2, y0: y1 - h - 1.2 * hs, y1: y1 - h - 0.2 * hs } });
     }
     // an order line never covers a counter (its own sits just under it)
@@ -1624,6 +1627,7 @@ export class UnitLayer {
 
   dispose(): void {
     this.disposed = true;
+    counterBoxes.length = 0;
     clearStackLifts();
     this.spots.dispose();
     this.field.dispose();

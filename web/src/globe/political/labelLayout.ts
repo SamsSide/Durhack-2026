@@ -97,6 +97,11 @@ export interface ScreenBox { x: number; y: number; hw: number; hh: number; c: nu
 /** The nation names on screen this frame, by label key. Region names give way to them. */
 export const nationBoxes = new Map<string, ScreenBox>();
 
+/** The unit counters on screen, rewritten by UnitLayer a few times a second. Region names give way to them too. */
+export const counterBoxes: ScreenBox[] = [];
+/** Each nation's capital marker on screen this frame, by label key. Region names give way to them too. */
+export const capitalBoxes = new Map<string, ScreenBox>();
+
 /** True when two turned boxes overlap (separating axes). */
 export function boxesCross(a: ScreenBox, b: ScreenBox): boolean {
   const dx = b.x - a.x, dy = b.y - a.y;
