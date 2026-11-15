@@ -84,3 +84,4 @@
 - 14 Nov (owner, #317): satellites from the modern age; a national mood that shifts with what happens; satellites can be shot down in future-age wars; towns modernise through the ages.
 - 14 Nov 23:50 (owner): an LLM provider switch: Gemini, Gemma through the Gemini API, local Gemma (Ollama) or hybrid; audio and painted flags stay on Gemini.
 - 14 Nov 23:50 (owner): Terra Nova runs as a Windows desktop app: npm run demo opens a launcher with settings (mode, LLM provider, voice, Solana, world) and preflight checks, then the game; the server stays in WSL.
+- 15 Nov 02:20 (owner's session, overnight): with `LLM_PROVIDER=ollama` the world bible goes to Gemini when a key is set (local Gemma took over 73 s and timed out, so every local world used the template); `OLLAMA_BIBLE=1` keeps it local. Voice Off now drops the ElevenLabs key in the server too.

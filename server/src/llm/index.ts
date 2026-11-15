@@ -66,11 +66,14 @@ export const localPurposes = (): string[] =>
   (process.env.LLM_LOCAL_PURPOSES ?? 'ruler').split(',').map((x) => x.trim()).filter(Boolean);
 
 /** Which backend serves a call. Audio always goes to Gemini (Gemma audio is unconfirmed). */
+// OLLAMA_BIBLE=1 keeps the bible local too (allow OLLAMA_BIBLE_TIMEOUT_MS for it).
 export function routeFor(purpose: string, hasAudio = false): LlmRoute {
   if (hasAudio) return 'gemini';
   switch (llmProvider()) {
     case 'gemma-api': return 'gemma-api';
-    case 'ollama': return 'ollama';
+    // The world bible is one long answer (over a minute on a laptop model, while the founding screen
+    // waits), so with a Gemini key it is the one text call `ollama` still sends to Gemini.
+    case 'ollama': return purpose === 'bible' && process.env.GEMINI_API_KEY && process.env.OLLAMA_BIBLE !== '1' ? 'gemini' : 'ollama';
     case 'hybrid': return localPurposes().includes(purpose) ? 'ollama' : 'gemini';
     default: return 'gemini';
   }
