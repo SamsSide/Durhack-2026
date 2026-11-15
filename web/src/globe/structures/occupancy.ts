@@ -49,6 +49,15 @@ export function feetOn(tile: number): Foot[] {
   return out;
 }
 
+/** Every footprint on a tile except those held by structure `id` (a layer asks what others hold, never its own). */
+export function feetExcept(tile: number, id: string): Foot[] {
+  const m = byTile.get(tile);
+  if (!m) return EMPTY;
+  const out: Foot[] = [];
+  for (const [k, f] of m) if (k !== id) out.push(...f);
+  return out;
+}
+
 /** Bumped whenever a tile's footprints change (part of a town's rebuild key). */
 export const occupancyVersion = (tile: number): number => version.get(tile) ?? 0;
 

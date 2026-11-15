@@ -49,6 +49,9 @@ Built in 24 hours at DurHack 2026 (Durham University, theme: Composition).
   (everyone else) at the industrial age, and builds shielded arcologies in the future and stellar
   ages. Industrial and modern towns pull down their old stone walls for a ring road. Each age step
   sweeps out from the capital, town by town, over about three seconds.
+- **Ports and docks:** every port reaches a pier into the sea toward the nearest open water, with moored boats and a
+  look that follows its nation's age: wooden jetties and a lighthouse, stone quays and cranes, container wharves
+  with gantry cranes and stacked containers, then floating docks. Coastal towns get a smaller pier of the same age.
 - **Wonders** from the Great Wall to a space elevator.
 
 | | | |
