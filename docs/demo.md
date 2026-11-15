@@ -141,13 +141,14 @@ Everything below was seen in the Electron app on the demo laptop, not in Chrome.
 - **Frame rate.** Production build, RTX laptop GPU: about 150 fps from orbit and 130 at ground level
   with every feature on. Close every other tab or window that shows the game before judging: three
   forgotten Chrome tabs halved the frame rate.
-- **Local Gemma shares the GPU with the picture.** With LLM Local or Both, the game drops to about
-  90 fps and hitches for 35 to 60 ms whenever the model answers; at the top speed gear it falls to
-  about 40 fps. With the Gemini API it stays smooth. If the picture matters more than showing the
-  local model, pick Gemini API or Gemma via Gemini API; if you show local Gemma, keep the gears at
-  one season a second and say that the model is running on the same card.
-- **Local calls wait in line.** They are sent one at a time, decrees, lore and news first. A
-  "Prepare for a demo" run on local Gemma with voice off takes about a minute and ends 12 of 12.
+- **Local Gemma shares the GPU with the picture.** Local calls now wait in line, one at a time, with
+  a short rest between routine answers; decrees, lore and news go first. Measured on local Gemma at
+  one season a second: 140 to 210 fps with almost no hitches (it was about 90 fps with a hitch every
+  second before the queue). At the top speed gear the model answers nearly back to back and the game
+  drops to about 50 fps with visible hitches, so keep the top gear to the few seconds the script asks
+  for, or pick Gemini API for the smoothest picture. A saved replay holds about 145 fps at ten years a
+  second, because it makes no calls.
+- **Prepare for a demo** on local Gemma with voice off takes about a minute and ends 12 of 12.
 - **The world bible.** With LLM Local it still goes to Gemini when a key is set (13 s to found a
   world); local Gemma needed over 73 s. `OLLAMA_BIBLE=1` keeps it local.
 - **Voice Off is really off now.** It used to keep calling ElevenLabs; the account has about 20
