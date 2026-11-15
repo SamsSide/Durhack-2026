@@ -391,7 +391,7 @@ this table from `@terra/shared`.
 { "type": "snapshot", "world": { "...": "a full World (X1)" } }
 { "type": "events", "events": [ { "id": "e-1042", "tick": 88, "actor": 2, "lamport": 311, "type": "tile_claimed", "tile": 417, "owner": 2, "from": -1, "cause": "expand" } ] }
 { "type": "agents", "agents": [ { "countryId": 2, "link": "cut", "ruler": "autopilot", "deleted": false, "lastHeardTick": 80, "pendingEvents": 14 } ] }
-{ "type": "budget", "calls": 212, "tokensIn": 61200, "tokensOut": 18800, "callsPerMin": 14, "capped": false, "mode": "mock" }
+{ "type": "budget", "calls": 212, "tokensIn": 61200, "tokensOut": 18800, "callsPerMin": 14, "capped": false, "mode": "mock", "provider": "hybrid", "localCalls": 57 }
 { "type": "belief", "countryId": 2, "owner": [ -1, 2, 2, 0 ] }
 { "type": "none" }
 { "type": "ledger", "entries": [ { "id": "p-1042", "eventIds": ["e-1042"], "tick": 352, "year": 1052, "from": 2, "to": 0, "amount": 120, "reason": "reparations", "note": "Treaty of Hatfield", "status": "confirmed", "signature": "5Kx...", "url": "https://explorer.solana.com/tx/5Kx...?cluster=devnet" } ] }
@@ -651,7 +651,8 @@ export interface WorldStore {
   world: World | null;                       // the replica; replaced on snapshot, mutated by applyEvent
   version: number;                           // bumps on every applied batch; subscribe to this to re-render
   agents: AgentStatus[];
-  budget: { calls: number; tokensIn: number; tokensOut: number; callsPerMin: number; capped: boolean; mode: 'mock' | 'live' } | null;
+  budget: { calls: number; tokensIn: number; tokensOut: number; callsPerMin: number; capped: boolean; mode: 'mock' | 'live';
+            provider?: 'gemini' | 'gemma-api' | 'ollama' | 'hybrid'; localCalls?: number } | null;   // optional (owner, 15 Nov): the LLM provider, and calls answered by local Gemma (not in `calls`)
   connected: boolean;
   selectedCountryId: number | null;
   selectedTileId: number | null;
