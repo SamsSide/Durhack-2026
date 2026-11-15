@@ -1,0 +1,22 @@
+# Built on Windows by scripts/desktop.sh (copy to C:\terra-desktop, npm install, electron-builder --win dir).
+appId: dev.terranova.app
+productName: Terra Nova
+directories:
+  output: dist
+  buildResources: build
+files:
+  - package.json
+  - main.cjs
+  - preload.cjs
+  - wsl.cjs
+  - setup.html
+  - setup.js
+  - splash.html
+  - style.css
+  - build/icon.ico
+  - build/icon.png
+  - fonts/**
+asar: true
+win:
+  target: dir
+  icon: build/icon.ico

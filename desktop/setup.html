@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'">
+  <title>Terra Nova</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { display: flex; flex-direction: column; }
+    header { padding: var(--space-5) var(--space-6) var(--space-4); display: flex; align-items: baseline; gap: var(--space-4); }
+    header .sub { color: var(--color-text-muted); font-size: var(--text-md); }
+    header .keys { margin-left: auto; }
+    header .state { font-size: var(--text-sm); padding-left: var(--space-4); border-left: 1px solid var(--color-border); }
+    footer button { white-space: nowrap; }
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 5px; }
+    main { flex: 1; display: grid; grid-template-columns: 1.1fr 1fr; gap: var(--space-5); padding: 0 var(--space-6); min-height: 0; }
+    section { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-4) var(--space-5); min-height: 0; overflow: auto; }
+    .field { margin-bottom: var(--space-3); }
+    .field > .label { font-weight: 600; margin-bottom: var(--space-2); }
+    .field .hint { color: var(--color-text-muted); font-size: var(--text-sm); margin-top: var(--space-1); min-height: 1.2em; }
+    .seg { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+    .seg label { position: relative; }
+    .seg input { position: absolute; opacity: 0; pointer-events: none; }
+    .seg span {
+      display: inline-block; padding: 6px 14px; border: 1px solid var(--color-border); border-radius: var(--radius);
+      background: var(--color-surface-2); cursor: pointer; font-size: var(--text-md);
+    }
+    .seg input:checked + span { border-color: var(--color-accent); background: rgba(201, 162, 75, 0.18); color: #fff; }
+    .seg input:focus-visible + span { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+    .field.off { opacity: 0.45; }
+    .field.off span { cursor: default; }
+    details { margin-top: var(--space-2); }
+    summary { cursor: pointer; color: var(--color-text-muted); }
+    .adv { display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-3); align-items: center; margin-top: var(--space-3); font-size: var(--text-sm); }
+    .adv input { background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 5px 8px; user-select: text; }
+    #checks { list-style: none; margin: 0; padding: 0; }
+    #checks li { display: grid; grid-template-columns: 64px 1fr; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid rgba(52, 58, 74, 0.6); }
+    #checks li:last-child { border-bottom: none; }
+    .badge { font: 600 var(--text-sm)/1.6 var(--font-mono); text-align: center; border-radius: var(--radius); height: fit-content; }
+    .badge.pass { color: var(--color-pass); border: 1px solid var(--color-pass); }
+    .badge.fail { color: #fff; background: var(--color-fail); border: 1px solid var(--color-fail); }
+    .badge.warn { color: var(--color-warn); border: 1px solid var(--color-warn); }
+    .badge.skip, .badge.info { color: var(--color-skip); border: 1px solid var(--color-skip); }
+    .badge.wait { color: var(--color-text-muted); border: 1px dashed var(--color-border); }
+    .row-label { font-weight: 600; }
+    .row-detail { color: var(--color-text-muted); font-size: var(--text-sm); word-break: break-word; }
+    .empty { color: var(--color-text-muted); padding: var(--space-4) 0; }
+    #summary { margin-bottom: var(--space-2); font-weight: 600; }
+    #summary.ok { color: var(--color-pass); }
+    #summary.bad { color: var(--color-fail); }
+    footer { padding: var(--space-4) var(--space-6) var(--space-5); display: flex; align-items: center; gap: var(--space-4); }
+    footer .spacer { flex: 1; }
+    .keys { color: var(--color-text-muted); font-size: var(--text-sm); }
+    kbd { font-family: var(--font-mono); border: 1px solid var(--color-border); border-radius: 3px; padding: 0 5px; background: var(--color-surface-2); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Terra Nova</h1>
+    <span class="sub">Demo launcher</span>
+    <span class="keys">In the game: <kbd>F11</kbd> fullscreen, <kbd>Ctrl+Shift+R</kbd> reset, <kbd>Ctrl+Shift+S</kbd> this screen</span>
+    <span class="state muted" id="state"></span>
+  </header>
+  <main>
+    <section aria-label="Settings">
+      <h2>Settings</h2>
+
+      <div class="field" id="f-mode">
+        <div class="label">Demo mode</div>
+        <div class="seg" role="radiogroup">
+          <label><input type="radio" name="mode" value="live"><span>Live</span></label>
+          <label><input type="radio" name="mode" value="mock"><span>Mock rehearsal</span></label>
+        </div>
+        <div class="hint" id="h-mode"></div>
+      </div>
+
+      <div class="field" id="f-llm">
+        <div class="label">AI rulers (LLM)</div>
+        <div class="seg" role="radiogroup">
+          <label><input type="radio" name="llm" value="gemini"><span>Gemini API</span></label>
+          <label><input type="radio" name="llm" value="gemma-api"><span>Gemma via Gemini API</span></label>
+          <label><input type="radio" name="llm" value="ollama"><span>Local Gemma (Ollama)</span></label>
+          <label><input type="radio" name="llm" value="hybrid"><span>Both</span></label>
+          <label><input type="radio" name="llm" value="mock"><span>Mock</span></label>
+        </div>
+        <div class="hint" id="h-llm"></div>
+      </div>
+
+      <div class="field" id="f-voice">
+        <div class="label">ElevenLabs voice</div>
+        <div class="seg" role="radiogroup">
+          <label><input type="radio" name="voice" value="on"><span>On</span></label>
+          <label><input type="radio" name="voice" value="off"><span>Off</span></label>
+        </div>
+        <div class="hint" id="h-voice"></div>
+      </div>
+
+      <div class="field" id="f-solana">
+        <div class="label">Solana devnet</div>
+        <div class="seg" role="radiogroup">
+          <label><input type="radio" name="solana" value="on"><span>On</span></label>
+          <label><input type="radio" name="solana" value="off"><span>Off</span></label>
+        </div>
+        <div class="hint" id="h-solana"></div>
+      </div>
+
+      <div class="field" id="f-world">
+        <div class="label">World</div>
+        <div class="seg" role="radiogroup">
+          <label><input type="radio" name="world" value="new"><span>Type a new world</span></label>
+          <label><input type="radio" name="world" value="replay"><span>Saved replay demo-1</span></label>
+          <label><input type="radio" name="world" value="auto"><span>Auto-prepared demo world</span></label>
+        </div>
+        <div class="hint" id="h-world"></div>
+      </div>
+
+      <details id="advanced">
+        <summary>Advanced</summary>
+        <div class="adv">
+          <label for="a-gemmaApiModel">Gemma API model</label><input id="a-gemmaApiModel" spellcheck="false">
+          <label for="a-ollamaHost">Ollama host</label><input id="a-ollamaHost" spellcheck="false">
+          <label for="a-ollamaModel">Ollama model</label><input id="a-ollamaModel" spellcheck="false">
+          <label for="a-localPurposes">Local purposes (Both)</label><input id="a-localPurposes" spellcheck="false">
+          <label for="a-serverPort">Server port</label><input id="a-serverPort" inputmode="numeric">
+          <label for="a-webPort">Web port</label><input id="a-webPort" inputmode="numeric">
+          <span class="muted">WSL</span><span class="muted mono" id="wsl-target"></span>
+        </div>
+      </details>
+    </section>
+
+    <section aria-label="Checks">
+      <h2>Checks</h2>
+      <div id="summary"></div>
+      <ul id="checks"><li class="empty" style="display:block">Press Run checks to test every service these settings use.</li></ul>
+    </section>
+  </main>
+  <footer>
+    <button id="run">Run checks</button>
+    <button id="game" hidden>Back to the game</button>
+    <button id="reset" hidden>Reset the world</button>
+    <span class="spacer"></span>
+    <button class="link" id="anyway">Start anyway</button>
+    <button class="primary" id="start" disabled>Start</button>
+  </footer>
+  <script src="setup.js"></script>
+</body>
+</html>

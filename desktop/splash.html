@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self'">
+  <title>Terra Nova</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { display: flex; flex-direction: column; padding: var(--space-5) var(--space-6); border: 1px solid var(--color-border); -webkit-app-region: drag; }
+    button { -webkit-app-region: no-drag; }
+    h1 { font-size: 34px; text-align: center; margin-top: var(--space-3); }
+    #title { text-align: center; font-size: var(--text-lg); margin-top: var(--space-3); }
+    .bar { height: 3px; background: var(--color-surface-2); border-radius: 2px; overflow: hidden; margin: var(--space-4) 0; }
+    .bar i { display: block; height: 100%; width: 30%; background: var(--color-accent); animation: slide 1.4s ease-in-out infinite; }
+    @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(340%); } }
+    body.error .bar i { animation: none; width: 100%; background: var(--color-fail); }
+    #line { text-align: center; color: var(--color-text-muted); font-size: var(--text-sm); min-height: 1.4em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #error { display: none; text-align: center; color: var(--color-fail); font-weight: 600; margin-top: var(--space-2); }
+    body.error #error { display: block; }
+    #logs { display: none; flex: 1; margin-top: var(--space-3); background: #05070d; border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-2) var(--space-3); overflow: auto; font: 12px/1.45 var(--font-mono); white-space: pre-wrap; word-break: break-all; user-select: text; -webkit-app-region: no-drag; }
+    body.logs #logs { display: block; }
+    .actions { display: flex; justify-content: center; gap: var(--space-3); margin-top: auto; padding-top: var(--space-3); }
+    #back { display: none; }
+    body.error #back { display: inline-block; }
+  </style>
+</head>
+<body>
+  <h1>Terra Nova</h1>
+  <div id="title">Starting the world...</div>
+  <div class="bar"><i></i></div>
+  <div id="line"></div>
+  <div id="error"></div>
+  <pre id="logs"></pre>
+  <div class="actions">
+    <button id="toggle">Logs</button>
+    <button id="back">Back to setup</button>
+  </div>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const logs = $('logs');
+    let open = false;
+    function addLog(line) {
+      const atEnd = logs.scrollTop + logs.clientHeight >= logs.scrollHeight - 20;
+      logs.textContent += line + '\n';
+      if (logs.textContent.length > 200000) logs.textContent = logs.textContent.slice(-150000);
+      if (atEnd) logs.scrollTop = logs.scrollHeight;
+    }
+    $('toggle').addEventListener('click', async () => {
+      open = !open;
+      document.body.classList.toggle('logs', open);
+      $('toggle').textContent = open ? 'Hide logs' : 'Logs';
+      window.terra.setLogsOpen(open);
+      if (open && !logs.textContent) for (const l of await window.terra.logHistory()) addLog(l);
+      logs.scrollTop = logs.scrollHeight;
+    });
+    $('back').addEventListener('click', () => window.terra.backToSetup());
+    window.terra.onSplash(({ kind, value }) => {
+      if (kind === 'title') { $('title').textContent = value; document.body.classList.remove('error'); }
+      else if (kind === 'line') $('line').textContent = value;
+      else if (kind === 'log') addLog(value);
+      else if (kind === 'error') { document.body.classList.add('error'); $('error').textContent = value; }
+    });
+  </script>
+</body>
+</html>

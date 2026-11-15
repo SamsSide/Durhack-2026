@@ -2,17 +2,23 @@
 # One command for the table demo: start the whole app, open it in the browser, reset it between
 # judges, stop it.
 #
-#   scripts/demo.sh live   [options]   real Gemini, ElevenLabs and Solana devnet  (npm run demo, npm run demo:live)
+#   scripts/demo.sh live   [options]   real Gemini, ElevenLabs and Solana devnet  (npm run demo:terminal, npm run demo:live)
 #   scripts/demo.sh mock   [options]   no API calls, for rehearsals              (npm run demo:mock)
 #   scripts/demo.sh reset  [options]   a fresh prepared world, servers kept       (npm run demo:reset)
+#   scripts/demo.sh check  [--mock] [--no-voice] [--json]
+#                                      the preflight checks with the demo's keys  (npm run demo:check)
 #   scripts/demo.sh status                                                         (npm run demo:status)
 #   scripts/demo.sh stop                                                           (npm run demo:stop)
+#
+# npm run demo opens the Windows desktop app (scripts/desktop.sh), which calls this script.
 #
 # Options (live, mock, reset):
 #   --prompt "..."   the world prompt (default: a strong demo prompt; reset reuses the last one)
 #   --nations N      how many nations (default 6)
 #   --replay <id>    play a saved replay (e.g. demo-1) instead of a new world: instant, no API calls
 #   --wait S         how long to wait for prepare, in seconds (default 60)
+#   --no-world       start with no world: the app opens on its Create screen (live, mock)
+#   --no-voice       no ElevenLabs: the key is dropped after the keys files load (live, check)
 #   --no-open        do not open the browser (live, mock)
 #   --lan            serve the web on every interface and print the LAN address (live, mock)
 #
@@ -74,7 +80,7 @@ resolve_ports() {
 
 # --- options -------------------------------------------------------------------------------------
 
-OPT_PROMPT="" OPT_NATIONS="" OPT_REPLAY="" OPT_WAIT=60 OPT_OPEN=1 OPT_LAN=0
+OPT_PROMPT="" OPT_NATIONS="" OPT_REPLAY="" OPT_WAIT=60 OPT_OPEN=1 OPT_LAN=0 OPT_NOWORLD=0 OPT_NOVOICE=0
 parse_opts() {
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -83,12 +89,27 @@ parse_opts() {
       --replay)  [ $# -ge 2 ] || die "--replay needs an id"; OPT_REPLAY="$2"; shift 2 ;;
       --wait)    [ $# -ge 2 ] || die "--wait needs a value"; OPT_WAIT="$2"; shift 2 ;;
       --no-open) OPT_OPEN=0; shift ;;
+      --no-world) OPT_NOWORLD=1; shift ;;
+      --no-voice) OPT_NOVOICE=1; shift ;;
       --lan)     OPT_LAN=1; shift ;;
       *) die "unknown option: $1 (see the top of scripts/demo.sh)" ;;
     esac
   done
   if [ -n "$OPT_NATIONS" ] && ! [[ "$OPT_NATIONS" =~ ^[0-9]+$ ]]; then die "--nations must be a number"; fi
   [[ "$OPT_WAIT" =~ ^[0-9]+$ ]] || die "--wait must be a number of seconds"
+  if [ "$OPT_NOWORLD" = 1 ] && [ -n "$OPT_REPLAY" ]; then die "--no-world and --replay do not go together"; fi
+}
+
+# Loads the keys files the way the live demo does. Earlier files win; an empty value (KEY=) never
+# blanks a key set by an earlier file. --no-voice drops the ElevenLabs key afterwards (an empty
+# export is not enough: load_env_file would fill it from the keys file).
+load_keys() {
+  load_env_file "$HOME/.config/durhack/keys.env"
+  load_env_file "$ROOT/.env"
+  if [ "$OPT_NOVOICE" = 1 ]; then
+    unset ELEVENLABS_API_KEY
+    export DEMO_VOICE=0
+  fi
 }
 
 # --- processes -----------------------------------------------------------------------------------
@@ -248,7 +269,9 @@ summary() {
   say "Terra Nova demo is running."
   say "  mode:   $S_MODE"
   say "  url:    $url"
-  if [ -n "$S_REPLAY" ]; then say "  world:  $S_WORLD (replay $S_REPLAY)"; else say "  world:  $S_WORLD"; fi
+  if [ -n "$S_REPLAY" ]; then say "  world:  $S_WORLD (replay $S_REPLAY)"
+  elif [ -z "$S_WORLD" ]; then say "  world:  none yet (type one on the Create screen)"
+  else say "  world:  $S_WORLD"; fi
   say "  logs:   .demo/server.log, .demo/web.log"
   if [ "$S_LAN" = 1 ]; then
     say "  on the LAN (teammates):"
@@ -271,14 +294,13 @@ do_start() {
 
   if [ "$mode" = live ]; then
     # Keys come from these files; never printed.
-    # Earlier files win; an empty value (KEY=) never blanks a key set by an earlier file.
-    load_env_file "$HOME/.config/durhack/keys.env"
-    load_env_file "$ROOT/.env"
+    load_keys
     # The mode is the command's, not a dev default from .env; only the caller's own env overrides it.
     export LLM_MODE="${caller_llm:-live}" SOLANA_MODE="${caller_sol:-devnet}"
     export GEMINI_MODEL_IMAGE="${caller_img:-${GEMINI_MODEL_IMAGE:-gemini-3.1-flash-image}}"
     [ -n "${GEMINI_API_KEY:-}" ] || say "WARN: GEMINI_API_KEY is not set (looked in ~/.config/durhack/keys.env and .env)."
-    [ -n "${ELEVENLABS_API_KEY:-}" ] || say "WARN: ELEVENLABS_API_KEY is not set; voices fall back to silence."
+    if [ "$OPT_NOVOICE" = 1 ]; then say "Voice is off (--no-voice): no ElevenLabs calls."
+    else [ -n "${ELEVENLABS_API_KEY:-}" ] || say "WARN: ELEVENLABS_API_KEY is not set; voices fall back to silence."; fi
   else
     export LLM_MODE=mock SOLANA_MODE=mock
   fi
@@ -310,7 +332,11 @@ do_start() {
   wait_for "web" 20 "$DEMO_DIR/web.log" web_ok
   say "Server and web are up."
 
-  make_world
+  if [ "$OPT_NOWORLD" = 1 ]; then
+    say "No world yet: the app opens on its Create screen."
+  else
+    make_world
+  fi
   [ "$OPT_OPEN" = 1 ] && open_browser "http://localhost:$WEB_PORT/"
   summary
 }
@@ -319,8 +345,9 @@ do_reset() {
   parse_opts "$@"
   load_state
   resolve_ports
+  [ "$OPT_NOWORLD" = 1 ] && die "reset makes a world; for an empty Create screen start again with --no-world"
   [ -n "$S_MODE" ] || die "no demo is running (start one with npm run demo, or npm run demo:mock for a rehearsal)"
-  health_ok || die "the demo server on :$SERVER_PORT does not answer (see .demo/server.log); restart with npm run demoive"
+  health_ok || die "the demo server on :$SERVER_PORT does not answer (see .demo/server.log); restart with npm run demo"
   [ -n "$OPT_PROMPT" ] && S_PROMPT="$OPT_PROMPT"
   [ -n "$OPT_NATIONS" ] && S_NATIONS="$OPT_NATIONS"
   [ -n "$S_PROMPT" ] || S_PROMPT="$DEFAULT_PROMPT"
@@ -330,6 +357,39 @@ do_reset() {
   # and the app swaps worlds without a reload (web/src/state/world.ts, App.tsx).
   say "The open browser tab switches to the new world by itself (no reload needed)."
   summary
+}
+
+# The preflight checks (scripts/preflight.mjs) with the keys loaded as the live demo loads them.
+# --mock checks a mock rehearsal (LLM_MODE and SOLANA_MODE mock); other arguments go to the script.
+do_check() {
+  local args=() mock=0 json=0 a
+  for a in "$@"; do
+    case "$a" in
+      --mock) mock=1 ;;
+      --no-voice) OPT_NOVOICE=1 ;;
+      --json) json=1; args+=("$a") ;;
+      *) args+=("$a") ;;
+    esac
+  done
+  local caller_llm="${LLM_MODE:-}" caller_sol="${SOLANA_MODE:-}"
+  load_state
+  resolve_ports
+  export DEMO_SERVER_PORT="$SERVER_PORT" DEMO_WEB_PORT="$WEB_PORT"
+  if [ "$mock" = 1 ]; then
+    export LLM_MODE=mock SOLANA_MODE=mock
+  else
+    load_keys
+    export LLM_MODE="${caller_llm:-live}" SOLANA_MODE="${caller_sol:-devnet}"
+  fi
+  local script="${PREFLIGHT_SCRIPT:-$ROOT/scripts/preflight.mjs}"
+  if [ ! -f "$script" ]; then
+    if [ "$json" = 1 ]; then
+      printf '%s\n' '{"id":"preflight","label":"Preflight script","status":"fail","detail":"scripts/preflight.mjs is not in this checkout yet"}' '{"done":true,"ok":false}'
+      exit 1
+    fi
+    die "scripts/preflight.mjs is not in this checkout yet"
+  fi
+  exec node "$script" "${args[@]}"
 }
 
 do_status() {
@@ -358,13 +418,16 @@ cmd="${1:-}"
 case "$cmd" in
   live|mock) do_start "$cmd" "$@" ;;
   reset)     do_reset "$@" ;;
+  check)     do_check "$@" ;;
   status)    do_status ;;
   stop)      load_state; resolve_ports; do_stop ;;
   help|-h|--help)
     sed -n '2,/^set -uo/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//' ;;
   *)
-    say "Usage: scripts/demo.sh live|mock|reset|status|stop|help [options]"
-    say "  npm run demo         start live: real Gemini, ElevenLabs and Solana devnet"
+    say "Usage: scripts/demo.sh live|mock|reset|check|status|stop|help [options]"
+    say "  npm run demo           open the desktop app (settings, checks, start)"
+    say "  npm run demo:terminal  start live from the terminal: real Gemini, ElevenLabs and Solana devnet"
+    say "  npm run demo:check   run the preflight checks"
     say "  npm run demo:mock    start a mock rehearsal (no API calls)"
     say "  npm run demo:reset   a fresh prepared world between judges (-- --replay demo-1 for instant)"
     say "  npm run demo:status  is it running, which world"
