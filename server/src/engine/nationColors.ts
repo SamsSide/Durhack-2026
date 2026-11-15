@@ -56,7 +56,15 @@ function fit(L: number, C: number, h: number): string {
   return oklabToHex(labAt(L, 0, h)) ?? '#808080';
 }
 
-/** The first colour is kept; each later one that is within MIN_NATION_DELTA of an earlier one (or sits on the
+/** A blue in the sea's own hue band reads as shallow water when it fills a province beside the ocean
+ *  (a royal blue nation was mistaken for sea), so nations keep out of it: teal and violet are fine. */
+const watery = (hex: string): boolean => {
+  const { C, h } = lchOf(hex);
+  const deg = ((h * 180) / Math.PI + 360) % 360;
+  return C > 0.06 && deg >= 228 && deg <= 278;
+};
+
+/** The first colour is kept (unless it is a sea blue); each later one that is within MIN_NATION_DELTA of an earlier one (or sits on the
  *  sea or the land tones) is moved to the hue, among 72 evenly spaced, whose colour is farthest from every
  *  colour already taken, with lightness and chroma pulled into a range that reads on the globe.
  *  Colours that are already fine are returned unchanged, so a good bible keeps its exact colours. */
@@ -67,12 +75,13 @@ export function distinctNationColors(colors: string[]): string[] {
     const lab = hexToOklab(c);
     const nearest = (x: Lab, list: Lab[]) => list.reduce((m, y) => Math.min(m, Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2])), Infinity);
     const taken = out.map(hexToOklab);
-    if (nearest(lab, taken) >= MIN_NATION_DELTA && nearest(lab, AVOID) >= MIN_FROM_TERRAIN) { out.push(c); continue; }
+    if (!watery(c) && nearest(lab, taken) >= MIN_NATION_DELTA && nearest(lab, AVOID) >= MIN_FROM_TERRAIN) { out.push(c); continue; }
     const { L, C } = lchOf(c);
     const l = Math.max(0.6, Math.min(0.78, L)), ch = Math.max(0.12, Math.min(0.2, C));
     let best = c, bestScore = -1;
     for (let k = 0; k < 72; k++) {
       const cand = fit(l, ch, (k / 72) * 2 * Math.PI);
+      if (watery(cand)) continue;
       const cl = hexToOklab(cand);
       const score = Math.min(nearest(cl, taken), nearest(cl, AVOID) * 1.5); // the terrain counts a little less than a rival nation
       if (score > bestScore + 1e-9) { bestScore = score; best = cand; }
