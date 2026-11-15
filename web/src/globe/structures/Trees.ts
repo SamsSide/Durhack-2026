@@ -73,7 +73,7 @@ export class Trees {
       if (!count) continue;
       const g = geos.get(t.id);
       // The variant counts are for a big province (a 300-province world); smaller ones get fewer, by area.
-      if (varied) count = Math.max(t.terrain === 'forest' ? 4 : 1, Math.round(count * Math.min(1.25, (g.width / 0.12) ** 2)));
+      if (varied) count = Math.max(t.terrain === 'forest' ? 11 : 2, Math.round(count * Math.min(1.25, (g.width / 0.12) ** 2)));
       const mix = mixFor(world, t);
       for (let i = 0; i < count; i++) {
         const seed = t.id * 64 + i;
