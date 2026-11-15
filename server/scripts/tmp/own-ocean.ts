@@ -1,0 +1,11 @@
+import { EngineRunner } from '../../src/engine/runner';
+import { forceMockMode } from '../../src/llm';
+forceMockMode(true);
+const r = new EngineRunner();
+await r.newWorld({ prompt: 'a drowned world', seed: 1337 });
+r.stop();
+for (let t = 0; t < 150; t++) r.advance(1);
+const w = r.getWorld()!;
+console.log('owned ocean tiles', w.tiles.filter((t) => t.terrain === 'ocean' && (w.owner[t.id] ?? -1) >= 0).length, 'ocean', w.tiles.filter((t) => t.terrain === 'ocean').length, 'tiles', w.tiles.length);
+console.log('fleets', w.units.filter((u) => u.kind === 'fleet').map((u) => `${u.owner}@${u.tile}:${u.strength}`).join(' '));
+process.exit(0);
