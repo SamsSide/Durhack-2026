@@ -44,3 +44,8 @@ A deeper simulation, so a Cold War style story (a space race, spies, an arms rac
 
 - **One-click demo run.** A scripted run that plays the whole two-minute story on one button. (#317 item 4)
 - **Sung anthems in the team's own voices.** Built and kept on local branch `a/sung-anthems`; the owner chose the generic singer for the demo.
+
+## Battles and terrain (parked by the owner, 15 Nov, #377)
+
+- **Battles in detail at close zoom.** Troops shown in proportion to strength (more formation blocks for a bigger army), visible fighting on both lines with figures thinning as losses come in, spread over the battle tile and its neighbours; only at close zoom, so the frame rate at the demo's distance is unchanged. (#377 part 1)
+- **Castles and forts that fit the ground.** A hill-fort or a castle on a rocky base on hills and mountains, chosen by how high the tile is; more model variety by terrain generally. (#377 part 2)
